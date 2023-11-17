@@ -116,7 +116,11 @@ impl Data {
     }
 
     pub fn store_pom(&self, name_with_owner: String, data: String) -> Fallible<()> {
-        let file = self.base_dir.join("poms").join(name_with_owner.replace('/', ".")).join("pom.xml");
+        let file = self
+            .base_dir
+            .join("poms")
+            .join(name_with_owner.replace('/', "."))
+            .join("pom.xml");
         fs::create_dir_all(
             file.parent()
                 .ok_or_else(|| err_msg("could not create pom dir"))?,

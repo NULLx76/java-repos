@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.jenkins-ci.plugins</groupId>
+        <artifactId>plugin</artifactId>
+        <version>4.75</version>
+        <relativePath />
+    </parent>
+
+    <groupId>org.jvnet.hudson.plugins</groupId>
+    <artifactId>ircbot</artifactId>
+    <packaging>hpi</packaging>
+    <version>${revision}.${changelist}</version>
+
+    <name>Jenkins IRC Plugin</name>
+    <description>A build status publisher that notifies channels on an IRC server</description>
+    <!-- (Note: the "bot" part is mostly in instant-messaging-plugin) which we require -->
+    <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
+    <inceptionYear>2006</inceptionYear>
+
+    <licenses>
+        <license>
+            <name>MIT license</name>
+            <url>https://opensource.org/licenses/MIT</url>
+            <comments>All source code is under the MIT license.</comments>
+        </license>
+    </licenses>
+
+    <properties>
+        <revision>3</revision>
+        <changelist>999999-SNAPSHOT</changelist>
+        <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
+        <jenkins.version>2.375.1</jenkins.version>
+        <!-- Note: keep in sync with io.jenkins.tools.bom version below -->
+        <spotbugs.effort>Max</spotbugs.effort>
+        <spotbugs.threshold>Low</spotbugs.threshold>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.jenkins.tools.bom</groupId>
+                <artifactId>bom-2.375.x</artifactId>
+                <version>2198.v39c76fc308ca</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>javax.annotation</groupId>
+                <artifactId>javax.annotation-api</artifactId>
+                <version>1.3.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-text</artifactId>
+                <version>1.11.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.jvnet.hudson.plugins</groupId>
+            <artifactId>instant-messaging</artifactId>
+            <version>2.698.ve71a_06c95cec</version>
+            <exclusions>
+                <!-- Provided by Jenkins core -->
+                <exclusion>
+                    <groupId>org.jenkins-ci</groupId>
+                    <artifactId>symbol-annotation</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <!-- groupId>org.pircbotx</groupId -->  <!-- For JARs uploaded to Jenkins Repo (snapshots) -->
+            <groupId>com.github.pircbotx</groupId>  <!-- For builds uploaded to Jitpack by github CI -->
+            <artifactId>pircbotx</artifactId>
+            <version>2.3.1</version>
+
+            <!-- SEE BELOW ABOUT VERSIONING WOES when a non-release version must be used -->
+            <!-- Finally cheated by uploading (Deploy button) the JAR from JitPack
+                 to https://repo.jenkins-ci.org/ snapshots; metadata parsed and
+                 name/version assigned automatically by it; note it also reassigned
+                 the groupId back to "org.pircbotx"; see also maven enforcer hacks: -->
+            <!-- version>2.4-20230523.142555-1</version -->
+
+            <!-- Normally https://jitpack.io/#pircbotx/pircbotx => Branches => master-SNAPSHOT
+                 => https://jitpack.io/com/github/pircbotx/pircbotx/-v2.3-gb1b48bf-9/build.log
+                 Using recent previews until a release (deleted after a couple of months).
+                 NOTE the leading minus in temporary-availability version! -->
+            <!-- version>-v2.3-gb1b48bf-9</version -->
+            <!-- version>master-v2.3-gb1b48bf-9</version -->
+            <!-- version>b1b48bfb64</version -->
+
+            <!-- Alternately rely on master branch of the day
+                 See https://github.com/pircbotx/pircbotx/issues/414 -->
+            <!-- version>master-SNAPSHOT</version -->
+            <!-- version>master</version -->
+
+            <scope>compile</scope>
+            <exclusions>
+                <!-- provides an ancient version, junit plugin is pulling in a more recent one -->
+                <exclusion>
+                    <groupId>org.apache.commons</groupId>
+                    <artifactId>commons-lang3</artifactId>
+                </exclusion>
+                <!-- provided by jenkins core -->
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+                <!-- provided by jenkins core -->
+                <exclusion>
+                    <groupId>com.google.guava</groupId>
+                    <artifactId>guava</artifactId>
+                </exclusion>
+                <!-- provided by jenkins core -->
+                <exclusion>
+                    <groupId>commons-codec</groupId>
+                    <artifactId>commons-codec</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- Jenkins pipeline support below -->
+        <dependency>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
+            <artifactId>workflow-step-api</artifactId>
+        </dependency>
+
+    </dependencies>
+
+    <repositories>
+        <repository>
+            <id>repo.jenkins-ci.org</id>
+            <url>https://repo.jenkins-ci.org/public/</url>
+        </repository>
+        <repository>
+            <id>jenkins-snapshots</id>
+            <url>https://repo.jenkins-ci.org/content/repositories/snapshots</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>jenkins-artifactory-snapshots</id>
+            <url>https://repo.jenkins-ci.org/artifactory/snapshots</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
+
+    <developers>
+        <developer>
+            <id>jimklimov</id>
+            <name>Jim Klimov</name>
+            <email>jimklimov+jenkinsci@gmail.com</email>
+            <timezone>1</timezone>
+        </developer>
+        <developer>
+            <id>kutzi</id>
+            <name>Christoph Kutzinski</name>
+            <email>kutzi@gmx.de</email>
+            <timezone>1</timezone>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:https://github.com/${gitHubRepo}.git</connection>
+        <developerConnection>scm:git:git@github.com:${gitHubRepo}.git</developerConnection>
+        <url>https://github.com/${gitHubRepo}</url>
+        <tag>${scmTag}</tag>
+    </scm>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>repo.jenkins-ci.org</id>
+            <url>https://repo.jenkins-ci.org/public/</url>
+        </pluginRepository>
+    </pluginRepositories>
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>3.3.1</version>
+                <configuration>
+                    <configLocation>${basedir}/checkstyle.xml</configLocation>
+                    <includeTestSourceDirectory>true</includeTestSourceDirectory>
+                    <sourceDirectories>
+                        <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
+                    </sourceDirectories>
+                    <testSourceDirectories>
+                        <sourceDirectory>${project.build.testSourceDirectory}</sourceDirectory>
+                    </testSourceDirectories>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.jenkins-ci.tools</groupId>
+                <artifactId>maven-hpi-plugin</artifactId>
+                <configuration>
+                    <loggers>
+                        <hudson.plugins.im>FINE</hudson.plugins.im>
+                    </loggers>
+                    <compatibleSinceVersion>2.0</compatibleSinceVersion>
+                </configuration>
+            </plugin>
+
+            <!-- For the time being, until pircbotx-2.4 is officially released,
+                 we are constrained to using snapshots, which is frowned upon.
+                 See centralized config in
+                 https://github.com/jenkinsci/plugin-pom/blob/ec78ae1af0b5365d8d17121f3d5be720acb87f13/pom.xml#L550-L570
+              -->
+<!--
+            <plugin>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>no-snapshots-in-release</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireReleaseDeps>
+                                    <message>No SNAPSHOT versions are allowed for releases (except pircbotx)</message>
+                                    <excludes>
+                                        <exclude>org.pircbotx:pircbotx</exclude>
+                                        <exclude>com.github.pircbotx:pircbotx</exclude>
+                                    </excludes>
+                                </requireReleaseDeps>
+                            </rules>
+                            <fail>true</fail>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+-->
+
+        </plugins>
+    </build>
+
+</project>

@@ -48,7 +48,8 @@ fn load_thread(api: &GitHubApi, data: &Data, to_load: Vec<String>) -> Fallible<(
         }
 
         if found {
-            let has_pom = api.file_exists(&repo, "pom.xml")?;
+            let pom = api.file_exists(&repo, "pom.xml")?;
+            let has_pom = pom.is_some();
 
             data.store_repo(
                 "github",
@@ -59,7 +60,11 @@ fn load_thread(api: &GitHubApi, data: &Data, to_load: Vec<String>) -> Fallible<(
                 },
             )?;
 
-            info!("found {}: Pom.xml: {has_pom:?}", repo.name_with_owner,);
+            if let Some(file) = pom {
+                data.store_pom(repo.name_with_owner.clone(), file)?;
+            }
+
+            info!("found {}: Pom.xml: {:?}", repo.name_with_owner, has_pom);
         }
     }
 

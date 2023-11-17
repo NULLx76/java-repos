@@ -237,6 +237,9 @@ impl<'conf> GitHubApi<'conf> {
                 if error.message.contains("abuse") {
                     warn!("triggered GitHub abuse detection systems");
                     Err(RetryRequest(StatusCode::TOO_MANY_REQUESTS).into())
+                } else if error.message.contains("secondary rate limit") {
+                    warn!("triggered GitHub rate limit");
+                    Err(RetryRequest(StatusCode::TOO_MANY_REQUESTS).into())
                 } else {
                     Err(err_msg(error.message)
                         .context(format!(
@@ -268,7 +271,7 @@ impl<'conf> GitHubApi<'conf> {
         Ok(data.nodes)
     }
 
-    pub fn file_exists(&self, repo: &GraphRepository, path: &str) -> Fallible<bool> {
+    pub fn file_exists(&self, repo: &GraphRepository, path: &str) -> Fallible<Option<String>> {
         let url = format!(
             "https://raw.githubusercontent.com/{}/{}/{}",
             repo.name_with_owner,
@@ -286,8 +289,8 @@ impl<'conf> GitHubApi<'conf> {
                 .send()?
                 .handle_errors()?;
             match resp.status() {
-                StatusCode::OK => Ok(true),
-                StatusCode::NOT_FOUND => Ok(false),
+                StatusCode::OK => Ok(Some(resp.text()?)),
+                StatusCode::NOT_FOUND => Ok(None),
                 status => Err(
                     err_msg(format!("GitHub API returned status code {}", status))
                         .context(format!(

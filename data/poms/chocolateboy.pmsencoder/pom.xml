@@ -1,0 +1,353 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.chocolatey</groupId>
+    <artifactId>pmsencoder</artifactId>
+    <version>2.0.1-SNAPSHOT</version>
+    <name>PMSEncoder</name>
+    <description>A plugin for PS3 Media Server that adds support for scriptable web video streaming.</description>
+    <properties>
+        <groovy-version>2.1.9</groovy-version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <junit-version>4.11</junit-version>
+        <pms-version>1.90.0</pms-version>
+    </properties>
+
+    <prerequisites>
+        <maven>2.2.1</maven>
+    </prerequisites>
+
+    <dependencies>
+        <!--
+            FIXME use groovy-all rather than the separate libs to work around an issue with PMS' use of an old/incompatible version of asm
+            http://groovy.329449.n5.nabble.com/Groovy-Spring-and-ASM-td5447603.html
+        -->
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-all</artifactId>
+            <version>${groovy-version}</version>
+        </dependency>
+        <!--
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy</artifactId>
+            <version>${groovy-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-json</artifactId>
+            <version>${groovy-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-xml</artifactId>
+            <version>${groovy-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-test</artifactId>
+            <version>${groovy-version}</version>
+        </dependency>
+        -->
+
+        <dependency>
+            <groupId>org.codehaus.groovy.modules.http-builder</groupId>
+            <artifactId>http-builder</artifactId>
+            <version>0.6</version>
+            <scope>compile</scope>
+            <!--
+                XXX might not need this.
+                We're using groovy 2.x. Prevent http-builder dragging in an
+                old (currently 1.8.x) version, which has broken closures in
+                the past
+            -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.codehaus.groovy</groupId>
+                    <artifactId>groovy</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.17</version>
+        </dependency>
+
+        <dependency>
+            <groupId>mockit</groupId>
+            <artifactId>jmockit</artifactId>
+            <version>0.999.4</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit-version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.code</groupId>
+            <artifactId>ps3mediaserver</artifactId>
+            <version>${pms-version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.7.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.3.1</version>
+            <!--  XXX cargo-culted from the PMS POM, not sure if it's needed here -->
+            <exclusions>
+                <!--  no need for commons-logging, as jcl-over-slf4j provides the impl -->
+                <exclusion>
+                    <artifactId>commons-logging</artifactId>
+                    <groupId>commons-logging</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.tony19</groupId>
+            <artifactId>named-regexp</artifactId>
+            <version>0.2.3</version>
+        </dependency>
+    </dependencies>
+
+    <repositories>
+        <repository>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+            <id>java.net</id>
+            <name>Java.net Repository</name>
+            <url>http://download.java.net/maven/2/</url>
+        </repository>
+
+        <repository>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+            <id>offical</id>
+            <name>Maven Official Repository</name>
+            <url>http://repo1.maven.org/maven2</url>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>ossrh</id>
+            <name>Sonatype OSS Repository</name>
+            <url>http://oss.sonatype.org/content/groups/public</url>
+        </pluginRepository>
+    </pluginRepositories>
+
+    <build>
+        <sourceDirectory>${project.basedir}/src/main/groovy</sourceDirectory>
+        <testSourceDirectory>${project.basedir}/src/test/groovy</testSourceDirectory>
+        <defaultGoal>surefire-report:report</defaultGoal>
+
+        <plugins>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.gmaven</groupId>
+                <artifactId>gmaven-plugin</artifactId>
+                <version>1.5</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>testCompile</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>generate-script-manifest</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <source>
+                                <!-- http://veithen.blogspot.com/2010/03/improve-your-maven-builds-with-groovy.html -->
+                                <!-- This generates a manifest of scripts for use by Matcher.loadDefaultScripts -->
+                                <![CDATA[
+                                    def resources = 'src/main/resources'
+                                    def manifest = new File(project.basedir, "$resources/lib.txt")
+
+                                    manifest.parentFile.mkdirs()
+
+                                    if (manifest.exists()) {
+                                        manifest.delete()
+                                    }
+
+                                    def files = []
+                                    new File(project.basedir, "$resources/scripts").eachFileRecurse(groovy.io.FileType.FILES) {
+                                        if (it.file && it.name.endsWith('.groovy')) {
+                                            files << "scripts/${it.name}\\n"
+                                        }
+                                    }
+
+                                    files.sort().each { manifest.append(it) }
+                                ]]>
+                            </source>
+                        </configuration>
+                    </execution>
+                </executions>
+
+                <dependencies>
+                    <dependency>
+                        <groupId>org.codehaus.groovy</groupId>
+                        <artifactId>groovy-all</artifactId>
+                        <version>${groovy-version}</version>
+                    </dependency>
+
+                    <dependency>
+                        <groupId>junit</groupId>
+                        <artifactId>junit</artifactId>
+                        <version>${junit-version}</version>
+                    </dependency>
+
+                    <dependency>
+                        <groupId>org.codehaus.gmaven.runtime</groupId>
+                        <artifactId>gmaven-runtime-2.0</artifactId>
+                        <version>1.5</version>
+                    </dependency>
+                </dependencies>
+
+                <configuration>
+                    <providerSelection>2.0</providerSelection>
+                    <verbose>true</verbose>
+                    <debug>true</debug>
+                    <stacktrace>true</stacktrace>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.4</version>
+                <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>com.savage7.maven.plugins</groupId>
+                <artifactId>maven-external-dependency-plugin</artifactId>
+                <version>0.5</version>
+                <executions>
+                    <execution>
+                        <id>clean-external-dependencies</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean-external</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>resolve-install-external-dependencies</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>resolve-external</goal>
+                            <goal>install-external</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <inherited>false</inherited>
+                <configuration>
+                    <stagingDirectory>${project.build.directory}/dependencies/</stagingDirectory>
+                    <createChecksum>true</createChecksum>
+                    <skipChecksumVerification>false</skipChecksumVerification>
+                    <force>false</force>
+                    <artifactItems>
+                        <artifactItem>
+                            <groupId>com.google.code</groupId>
+                            <artifactId>ps3mediaserver</artifactId>
+                            <version>${pms-version}</version>
+                            <packaging>jar</packaging>
+                            <downloadUrl>http://downloads.sourceforge.net/project/ps3mediaserver/pms-${pms-version}-generic-linux-unix.tar.gz</downloadUrl>
+                            <install>true</install>
+                            <force>false</force>
+                            <checksum>7df9673a35439f5e4f5f469e9e9ce6cb59b652b3</checksum>
+                            <extractFile>pms-${pms-version}/pms.jar</extractFile>
+                            <extractFileChecksum>42241138e6a793e6ee93a0693ea7af9c15e96837</extractFileChecksum>
+                        </artifactItem>
+                    </artifactItems>
+                </configuration>
+            </plugin>
+
+            <!--
+                Plugin to create and add git commit information to src/main/resources/git.properties.
+                See: https://github.com/ktoso/maven-git-commit-id-plugin
+            -->
+            <plugin>
+                <groupId>pl.project13.maven</groupId>
+                <artifactId>git-commit-id-plugin</artifactId>
+                <version>2.1.9</version>
+                <executions>
+                    <execution>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>revision</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <dateFormat>yyyy-MM-dd</dateFormat>
+                    <verbose>false</verbose>
+                    <generateGitPropertiesFile>true</generateGitPropertiesFile>
+                    <generateGitPropertiesFilename>src/main/resources/git.properties</generateGitPropertiesFilename>
+                    <!--
+                         don't break a build that has too few commits checked out (e.g. Travis) to
+                         generate a git describe ID. see:
+
+                             https://github.com/ktoso/maven-git-commit-id-plugin/issues/63
+                             https://github.com/ktoso/maven-git-commit-id-plugin/issues/96
+                    -->
+                    <failOnUnableToExtractRepoInfo>false</failOnUnableToExtractRepoInfo>
+                    <gitDescribe>
+                        <!--
+                             disable this for now since we're not using it and it breaks Travis
+                             builds (XXX and the workaround above doesn't work)
+
+                             FIXME this should be in an explicitly-selected profile e.g.
+                             mvn -P disable_git_describe_id
+                         -->
+                        <skip>true</skip>
+                    </gitDescribe>
+                </configuration>
+            </plugin>
+
+        </plugins>
+    </build>
+
+    <reporting>
+        <plugins>
+            <plugin>
+                <artifactId>maven-surefire-report-plugin</artifactId>
+                <version>2.15</version>
+                <configuration>
+                    <showSuccess>false</showSuccess>
+                </configuration>
+            </plugin>
+        </plugins>
+    </reporting>
+</project>

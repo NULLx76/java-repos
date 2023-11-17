@@ -35,7 +35,7 @@ struct State {
     last_id: HashMap<String, usize>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Repo {
     pub id: String,
     pub name: String,
@@ -111,6 +111,19 @@ impl Data {
         };
 
         csv.serialize(repo)?;
+
+        Ok(())
+    }
+
+    pub fn store_pom(&self, name_with_owner: String, data: String) -> Fallible<()> {
+        let file = self.base_dir.join("poms").join(name_with_owner.replace('/', ".")).join("pom.xml");
+        fs::create_dir_all(
+            file.parent()
+                .ok_or_else(|| err_msg("could not create pom dir"))?,
+        )?;
+        let mut b = File::create(file)?;
+
+        b.write_all(data.as_bytes())?;
 
         Ok(())
     }

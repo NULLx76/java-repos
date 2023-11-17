@@ -46,7 +46,7 @@ if [[ -z "${HIGHFIVE_GH_TOKEN}" ]]; then
 fi
 
 git checkout "${GIT_BRANCH}"
-GITHUB_TOKEN="${HIGHFIVE_GH_TOKEN}" cargo run --release -- data
+GITHUB_TOKEN="${HIGHFIVE_GH_TOKEN}" cargo run --release -- data || true
 
 
 if git diff --quiet data/; then

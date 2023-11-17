@@ -18,10 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-extern crate dotenv;
 extern crate crossbeam_utils;
 extern crate csv;
 extern crate ctrlc;
+extern crate dotenv;
 extern crate env_logger;
 #[macro_use]
 extern crate failure;

@@ -39,7 +39,7 @@ struct State {
 pub struct Repo {
     pub id: String,
     pub name: String,
-    pub has_pom: bool
+    pub has_pom: bool,
 }
 
 pub struct Data {

@@ -55,14 +55,11 @@ fn load_thread(api: &GitHubApi, data: &Data, to_load: Vec<String>) -> Fallible<(
                 Repo {
                     id: repo.id,
                     name: repo.name_with_owner.clone(),
-                    has_pom
+                    has_pom,
                 },
             )?;
 
-            info!(
-                "found {}: Pom.xml: {has_pom:?}",
-                repo.name_with_owner,
-            );
+            info!("found {}: Pom.xml: {has_pom:?}", repo.name_with_owner,);
         }
     }
 

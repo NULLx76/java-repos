@@ -1,0 +1,256 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>net.frontlinesms.core</groupId>
+	<artifactId>FrontlineSMS-distribution</artifactId>
+	<name>FrontlineSMS Desktop build</name>
+	<!--
+		TODO it is the version of THIS project which should be changing for
+		releases rather than the FrontlineSMS core project
+	-->
+	<version>1.7-Beta2-SNAPSHOT</version>
+	<description>This project allows packaging of separate modules of FrontlineSMS for distribution as a desktop application.</description>
+
+	<licenses>
+		<license>
+			<name>GNU Lesser General Public License v3 or later</name>
+			<url>http://www.gnu.org/copyleft/lesser.html</url>
+			<distribution>manual</distribution>
+			<comments>
+				FrontlineSMS - http://www.frontlinesms.com
+				Copyright 2007, 2008 kiwanja
+				
+				This file is part of FrontlineSMS.
+				
+				FrontlineSMS is free software: you can redistribute it and/or modify it
+				under the terms of the GNU Lesser General Public License as published by
+				the Free Software Foundation, either version 3 of the License, or (at
+				your option) any later version.
+				
+				FrontlineSMS is distributed in the hope that it will be useful, but
+				WITHOUT ANY WARRANTY; without even the implied warranty of
+				MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
+				General Public License for more details.
+				
+				You should have received a copy of the GNU Lesser General Public License
+				along with FrontlineSMS. If not, see http://www.gnu.org/licenses/.
+			</comments>
+		</license>
+	</licenses>
+	
+	<scm>
+	
+		<connection>scm:git://frontlinesms.git.sourceforge.net/gitroot/frontlinesms/frontline-dist.git</connection>
+		<developerConnection>scm:git:ssh://${sourceforge.username}@frontlinesms.git.sourceforge.net/gitroot/frontlinesms/frontline-dist</developerConnection>
+	</scm>
+
+	<repositories>
+		<repository>
+			<id>cleone.net.repo</id>
+			<name>Temporary FrontlineSMS repository on cleone.net</name>
+			<url>http://m2repo.cleone.net</url>
+		</repository>
+		<repository>
+			<id>maven-repository.dev.java.net</id>
+			<url>http://download.java.net/maven/2</url>
+		</repository>
+	</repositories>
+	
+	<pluginRepositories>
+		<pluginRepository>
+			<id>cleone.net.repo</id>
+			<name>Temporary FrontlineSMS repository on cleone.net</name>
+			<url>http://m2repo.cleone.net</url>
+		</pluginRepository>
+	</pluginRepositories>
+
+	<distributionManagement>
+		<repository>
+			<id>cleone.net.repo</id>
+			<name>Temporary FrontlineSMS repository on cleone.net</name>
+			<url>ftp://m2repo.cleone.net</url>
+		</repository>
+	</distributionManagement>
+
+	<build>
+		<plugins>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.5</source>
+					<target>1.5</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<artifactId>maven-release-plugin</artifactId>
+				<version>2.0</version>
+			</plugin>
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<configuration>
+					<descriptors>
+						<descriptor>src/assemble/distribution.xml</descriptor>
+						
+						<!-- Windows build for JET compilation -->
+						<descriptor>src/assemble/windows-jet.xml</descriptor>
+						
+						<!-- Linux builds -->
+						<descriptor>src/assemble/linux_i686-dist.xml</descriptor>
+						<descriptor>src/assemble/linux_ia64-dist.xml</descriptor>
+						<descriptor>src/assemble/linux_x86_64-dist.xml</descriptor>
+					</descriptors>
+				</configuration>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<!-- THIS PLUGIN IS PLATFORM-DEPENDENT 
+					This will create the FrontlineSMS.app bundle regardless of the platform used.
+					This will ONLY create the Mac distributable disk image (.dmg file) when run on OS X. -->
+				<groupId>net.frontlinesms.build</groupId>
+				<artifactId>osxappbundle-maven-plugin</artifactId>
+				<version>1.0</version>
+				<configuration>
+					<bundleName>FrontlineSMS ${version}</bundleName>
+					<mainClass>net.frontlinesms.DesktopLauncher</mainClass>
+					<iconFile>${basedir}/src/assemble/osx-resources/FrontlineSMS.icns</iconFile>
+					<jvmVersion>1.5+</jvmVersion>
+					<javaApplicationStub>${basedir}/src/assemble/osx-resources/JavaApplicationStub</javaApplicationStub>
+					<workingDirectory>$JAVAROOT/lib</workingDirectory>
+					<additionalResources>
+						<fileSet>
+							<directory>${basedir}/src/assemble/resources/package</directory>
+							<includes>
+								<include>**</include>
+							</includes>
+						</fileSet>
+					</additionalResources>
+					<additionalBundledClasspathResources>
+						<fileSet>
+							<directory>${basedir}/src/assemble/osx-resources</directory>
+							<includes>
+								<include>*.jnilib</include>
+							</includes>
+						</fileSet>
+						<fileSet>
+							<directory>${basedir}/src/assemble/resources/lib</directory>
+						</fileSet>
+					</additionalBundledClasspathResources>
+				</configuration>
+				<!--<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>bundle</goal>
+						</goals>
+					</execution>
+				</executions>
+			--></plugin>
+			<plugin>
+				<!-- THIS PLUGIN IS PLATFORM-DEPENDENT
+					This will create the FrontlineSMS Windows install package, but will only work
+					if the OS is Windows and Excelsior Jet compiler and packager are installed -->
+				<groupId>net.frontlinesms.build</groupId>
+				<artifactId>jetpackager-maven-plugin</artifactId>
+				<version>0.0.2</version>
+				<configuration>
+					<splashImage>src/assemble/resources/FrontlineSMS_Splash_Logo.jpg</splashImage>
+					<programIcon>src/assemble/resources/FrontlineSMS.ico</programIcon>
+					<javaMainClass>net.frontlinesms.DesktopLauncher</javaMainClass>
+					<programExecutableName>FrontlineSMS</programExecutableName>
+					<programVendor>kiwanja.net</programVendor>
+					<packageContents>
+						<fileSet>
+							<!-- Include the help directory + all contents and subdirs -->
+							<directory>src/assemble/resources/package/</directory>
+							<includes>
+								<include>**</include>
+							</includes>
+						</fileSet>
+						<fileSet>
+							<!-- Include JNI Libraries for Windows -->
+							<directory>lib/windows</directory>
+							<includes>
+								<include>*.dll</include>
+							</includes>
+							<excludes>
+								<exclude>rxtx*.dll</exclude>
+							</excludes>
+						</fileSet>
+					</packageContents>
+					<programFilesHome>kiwanja.net/FrontlineSMS_${version}</programFilesHome>
+					<startMenuProgramFolderRoot>FrontlineSMS</startMenuProgramFolderRoot>
+					<compressionLevel>2</compressionLevel>
+					<!--<doCompile>false</doCompile>-->
+					<!--<doPack>false</doPack>-->
+				</configuration>
+				<!--<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>jetbuild</goal>
+						</goals>
+					</execution>
+				</executions>
+			--></plugin>
+		</plugins>
+
+		<extensions>
+			<extension>
+				<groupId>org.apache.maven.wagon</groupId>
+				<artifactId>wagon-ftp</artifactId>
+				<version>1.0-beta-6</version>
+			</extension>
+		</extensions>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>net.frontlinesms.core</groupId>
+			<artifactId>frontlinesms</artifactId>
+			<version>1.7-Beta1</version>
+		</dependency>
+
+		<!-- FrontlineSMS Plugins -->
+		<dependency>
+			<groupId>com.masabi.frontlinesms.plugins</groupId>
+			<artifactId>masabi-frontlinesms-plugin-formscodec</artifactId>
+			<version>0.02.22</version>
+		</dependency>
+		<dependency>
+			<groupId>net.frontlinesms.plugins</groupId>
+			<artifactId>frontlinesms-plugin-httptrigger</artifactId>
+			<version>0.01.19</version>
+		</dependency>
+		<dependency>
+			<groupId>net.frontlinesms.plugins</groupId>
+			<artifactId>frontlinesms-plugin-translation</artifactId>
+			<version>0.00.15</version>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>net.frontlinesms.plugins</groupId>
+			<artifactId>frontlinesms-plugin-reminders</artifactId>
+			<version>0.01.09</version>
+		</dependency>
+		
+		<!-- Test Dependencies -->
+		<dependency>
+			<groupId>net.frontlinesms.core</groupId>
+			<artifactId>frontlinesms-test</artifactId>
+			<version>0.01.01</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-all</artifactId>
+			<version>1.8.2</version>
+			<scope>test</scope> 
+		</dependency>
+	</dependencies>
+</project>

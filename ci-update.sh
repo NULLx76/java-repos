@@ -54,7 +54,7 @@ if git diff --quiet data/; then
 else
     # Configure the deploy key on the local system
     mkdir -p ~/.ssh
-    echo "${DEPLOY_KEY}" | base64 -d > ~/.ssh/id_rsa
+    echo "${DEPLOY_KEY}" > ~/.ssh/id_rsa
     chmod 0600 ~/.ssh/id_rsa
 
     git status

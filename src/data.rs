@@ -39,8 +39,7 @@ struct State {
 pub struct Repo {
     pub id: String,
     pub name: String,
-    pub has_cargo_toml: bool,
-    pub has_cargo_lock: bool,
+    pub has_pom: bool
 }
 
 pub struct Data {

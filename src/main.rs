@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+extern crate dotenv;
 extern crate crossbeam_utils;
 extern crate csv;
 extern crate ctrlc;
@@ -101,6 +102,8 @@ fn app() -> Fallible<()> {
 }
 
 fn main() {
+    dotenv::dotenv().ok();
+
     // Initialize logging
     // This doesn't use from_default_env() because it doesn't allow to override filter_module()
     // with the RUST_LOG environment variable

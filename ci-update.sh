@@ -26,8 +26,8 @@ IFS=$'\n\t'
 GIT_COMMIT_MESSAGE="Automatic lists update"
 GIT_EMAIL="7378925+lists-updater@users.noreply.github.com"
 GIT_NAME="lists updater"
-GIT_REPO="rust-lang/rust-repos"
-GIT_BRANCH="master"
+GIT_REPO="nullx76/java-repos"
+GIT_BRANCH="java"
 
 
 if [[ -z "${GITHUB_ACTIONS+x}" ]]; then

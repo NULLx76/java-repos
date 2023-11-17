@@ -29,7 +29,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 use utils::wrap_thread;
 
-static WANTED_LANG: &str = "Rust";
+const WANTED_LANG: &str = "Java";
 
 fn load_thread(api: &GitHubApi, data: &Data, to_load: Vec<String>) -> Fallible<()> {
     debug!(
@@ -48,22 +48,20 @@ fn load_thread(api: &GitHubApi, data: &Data, to_load: Vec<String>) -> Fallible<(
         }
 
         if found {
-            let has_cargo_toml = api.file_exists(&repo, "Cargo.toml")?;
-            let has_cargo_lock = api.file_exists(&repo, "Cargo.lock")?;
+            let has_pom = api.file_exists(&repo, "pom.xml")?;
 
             data.store_repo(
                 "github",
                 Repo {
                     id: repo.id,
                     name: repo.name_with_owner.clone(),
-                    has_cargo_toml,
-                    has_cargo_lock,
+                    has_pom
                 },
             )?;
 
             info!(
-                "found {}: Cargo.toml = {:?}, Cargo.lock = {:?}",
-                repo.name_with_owner, has_cargo_toml, has_cargo_lock,
+                "found {}: Pom.xml: {has_pom:?}",
+                repo.name_with_owner,
             );
         }
     }

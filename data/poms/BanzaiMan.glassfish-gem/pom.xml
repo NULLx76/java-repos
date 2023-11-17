@@ -1,0 +1,333 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.glassfish.scripting</groupId>
+    <artifactId>glassfish-gem</artifactId>
+    <version>1.0.3.beta.1</version>
+    <packaging>jar</packaging>
+    <name>Glassfish JRuby Gem distribution</name>
+    <description>This module creates the jruby gem distribution image</description>
+
+    <properties>
+        <glassfish.version>3.0-b74b</glassfish.version>
+        <gem.version>1.0.3.beta.1</gem.version>
+        <jruby-container.version>1.0-b17</jruby-container.version>
+        <hk2.version>1.0.0</hk2.version>
+        <grizzly-jruby.version>1.8.31-SNAPSHOT</grizzly-jruby.version>
+        <jruby.version>1.4.0</jruby.version>
+    </properties>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>com.sun.enterprise</groupId>
+                <artifactId>hk2-maven-plugin</artifactId>
+                <version>${hk2.version}</version>
+                <extensions>true</extensions>
+            </plugin>
+
+
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.5</source>
+                    <target>1.5</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <finalName>${artifactId}</finalName>
+                    <archive>
+                        <manifestEntries>
+                            <Class-Path>akuma.jar gf-jruby-connector.jar grizzly-jruby-module.jar glassfish-embedded-nucleus.jar jna.jar
+                            </Class-Path>
+                        </manifestEntries>
+
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                            <mainClass>org.glassfish.scripting.gem.GlassFishMain</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/stage/lib/java</outputDirectory>
+                            <overWriteReleases>false</overWriteReleases>
+                            <overWriteSnapshots>true</overWriteSnapshots>
+                            <excludeTransitive>true</excludeTransitive>
+                            <includeScope>runtime</includeScope>
+                            <stripVersion>true</stripVersion>
+                        </configuration>
+                   </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.jvnet.maven-antrun-extended-plugin</groupId>
+                <artifactId>maven-antrun-extended-plugin</artifactId>
+                <version>1.40</version>
+                <executions>
+                    <execution>
+                        <id>prepare</id>
+                        <phase>pre-integration-test</phase>
+                        <configuration>
+                            <tasks>
+                                <property name="gem.version" value="${gem.version}" />
+                                <ant target="setup-resources" />
+
+                            </tasks>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+
+                    <execution>
+                        <id>post</id>
+                        <phase>install</phase>
+                        <configuration>
+                            <tasks>
+                              <attachArtifact file="target/stage/pkg/glassfish-${gem.version}-universal-java.gem" />
+                            </tasks>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.jruby.plugins</groupId>
+                <artifactId>jruby-rake-plugin</artifactId>
+                <version>1.4.0</version>
+                <executions>
+                    <execution>
+                        <id>download-actionwebservice</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>rake</goal>
+                        </goals>
+                        <configuration>
+                            <script>
+                                require 'rake/gempackagetask'
+
+                                spec = Gem::Specification.new do |s|
+                                s.name = "glassfish"
+                                s.version = "${gem.version}"
+                                s.authors = ["Hirotsugu Asari", "Vivek Pandey"]
+                                s.email = ["asari.ruby@gmail.com", "vivek.pandey@sun.com"]
+                                s.homepage = "http://glassfishgem.rubyforge.org/"
+                                s.platform = "universal-java"
+                                s.summary = "GlassFish V3 gem for JRuby"
+                                s.description = "GlassFish gem is an embedded GlassFish V3 application server which
+                                would help run your Ruby on Rails application"
+                                s.files = FileList["{bin,lib,generators,config}/**/*"].to_a
+                                s.files += ['README.md', 'History.txt', 'LICENSE.txt']
+                                s.bindir = "bin"
+                                s.require_paths = ["lib"]
+                                s.executables = ["glassfish", "gfrake"]
+                                s.default_executable = "glassfish"
+                                s.test_files = FileList["{test}/**/*test.rb"].to_a
+                                s.has_rdoc = false
+                                #s.rdoc_options = "-S -N -t 'GlassFish gem ${gem.version} Documentation' -m README.txt"
+                                #s.extra_rdoc_files = ["README.md","History.txt", "LICENSE.txt"]
+                                s.rubyforge_project = "glassfishgem"
+                                s.add_dependency('rack', '&gt;= 0.4.0')
+
+                                end
+
+                                # Create the gem distribution package
+
+                                Rake::GemPackageTask.new(spec) do |pkg|
+                                pkg.need_tar = true
+                                end
+
+                                task :default =&gt; :gem do
+                                end
+                            </script>
+                            <launchDirectory>target/stage</launchDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.4.2</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**/itest/**</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+
+        </plugins>
+        <extensions>
+            <extension>
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-webdav</artifactId>
+                <version>1.0-beta-2</version>
+            </extension>
+            <extension>
+                <groupId>org.glassfish.build</groupId>
+                <artifactId>maven-glassfishbuild-extension</artifactId>
+                <version>${glassfish.version}</version>
+            </extension>
+
+        </extensions>
+    </build>
+
+    <profiles>
+
+        <profile>
+            <id>itest</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>surefire-itest</id>
+                                <phase>integration-test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <excludes>
+                                        <exclude>none</exclude>
+                                    </excludes>
+                                    <systemProperties>
+                                        <property>
+                                            <name>glassfish.home</name>
+                                            <value>${project.build.outputDirectory}/../dependency/glassfish</value>
+                                        </property>
+
+                                        <property>
+                                            <name>test.home</name>
+                                            <value>${project.build.outputDirectory}/../test-classes</value>
+                                        </property>
+                                    </systemProperties>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.sun.akuma</groupId>
+            <artifactId>akuma</artifactId>
+            <version>1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna</artifactId>
+            <version>3.2.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jruby</groupId>
+            <artifactId>jruby-complete</artifactId>
+            <version>${jruby.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.8.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.extras</groupId>
+            <artifactId>glassfish-embedded-nucleus</artifactId>
+            <version>${glassfish.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.scripting</groupId>
+            <artifactId>grizzly-jruby-module</artifactId>
+            <version>${jruby-container.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.scripting</groupId>
+            <artifactId>gf-jruby-connector</artifactId>
+            <version>${jruby-container.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.grizzly</groupId>
+            <artifactId>grizzly-jruby</artifactId>
+            <version>${grizzly-jruby.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jruby</groupId>
+            <artifactId>jruby-complete</artifactId>
+            <version>${jruby.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+    </dependencies>
+
+    <scm>
+        <connection>scm:git:http://github.com/BanzaiMan/glassfish-gem.git</connection>
+        <developerConnection>scm:git:git@github.com:BanzaiMan/glassfish-gem.git
+        </developerConnection>
+    </scm>
+    <repositories>
+        <repository>
+            <id>glassfish-repository</id>
+            <name>Java.net Repository for Glassfish</name>
+            <url>http://download.java.net/maven/glassfish</url>
+            <snapshots>
+                <updatePolicy>never</updatePolicy>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>java.net-m2-repository</id>
+            <url>http://download.java.net/maven/2/</url>
+        </repository>
+
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>glassfish-repository</id>
+            <name>Java.net Repository for Maven 2</name>
+            <url>http://download.java.net/maven/glassfish</url>
+        </pluginRepository>
+        <pluginRepository>
+            <id>maven2.java.net</id>
+            <name>Java.net Repository for Maven 2</name>
+            <url>http://download.java.net/maven/2</url>
+        </pluginRepository>
+    </pluginRepositories>
+
+    <distributionManagement>
+        <repository>
+            <uniqueVersion>false</uniqueVersion>
+            <id>java.net-m2-repository</id>
+            <url>java-net:/maven2-repository/trunk/repository/</url>
+        </repository>
+
+    </distributionManagement>
+
+</project>

@@ -1,0 +1,398 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	Copyright 2014 Bernd Vogt and others.
+
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.sourcepit</groupId>
+		<artifactId>srcpit-parent</artifactId>
+		<version>23</version>
+	</parent>
+	<groupId>org.sourcepit.osgifier</groupId>
+	<artifactId>osgifier</artifactId>
+	<version>0.26.0-SNAPSHOT</version>
+	<packaging>pom</packaging>
+
+	<name>OSGifier</name>
+
+	<description>The objectives of the *OSGifier* project are to
+
+*   help developers to create proper OSGi bundles.
+*   provide automatable solutions to integrate non-OSGi JARs.
+
+Checkout the following chapters for more detailed information.
+
+\[TOC,2\]
+
+# Create Proper OSGi Bundles
+
+From my own experience I've noticed that it is very cumbersome and error-prone to maintain the metadata for OSGi bundles by hand. And I also realized that everything that is needed for that is already present in my projects.
+
+*   Bundle identity: Maven project information (GAV, name, description)
+*   Bundle content: Java classes
+*   Bundle requirements: Maven dependencies (incl. versioning)
+*   Bundle environment: Compiler settings and required Java classes
+
+But to create **proper** OSGi metadata, you also
+
+*   need solid knowlege about OSGi.
+*   must be aware of many best practises and recommendations (scattered all over the Internet).
+
+This is where the *OSGifier* comes into place. The *OSGifier* gathers the information of your project, applies many best pracises, recommendations and customizations (as wished) and finally generates a `MANIFES.MF` file that contains all the metadata required by OSGi.
+
+This is done by the following goals of the  [OSGifier Maven Plugin](#osgifier-maven-plugin).
+
+*   [osgifier:generate-manifest](#osgifiergenerate-manifest)
+*   [osgifier:inject-manifest](#osgifierinject-manifest)
+
+# Deal with dependencies to non-OSGi JARs
+
+In OSGi it is a significant problem to re-use functionality from third-party libraries that are not OSGi-enabled. Existing solutions (known by me) either contradict the idea of modularization, or are only satisfactorily applicable to simple libraries without any dependencies.
+
+To respect both, idea of modularization and transitive dependencies, the *OSGifier* provides tooling to
+*   fetch a set of libraries and their dependencies from Maven repositories and to equip each with its own `MANIFES.MF`.
+*   deploy those *osgified* libaries to a Maven repository (using customized Maven coordinates). So you can use those as normal Maven dependencies in your project.
+
+This is done by the following goals of the  [OSGifier Maven Plugin](#osgifier-maven-plugin).
+
+*   [osgifier:osgify-artifacts](#osgifierosgify-artifacts)
+*   [osgifier:deploy-osgified-artifacts](#osgifierdeploy-osgified-artifacts)
+*   [osgifier:install-osgified-artifacts](#osgifierinstall-osgified-artifacts)
+
+# Configuration Options
+
+## Adopt Bundle Symbolic Name and Version
+
+*   `forceContextQualifier`
+    
+    String that will be appended as qualifier to the OSGi version that is determined for a osgified project or library. Usually this is sth. like a date or timestamp.
+    
+*   `saveMavenQualifier`
+    
+    When set to `true` Maven version qualifiers will always be appended to at the end of the determined OSGi version, default `true`.
+    
+*   `symbolicNameMappings`
+    
+    Comma separated list with mappings of Maven coordinate to a specific *Symbolic Bundle Names*, e.g "xalan:xalan:jar=org.apache.xalan, stax:stax-api:jar=javax.xml.stream"
+
+## Determine internal Packages
+
+*   `internalPackages`
+    
+    Comma separated list with patterns to determine which Java packages should be treated as internal and not as public API, e.g. `**.internal.**, **.impl.**, !**.api.**`.
+    
+*   `treatInheritedPackagesAsInternal`
+    
+    When set to `true`, packages from classes your classes inherits from are treated as internal, default is `false`.
+
+## Adopt version ranges for package imports
+
+*   `eraseMicro`
+    
+    When set to `true`, the *micro* version numbers are considered when determining version ranges to requirements, default is `false`.
+    
+*   `publicImportPolicy`
+    
+    Policy that takes place when determining version ranges for imports of public packages, default is `compatible`.
+    
+*   `internalImportPolicy`
+    
+    Policy that takes place when determining version ranges for imports of internal packages, default is `equivalent`.
+    
+*   `selfImportPolicy`
+    
+    Policy that takes place when determining version ranges for imports of packages from the own bundle, default is `equivalent`.
+    
+*   `recommendedImportPolicies`
+    
+    Comma separated list with mappings of bundle symbolic name patterns to the import policies that should take place when importing packages from this bundle, e.g. `org.sourcepit.dev.**=strict|perfect` (public packages will be imported *strict*, internal *perfect*).
+
+## Require-Bundle instead of Import-Package
+    
+*   `requireBundle`
+    
+    Comma separated list with patterns to determine which bundles should be referenced via `Require-Bundle`instead of `Import-Package` header.
+
+##  Bundle-RequiredExecutionEnvironment
+
+*   `executionEnvironmentMappings`
+    
+    Comma separated list with mappings to set one or more *Execution Environments* for a bundle, e.g. `org.sourcepit.core.**=JavaSE/compact1-1.8|JavaSE-1.7,org.sourcepit.runtime.**=JavaSE/compact1-1.8`.
+    
+*   `excludedExecutionEnvironments`
+    
+    Comma separated list with *Execution Environments* won't be considered when determining the required execution environments for a bundle.
+
+## Force OSGifier to override MANIFEST.MF of native Bundles
+
+*   `overrideNativeBundles`
+    
+    `true`, `false` or a list with patterns that will be used to determine if `MANIFEST.MF` files of existing bundles should be overridden, default is `false`.</description>
+
+	<scm>
+		<connection>scm:git:git@github.com:sourcepit/osgifier.git</connection>
+		<url>https://github.com/sourcepit/osgifier</url>
+		<tag>HEAD</tag>
+	</scm>
+
+	<issueManagement>
+		<system>GitHub</system>
+		<url>${project.scm.url}/issues</url>
+	</issueManagement>
+
+	<properties>
+		<tycho.version>0.26.0</tycho.version>
+		<common-maven.version>0.24.0</common-maven.version>
+	</properties>
+
+	<modules>
+		<module>osgifier-maven-plugin</module>
+		<module>org.sourcepit.osgifier.maven</module>
+		<module>org.sourcepit.osgifier.core</module>
+		<!-- <module>osgifier-tools</module> -->
+		<module>osgifier-maven-core</module>
+	</modules>
+
+	<repositories>
+		<repository>
+			<id>srcpit-public</id>
+			<url>http://nexus.sourcepit.org/content/groups/public/</url>
+		</repository>
+	</repositories>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>log4j</groupId>
+				<artifactId>log4j</artifactId>
+				<version>1.2.17</version>
+			</dependency>
+			<dependency>
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>tycho-p2-facade</artifactId>
+				<version>${tycho.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>sisu-equinox-launching</artifactId>
+				<version>${tycho.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.sourcepit.common</groupId>
+				<artifactId>org.sourcepit.common.utils</artifactId>
+				<version>0.17.0</version>
+			</dependency>
+			<dependency>
+				<groupId>org.sourcepit.common</groupId>
+				<artifactId>org.sourcepit.common.constraints</artifactId>
+				<version>0.17.0</version>
+			</dependency>
+			<dependency>
+				<groupId>org.sourcepit.common</groupId>
+				<artifactId>org.sourcepit.common.manifest</artifactId>
+				<version>0.20.0</version>
+			</dependency>
+			<dependency>
+				<groupId>org.sourcepit.common</groupId>
+				<artifactId>org.sourcepit.common.modeling</artifactId>
+				<version>0.15.0</version>
+			</dependency>
+			<dependency>
+				<groupId>org.sourcepit.common</groupId>
+				<artifactId>org.sourcepit.common.modeling</artifactId>
+				<version>0.15.0</version>
+				<type>test-jar</type>
+			</dependency>
+			<dependency>
+				<groupId>org.sourcepit.common</groupId>
+				<artifactId>common-testing</artifactId>
+				<version>0.15.0</version>
+				<scope>test</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.sourcepit.common.maven</groupId>
+				<artifactId>org.sourcepit.common.maven.model</artifactId>
+				<version>${common-maven.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.sourcepit.common.maven</groupId>
+				<artifactId>org.sourcepit.common.maven.artifact</artifactId>
+				<version>${common-maven.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.sourcepit.common.maven</groupId>
+				<artifactId>common-maven-core</artifactId>
+				<version>${common-maven.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.sourcepit</groupId>
+				<artifactId>maven-dependency-model</artifactId>
+				<version>0.13.0</version>
+			</dependency>
+			<dependency>
+				<groupId>org.sourcepit.osgifier</groupId>
+				<artifactId>org.sourcepit.osgifier.core</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.sourcepit.osgifier</groupId>
+				<artifactId>org.sourcepit.osgifier.maven</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.sourcepit.osgifier</groupId>
+				<artifactId>org.sourcepit.osgifier.core</artifactId>
+				<version>${project.version}</version>
+				<type>test-jar</type>
+			</dependency>
+			<dependency>
+				<groupId>org.sourcepit.osgifier</groupId>
+				<artifactId>osgifier-maven-core</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.sourcepit.osgifier</groupId>
+				<artifactId>osgifier-maven-plugin</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.google.code.gson</groupId>
+				<artifactId>gson</artifactId>
+				<version>2.3.1</version>
+			</dependency>
+			<dependency>
+				<groupId>net.sf.jtidy</groupId>
+				<artifactId>jtidy</artifactId>
+				<version>r938</version>
+			</dependency>
+			<dependency>
+				<groupId>com.google.code.javaparser</groupId>
+				<artifactId>javaparser</artifactId>
+				<version>1.0.11</version>
+			</dependency>
+			<dependency>
+				<groupId>srcpit.org.apache.bcel</groupId>
+				<artifactId>srcpit-bcel</artifactId>
+				<version>6.0-alpha-1</version>
+			</dependency>
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>slf4j-simple</artifactId>
+				<version>${slf4j.version}</version>
+				<scope>provided</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.sourcepit</groupId>
+					<artifactId>readme-maven-plugin</artifactId>
+					<version>0.1.0-SNAPSHOT</version>
+					<configuration>
+						<projectContentFilter>!*:osgifier</projectContentFilter>
+						<goalFilter>*:generate-manifest,*:inject-manifest,*:osgify-artifacts,*:install-osgified-artifacts,*:deploy-osgified-artifacts</goalFilter>
+						<skipSubProjectsHeader>true</skipSubProjectsHeader>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.sourcepit.osgifier</groupId>
+					<artifactId>osgifier-maven-plugin</artifactId>
+					<version>0.24.1</version>
+					<configuration>
+						<pde>true</pde>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>
+											org.apache.maven.plugins
+										</groupId>
+										<artifactId>
+											maven-dependency-plugin
+										</artifactId>
+										<versionRange>
+											[2.3,)
+										</versionRange>
+										<goals>
+											<goal>
+												unpack-dependencies
+											</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore />
+									</action>
+								</pluginExecution>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>org.sourcepit.osgifier</groupId>
+										<artifactId>osgifier-maven-plugin</artifactId>
+										<versionRange>[0,)</versionRange>
+										<goals>
+											<goal>generate-manifest</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore />
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+	<profiles>
+		<profile>
+			<id>test-jar</id>
+			<activation>
+				<file>
+					<exists>${basedir}/src/test/</exists>
+				</file>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-jar-plugin</artifactId>
+						<executions>
+							<execution>
+								<goals>
+									<goal>test-jar</goal>
+								</goals>
+								<configuration>
+									<defaultManifestFile>${project.build.testOutputDirectory}/META-INF/MANIFEST.MF</defaultManifestFile>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
+</project>

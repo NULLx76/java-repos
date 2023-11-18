@@ -1,0 +1,1082 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>org.jasig.ssp</groupId>
+	<artifactId>ssp</artifactId>
+	<packaging>war</packaging>
+	<name>SSP</name>
+	<version>2.9-SNAPSHOT</version>
+
+	<parent>
+		<groupId>org.jasig.parent</groupId>
+		<artifactId>jasig-parent</artifactId>
+		<version>39</version>
+	</parent>
+
+	<properties>
+		<apache.httpcomponents.version>4.1.3</apache.httpcomponents.version>
+		<spring.version>4.3.18.RELEASE</spring.version>
+		<spring.security.version>3.1.3.RELEASE</spring.security.version>
+		<resource-server.version>1.0.23</resource-server.version>
+		<jasperreports.version>6.2.0</jasperreports.version>
+		<groovy.version>1.8.6</groovy.version>
+
+		<targetJdk>1.8</targetJdk>
+		<project.build.sourceVersion>1.8</project.build.sourceVersion>
+		<project.build.targetVersion>1.8</project.build.targetVersion>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+		<gmaven.runtime>1.8</gmaven.runtime>
+		<sencha.skip>false</sencha.skip>
+
+		<maven.build.timestamp.format>yyyyMMdd-HHmmZ</maven.build.timestamp.format>
+ 		<integrationTest.skip>true</integrationTest.skip>
+  		<unitTest.skip>false</unitTest.skip>
+  		<additionalReleaseArguments>-DskipTests=true</additionalReleaseArguments>
+
+	</properties>
+
+	<scm>
+		<connection>scm:git:git://github.com/Jasig/SSP.git</connection>
+		<developerConnection>scm:git:git@github.com:Jasig/SSP.git</developerConnection>
+		<url>https://github.com/Jasig/SSP</url>
+		<tag>rel-2-8-patches</tag>
+	</scm>
+
+	<repositories>
+		<repository>
+			<id>spring-milestone</id>
+			<name>Spring Maven MILESTONE Repository</name>
+			<url>http://maven.springframework.org/milestone</url>
+		</repository>
+		<repository>
+			<id>spring-release</id>
+			<name>Spring Maven RELEASE Repository</name>
+			<url>http://maven.springframework.org/release</url>
+		</repository>
+	</repositories>
+
+	<profiles>
+		<profile>
+			<id>STANDALONE</id>
+			<dependencies>
+				<dependency>
+					<groupId>javax.portlet</groupId>
+					<artifactId>portlet-api</artifactId>
+					<version>2.0</version>
+				</dependency>
+			</dependencies>
+		</profile>
+
+		<profile>
+			<id>WINS</id>
+			<activation>
+				<os>
+					<family>Windows</family>
+				</os>
+			</activation>
+			<properties>
+				<sencha.cmd>sencha.bat</sencha.cmd>
+				<sencha.working.dir>src\main\webapp</sencha.working.dir>
+				<sencha.project.file>"${basedir}\src\main\webapp\ssp.jsb3"</sencha.project.file>
+				<sencha.output.dir>"${basedir}\src\main\webapp\"</sencha.output.dir>
+			</properties>
+		</profile>
+
+		<profile>
+			<id>LINUX</id>
+			<activation>
+				<os>
+					<family>unix</family>
+				</os>
+			</activation>
+			<properties>
+				<sencha.cmd>sencha</sencha.cmd>
+				<sencha.working.dir>${basedir}/src/main/webapp</sencha.working.dir>
+				<sencha.project.file>${basedir}/src/main/webapp/ssp.jsb3</sencha.project.file>
+				<sencha.output.dir>${basedir}/src/main/webapp/</sencha.output.dir>
+			</properties>
+		</profile>
+
+		<profile>
+			<id>SKIP_SENCHA</id>
+			<properties>
+				<sencha.skip>true</sencha.skip>
+			</properties>
+		</profile>
+
+        <profile>
+            <id>API_INTEGRATION_TEST</id>
+            <properties>
+                <integrationTest.skip>false</integrationTest.skip>
+                <unitTest.skip>true</unitTest.skip>
+            </properties>
+
+        </profile>
+
+	</profiles>
+
+	<dependencies>
+
+        <dependency>
+            <groupId>org.springframework.security.oauth</groupId>
+            <artifactId>spring-security-oauth</artifactId>
+            <version>2.5.0.RELEASE</version>
+            <exclusions>
+                <exclusion>
+                    <!--
+                    Prevents Maven from deploying v4.0.3-RELEASE when we need 3.2.0-RELEASE.
+                    The former results in a stack trace rooted in the following when trying to initialize
+                    bean proxies:
+                    'Caused by: java.lan.ClassNotFoundException: org.springframework.objenesis.ObjenesisException'
+                    -->
+                    <groupId>org.springframework</groupId>
+                    <artifactId>spring-aop</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+		<dependency>
+			<groupId>org.springframework.security.oauth</groupId>
+			<artifactId>spring-security-oauth2</artifactId>
+			<version>2.5.0.RELEASE</version>
+			<!--<exclusions>-->
+				<!--&lt;!&ndash; 1.0.5 RELEASE needed Jackson 1.9.2 (asl) but historically-->
+				<!--SSP has managed the Jackson dependency explicitly (1.9.4 at this-->
+				<!--writing). Normally Maven would manage the problem away, but-->
+				<!--there's the very clear possibility of accidentally deploying two-->
+				<!--Jackson jars if one lib dependes on the -asl artifact but-->
+				<!--another on the -lgpl artifact. FWIW, exactly this sort of-->
+				<!--accident has occurred in SSP in the past. At one point we-->
+				<!--we deploying:-->
+					<!--jackson-core-asl-1.9.4.jar-->
+					<!--jackson-core-lgpl-1.9.4.jar-->
+					<!--jackson-mapper-asl-1.9.2.jar-->
+					<!--jackson-mapper-lgpl-1.9.4.jar-->
+				<!--&ndash;&gt;-->
+				<!--<exclusion>-->
+					<!--<groupId>org.codehaus.jackson</groupId>-->
+					<!--<artifactId>jackson-mapper-asl</artifactId>-->
+				<!--</exclusion>-->
+			<!--</exclusions>-->
+		</dependency>
+
+		<!--  Open CSV for exportable caseload -->
+		<dependency>
+			<groupId>net.sf.opencsv</groupId>
+			<artifactId>opencsv</artifactId>
+			<version>2.0</version>
+		</dependency>
+		
+		<dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-aop</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+        
+		
+		<!-- Jasper -->
+		<dependency>
+			<groupId>net.sf.jasperreports</groupId>
+			<artifactId>jasperreports</artifactId>
+			<version>${jasperreports.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>commons-logging</groupId>
+					<artifactId>commons-logging</artifactId>
+				</exclusion>
+				<!--&lt;!&ndash; 1.0.5 RELEASE needed Jackson 1.9.4 (asl) but historically-->
+				<!--SSP has managed the Jackson dependency explicitly (1.9.4 at this-->
+				<!--writing). Normally Maven would manage the problem away, but-->
+				<!--there's the very clear possibility of accidentally deploying two-->
+				<!--Jackson jars if one lib dependes on the -asl artifact but-->
+				<!--another on the -lgpl artifact. FWIW, exactly this sort of-->
+				<!--accident has occurred in SSP in the past. At one point we-->
+				<!--we deploying:-->
+					<!--jackson-core-asl-1.9.4.jar-->
+					<!--jackson-core-lgpl-1.9.4.jar-->
+					<!--jackson-mapper-asl-1.9.2.jar-->
+					<!--jackson-mapper-lgpl-1.9.4.jar-->
+				<!--&ndash;&gt;-->
+				<!--<exclusion>-->
+					<!--<groupId>org.codehaus.jackson</groupId>-->
+					<!--<artifactId>jackson-core-asl</artifactId>-->
+				<!--</exclusion>-->
+			</exclusions>
+		</dependency>
+
+		<dependency>
+			<groupId>net.sf.jasperreports</groupId>
+			<artifactId>jasperreports-fonts</artifactId>
+			<version>6.0.0</version>
+		</dependency>
+
+		<!-- File Upload -->
+		<dependency>
+			<groupId>commons-fileupload</groupId>
+			<artifactId>commons-fileupload</artifactId>
+			<version>1.3.3</version>
+		</dependency>
+
+		<!-- Collections shortcuts -->
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>10.0</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.codehaus.groovy</groupId>
+			<artifactId>groovy-all</artifactId>
+			<version>2.4.4</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-collections</groupId>
+			<artifactId>commons-collections</artifactId>
+			<version>3.2.2</version>
+		</dependency>
+
+		<!-- Mail -->
+		<dependency>
+			<groupId>javax.mail</groupId>
+			<artifactId>mail</artifactId>
+			<version>1.4.4</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-validator</groupId>
+			<artifactId>commons-validator</artifactId>
+			<version>1.3.1</version>
+		</dependency>
+		<dependency>
+			<groupId>oro</groupId>
+			<artifactId>oro</artifactId>
+			<version>2.0.8</version>
+		</dependency>
+		<!-- Templates for Mail -->
+		<dependency>
+			<groupId>org.apache.velocity</groupId>
+			<artifactId>velocity</artifactId>
+			<version>1.7</version>
+		</dependency>
+		<!-- Mail server for testing purposes -->
+		<dependency>
+			<groupId>dumbster</groupId>
+			<artifactId>dumbster</artifactId>
+			<version>1.6</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Scheduling -->
+		<dependency>
+			<groupId>org.quartz-scheduler</groupId>
+			<artifactId>quartz</artifactId>
+			<version>2.3.2</version>
+		</dependency>
+
+		<!-- Web -->
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>3.1.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>javax.servlet.jsp</groupId>
+			<artifactId>javax.servlet.jsp-api</artifactId>
+			<version>2.3.1</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>jstl</artifactId>
+			<version>1.2</version>
+		</dependency>
+		<dependency>
+			<groupId>javax.el</groupId>
+			<artifactId>el-api</artifactId>
+			<version>2.2</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.tuckey</groupId>
+			<artifactId>urlrewritefilter</artifactId>
+			<version>3.1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>taglibs</groupId>
+			<artifactId>standard</artifactId>
+			<version>1.1.2</version>
+		</dependency>
+		
+		<!-- Basic Authentication Client  -->
+		<dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+               <artifactId>httpclient</artifactId>
+            <version>4.5.6</version>
+        </dependency>
+
+		<!-- Portlets -->
+		<dependency>
+			<groupId>javax.portlet</groupId>
+			<artifactId>portlet-api</artifactId>
+			<version>2.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.portals.pluto</groupId>
+			<artifactId>pluto-taglib</artifactId>
+			<version>2.1.0-M2</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.jasig.portlet.utils</groupId>
+			<artifactId>portal-rest-api</artifactId>
+			<version>1.0.0-M3</version>
+			<exclusions>
+				<exclusion>
+					<artifactId>slf4j-log4j12</artifactId>
+					<groupId>org.slf4j</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>log4j</artifactId>
+					<groupId>log4j</groupId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.jasig.resourceserver</groupId>
+			<artifactId>resource-server-content</artifactId>
+			<version>${resource-server.version}</version>
+			<type>war</type>
+		</dependency>
+		<dependency>
+			<groupId>org.jasig.resourceserver</groupId>
+			<artifactId>resource-server-utils</artifactId>
+			<version>${resource-server.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.springframework</groupId>
+					<artifactId>spring-core</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.jasig.ssp.platform</groupId>
+			<artifactId>platform-java-api</artifactId>
+			<version>0.2.0</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Spring dependencies -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-core</artifactId>
+			<version>${spring.version}</version>
+		</dependency>		
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-beans</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context</artifactId>
+			<version>${spring.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>commons-logging</groupId>
+					<artifactId>commons-logging</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context-support</artifactId>
+			<version>${spring.version}</version>
+		</dependency>		
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-test</artifactId>
+			<version>${spring.version}</version>
+			<!-- intentionally *not* test scope... we use mock HTTP req/resp
+				objs from this library when invoking uPortal REST services
+				from background jobs -->
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-orm</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-aspects</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-web</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-webmvc</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-webmvc-portlet</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+
+		<!-- Apache Commons Configuration - allows loading config from the db -->
+		<dependency>
+			<groupId>commons-configuration</groupId>
+			<artifactId>commons-configuration</artifactId>
+			<version>1.8</version>
+		</dependency>
+
+		<!-- JSR 303 with Hibernate Validator -->
+		<dependency>
+			<groupId>javax.validation</groupId>
+			<artifactId>validation-api</artifactId>
+			<version>1.0.0.GA</version>
+		</dependency>
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-validator</artifactId>
+			<version>4.2.0.Final</version>
+		</dependency>
+
+		<!-- Logging -->
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.6.4</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>jcl-over-slf4j</artifactId>
+			<version>1.6.4</version>
+		</dependency>
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-core</artifactId>
+			<version>1.0.0</version>
+		</dependency>
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>1.0.0</version>
+		</dependency>
+
+		<!-- Auditing -->
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-envers</artifactId>
+			<version>4.1.4.Final</version>
+		</dependency>
+
+		<!-- Persistence -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>42.1.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>net.sourceforge.jtds</groupId>
+			<artifactId>jtds</artifactId>
+			<version>1.2.4</version>
+		</dependency>
+
+		<!-- liquibase versions 2.0.4 through the latest version, 2.0.5, seem to
+			have a regression bug with the SQL Server 2005 dialect. Once this is resolved 
+			by the liquibase team, we should be able to upgrade here. -->
+		<dependency>
+			<groupId>org.liquibase</groupId>
+			<artifactId>liquibase-core</artifactId>
+			<version>2.0.3</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-dbcp2</artifactId>
+			<version>2.1.1</version>
+		</dependency>
+		<dependency>
+			<groupId>javax.transaction</groupId>
+			<artifactId>transaction-api</artifactId>
+			<version>1.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-core</artifactId>
+			<version>4.1.4.Final</version>
+		</dependency>
+		<dependency>
+			<groupId>org.javassist</groupId>
+			<artifactId>javassist</artifactId>
+			<version>3.15.0-GA</version>
+		</dependency>
+		<dependency>
+			<groupId>cglib</groupId>
+			<artifactId>cglib</artifactId>
+			<version>2.2.2</version>
+		</dependency>
+
+		<!-- Spring Security -->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-ldap</artifactId>
+			<version>${spring.security.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-config</artifactId>
+			<version>${spring.security.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-web</artifactId>
+			<version>${spring.security.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-taglibs</artifactId>
+			<version>${spring.security.version}</version>
+		</dependency>
+
+		<!-- Jackson JSON Processor -->
+		<!-- See several related exclusions below -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<version>2.12.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-core</artifactId>
+			<version>2.12.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-annotations</artifactId>
+			<version>2.12.1</version>
+		</dependency>
+
+		<!-- Apache directory service used for running a local directory server 
+			for development purposes -->
+		<dependency>
+			<groupId>org.apache.directory.server</groupId>
+			<artifactId>apacheds-core</artifactId>
+			<version>1.5.5</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.directory.server</groupId>
+			<artifactId>apacheds-protocol-ldap</artifactId>
+			<version>1.5.5</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.directory.shared</groupId>
+			<artifactId>shared-ldap</artifactId>
+			<version>0.9.17</version>
+		</dependency>
+
+		<!-- Testing -->
+		<dependency>
+			<groupId>org.easymock</groupId>
+			<artifactId>easymock</artifactId>
+			<version>3.0</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.13.1</version>
+			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>org.hamcrest</groupId>
+					<artifactId>hamcrest-core</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.hamcrest</groupId>
+			<artifactId>hamcrest-all</artifactId>
+			<version>1.3</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-all</artifactId>
+			<version>1.9.5</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Allow using groovy maven tools in test scope -->
+		<dependency>
+			<groupId>org.codehaus.groovy.maven.runtime</groupId>
+			<artifactId>gmaven-runtime-api</artifactId>
+			<version>1.0</version>
+			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>org.codehaus.groovy</groupId>
+					<artifactId>groovy-all-minimal</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<!-- Spock testing -->
+		<dependency>
+			<groupId>org.spockframework</groupId>
+			<artifactId>spock-core</artifactId>
+			<version>0.6-groovy-1.8</version>
+			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>org.hamcrest</groupId>
+					<artifactId>hamcrest-core</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<dependency>
+			<groupId>org.spockframework</groupId>
+			<artifactId>spock-spring</artifactId>
+			<version>0.6-groovy-1.8</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Allow use of properties files in maven script -->
+		<dependency>
+			<groupId>org.codehaus.mojo</groupId>
+			<artifactId>properties-maven-plugin</artifactId>
+			<version>1.0-alpha-2</version>
+		</dependency>
+
+        <dependency>
+            <groupId>com.jayway.restassured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <version>1.8.1</version>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.hamcrest</groupId>
+                    <artifactId>hamcrest-library</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.hamcrest</groupId>
+                    <artifactId>hamcrest-core</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+	</dependencies>
+
+
+	<build>
+
+		<plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>buildnumber-maven-plugin</artifactId>
+				<version>1.2</version>
+                <executions>
+                     <execution>
+                       <phase>validate</phase>
+                       <goals>
+                            <goal>create</goal>
+                       </goals>
+                     </execution>
+                </executions>
+				<configuration>
+					<revisionOnScmFailure>${maven.build.timestamp}</revisionOnScmFailure>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>jasperreports-maven-plugin</artifactId>
+				<version>1.0-beta-2</version>
+				<configuration>
+					<outputDirectory>${project.build.outputDirectory}/reports</outputDirectory>
+				</configuration>
+				
+				<executions>
+					<!-- We need to wait until after the java classes have been compiled to compile the reports -->
+					<execution>
+						<phase>compile</phase>
+						<goals>
+							<goal>compile-reports</goal>
+						</goals>
+					</execution>
+				</executions>
+				
+				<dependencies>
+					<dependency>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>jasperreports-maven-plugin</artifactId>
+						<version>1.0-beta-2</version>
+						<exclusions>
+							<exclusion>
+								<groupId>jasperreports</groupId>
+								<artifactId>jasperreports</artifactId>
+							</exclusion>
+						</exclusions>
+					</dependency>
+					<dependency>
+						<groupId>net.sf.jasperreports</groupId>
+						<artifactId>jasperreports</artifactId>
+						<version>${jasperreports.version}</version>
+						<exclusions>
+							<exclusion>
+								<groupId>commons-logging</groupId>
+								<artifactId>commons-logging</artifactId>
+							</exclusion>
+						</exclusions>
+					</dependency>
+					<dependency>
+						<groupId>org.slf4j</groupId>
+						<artifactId>jcl-over-slf4j</artifactId>
+						<version>1.6.4</version>
+					</dependency>
+					<dependency>
+						<groupId>org.codehaus.groovy</groupId>
+						<artifactId>groovy-all</artifactId>
+						<version>${groovy.version}</version>
+					</dependency>
+				</dependencies>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.2.1</version>
+				<executions>
+					<execution>
+						<id>sencha</id>
+						<phase>compile</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<skip>${sencha.skip}</skip>
+					<executable>${sencha.cmd}</executable>
+					<!-- optional -->
+					<workingDirectory>${sencha.working.dir}</workingDirectory>
+					<arguments>
+						<argument>build</argument>
+						<argument>-p</argument>
+						<argument>${sencha.project.file}</argument>
+						<argument>-d</argument>
+						<argument>${sencha.output.dir}</argument>
+					</arguments>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>com.mycila.maven-license-plugin</groupId>
+				<artifactId>maven-license-plugin</artifactId>
+				<configuration>
+					<excludes combine.children="append">
+						<exclude>NOTICE.template</exclude>
+						<exclude>src/main/webapp/js/libs/**</exclude>
+						<exclude>src/main/webapp/resources/fonts/**</exclude>
+						<exclude>src/main/webapp/resources/css/font-awesome*</exclude>
+						<exclude>src/main/webapp/resources/sass/**/.sass-cache/**/*.scssc</exclude>
+						<exclude>**/.gitignore</exclude>
+						<exclude>**/.pmd</exclude>
+						<exclude>overlays/**/*</exclude>
+						<exclude>src/main/less/mygps/grid.less/grid.less</exclude>
+						<exclude>src/main/webapp/test/app-test/lib/**/*</exclude>
+						<exclude>src/main/webapp/MyGPS/scripts/lib/**/*</exclude>
+						<exclude>src/main/webapp/MyGPS/styles/lib/**/*</exclude>
+						<exclude>**/*.pdf</exclude>
+
+						<!-- Exclude binaries and metadata files generated
+							by tooling. -->
+						<exclude>doc/apiDiagrams/*.mm</exclude>
+						<exclude>doc/apiDiagrams/*.PNG</exclude>
+						<exclude>doc/apiDiagrams/*.ucls</exclude>
+						<exclude>doc/apiDiagrams/*.uxf</exclude>
+
+						<!-- See below for explanation -->
+						<exclude>**/Cakefile</exclude>
+						<exclude>**/*.json</exclude>
+
+						<!-- jsb3 most closely resembles JSON, for which
+							comments are not allowed. There is an embedded
+							license header configured into that JSON
+							content, though, which should be written into the
+							top of all-classes.js and app-all.js whenever
+							regenerating those files
+							(sencha build -p ssp.jsb3 -d .)-->
+						<exclude>**/*.jsb3</exclude>
+						<exclude>src/main/webapp/app-all.js</exclude>
+						<exclude>src/main/webapp/all-classes.js</exclude>
+						<exclude>license-header-defs.xml</exclude>
+					</excludes>
+					<headerDefinitions>
+						<headerDefinition>license-header-defs.xml</headerDefinition>
+					</headerDefinitions>
+					<mapping>
+						<!-- Defaults don't have any mapping for the following -->
+						<coffee>SCRIPT_STYLE</coffee>
+						<markdown>XML_STYLE</markdown>
+						<ldif>SCRIPT_STYLE</ldif>
+						<jrxml>XML_STYLE</jrxml>
+						<less>DOUBLESLASH_STYLE</less>
+						<scss>DOUBLESLASH_STYLE</scss>
+						<htm>HTML_STYLE</htm>
+						<html>HTML_STYLE</html>
+
+						!<!-- Cannot detect extension-less files, which affects
+							the following in our case. Have to add licenses to
+							these manually -->
+						<!--
+						<Cakefile>SCRIPT_STYLE</Cakefile>
+						-->
+					</mapping>
+					<encoding>${project.build.sourceEncoding}</encoding>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.jasig.maven</groupId>
+				<artifactId>maven-notice-plugin</artifactId>
+				<configuration>
+					<!-- Need our own NOTICE.template to account for JS/CSS
+						licenses -->
+					<noticeTemplate>NOTICE.template</noticeTemplate>
+					<licenseMapping combine.children="append">
+						<param>${basedir}/license-mappings.xml</param>
+					</licenseMapping>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<configuration>
+					<attachClasses>true</attachClasses>
+					<warName>ssp</warName>
+					<archive>
+						<manifest>
+							<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+						</manifest>
+						<manifestEntries>
+							<version>${project.version}</version>
+							<SSP-Artifact>${project.groupId}:${project.artifactId}</SSP-Artifact>
+							<SSP-Artifact-Version>${project.version}</SSP-Artifact-Version>
+							<SSP-Build-Date>${timestamp}</SSP-Build-Date>
+							<SSP-SCM-Revision>${buildNumber}</SSP-SCM-Revision>
+						</manifestEntries>
+					</archive>
+					<overlays>
+						<overlay>
+							<groupId>org.jasig.resourceserver</groupId>
+							<artifactId>resource-server-content</artifactId>
+							<includes>
+								<include>rs/jquery/1.6.1/</include>
+								<include>rs/jqueryui/1.8.13/</include>
+								<include>rs/famfamfam/silk/1.3/add.png</include>
+								<include>rs/fluid/1.4.0/</include>
+							</includes>
+						</overlay>
+					</overlays>
+				</configuration>
+			</plugin>
+			<!-- GMaven plugin for unit tests -->
+			<plugin>
+				<groupId>org.codehaus.gmaven</groupId>
+				<artifactId>gmaven-plugin</artifactId>
+				<version>1.4</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>generateTestStubs</goal>
+							<goal>testCompile</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- Report on test code coverage -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>cobertura-maven-plugin</artifactId>
+				<version>2.5.1</version>
+				<configuration>
+					<formats>
+						<format>html</format>
+						<format>xml</format>
+					</formats>
+				</configuration>
+			</plugin>
+			<!-- Run Unit tests -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.12</version>
+				<inherited>true</inherited>
+				<configuration>
+                    <skip>${unitTest.skip}</skip>
+					<forkMode>once</forkMode>
+					<reportFormat>plain</reportFormat>
+					<includes>
+						<include>**/EarlyAlertResponseReminderRecipientsConfigImplTest.java</include>
+						<include>%regex[.*SendAllEarlyAlertReminderNotificationsTo.*Test.*]</include>
+					</includes>
+				</configuration>
+				<dependencies>
+					<dependency>
+						<groupId>org.apache.maven.surefire</groupId>
+						<artifactId>surefire-junit47</artifactId>
+						<version>2.12</version>
+					</dependency>
+				</dependencies>
+			</plugin>
+            <!-- Add API Integration Test Source to Tests -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.8</version>
+                <executions>
+                    <execution>
+                        <id>add-test-source</id>
+                        <phase>generate-test-sources</phase>
+                        <goals>
+                            <goal>add-test-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${basedir}/src/test/api</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Run API Integration Tests -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.16</version>
+                <configuration>
+                    <skip>${integrationTest.skip}</skip>
+                    <encoding>utf-8</encoding>
+                    <systemPropertyVariables>
+                        <apiURL>${apiURL}</apiURL>
+                        <apiPORT>${apiPORT}</apiPORT>
+                        <artifactVersion>${project.version}</artifactVersion>
+                        <buildDate>${timestamp}</buildDate>
+                        <scmRevision>${buildNumber}</scmRevision>
+                    </systemPropertyVariables>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-release-plugin</artifactId>
+			</plugin>
+            <plugin>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals><goal>enforce</goal></goals>
+                            <configuration>
+                            <rules>
+                            <bannedDependencies>
+                            <excludes>
+                                <exclude>commons-collections:commons-collections:[3.2.1]</exclude>
+                            </excludes>
+                            </bannedDependencies>
+                            </rules>
+                            </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+		</plugins>
+
+		<pluginManagement>
+			<plugins>
+				<!--This plugin's configuration is used to store Eclipse m2e settings 
+					only. It has no influence on the Maven build itself. -->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>org.codehaus.gmaven</groupId>
+										<artifactId>gmaven-plugin</artifactId>
+										<versionRange>[1.4,)</versionRange>
+										<goals>
+											<goal>generateTestStubs</goal>
+											<goal>testCompile</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<execute>
+											<runOnIncremental>false</runOnIncremental>
+										</execute>
+									</action>
+								</pluginExecution>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>org.codehaus.mojo</groupId>
+										<artifactId>jasperreports-maven-plugin</artifactId>
+										<versionRange>[1.0-beta-2,)</versionRange>
+										<goals>
+											<goal>compile-reports</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore />
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+
+	<reporting>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.12</version>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>findbugs-maven-plugin</artifactId>
+				<version>2.3.2</version>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-checkstyle-plugin</artifactId>
+				<version>2.7</version>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-pmd-plugin</artifactId>
+				<version>2.5</version>
+			</plugin>
+		</plugins>
+	</reporting>
+
+</project>

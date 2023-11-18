@@ -1,0 +1,243 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.atlassian.jira.ext</groupId>
+    <artifactId>commitacceptance</artifactId>
+    <version>1.5-SNAPSHOT</version>
+
+    <name>JIRA Commit Acceptance Plugin</name>
+    <packaging>atlassian-plugin</packaging>
+
+    <description>
+        This plug-in lets you define certain basic rules that will determine whether a commit to your version control
+        system will be accepted based on the issues in JIRA.
+        For example, you can define a rule that no commit will be accepted unless it contains a valid issue key.
+        Or you can set a rule that no commit would be accepted if the issue was not in an "open" state.
+    </description>
+    <url>http://confluence.atlassian.com/display/JIRAEXT/Commit+Acceptance+Plugin</url>
+
+    <developers>
+        <developer>
+            <id>fkiss</id>
+            <name>Ferenc Kiss</name>
+            <email>ferenc.kiss@midori.hu</email>
+        </developer>
+        <developer>
+            <name>Bernie Davison</name>
+        </developer>
+        <developer>
+            <id>prkolbus</id>
+            <name>Peter Kolbus</name>
+            <email>peter.kolbus@gmail.com</email>
+        </developer>
+    </developers>
+
+
+    <scm>
+        <connection>scm:svn:https://svn.atlassian.com/svn/public/contrib/jira/jira-commitacceptance-plugin/trunk/</connection>
+        <developerConnection>scm:svn:https://svn.atlassian.com/svn/public/contrib/jira/jira-commitacceptance-plugin/trunk/</developerConnection>
+        <url>http://svn.atlassian.com/fisheye/browse/public/contrib/jira/jira-commitacceptance-plugin/trunk/</url>
+    </scm>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>atlassian-plugin.xml</include>
+                    <include>client/perl/svn/*.*</include>
+                    <include>client/python/svn/*.*</include>
+                    <include>client/perl/cvs/*</include>
+                    <include>client/python/cvs/*</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <includes>
+                    <include>**/*.*</include>
+                </includes>
+                <excludes>
+                    <exclude>atlassian-plugin.xml</exclude>
+                    <exclude>client/perl/svn/*.*</exclude>
+                    <exclude>client/python/svn/*.*</exclude>
+                    <exclude>client/python/svn/advanced/*.*</exclude>
+                    <exclude>client/python/cvs/*</exclude>
+                    <exclude>client/python/cvs/advanced/*.*</exclude>
+                    <exclude>client/perl/cvs/*</exclude>
+                </excludes>
+            </resource>
+        </resources>
+
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <filtering>false</filtering>
+                <includes>
+                    <include>**/*</include>
+                </includes>
+            </testResource>
+        </testResources>
+
+        <!--
+            The following plugin definitions are required to invoke functions that
+            build run-time environment for running integration tests against JIRA
+        -->
+		<plugins>
+
+            <plugin>
+                <groupId>com.atlassian.maven.plugins</groupId>
+                <artifactId>maven-jira-plugin</artifactId>
+                <version>3.2.3</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <productVersion>${jira.version}</productVersion>
+                    <productDataVersion>${jira.data.version}</productDataVersion>
+                    <log4jProperties>${basedir}/log4j.properties</log4jProperties>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.5</source>
+                    <target>1.5</target>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.2-beta-2</version>
+                <executions>
+                    <execution>
+                        <id>create-distribution-zip</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>attached</goal>
+                        </goals>
+
+                        <configuration>
+                            <descriptors>
+                                <descriptor>src/assemble/client-scripts.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>pre-integration-test-user-ant-tasks</id>
+                        <configuration>
+                            <tasks>
+                                <!-- Perl + CVS -->
+                                <replace file="${project.build.directory}/classes/client/perl/cvs/jira-client.pl">
+                                    <replacefilter token="&lt;JIRA base URL&gt;" value="${atlassian.product.url}" />
+                                    <replacefilter token="&lt;JIRA user name&gt;" value="admin" />
+                                    <replacefilter token="&lt;JIRA password&gt;" value="admin" />
+                                    <replacefilter token="&lt;JIRA project key&gt;" value="*" />
+                                </replace>
+
+                                <!-- Perl + SVN -->
+                                <replace file="${project.build.directory}/classes/client/perl/svn/jira-client.pl">
+                                    <replacefilter token="&lt;JIRA base URL&gt;" value="${atlassian.product.url}" />
+                                    <replacefilter token="&lt;JIRA user name&gt;" value="admin" />
+                                    <replacefilter token="&lt;JIRA password&gt;" value="admin" />
+                                    <replacefilter token="&lt;JIRA project key&gt;" value="*" />
+                                    <replacefilter token="&lt;Full path to svnlook&gt;" value="${project.build.directory}/test-classes/svnlook" />
+                                </replace>
+
+                                <!-- Python + CVS -->
+                                <replace file="${project.build.directory}/classes/client/python/cvs/jira-client.py">
+                                    <replacefilter token="&lt;JIRA base URL&gt;" value="${atlassian.product.url}" />
+                                    <replacefilter token="&lt;JIRA user name&gt;" value="admin" />
+                                    <replacefilter token="&lt;JIRA password&gt;" value="admin" />
+                                    <replacefilter token="&lt;JIRA project key&gt;" value="*" />
+                                </replace>
+
+                                <!-- Python + SVN -->
+                                <replace file="${project.build.directory}/classes/client/python/svn/jira-client.py">
+                                    <replacefilter token="&lt;JIRA base URL&gt;" value="${atlassian.product.url}" />
+                                    <replacefilter token="&lt;JIRA user name&gt;" value="admin" />
+                                    <replacefilter token="&lt;JIRA password&gt;" value="admin" />
+                                    <replacefilter token="&lt;JIRA project key&gt;" value="*" />
+                                    <replacefilter token="&lt;Full path to svnlook&gt;" value="${project.build.directory}/test-classes/svnlook" />
+                                </replace>
+
+                                <echo file="${project.build.directory}/test-classes/test-configuration.properties">
+                                    <![CDATA[
+client.scm.svn.svnlook.path=${project.build.directory}/test-classes/svnlook
+client.scm.python.path=${test.python.path}
+client.scm.perl.path=${test.perl.path}
+]]>
+                                </echo>
+                            </tasks>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.atlassian.maven.plugins</groupId>
+                <artifactId>maven-clover2-plugin</artifactId>
+                <configuration>
+                    <targetPercentage>50%</targetPercentage>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.atlassian.jira</groupId>
+            <artifactId>atlassian-jira</artifactId>
+            <version>${jira.version}</version>
+            <scope>provided</scope>
+        </dependency>        
+        <dependency>
+            <groupId>jmock</groupId>
+            <artifactId>jmock-cglib</artifactId>
+            <version>1.2.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>1.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.6</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.atlassian.jira</groupId>
+            <artifactId>jira-func-tests</artifactId>
+            <version>${jira.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <properties>
+        <atlassian.plugin.application.version.min>4.0</atlassian.plugin.application.version.min>
+
+		<maven.test.skip>true</maven.test.skip>
+        <test.perl.path>/usr/bin/perl</test.perl.path>
+        <test.python.path>/usr/bin/python</test.python.path>
+
+        <atlassian.product.version>4.0</atlassian.product.version>
+        <atlassian.product.test-lib.version>4.0</atlassian.product.test-lib.version>
+        <atlassian.product.data.version>4.0</atlassian.product.data.version>
+        <atlassian.test.harness.version>0.11-beta3</atlassian.test.harness.version>
+        <jdkLevel>1.5</jdkLevel>
+
+        <jvmargs>-XX:+HeapDumpOnOutOfMemoryError -XX:MaxPermSize=384m -Xms128m -Xmx564m</jvmargs>
+
+		<jira.version>4.2.4-b591</jira.version>
+        <jira.data.version>4.1.1</jira.data.version>
+    </properties>
+
+</project>

@@ -1,0 +1,483 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.locationtech.udig</groupId>
+  <artifactId>udig-platform</artifactId>
+  <version>2.3.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <description>This is the base uDig pom that controls the version numbers
+        used by the nightly build process.</description>
+
+  <modules>
+    <module>extras/org.locationtech.udig.target</module>
+    <module>plugins</module>
+    <module>features</module>
+  </modules>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+
+    <tycho-version>1.6.0</tycho-version>
+    <tycho-extras-version>1.6.0</tycho-extras-version>
+    <!-- necessary for e.g. hudson proxy settings
+             see https://locationtech.org/bugs/show_bug.cgi?id=51
+        -->
+    <tycho.test.envSettings></tycho.test.envSettings>
+    <tycho.test.defaultOptions>-Xmx1024m -Dlauncher.suppressErrors -Dsdtcore.headless ${tycho.test.OSspecific}</tycho.test.defaultOptions>
+    <tycho.test.options>${tycho.test.defaultOptions} ${tycho.test.envSettings}</tycho.test.options>
+
+    <!-- sonar specific parameters -->
+    <sonar.jacoco.reportPaths>../${project.artifactId}.tests/target/jacoco.exec</sonar.jacoco.reportPaths>
+    <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
+    <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
+  </properties>
+
+  <build>
+
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>3.0.0-M3</version>
+        </plugin>
+
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>build-helper-maven-plugin</artifactId>
+          <version>1.8</version>
+        </plugin>
+
+        <plugin>
+          <artifactId>maven-clean-plugin</artifactId>
+          <version>2.6.1</version>
+        </plugin>
+
+        <plugin>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>2.7</version>
+        </plugin>
+
+        <plugin>
+          <artifactId>maven-install-plugin</artifactId>
+          <version>2.5.2</version>
+        </plugin>
+
+        <plugin>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <version>3.1.1</version>
+        </plugin>
+
+        <plugin>
+          <groupId>org.eclipse.tycho</groupId>
+          <artifactId>tycho-surefire-plugin</artifactId>
+          <version>${tycho-version}</version>
+          <configuration>
+            <useUIHarness>true</useUIHarness>
+            <runOrder>alphabetical</runOrder>
+            <argLine>${tycho.test.options}</argLine>
+          </configuration>
+        </plugin>
+
+        <plugin>
+          <groupId>org.eclipse.tycho</groupId>
+          <artifactId>tycho-versions-plugin</artifactId>
+          <version>${tycho-version}</version>
+        </plugin>
+
+        <plugin>
+          <groupId>com.github.spotbugs</groupId>
+          <artifactId>spotbugs-maven-plugin</artifactId>
+          <version>4.4.1</version>
+          <configuration>
+            <!-- too many issues at the moment -->
+            <failOnError>false</failOnError>
+            <xmlOutput>true</xmlOutput>
+            <threshold>High</threshold>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.jacoco</groupId>
+          <artifactId>jacoco-maven-plugin</artifactId>
+          <version>0.8.7</version>
+        </plugin>
+        <plugin>
+          <groupId>com.github.ekryd.sortpom</groupId>
+          <artifactId>sortpom-maven-plugin</artifactId>
+          <version>2.15.0</version>
+          <executions>
+            <execution>
+              <phase>verify</phase>
+              <goals>
+                <goal>verify</goal>
+              </goals>
+            </execution>
+          </executions>
+          <configuration>
+            <keepBlankLines>true</keepBlankLines>
+            <spaceBeforeCloseEmptyElement>false</spaceBeforeCloseEmptyElement>
+            <createBackupFile>false</createBackupFile>
+            <verifyFail>stop</verifyFail>
+            <verifyFailOn>strict</verifyFailOn>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <plugins>
+      <plugin>
+        <groupId>org.eclipse.tycho</groupId>
+        <artifactId>tycho-maven-plugin</artifactId>
+        <version>${tycho-version}</version>
+        <extensions>true</extensions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.eclipse.tycho</groupId>
+        <artifactId>target-platform-configuration</artifactId>
+        <version>${tycho-version}</version>
+        <configuration>
+          <!-- target from sub-module eclipse-target-definition project -->
+          <target>
+            <artifact>
+              <groupId>org.locationtech.udig</groupId>
+              <artifactId>org.locationtech.udig.target</artifactId>
+              <version>4.4</version>
+            </artifact>
+          </target>
+          <resolver>p2</resolver>
+          <dependency-resolution>
+            <optionalDependencies>ignore</optionalDependencies>
+          </dependency-resolution>
+          <!-- filter out optional dependency -->
+          <!-- currently allowed in until jconsole is fixed
+                    <filters>
+                       <filter>
+                          <type>eclipse-plugin</type>
+                          <id>org.eclipse.ui.ide</id>
+                          <removeAll/>
+                       </filter>
+                    </filters>
+                    -->
+          <!-- example 3: work around Equinox bug 348045 -->
+          <filters>
+            <filter>
+              <type>eclipse-plugin</type>
+              <id>org.eclipse.jdt.core</id>
+              <removeAll></removeAll>
+            </filter>
+          </filters>
+
+          <pomDependencies>consider</pomDependencies>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.eclipse.tycho</groupId>
+        <artifactId>tycho-compiler-plugin</artifactId>
+        <version>${tycho-version}</version>
+        <configuration>
+          <useProjectSettings>false</useProjectSettings>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.eclipse.tycho</groupId>
+        <artifactId>tycho-source-plugin</artifactId>
+        <version>${tycho-version}</version>
+        <executions>
+          <execution>
+            <id>plugin-source</id>
+            <goals>
+              <goal>plugin-source</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-eclipse-plugin</artifactId>
+        <version>2.5</version>
+        <executions>
+          <execution>
+            <id>the-execution-id</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>enforce-java</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireJavaVersion>
+                  <version>1.8</version>
+                </requireJavaVersion>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
+            <id>enforce-maven</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                  <version>3.0</version>
+                </requireMavenVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.github.ekryd.sortpom</groupId>
+        <artifactId>sortpom-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+
+  <!--
+        We need to ask you to download some libs prior to doing a full build:
+        simply run here at the same level the following commend to download libraries:
+
+           mvn clean package -f pom-libs.xml
+
+        In addition its required to build some bundles (JAI/ImageIO) before building this project.
+        Bundles will be installed into the maven repository and will be resolved because of the
+        following option for target-platform-configuration:
+
+        <pomDependencies>consider</pomDependencies>
+
+        Our maven tests require a bit more memory:
+           export MAVEN_OPTS="-Xmx1024m"
+
+        Once that is done you can run a full build on the command line:
+           mvn install -Dall
+
+        If you run into any problems (to list debug and stack trace)
+           mvn install -Dall -e -X
+
+        Please note the Tycho maven plugin used to build RCP projects is a a work in progress; you
+        will do better to review the stack trace with a checkout of the Tycho code in hand as the
+        error messages are often misleading and evil.
+
+        The build supports the use of profiles - the following profiles are defined:
+
+        To quickly build the product (result is in features/org.locationtech.udig-product/target):
+           mvn install -Pproduct
+
+        Builds documentation (requires sphinx-build is installed):
+          mvn install -Pdocs
+
+        Gathers the tutorials and source code for the software developers kit
+          mvn install -Dall -Psdk
+
+        To run a full build with tests:
+          mvn install -Dall -Ptest
+
+        To profile the tests you will need:
+          mvn install -Ptest -Pprofile
+
+        Gathers the plugins that are not included in the default product
+          mvn install -Ppending (included by -Dall)
+
+        Includes the udig and community sites:
+           -Psite
+
+        Includes the ossim feaure (this may be dead code)
+          -Possim
+    -->
+
+  <profiles>
+    <profile>
+      <id>docs</id>
+      <modules>
+        <module>docs</module>
+      </modules>
+    </profile>
+
+    <profile>
+      <id>coverage</id>
+      <activation>
+        <property>
+          <name>coverage</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <!-- Enabling use of jacoco -->
+          <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>prepare-agent</goal>
+                </goals>
+                <configuration>
+                  <propertyName>tycho.test.jacoco</propertyName>
+                </configuration>
+              </execution>
+              <execution>
+                <id>generate-report</id>
+                <goals>
+                  <goal>report</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+      <properties>
+        <tycho.test.options>${tycho.test.defaultOptions} ${tycho.test.envSettings} ${tycho.test.jacoco}</tycho.test.options>
+      </properties>
+    </profile>
+
+    <profile>
+      <id>mac-os</id>
+      <activation>
+        <os>
+          <family>mac</family>
+        </os>
+      </activation>
+      <properties>
+        <tycho.test.OSspecific>-XstartOnFirstThread</tycho.test.OSspecific>
+      </properties>
+    </profile>
+
+    <profile>
+      <id>other-os</id>
+      <activation>
+        <os>
+          <family>!mac</family>
+        </os>
+      </activation>
+      <properties>
+        <tycho.test.OSspecific></tycho.test.OSspecific>
+      </properties>
+    </profile>
+
+    <!-- following profiles (target-platform-XXX) configure tycho target platform in correct os-secific order -->
+    <profile>
+      <id>target-platform-win</id>
+      <activation>
+        <os>
+          <family>Windows</family>
+        </os>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.eclipse.tycho</groupId>
+            <artifactId>target-platform-configuration</artifactId>
+            <configuration>
+              <environments>
+                <environment>
+                  <os>win32</os>
+                  <ws>win32</ws>
+                  <arch>x86_64</arch>
+                </environment>
+                <environment>
+                  <os>linux</os>
+                  <ws>gtk</ws>
+                  <arch>x86_64</arch>
+                </environment>
+                <environment>
+                  <os>macosx</os>
+                  <ws>cocoa</ws>
+                  <arch>x86_64</arch>
+                </environment>
+              </environments>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>target-platform-lin</id>
+      <activation>
+        <os>
+          <family>unix</family>
+        </os>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.eclipse.tycho</groupId>
+            <artifactId>target-platform-configuration</artifactId>
+            <configuration>
+              <environments>
+                <environment>
+                  <os>linux</os>
+                  <ws>gtk</ws>
+                  <arch>x86_64</arch>
+                </environment>
+                <environment>
+                  <os>macosx</os>
+                  <ws>cocoa</ws>
+                  <arch>x86_64</arch>
+                </environment>
+                <environment>
+                  <os>win32</os>
+                  <ws>win32</ws>
+                  <arch>x86_64</arch>
+                </environment>
+              </environments>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>target-platform-mac</id>
+      <activation>
+        <os>
+          <family>mac</family>
+        </os>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.eclipse.tycho</groupId>
+            <artifactId>target-platform-configuration</artifactId>
+            <configuration>
+              <environments>
+                <environment>
+                  <os>macosx</os>
+                  <ws>cocoa</ws>
+                  <arch>x86_64</arch>
+                </environment>
+                <environment>
+                  <os>linux</os>
+                  <ws>gtk</ws>
+                  <arch>x86_64</arch>
+                </environment>
+                <environment>
+                  <os>win32</os>
+                  <ws>win32</ws>
+                  <arch>x86_64</arch>
+                </environment>
+              </environments>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

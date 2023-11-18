@@ -1,0 +1,409 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>com.barchart.base</groupId>
+		<artifactId>barchart-archon</artifactId>
+		<version>2.5.6</version>
+	</parent>
+
+	<groupId>com.barchart.pivot</groupId>
+	<artifactId>barchart-pivot</artifactId>
+	<version>2.0.2-build049-SNAPSHOT</version>
+	<packaging>pom</packaging>
+
+	<scm>
+		<url>https://github.com/barchart/barchart-pivot</url>
+		<connection>scm:git:git://github.com/barchart/barchart-pivot.git</connection>
+		<developerConnection>scm:git:ssh://git@github.com/barchart/barchart-pivot.git</developerConnection>
+		<tag>barchart-pivot-2.0.2-build041</tag>
+	</scm>
+
+	<modules>
+
+		<!-- Required Apache Pivot modules. -->
+		<module>pivot-core</module>
+		<module>pivot-core-web</module>
+		<module>pivot-core-web-server</module>
+		<module>pivot-wtk</module>
+		<module>pivot-wtk-skin-terra</module>
+		<module>pivot-wtk-charts</module>
+
+		<!-- Optional Apache Pivot modules. -->
+		<!-- <module>pivot-demos</module> -->
+		<!-- <module>pivot-demos-server</module> -->
+		<!-- <module>pivot-examples</module> -->
+		<!-- <module>pivot-tutorials</module> -->
+		<!-- <module>pivot-tutorials-server</module> -->
+
+	</modules>
+
+	<properties>
+
+		<!-- Apache Pivot source remote branch path. -->
+		<!-- See repository structure: http://svn.apache.org/repos/asf/pivot/ -->
+		<!-- <repo-branch>trunk</repo-branch> -->
+		<repo-branch>branches/2.0.x</repo-branch>
+
+		<!-- Apache Pivot source remote URL. -->
+		<repo-url>http://svn.apache.org/repos/asf/pivot/${repo-branch}</repo-url>
+
+		<!-- SCM read-only connection to Apache source. -->
+		<repo-connection>scm:svn:${repo-url}</repo-connection>
+
+		<!-- Apache pivot module provided by each module pom.xml. -->
+		<repo-module />
+
+		<!-- Checkout folder name -->
+		<checkoutFolder>target/checkout-apache-pivot</checkoutFolder>
+
+		<!-- Local copy of Apache Pivot source after check out step. -->
+		<repodir>${basedir}/${checkoutFolder}</repodir>
+
+		<!-- Apache Pivot convention for main java folders. -->
+		<module-src-main-java>src</module-src-main-java>
+		<!-- Apache Pivot convention for test java folders. -->
+		<module-src-test-java>testing</module-src-test-java>
+
+	</properties>
+
+
+	<build>
+
+		<!-- Pivot source directory. -->
+		<sourceDirectory>${module-src-main-java}</sourceDirectory>
+
+		<!-- Pivot view resources are stored with code. -->
+		<resources>
+			<resource>
+				<directory>${module-src-main-java}</directory>
+				<includes>
+					<include>**/*</include>
+				</includes>
+				<excludes>
+					<exclude>**/*.java</exclude>
+					<exclude>**/*.scala</exclude>
+				</excludes>
+			</resource>
+		</resources>
+
+		<pluginManagement>
+			<plugins>
+
+				<!-- Activate all life cycle profiles during release. -->
+				<!-- <plugin> -->
+				<!-- <groupId>org.apache.maven.plugins</groupId> -->
+				<!-- <artifactId>maven-release-plugin</artifactId> -->
+				<!-- <configuration> -->
+				<!-- <arguments>-DskipTests -Pclean,clone,copy,patch,release</arguments> -->
+				<!-- </configuration> -->
+				<!-- </plugin> -->
+
+			</plugins>
+		</pluginManagement>
+
+	</build>
+
+	<profiles>
+
+		<!-- Remove local repository clone and local developer copy of Apache sources. -->
+		<profile>
+			<id>clean</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-clean-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>clean-local</id>
+								<phase>clean</phase>
+								<goals>
+									<goal>clean</goal>
+								</goals>
+								<configuration>
+									<filesets>
+										<fileset>
+											<directory>${basedir}/src</directory>
+											<includes>
+												<include>**/*</include>
+											</includes>
+										</fileset>
+										<fileset>
+											<directory>${basedir}/test</directory>
+											<includes>
+												<include>**/*</include>
+											</includes>
+										</fileset>
+									</filesets>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+		<!-- Make local checkout of remote Apache source. -->
+		<!-- Must have command line SVN available on local O/S -->
+		<profile>
+			<id>clone</id>
+			<build>
+
+				<plugins>
+
+					<!-- Download from Apache. -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-scm-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>checkout-apache</id>
+								<phase>generate-sources</phase>
+								<goals>
+									<goal>checkout</goal>
+								</goals>
+								<configuration>
+									<connectionUrl>${repo-connection}/${repo-module}</connectionUrl>
+									<checkoutDirectory>${repodir}</checkoutDirectory>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+					<!-- Remove SVN metadata from checkout directory. -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-clean-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>remove-subversion</id>
+								<phase>generate-sources</phase>
+								<goals>
+									<goal>clean</goal>
+								</goals>
+								<configuration>
+									<excludeDefaultDirectories>true</excludeDefaultDirectories>
+									<filesets>
+										<fileset>
+											<directory>${repodir}</directory>
+											<includes>
+												<include>**/.svn/**</include>
+											</includes>
+										</fileset>
+									</filesets>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+				</plugins>
+
+			</build>
+
+		</profile>
+
+		<!-- Make local developer working copy from local Apache clone. -->
+		<profile>
+			<id>copy</id>
+			<build>
+				<plugins>
+					<!-- Copy main and test source folders to working copy. -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-resources-plugin</artifactId>
+						<configuration>
+							<encoding>UTF-8</encoding>
+						</configuration>
+						<executions>
+							<execution>
+								<id>copy-src-main-java</id>
+								<phase>generate-sources</phase>
+								<goals>
+									<goal>copy-resources</goal>
+								</goals>
+								<configuration>
+									<resources>
+										<resource>
+											<directory>${repodir}/${module-src-main-java}</directory>
+											<filtering>false</filtering>
+										</resource>
+									</resources>
+									<overwrite>true</overwrite>
+									<outputDirectory>${basedir}/${module-src-main-java}</outputDirectory>
+								</configuration>
+							</execution>
+							<execution>
+								<id>copy-src-test-java</id>
+								<phase>generate-sources</phase>
+								<goals>
+									<goal>copy-resources</goal>
+								</goals>
+								<configuration>
+									<resources>
+										<resource>
+											<directory>${repodir}/${module-src-test-java}</directory>
+											<filtering>false</filtering>
+										</resource>
+									</resources>
+									<overwrite>true</overwrite>
+									<outputDirectory>${basedir}/${module-src-test-java}</outputDirectory>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+		<!-- Apply patch files to the working copy. -->
+		<!-- Must have command line GIT available on local O/S. -->
+		<profile>
+			<id>patch</id>
+			<build>
+				<plugins>
+
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>groovy-maven-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>apply-patch</id>
+								<phase>process-sources</phase>
+								<goals>
+									<goal>execute</goal>
+								</goals>
+								<configuration>
+									<providerSelection>2.0</providerSelection>
+									<source>
+		<![CDATA[
+		// Layout convention.
+		def baseDir = project["basedir"]
+		def patchDir = new File(baseDir, "patch")
+		
+		// Find current patch files.
+		def fileList = []
+		// Do not try to invoke git whent there is no patches.
+		patchDir.eachFileMatch (~/.*.patch/) { 
+			file -> fileList.add(file.path)
+		} 
+		if(fileList.isEmpty()){
+			println "### No patch files."
+			return
+		}
+
+		// Invoke git apply.		
+		def command = ([ "git", "apply", "--verbose", "--ignore-space-change", "--ignore-whitespace" ] + fileList).join(" ")
+		println "### Git command: ${command}"
+		def process = command.execute(null, baseDir) 
+		def std = new StringBuilder()
+		def err = new StringBuilder()
+		process.waitForProcessOutput(std, err)
+
+		// Process standard output is not used.
+		def patchText = std.toString()
+		 
+		// Process error output contains status messages.
+		def errorText = err.toString()
+		println "${errorText}"
+		
+		if(errorText.contains("error:") || errorText.contains("fatal:")){
+			throw new Exception("Git failed, see messages above. ")
+		}
+		]]>
+									</source>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+				</plugins>
+			</build>
+		</profile>
+
+		<!-- Create patch from difference between clone and working copy. -->
+		<!-- Must have command line git available on local O/S. -->
+		<profile>
+			<id>diff</id>
+			<build>
+
+				<plugins>
+
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>groovy-maven-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>create-patch</id>
+								<phase>process-sources</phase>
+								<goals>
+									<goal>execute</goal>
+								</goals>
+								<configuration>
+									<providerSelection>2.0</providerSelection>
+									<source>
+		<![CDATA[
+		// Do not generate patches for parent project.		
+		def packaging = project["packaging"]
+		if("pom".equals(packaging)){
+			println "### Skip patch for pom project."
+			return;
+		} 
+		
+		// Layout convention.
+		def baseDir = project["basedir"]
+		def patchDir = new File(baseDir, "patch")
+		def patchFile = new File(patchDir, "current.patch")
+		def checkoutFolder = project.properties["checkoutFolder"] + "/"
+		def source = checkoutFolder + "src"
+		def target = "src"
+	
+		// Invoke git diff.	
+		def command = [ "git", "diff", "--relative", "--no-index",  "--", source, target ].join(" ")
+		println "### Git command: ${command}"
+		def process = command.execute(null, baseDir) 
+		def std = new StringBuilder()
+		def err = new StringBuilder()
+		process.waitForProcessOutput(std, err)
+
+		// Process standard output contains the patch.
+		def patchText = std.toString()
+		 
+		// Process error output contains status messages.
+		def errorText = err.toString() 
+		println "${errorText}"
+		
+		if(errorText.contains("error:") || errorText.contains("fatal:")) {
+			throw new Exception("Git failed, see error messages above.")
+		}
+
+		// Remove existing patch, if any.
+		patchFile.delete()
+		
+		// Do not create empty patch files.
+		if(patchText.isEmpty()){
+			println "### No difference."
+			return
+		}
+		
+		// Format patch for sumbission to Apache.
+		def diffText = patchText.replaceAll(checkoutFolder,"")
+		
+		// Create patch file.
+		patchFile.write(diffText)
+		println "### Patch created: " + patchFile 
+		]]>
+									</source>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+				</plugins>
+			</build>
+		</profile>
+
+	</profiles>
+
+</project>

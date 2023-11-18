@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>org.st-js</groupId>
+	<artifactId>stjs</artifactId>
+	<version>3.5.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+	<name>Strongly-typed Javascript</name>
+	<description>Javascript code generator from Java source code</description>
+	<url>http://www.st-js.org</url>
+	<licenses>
+		<license>
+			<name>The Apache Software License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<id>acraciun</id>
+			<name>Alexandru Craciun</name>
+			<email>ax.craciun@gmail.com</email>
+		</developer>
+
+		<developer>
+			<id>ekaspi</id>
+			<name>Eyal Kaspi</name>
+			<email>eyal.kaspi@gmail.com</email>
+		</developer>
+	</developers>
+
+
+	<modules>
+		<module>code-analysis</module>
+		<module>client-runtime</module>
+		<module>generator</module>
+		<module>generator-plugin-java8</module>
+		<module>shared</module>
+		<module>server</module>
+		<module>maven-plugin</module>
+		<module>test-helper</module>
+		<module>maven-plugin-it</module>
+		<module>command-line</module>
+	</modules>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+		<!-- Maven extensions versions -->
+		<wagon-webdav.version>1.0-beta-2</wagon-webdav.version>
+		<wagon-scm.version>1.0-beta-6</wagon-scm.version>
+		<maven-scm-manager-plexus.version>1.1</maven-scm-manager-plexus.version>
+		<maven-scm-provider-svnexe.version>1.1</maven-scm-provider-svnexe.version>
+
+		<!-- code analysis plugins -->
+		<findbugs-maven-plugin.version>3.0.1</findbugs-maven-plugin.version>
+
+		<maven-pmd-plugin.version>3.0.1</maven-pmd-plugin.version>
+		<maven-checkstyle-plugin.version>2.10</maven-checkstyle-plugin.version>
+		<findbugs.fork>false</findbugs.fork>
+		<pmd.version>5.0.4</pmd.version>
+	</properties>
+
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>2.3.2</version>
+				<configuration>
+					<source>1.7</source>
+					<target>1.7</target>
+				</configuration>
+			</plugin>
+		</plugins>
+
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-source-plugin</artifactId>
+					<executions>
+						<execution>
+							<goals>
+								<goal>jar</goal>
+							</goals>
+						</execution>
+					</executions>
+				</plugin>
+
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-release-plugin</artifactId>
+					<version>2.5.1</version>
+					<configuration>
+						<preparationGoals>clean install</preparationGoals>
+						<autoVersionSubmodules>true</autoVersionSubmodules>
+						<mavenExecutorId>forked-path</mavenExecutorId>
+						<useReleaseProfile>false</useReleaseProfile>
+						<arguments>-Psonatype-oss-release-stjs -Dgpg.passphrase=${gpg.passphrase}</arguments>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+
+	</build>
+
+	<profiles>
+		<profile>
+			<id>code-analysis</id>
+			<activation>
+				<file>
+					<exists>.code-analysis.enabled</exists>
+				</file>
+			</activation>
+			<build>
+				<plugins>
+					<!-- static code analysis -->
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>findbugs-maven-plugin</artifactId>
+						<version>${findbugs-maven-plugin.version}</version>
+						<configuration>
+							<effort>Max</effort>
+							<threshold>Low</threshold>
+							<includeFilterFile>code-analysis/findbugs.xml</includeFilterFile>
+							<fork>${findbugs.fork}</fork>
+							<includeTests>false</includeTests>
+						</configuration>
+						<executions>
+							<execution>
+								<goals>
+									<goal>check</goal>
+								</goals>
+							</execution>
+						</executions>
+						<dependencies>
+							<dependency>
+								<groupId>org.st-js</groupId>
+								<artifactId>code-analysis</artifactId>
+								<version>${project.version}</version>
+							</dependency>
+						</dependencies>
+					</plugin>
+
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-pmd-plugin</artifactId>
+						<version>${maven-pmd-plugin.version}</version>
+
+						<configuration>
+							<linkXref>false</linkXref>
+							<printFailingErrors>true</printFailingErrors>
+							<rulesets>
+								<ruleset>/code-analysis/pmd.xml</ruleset>
+							</rulesets>
+							<failurePriority>3</failurePriority>
+							<includeTests>false</includeTests>
+						</configuration>
+						<executions>
+							<execution>
+								<goals>
+									<goal>check</goal>
+								</goals>
+							</execution>
+						</executions>
+						<dependencies>
+							<dependency>
+								<groupId>org.st-js</groupId>
+								<artifactId>code-analysis</artifactId>
+								<version>${project.version}</version>
+							</dependency>
+
+							<dependency>
+								<groupId>net.sourceforge.pmd</groupId>
+								<artifactId>pmd</artifactId>
+								<version>${pmd.version}</version>
+								<!-- Workaround to fix http://jira.codehaus.org/browse/MPLUGIN-221 -->
+								<exclusions>
+									<exclusion>
+										<groupId>com.ibm.icu</groupId>
+										<artifactId>icu4j</artifactId>
+									</exclusion>
+								</exclusions>
+							</dependency>
+						</dependencies>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-checkstyle-plugin</artifactId>
+						<version>${maven-checkstyle-plugin.version}</version>
+						<configuration>
+							<configLocation>/code-analysis/checkstyle.xml</configLocation>
+							<logViolationsToConsole>true</logViolationsToConsole>
+							<includeTestSourceDirectory>false</includeTestSourceDirectory>
+						</configuration>
+						<executions>
+							<execution>
+								<goals>
+									<goal>check</goal>
+								</goals>
+							</execution>
+						</executions>
+						<dependencies>
+							<dependency>
+								<groupId>org.st-js</groupId>
+								<artifactId>code-analysis</artifactId>
+								<version>${project.version}</version>
+							</dependency>
+						</dependencies>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+
+		<!-- this overrides the oss one to skip signature -->
+		<profile>
+			<id>sonatype-oss-release-stjs</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-source-plugin</artifactId>
+						<version>2.1.2</version>
+						<executions>
+							<execution>
+								<id>attach-sources</id>
+								<goals>
+									<goal>jar-no-fork</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-javadoc-plugin</artifactId>
+						<version>2.7</version>
+						<configuration>
+							<failOnError>false</failOnError>
+						</configuration>
+						<executions>
+							<execution>
+								<id>attach-javadocs</id>
+								<goals>
+									<goal>jar</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-gpg-plugin</artifactId>
+						<version>1.6</version>
+						<configuration>
+							<gpgArguments>
+								<arg>-c</arg>
+							</gpgArguments>
+						</configuration>
+						<executions>
+							<execution>
+								<id>sign-artifacts</id>
+								<phase>install</phase>
+								<goals>
+									<goal>sign</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+
+	</profiles>
+
+	<distributionManagement>
+		<snapshotRepository>
+			<id>ossrh</id>
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+		</snapshotRepository>
+		<repository>
+			<id>ossrh</id>
+			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+		</repository>
+	</distributionManagement>
+
+	<scm>
+		<connection>scm:git:https://github.com/st-js/st-js.git</connection>
+		<developerConnection>scm:git:https://github.com/st-js/st-js.git</developerConnection>
+		<url>scm:git:https://github.com/st-js/st-js</url>
+		<tag>HEAD</tag>
+	</scm>
+</project>

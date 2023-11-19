@@ -1,0 +1,392 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>fr.midix</groupId>
+	<artifactId>boire</artifactId>
+	<name>rest-services</name>
+	<url>http://maven.apache.org</url>
+
+	<parent>
+      <groupId>org.ow2.frascati</groupId>
+      <artifactId>frascati-parent</artifactId>
+      <version>1.5-SNAPSHOT</version>
+    </parent>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<composite.file>boire</composite.file>
+		<hibernate.version>3.6.0.Final</hibernate.version>
+		
+		<frascati.version>1.5-SNAPSHOT</frascati.version>
+		
+		<org.ow2.frascati.class>org.ow2.frascati.FraSCAti</org.ow2.frascati.class>
+        <org.ow2.frascati.bootstrap>org.ow2.frascati.bootstrap.FraSCAti</org.ow2.frascati.bootstrap>
+        <org.ow2.frascati.composite>org.ow2.frascati.FraSCAti</org.ow2.frascati.composite>
+		<org.ow2.frascati.binding.uri.base>http://localhost:8095</org.ow2.frascati.binding.uri.base>
+
+        <hibernate.connection.driver_class>com.mysql.jdbc.Driver</hibernate.connection.driver_class>
+        <hibernate.dialect>org.hibernate.dialect.MySQLDialect</hibernate.dialect>
+        <hibernate.connection.url>jdbc:mysql://localhost:8889/boireverre</hibernate.connection.url>
+        <hibernate.connection.username>root</hibernate.connection.username>
+        <hibernate.connection.password>root</hibernate.connection.password>
+	</properties>
+
+	<build>
+        <defaultGoal>package</defaultGoal>
+
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+
+        <extensions>
+            <!-- Enabling the use of SSH -->
+            <extension>
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-ssh</artifactId>
+            </extension>
+        </extensions>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.5</version>
+                <configuration>
+                    <skipTests>false</skipTests>
+                    <useSystemClassLoader>false</useSystemClassLoader>
+                    <systemPropertyVariables>
+                        <org.ow2.frascati.class>${org.ow2.frascati.class}</org.ow2.frascati.class>
+                        <org.ow2.frascati.bootstrap>${org.ow2.frascati.bootstrap}</org.ow2.frascati.bootstrap>
+                        <org.ow2.frascati.composite>${org.ow2.frascati.composite}</org.ow2.frascati.composite>
+                        <org.ow2.frascati.binding.uri.base>${org.ow2.frascati.binding.uri.base}</org.ow2.frascati.binding.uri.base>
+                        <java.util.logging.config.file>${java.util.logging.config.file}</java.util.logging.config.file>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+
+            <!-- Copy jar to be used in tests -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>2.4</version>
+                <executions>
+                  <execution>
+                    <id>copy</id>
+                    <phase>clean</phase>
+                    <goals>
+                      <goal>copy</goal>
+                    </goals>
+                    <configuration>
+                      <artifactItems>
+                        <artifactItem>
+                          <groupId>org.eclipse.stp.sca.osoa.java</groupId>
+                          <artifactId>osoa-java-api</artifactId>
+                          <version>2.0.1.2</version>
+                          <type>jar</type>
+                        </artifactItem>
+                      </artifactItems>
+                      <!-- other configurations here -->
+                      <outputDirectory>src/test/resources/lib</outputDirectory>
+                    </configuration>
+                  </execution>
+                </executions>
+              </plugin>
+        </plugins>
+
+        <pluginManagement>
+            <plugins>
+                <!-- Compile with Java 1.6 -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <source>1.6</source>
+                        <target>1.6</target>
+                    </configuration>
+                </plugin>
+
+                <!-- Compile the SCA composite. -->
+                <plugin>
+                    <groupId>org.ow2.frascati.mojo</groupId>
+                    <artifactId>frascati-compiler-plugin</artifactId>
+                    <version>${frascati.version}</version>
+                    <executions>
+                        <execution>
+                            <id>compile-composite</id>
+                            <phase>generate-sources</phase>
+                            <goals>
+                                <goal>compile</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <loggingConfFile>${java.util.logging.config.file}</loggingConfFile>
+                        <composite>${composite.file}</composite>
+                    </configuration>
+                    <!-- Required for FraSCAti EasyBPEL integration. -->
+                    <dependencies>
+                        <dependency>
+                            <groupId>xerces</groupId>
+                            <artifactId>xercesImpl</artifactId>
+                            <version>${xerces.version}</version>
+                            <scope>compile</scope>
+                        </dependency>
+                    </dependencies>
+                </plugin>
+
+                <!-- Execute Java. -->
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>exec-maven-plugin</artifactId>
+                    <!-- Use version 1.1.1 instead of 1.2 to be sure that provided artifacts 
+                        are added to the classpath. -->
+                    <version>1.1.1</version>
+                    <configuration>
+                        <!-- Define Java system properties for FraSCAti. -->
+                        <systemProperties>
+                            <systemProperty>
+                                <key>org.ow2.frascati.class</key>
+                                <value>${org.ow2.frascati.class}</value>
+                            </systemProperty>
+                            <systemProperty>
+                                <key>org.ow2.frascati.bootstrap</key>
+                                <value>${org.ow2.frascati.bootstrap}</value>
+                            </systemProperty>
+                            <systemProperty>
+                                <key>org.ow2.frascati.composite</key>
+                                <value>${org.ow2.frascati.composite}</value>
+                            </systemProperty>
+                            <systemProperty>
+                                <key>org.ow2.frascati.binding.uri.base</key>
+                                <value>${org.ow2.frascati.binding.uri.base}</value>
+                            </systemProperty>
+                            <systemProperty>
+                                <key>fscript-factory</key>
+                                <value>org.ow2.frascati.fscript.jsr223.FraSCAtiScriptEngineFactory</value>
+                            </systemProperty>
+                            <systemProperty>
+                                <key>java.util.logging.config.file</key>
+                                <value>${java.util.logging.config.file}</value>
+                            </systemProperty>
+                            <!-- Set the Apache CXF configuration file to load. -->
+                            <systemProperty>
+                                <key>cxf.config.file.url</key>
+                                <value>file:${cxf.config.file}</value>
+                            </systemProperty>
+                        </systemProperties>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.ow2.frascati.mojo</groupId>
+                    <artifactId>frascati-launcher-plugin</artifactId>
+                    <version>${frascati.version}</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
+    </build>
+
+	<dependencies>
+		<dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>1.5.5</version>
+        </dependency>
+	
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>3.8.1</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.ow2.frascati</groupId>
+			<artifactId>frascati-implementation-velocity</artifactId>
+			<version>1.5-SNAPSHOT</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.ow2.frascati</groupId>
+			<artifactId>frascati-binding-rest</artifactId>
+			<version>1.5-SNAPSHOT</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.ow2.frascati</groupId>
+			<artifactId>frascati-binding-http</artifactId>
+			<version>1.5-SNAPSHOT</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-email</artifactId>
+			<version>1.2</version>
+		</dependency>
+
+		<dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-search</artifactId>
+            <version>3.3.0.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate.javax.persistence</groupId>
+            <artifactId>hibernate-jpa-2.0-api</artifactId>
+            <version>1.0.0.Final</version>
+        </dependency>
+
+        <dependency>
+            <groupId>jdom</groupId>
+            <artifactId>jdom</artifactId>
+            <version>1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.googlecode.json-simple</groupId>
+            <artifactId>json-simple</artifactId>
+            <version>1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-entitymanager</artifactId>
+            <version>${hibernate.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>5.1.14</version>
+        </dependency>
+        <dependency>
+		    <groupId>com.google.code.geocoder-java</groupId>
+		    <artifactId>geocoder-java</artifactId>
+		    <version>0.9</version>
+		</dependency>
+	</dependencies>
+	
+	 <profiles>
+
+<!--     To execute an SCA composite type 'mvn -Prun'. -->
+        <profile>
+            <id>run</id>
+            <build>
+                <defaultGoal>org.ow2.frascati.mojo:frascati-launcher-plugin:exec</defaultGoal>
+                <plugins>
+                    <plugin>
+                        <groupId>org.ow2.frascati.mojo</groupId>
+                        <artifactId>frascati-launcher-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <loggingConfFile>${java.util.logging.conf.file}</loggingConfFile>
+                            <composite>${composite.file}</composite>
+                            <service>${service.name}</service>
+                            <method>${method.name}</method>
+                            <methodParams>${method.params}</methodParams>
+                            <systemProperties>
+                                <org.ow2.frascati.class>${org.ow2.frascati.class}</org.ow2.frascati.class>
+                                <org.ow2.frascati.bootstrap>${org.ow2.frascati.bootstrap}</org.ow2.frascati.bootstrap>
+                                <org.ow2.frascati.composite>${org.ow2.frascati.composite}</org.ow2.frascati.composite>
+                                <org.ow2.frascati.binding.uri.base>${org.ow2.frascati.binding.uri.base}</org.ow2.frascati.binding.uri.base>
+                                Set the Apache CXF configuration file to load.
+                                <cxf.config.file.url>file:${cxf.config.file}</cxf.config.file.url>
+                            </systemProperties>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+<!--         To execute an SCA composite with FraSCAti Explorer type 'mvn -Pexplorer'. -->
+        <profile>
+            <id>explorer</id>
+            <dependencies>
+<!--             here FraSCAti Explorer is put in the classpath. -->
+                <dependency>
+                    <groupId>org.ow2.frascati</groupId>
+                    <artifactId>frascati-explorer-core</artifactId>
+                    <version>${frascati.version}</version>
+                </dependency>
+            </dependencies>
+            <properties>
+                <org.ow2.frascati.bootstrap>org.ow2.frascati.bootstrap.FraSCAtiFractal</org.ow2.frascati.bootstrap>
+            </properties>
+            <build>
+                <defaultGoal>exec:java</defaultGoal>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <configuration>
+                            <mainClass>org.ow2.frascati.explorer.FrascatiExplorerLauncher</mainClass>
+                            <arguments>
+                                <argument>${composite.file}</argument>
+                            </arguments>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+<!--             To execute an SCA composite with FraSCAti Remote Introspection with   -->
+<!--             FScript type 'mvn -Premote-fscript'. -->
+        <profile>
+            <id>remote-fscript</id>
+            <dependencies>
+                <dependency>
+                    <groupId>org.ow2.frascati</groupId>
+                    <artifactId>frascati-introspection-fscript-impl</artifactId>
+                    <version>${frascati.version}</version>
+                </dependency>
+            </dependencies>
+            <properties>
+                <org.ow2.frascati.bootstrap>org.ow2.frascati.bootstrap.FraSCAtiJDTFractalRest</org.ow2.frascati.bootstrap>
+            </properties>
+        </profile>
+        
+<!--         To execute an SCA composite with FraSCAti Remote Introspection type 'mvn -Premote'. -->
+            <profile>
+              <id>remote</id>
+              <dependencies>
+                <dependency>
+                  <groupId>org.ow2.frascati</groupId>
+                  <artifactId>frascati-introspection-impl</artifactId>
+                  <version>${project.version}</version>
+                </dependency>
+              </dependencies>
+              <properties>
+                <org.ow2.frascati.bootstrap>org.ow2.frascati.bootstrap.FraSCAtiJDTRest</org.ow2.frascati.bootstrap>
+              </properties>
+            </profile>
+
+<!--         To execute an SCA composite with FraSCAti Web Explorer type 'mvn -Pweb'. -->
+        <profile>
+            <id>web</id>
+            <dependencies>
+                <dependency>
+                    <groupId>org.ow2.frascati</groupId>
+                    <artifactId>frascati-web-explorer</artifactId>
+                    <version>${frascati.version}</version>
+                </dependency>
+            </dependencies>
+            <properties>
+                <org.ow2.frascati.bootstrap>org.ow2.frascati.bootstrap.FraSCAtiWebExplorer</org.ow2.frascati.bootstrap>
+            </properties>
+        </profile>
+
+    </profiles>
+</project>

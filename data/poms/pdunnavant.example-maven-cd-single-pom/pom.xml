@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<name>Example Library</name>
+	<groupId>org.example</groupId>
+	<artifactId>example-maven-cd-single-pom</artifactId>
+	<version>${version.full}</version>
+	<packaging>jar</packaging>
+	<description>
+		1.0 - This is just a test pom to see how we can get continuous delivery and Maven working nicely together.
+	</description>
+
+	<scm>
+		<connection>${scm.location}</connection>
+		<url>${scm.location}</url>
+		<developerConnection>${scm.location}</developerConnection>
+	</scm>
+
+	<build>
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>true</filtering>
+				<includes>
+					<include>**/build.properties</include>
+				</includes>
+			</resource>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>false</filtering>
+				<excludes>
+					<exclude>**/build.properties</exclude>
+				</excludes>
+			</resource>
+		</resources>
+
+		<plugins>
+			<plugin>
+				<!-- Make sure that developers are using the correct version of Maven to run builds. -->
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>enforce-versions</id>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<requireMavenVersion>
+									<message>Only Maven versions ${version.maven}+ are supported.</message>
+									<version>[${version.maven},)</version>
+								</requireMavenVersion>
+								<requireJavaVersion>
+									<message>Only Java versions ${version.jdk}+ are supported.</message>
+									<version>[${version.jdk},)</version>
+								</requireJavaVersion>
+								<requireReleaseDeps>
+									<message>Snapshot dependencies are not allowed!</message>
+								</requireReleaseDeps>
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<!-- There are issues using Maven's native timestamp feature in combination with Jenkins (Jenkins
+				     overrides maven.build.timestamp.format for some reason), so this plugin will replace that for
+				     now. -->
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>buildnumber-maven-plugin</artifactId>
+				<version>1.1</version>
+				<configuration>
+					<timestampPropertyName>timestamp</timestampPropertyName>
+					<timestampFormat>yyyy-MM-dd'T'HH:mm:ss.SSSZ</timestampFormat>
+					
+					<format>{0,number}</format>
+					<items>
+						<item>buildNumber</item>
+					</items>                    
+					<doCheck>false</doCheck>
+					<doUpdate>true</doUpdate>
+					<revisionOnScmFailure>UNKNOWN</revisionOnScmFailure>
+				</configuration>
+				<executions>
+					<execution>
+						<id>initialize-timestamp-property</id>
+						<phase>initialize</phase>
+						<goals>
+							<goal>create-timestamp</goal>
+							<goal>create</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-scm-plugin</artifactId>
+				<version>1.7</version>
+				<executions>
+					<execution>
+						<id>commit-buildnumber-properties</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>checkin</goal>
+						</goals>
+						<configuration>
+							<includes>buildNumber.properties</includes>
+							<message>Auto commit buildNumber.properties.</message>
+							<pushChanges>true</pushChanges>
+						</configuration>
+					</execution>
+					<execution>
+						<id>tag-build</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>tag</goal>
+						</goals>
+						<configuration>
+							<tag>${version.full}</tag>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+	<properties>
+		<scm.location>scm:git:git@github.com:pdunnavant/example-maven-cd-single-pom.git</scm.location>
+
+		<version.major>1</version.major>
+		<version.minor>0</version.minor>
+		<version.patch>0</version.patch>
+		<version.build.number>${buildNumber}</version.build.number>
+		<version.full>${version.major}.${version.minor}.${version.patch}.${version.build.number}</version.full>
+
+		<version.maven>3.0.3</version.maven>
+		<version.jdk>1.6</version.jdk>
+	</properties>
+</project>

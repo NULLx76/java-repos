@@ -1,0 +1,279 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <parent>
+        <groupId>org.apache.axis2</groupId>
+        <artifactId>axis2-parent</artifactId>
+        <version>1.6.2</version>
+        <relativePath>../parent/pom.xml</relativePath>
+    </parent>
+      
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>de.slopjong</groupId>
+  <artifactId>tomxis2</artifactId>
+  <version>1.0</version>
+  <name>Tomcat with Axis2</name>
+  <url>http://slopjong.de</url>
+
+  <properties>
+    <tomcat.version>7.0.22</tomcat.version>
+    <axis2.version>1.6.2</axis2.version>
+    <webappDirectory>${project.basedir}/src/main/webapp</webappDirectory>
+    <confDirectory>${project.basedir}/src/main/conf</confDirectory>
+  </properties>
+  
+  <build>
+  	
+    <finalName>Tomxis2</finalName>
+  
+    <plugins>
+    
+        <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>appassembler-maven-plugin</artifactId>
+            <version>1.1.1</version>            
+            <configuration>
+                <assembleDirectory>${project.build.directory}</assembleDirectory>
+                <programs>
+                    <program>
+                        <mainClass>tomcat.Launcher</mainClass>
+                        <name>webapp</name>
+                    </program>
+                </programs>
+            </configuration>
+            <executions>
+                <execution>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>assemble</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+
+		<!-- this plugin must be executed before a related ant task processes -->
+		<plugin>
+        	<groupId>org.apache.maven.plugins</groupId>
+        	<artifactId>maven-dependency-plugin</artifactId>
+        	<executions>
+        		<execution>
+		            <id>unpack-axis2-webapp</id>
+		            <phase>package</phase>
+		            <goals>
+		              <goal>unpack</goal>
+		            </goals>
+		            <inherited>false</inherited>
+		            <configuration>
+			            <artifactItems>
+			            	<artifactItem>
+			            		<groupId>org.apache.axis2</groupId>
+			            		<artifactId>axis2-webapp</artifactId>
+			            		<version>${axis2.version}</version>
+			            		<type>war</type>
+			            		<overWrite>true</overWrite>
+			            		<outputDirectory>${project.build.directory}/axis2-webapp</outputDirectory>
+			            	</artifactItem>
+			            </artifactItems>	
+		            </configuration>
+          		</execution>
+        	</executions>
+        </plugin>
+                
+        <plugin>
+        	<!-- Process the start scripts to make the user's life a bit easier -->
+        	<artifactId>maven-antrun-plugin</artifactId>
+        	<executions>
+        	
+	            <execution>
+		            <id>explode-axis2-webapp</id>
+		            <phase>package</phase>
+		            <goals>
+		              <goal>run</goal>
+		            </goals>
+		            <inherited>false</inherited>
+		            <configuration>
+		           		<tasks>
+		           			<!--
+		           			<copy todir="${webappDirectory}/axis2-web">
+		           				<fileset dir="${project.build.directory}/axis2-webapp/axis2-web/" />
+		           			</copy>
+		           			<copy todir="${webappDirectory}/services">
+		           				<fileset dir="${project.build.directory}/axis2-webapp/services/" />
+		           			</copy>
+		           			<copy todir="${webappDirectory}/classes">
+		           				<fileset dir="${project.build.directory}/axis2-webapp/classes/" />
+		           			</copy>
+		           			<copy todir="${webappDirectory}/modules">
+		           				<fileset dir="${project.build.directory}/axis2-webapp/modules/" />
+		           			</copy>
+		           			<copy todir="${webappDirectory}/lib">
+		           				<fileset dir="${project.build.directory}/axis2-webapp/lib/" />
+		           			</copy>
+		           			-->
+		           			<move todir="${webappDirectory}">
+		           				<fileset dir="${project.build.directory}/axis2-webapp" />
+		           			</move>
+		           		</tasks>
+		            </configuration>
+	            </execution>
+	            <execution>
+		            <id>copy-configs</id>
+		            <phase>package</phase>
+		            <goals>
+		              <goal>run</goal>
+		            </goals>
+		            <inherited>false</inherited>
+		            <configuration>
+		           		<tasks>
+		           			<copy overwrite="true" file="${confDirectory}/web.xml" todir="${webappDirectory}/WEB-INF" />
+		           			<copy overwrite="true" file="${confDirectory}/axis2.xml" todir="${webappDirectory}/WEB-INF/conf" />
+		           		</tasks>
+		            </configuration>
+	            </execution>
+	            <execution>
+		            <id>create-start-script</id>
+		            <phase>package</phase>
+		            <goals>
+		              <goal>run</goal>
+		            </goals>
+		            <inherited>false</inherited>
+		            <configuration>
+		           		<tasks>
+		           			<echo file="${basedir}/run">#!/bin/sh
+		           				target/bin/webapp
+		           			</echo>
+		           		</tasks>
+		            </configuration>
+	            </execution>
+	            <execution>
+		            <id>chmod-start-scripts</id>
+		            <phase>package</phase>
+		            <goals>
+		              <goal>run</goal>
+		            </goals>
+		            <inherited>false</inherited>
+		            <configuration>
+		           		<tasks>
+		           			<chmod file="${project.build.directory}/bin/webapp" perm="755"/>
+		           			<chmod file="${basedir}/run" perm="755"/>
+		           		</tasks>
+		            </configuration>
+	            </execution>
+	             <execution>
+		            <id>delete-start-script</id>
+		            <phase>clean</phase>
+		            <goals>
+		              <goal>run</goal>
+		            </goals>
+		            <inherited>false</inherited>
+		            <configuration>
+		           		<tasks>
+		           			<delete file="${basedir}/run"/>
+		           		</tasks>
+		            </configuration>
+	            </execution>
+	            <!--
+	            <execution>
+          			<id>copy-axis2-webapp</id>
+          			<phase>package</phase>
+          			<goals><goal>run</goal></goals>
+          			<configuration>
+          				<tasks>
+          					<copy></copy>
+          				</tasks>
+          			</configuration>
+          		</execution>
+          		-->
+        	</executions>
+        	<dependencies>
+        		<!--
+        		<dependency>
+        			<groupId>ant-contrib</groupId>
+        			<artifactId>ant-contrib</artifactId>
+        			<version>1.0b3</version>
+        		</dependency>
+        		-->
+        	</dependencies>
+        </plugin>
+		
+    </plugins>
+  </build>
+    
+  <dependencies>
+  
+  	<!-- Tomcat dependencies -->
+    <dependency>
+        <groupId>org.apache.tomcat.embed</groupId>
+        <artifactId>tomcat-embed-core</artifactId>
+        <version>${tomcat.version}</version>
+    </dependency>
+    <!--
+    <dependency>
+        <groupId>org.apache.tomcat.embed</groupId>
+        <artifactId>tomcat-embed-logging-juli</artifactId>
+        <version>${tomcat.version}</version>
+    </dependency>
+    -->
+    <dependency>
+        <groupId>org.apache.tomcat.embed</groupId>
+        <artifactId>tomcat-embed-jasper</artifactId>
+        <version>${tomcat.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.tomcat</groupId>
+        <artifactId>tomcat-jasper</artifactId>
+        <version>${tomcat.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.tomcat</groupId>
+        <artifactId>tomcat-jasper-el</artifactId>
+        <version>${tomcat.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.tomcat</groupId>
+        <artifactId>tomcat-jsp-api</artifactId>
+        <version>${tomcat.version}</version>
+    </dependency>
+ 
+ 	<!-- Axis2 dependencies, if something axis2-related doesn't work, check [0] and [1] if dependencies are missing.
+ 	
+    	 [0] http://search.maven.org/remotecontent?filepath=org/apache/axis2/axis2-webapp/1.6.2/axis2-webapp-1.6.2.pom
+    	 [1] http://search.maven.org/remotecontent?filepath=org/apache/axis2/axis2-parent/1.6.2/axis2-parent-1.6.2.pom	 
+     -->    
+     
+    <dependency>
+    	<groupId>org.apache.axis2</groupId>
+    	<artifactId>axis2-parent</artifactId>
+    	<version>${axis2.version}</version>
+    	<type>pom</type>
+    </dependency>
+    
+	<!-- Axis2 has always been shipped with Sun's implementations of
+	     JavaMail and JAF, although Axiom depends on (and has been tested
+	     with) Geronimo's implementations. This should probably reevaluated. -->
+	<!--
+        <dependency>
+            <groupId>javax.mail</groupId>
+            <artifactId>mail</artifactId>
+            <version>${javax.mail.version}</version>
+        </dependency>
+	-->    
+
+    <!-- Other dependencies -->
+    <!--
+    <dependency>
+    	<groupId>org.apache.directory.studio</groupId>
+    	<artifactId>org.apache.commons.logging</artifactId>
+    	<version>1.1.1</version>
+    </dependency>
+    <dependency>
+    	<groupId>log4j</groupId>
+    	<artifactId>log4j</artifactId>
+    	<version>1.2.16</version>
+    </dependency>
+    -->
+    
+  </dependencies>
+  
+
+</project>

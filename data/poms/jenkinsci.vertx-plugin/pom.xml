@@ -1,0 +1,230 @@
+<?xml version="1.0"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    
+    <modelVersion>4.0.0</modelVersion>
+    
+    <parent>
+        <groupId>org.jenkins-ci.plugins</groupId>
+        <artifactId>plugin</artifactId>
+        
+        <!-- which version of Jenkins is this plugin built against? -->
+        <version>1.482</version>
+    </parent>
+    
+    <groupId>org.bravo5.jenkins.plugins</groupId>
+    <artifactId>vertx</artifactId>
+    <version>1.0.2-SNAPSHOT</version>
+    <packaging>hpi</packaging>
+    
+    <url>https://wiki.jenkins-ci.org/display/JENKINS/Vert.x+Embedder</url>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
+
+    <scm>
+        <connection>scm:git:ssh://github.com/jenkinsci/vertx-plugin.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/jenkinsci/vertx-plugin.git</developerConnection>
+        <url>https://github.com/jenkinsci/vertx-plugin</url>
+    </scm>
+    
+    <repositories>
+        <repository>
+            <id>repo.jenkins-ci.org</id>
+            <url>http://repo.jenkins-ci.org/public/</url>
+        </repository>
+    </repositories>
+    
+    <pluginRepositories>
+        <pluginRepository>
+            <id>repo.jenkins-ci.org</id>
+            <url>http://repo.jenkins-ci.org/public/</url>
+        </pluginRepository>
+    </pluginRepositories>
+    
+    <dependencies>
+        <!-- == compile == -->
+        <dependency>
+            <groupId>org.vert-x</groupId>
+            <artifactId>vertx-core</artifactId>
+            <version>1.3.0.final</version>
+
+            <exclusions>
+                <exclusion>
+                    <groupId>log4j</groupId>
+                    <artifactId>log4j</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.2</version>
+        </dependency>
+
+        <!-- == runtime == -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-jdk14</artifactId>
+            <version>1.7.2</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- == test == -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.easymock</groupId>
+            <artifactId>easymock</artifactId>
+            <version>3.1</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    
+    <build>
+        <resources>
+            <resource>
+              <directory>src/main/resources</directory>
+            </resource>
+            <resource>
+                <directory>target/generated-resources</directory>
+            </resource>
+        </resources>
+
+        <plugins>
+            <plugin>
+                <groupId>pl.project13.maven</groupId>
+                <artifactId>git-commit-id-plugin</artifactId>
+                <version>2.1.2</version>
+
+                <executions>
+                    <execution>
+                         <phase>generate-resources</phase>
+                        <goals>
+                            <goal>revision</goal>
+                         </goals>
+                    </execution>
+                </executions>
+
+                <configuration>
+                    <generateGitPropertiesFile>true</generateGitPropertiesFile>
+
+                    <!-- cannot prefix with ${project.build.directory} -->
+                    <generateGitPropertiesFilename>target/generated-resources/git.properties</generateGitPropertiesFilename>
+
+                    <dateFormat>yyyy-MM-dd'T'HH:mm:ssXX</dateFormat>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.5.1</version>
+
+                <configuration>
+                    <showDeprecation>true</showDeprecation>
+                    <showWarnings>true</showWarnings>
+                    
+                    <source>1.7</source>
+                    <target>1.7</target>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.12.4</version>
+
+                <configuration>
+                    <!-- because Vert.x can't be shut down -->
+                    <forkMode>always</forkMode>
+                    <systemPropertyVariables>
+                        <log4j.configuration>file://${project.build.directory}/test-classes/log4j.properties</log4j.configuration>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.6.0.201210061924</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    
+                    <execution>
+                        <id>report</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>disable-jenkins-meddling</id>
+            <activation>
+                <!-- set to true to save your sanity -->
+                <activeByDefault>false</activeByDefault>
+            </activation>
+
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jenkins-ci.tools</groupId>
+                        <artifactId>maven-hpi-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>default-test-hpl</id>
+                                <phase>none</phase>
+                            </execution>
+                            
+                            <execution>
+                                <id>default-resolve-test-dependencies</id>
+                                <phase>none</phase>
+                            </execution>
+                            
+                            <execution>
+                                <id>default-hpi</id>
+                                <phase>none</phase>
+                            </execution>
+                            
+                            <execution>
+                                <id>default-insert-test</id>
+                                <phase>none</phase>
+                            </execution>
+
+                            <execution>
+                                <id>default-validate</id>
+                                <phase>none</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+    <developers>
+        <developer>
+            <id>blalor</id>
+            <name>Brian Lalor</name>
+            <email>blalor@bravo5.org</email>
+            <url>https://github.com/blalor</url>
+        </developer>
+    </developers>
+</project>

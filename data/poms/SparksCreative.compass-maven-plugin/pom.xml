@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>net.uk.sparks.webstack</groupId>
+    <artifactId>compass-maven-plugin</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>maven-plugin</packaging>
+
+    <name>Compass Maven Plugin</name>
+    <description>Installs Sass, Compass (and optional extension) resources into a Maven project and compiles .scss files
+        to .css within the project's build lifecycle.</description>
+    <inceptionYear>2012</inceptionYear>
+
+    <licenses>
+        <license>
+            <name>Apache License 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <organization>
+        <name>Sparks Creative Limited</name>
+        <url>http://sparks.uk.net</url>
+    </organization>
+
+    <developers>
+        <developer>
+            <id>simonsparks</id>
+            <name>Simon Sparks</name>
+            <email>simon@sparks.uk.net</email>
+            <url>http://simon.sparks.uk.net</url>
+            <organization>Sparks Creative Limited</organization>
+            <organizationUrl>http://sparks.uk.net</organizationUrl>
+            <timezone>0</timezone>
+            <roles>
+                <role>architect</role>
+                <role>developer</role>
+            </roles>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git@github.com:simonsparks/ZenGridsJavaLibrary.git</connection>
+        <developerConnection>scm:git:git@github.com:simonsparks/ZenGridsJavaLibrary.git</developerConnection>
+        <url>scm:git:git@github.com:simonsparks/ZenGridsJavaLibrary.git</url>
+    </scm>
+
+    <prerequisites>
+        <maven>2.0</maven>
+    </prerequisites>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.build.generatedSources>${project.build.directory}/generated-sources</project.build.generatedSources>
+
+        <properties-maven-plugin.version>1.0-alpha-2</properties-maven-plugin.version>
+        <exec-maven-plugin.version>1.2.1</exec-maven-plugin.version>
+        <maven-jar-plugin.version>2.4</maven-jar-plugin.version>
+
+        <maven-plugin-api.version>2.0</maven-plugin-api.version>
+        <jruby.version>1.6.7</jruby.version>
+        <junit.version>4.10</junit.version>
+
+        <jruby.gems.versions>${basedir}/src/main/resources/META-INF/properties/version.properties</jruby.gems.versions>
+        <jruby.gems.sources>${project.build.generatedSources}/rubygems</jruby.gems.sources>
+        <jruby.install.args>--no-rdoc --no-ri</jruby.install.args>
+        <jruby.install.cmd.pre>-classpath %classpath org.jruby.Main -S gem install</jruby.install.cmd.pre>
+        <jruby.install.cmd.post>-i ${jruby.gems.sources}/META-INF/ruby.gems ${jruby.install.args}</jruby.install.cmd.post>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.jruby</groupId>
+            <artifactId>jruby-complete</artifactId>
+            <version>${jruby.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-plugin-api</artifactId>
+            <version>${maven-plugin-api.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-core</artifactId>
+            <version>${maven-plugin-api.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <resources>
+            <resource><directory>${project.basedir}/src/main/resources</directory></resource>
+            <resource>
+                <directory>${jruby.gems.sources}</directory>
+                <filtering>false</filtering>
+            </resource>
+        </resources>
+
+        <testResources>
+            <testResource><directory>${project.basedir}/src/main/resources</directory></testResource>
+            <testResource>
+                <directory>${jruby.gems.sources}</directory>
+                <filtering>false</filtering>
+            </testResource>
+        </testResources>
+
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>properties-maven-plugin</artifactId>
+                <version>${properties-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <phase>initialize</phase>
+                        <goals><goal>read-project-properties</goal></goals>
+                        <configuration>
+                            <files><file>${jruby.gems.versions}</file></files>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>install-gems</id>
+            <activation>
+                <property><name>!gems.install.skip</name></property>
+            </activation>
+
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>${exec-maven-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>install-sass</id>
+                                <goals><goal>exec</goal></goals>
+                                <phase>generate-sources</phase>
+                                <configuration>
+                                    <executable>java</executable>
+                                    <commandlineArgs>${jruby.install.cmd.pre} sass -v ${gem.sass.version} ${jruby.install.cmd.post}</commandlineArgs>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>install-compass</id>
+                                <goals><goal>exec</goal></goals>
+                                <phase>generate-sources</phase>
+                                <configuration>
+                                    <executable>java</executable>
+                                    <commandlineArgs>${jruby.install.cmd.pre} compass -v ${gem.compass.version} ${jruby.install.cmd.post}</commandlineArgs>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>install-960</id>
+                                <goals><goal>exec</goal></goals>
+                                <phase>generate-sources</phase>
+                                <configuration>
+                                    <executable>java</executable>
+                                    <commandlineArgs>${jruby.install.cmd.pre} compass-960-plugin -v ${gem.960.version} ${jruby.install.cmd.post}</commandlineArgs>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>install-yui</id>
+                                <goals><goal>exec</goal></goals>
+                                <phase>generate-sources</phase>
+                                <configuration>
+                                    <executable>java</executable>
+                                    <commandlineArgs>${jruby.install.cmd.pre} yui-compass-plugin -v ${gem.yui.version} ${jruby.install.cmd.post}</commandlineArgs>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>install-zen-grids</id>
+                                <goals><goal>exec</goal></goals>
+                                <phase>generate-sources</phase>
+                                <configuration>
+                                    <executable>java</executable>
+                                    <commandlineArgs>${jruby.install.cmd.pre} zen-grids -v ${gem.zen-grids.version} ${jruby.install.cmd.post}</commandlineArgs>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>install-zurb-foundation</id>
+                                <goals><goal>exec</goal></goals>
+                                <phase>generate-sources</phase>
+                                <configuration>
+                                    <executable>java</executable>
+                                    <commandlineArgs>${jruby.install.cmd.pre} foundation-sass -v ${gem.zurb-foundation.version} ${jruby.install.cmd.post}</commandlineArgs>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>install-sassy-buttons</id>
+                                <goals><goal>exec</goal></goals>
+                                <phase>generate-sources</phase>
+                                <configuration>
+                                    <executable>java</executable>
+                                    <commandlineArgs>${jruby.install.cmd.pre} sassy-buttons -v ${gem.sassy-buttons.version} ${jruby.install.cmd.post}</commandlineArgs>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>install-sassy-math</id>
+                                <goals><goal>exec</goal></goals>
+                                <phase>generate-sources</phase>
+                                <configuration>
+                                    <executable>java</executable>
+                                    <commandlineArgs>${jruby.install.cmd.pre} sassy-math -v ${gem.sassy-math.version} ${jruby.install.cmd.post}</commandlineArgs>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-patch-plugin</artifactId>
+                        <version>1.1.1</version>
+                        <executions>
+                            <execution>
+                                <id>apply-rubygems-patches</id>
+                                <goals><goal>apply</goal></goals>
+                                <phase>process-sources</phase>
+                                <configuration>
+                                    <patches>
+                                        <patch>compass-0.12.2_lib_compass_sass_extensions_sprites_engines_chunky_png_engine.patch</patch>
+                                        <patch>fssm-0.2.9_lib_fssm.patch</patch>
+                                        <patch>fssm-0.2.9_lib_fssm_path.patch</patch>
+                                        <patch>sass-3.2.3_lib_sass_importers_filesystem.patch</patch>
+                                        <patch>yui-compass-plugin-0.3_templates_project_screen.patch</patch>
+                                    </patches>
+                                    <targetDirectory>${jruby.gems.sources}</targetDirectory>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

@@ -1,0 +1,217 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>net.oneandone.maven.poms</groupId>
+    <artifactId>lazy-foss-parent</artifactId>
+    <version>1.0.2</version>
+  </parent>
+
+  <name>Mork</name>
+  <url>https://github.com/mlhartme/mork</url>
+  <description>See ${project.url}.</description>
+
+  <groupId>net.oneandone</groupId>
+  <artifactId>mork</artifactId>
+  <version>1.1.6-SNAPSHOT</version>
+  <!-- YP link: http://go.1and1.org/yp/YP-FE.16894 -->
+
+  <packaging>jar</packaging>
+  <inceptionYear>1998</inceptionYear>
+
+  <developers>
+    <developer>
+      <id>mlhartme</id>
+      <name>Michael Hartmeier</name>
+      <url>http://github.com/mlhartme/</url>
+      <organization>1 &amp; 1 Internet AG</organization>
+      <organizationUrl>https://github.com/1and1</organizationUrl>
+      <roles>
+        <role>developer</role>
+      </roles>
+      <timezone>+1</timezone>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:ssh://git@github.com/mlhartme/mork.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/mlhartme/mork.git</developerConnection>
+    <url>https://github.com/mlhartme/mork</url>
+    <tag>HEAD</tag>
+  </scm>
+
+  <dependencies>
+    <dependency>
+      <groupId>net.oneandone</groupId>
+      <artifactId>sushi</artifactId>
+      <version>3.1.6</version>
+    </dependency>
+    <dependency>
+      <groupId>net.oneandone</groupId>
+      <artifactId>inline</artifactId>
+      <version>1.1.1</version>
+    </dependency>
+    <dependency>
+      <groupId>net.oneandone</groupId>
+      <artifactId>graph</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <defaultGoal>package</defaultGoal>
+
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <forkMode>never</forkMode>
+            <useFile>false</useFile>
+            <includes>
+              <include>**/*Test.java</include>
+            </includes>
+            <excludes>
+              <exclude>**/MainFunctionalTest.java</exclude>
+              <exclude>**/PartitionTest.java</exclude>
+            </excludes>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+
+    <plugins>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.8</version>
+        <executions>
+          <execution>
+            <id>bootstrap</id>
+            <phase>test-compile</phase>
+            <configuration>
+              <target>
+                <echo>Bootstrap Pass 1</echo>
+                <fileset id="mapper.bs1" dir="${basedir}">
+                  <include name="src/test/java/**/bootstrap/*.mapper" />
+                </fileset>
+                <pathconvert property="mapper.bs1" refid="mapper.bs1" pathsep=" " />
+                <java fork="true" dir="${basedir}" classname="de.mlhartme.mxxx.compiler.Main" failonerror="true">
+                  <classpath>
+                    <pathelement path="${basedir}/src/bsmork.jar" />
+                    <pathelement path="${basedir}/target/classes" />
+                    <path refid="maven.test.classpath" />
+                  </classpath>
+                  <arg value="-d" />
+                  <arg path="${basedir}/target/classes" />
+                  <arg line="${mapper.bs1}" />
+                </java>
+                <echo>Bootstrap Pass 2</echo>
+                <fileset id="mapper.bs2" dir="${basedir}">
+                  <include name="src/main/*.mapper" />
+                </fileset>
+                <pathconvert property="mapper.bs2" refid="mapper.bs2" pathsep=" " />
+                <java fork="true" dir="${basedir}" classname="net.oneandone.mork.compiler.Main" failonerror="true">
+                  <classpath>
+                    <pathelement path="${basedir}/src/bsmork.jar" />
+                    <pathelement path="${basedir}/target/classes" />
+                    <path refid="maven.test.classpath" />
+                  </classpath>
+                  <arg value="-d" />
+                  <arg path="${basedir}/target/classes" />
+                  <arg value="-lst" />
+                  <arg value="-mapper" />
+                  <arg value="net.oneandone.mork.bootstrap.Loader.loadMapper" />
+                  <arg line="${mapper.bs2}" />
+                </java>
+                <echo>Bootstrap Pass 3</echo>
+                <fileset id="mapper.bs3" dir="${basedir}">
+                  <include name="src/main/*.mapper" />
+                </fileset>
+                <pathconvert property="mapper.bs3" refid="mapper.bs3" pathsep=" " />
+                <java fork="true" dir="${basedir}" classname="net.oneandone.mork.compiler.Main" failonerror="true">
+                  <classpath>
+                    <pathelement path="${basedir}/target/classes" />
+                    <pathelement path="${basedir}/target/test-classes" />
+                    <path refid="maven.test.classpath" />
+                  </classpath>
+                  <arg value="-d" />
+                  <arg path="${basedir}/target/classes" />
+                  <arg value="-lst" />
+                  <arg line="${mapper.bs3}" />
+                </java>
+                <!-- run again to test the generated mappers -->
+                <java fork="true" dir="${basedir}" classname="net.oneandone.mork.compiler.Main" failonerror="true">
+                  <classpath>
+                    <pathelement path="${basedir}/target/classes" />
+                    <pathelement path="${basedir}/target/test-classes" />
+                    <path refid="maven.test.classpath" />
+                  </classpath>
+                  <!-- <arg value="-verbose:attribution"/-->
+                  <arg value="-d" />
+                  <arg path="${basedir}/target/classes" />
+                  <arg line="${mapper.bs3}" />
+                </java>
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <!-- Documentation: http://code.google.com/p/docbkx-tools/ -->
+        <groupId>com.agilejava.docbkx</groupId>
+        <artifactId>docbkx-maven-plugin</artifactId>
+        <version>2.0.13</version>
+        <configuration>
+          <sourceDirectory>src/site/manual</sourceDirectory>
+          <includes>manual.xml</includes>
+          <targetDirectory>${basedir}/target/site</targetDirectory>
+          <xincludeSupported>true</xincludeSupported>
+          <preProcess>
+            <tstamp>
+              <format property="now" pattern="yyyy-MM-d" />
+            </tstamp>
+            <mkdir dir="${project.build.directory}/site/manual" />
+            <copy toDir="${project.build.directory}/site/manual">
+              <fileset dir="${basedir}/src/site/manual">
+                <include name="*.svg" />
+                <include name="*.jpg" />
+              </fileset>
+            </copy>
+            <echo file="${project.build.directory}/now.txt">${now}</echo>
+          </preProcess>
+        </configuration>
+        <executions>
+          <execution>
+            <id>manual-html</id>
+            <phase>pre-site</phase>
+            <goals>
+              <goal>generate-html</goal>
+            </goals>
+            <configuration>
+              <chunkedOutput>true</chunkedOutput>
+              <chunkSectionDepth>0</chunkSectionDepth>
+            </configuration>
+          </execution>
+          <execution>
+            <id>manual-pdf</id>
+            <phase>pre-site</phase>
+            <goals>
+              <goal>generate-pdf</goal>
+            </goals>
+            <configuration>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

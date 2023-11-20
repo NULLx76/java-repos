@@ -1,0 +1,289 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>be.collectors</groupId>
+  <artifactId>whiskey</artifactId>
+  <packaging>war</packaging>
+  <version>0.0.0-SNAPSHOT</version>
+  <name>Whiskey Maven Webapp</name>
+  <url>http://maven.apache.org</url>
+  <build>
+    <finalName>whiskeycollection</finalName>
+      <resources>
+    			<resource>
+    				<filtering>false</filtering>
+    				<directory>src/main/resources</directory>
+    			</resource>
+    			<resource>
+    				<filtering>false</filtering>
+    				<directory>src/main/java</directory>
+    				<includes>
+    					<include>**</include>
+    				</includes>
+    				<excludes>
+    					<exclude>**/*.java</exclude>
+    				</excludes>
+    			</resource>
+    		</resources>
+    		<testResources>
+    			<testResource>
+    				<filtering>false</filtering>
+    				<directory>src/main/webapp/WEB-INF/views</directory>
+    				<includes>
+    					<include>**</include>
+    				</includes>
+    				<excludes>
+    					<exclude>**/*.java</exclude>
+    				</excludes>
+    			</testResource>
+    		</testResources>
+
+    <plugins>
+
+        <plugin>
+       <groupId>org.codehaus.mojo</groupId>
+       <artifactId>findbugs-maven-plugin</artifactId>
+       <version>2.5.2</version>
+            <configuration>
+                <excludeFilterFile>${project.basedir}/find-bugs-exclude-filter.xml</excludeFilterFile>
+                      <effort>Max</effort>
+                      <threshold>Low</threshold>
+                      <xmlOutput>true</xmlOutput>
+                    </configuration>
+                    <executions>
+                      <execution>
+                        <phase>verify</phase>
+                        <goals>
+                          <goal>check</goal>
+                        </goals>
+                      </execution>
+                    </executions>
+        </plugin>
+        <!--<plugin>-->
+                        <!--<groupId>org.apache.maven.plugins</groupId>-->
+                        <!--<artifactId>maven-checkstyle-plugin</artifactId>-->
+                        <!--<version>2.8</version>-->
+                        <!--<inherited>true</inherited>-->
+                        <!--<configuration>-->
+                            <!--&lt;!&ndash;to skip checkstyle validation set value as "true" &ndash;&gt;-->
+                            <!--<skip>false</skip>-->
+                            <!--<consoleOutput>true</consoleOutput>-->
+                            <!--<logViolationsToConsole>true</logViolationsToConsole>-->
+                            <!--&lt;!&ndash;want to make build fail, when checkstyle found validation error. set value as "true".&ndash;&gt;-->
+                            <!--<failOnViolation>true</failOnViolation>-->
+                            <!--<violationSeverity>warning</violationSeverity>-->
+          <!--&lt;!&ndash; sun_checks.xml is default checkstyle configuration from checkstyle. Can add/remove validations in this file.  &ndash;&gt;                    &lt;!&ndash;configLocation>${basedir}/src/main/resources/sun_checks.xml</configLocation&ndash;&gt;-->
+
+                        <!--</configuration>-->
+        <!--&lt;!&ndash; the below configuration will ask maven build to execute checkstyle goal &ndash;&gt;-->
+                        <!--<executions>-->
+                            <!--<execution>-->
+                                <!--<goals>-->
+                                    <!--<goal>check</goal>-->
+                                <!--</goals>-->
+                            <!--</execution>-->
+                        <!--</executions>-->
+                    <!--</plugin>-->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-pmd-plugin</artifactId>
+            <version>3.0.1</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>check</goal>
+                  <goal>cpd-check</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>1.6</version>
+
+            <executions>
+                <execution>
+                    <!-- Starting hsqldb for unitteting, including filling the database with custom scripts.
+                         I could also let hibernate create te database objects themself, but this way it is easier to
+                         control we have excactly the same database releases as in the production environment -->
+                    <id>start-hsqldb-server</id>
+                    <phase>generate-test-sources</phase>
+                    <goals>
+                        <goal>run</goal>
+                    </goals>
+                    <configuration>
+                        <target unless="maven.test.skip">
+                            <java classname="org.hsqldb.Server" classpathref="maven.test.classpath" fork="true"  spawn="true">
+                                <arg value="-port"/>
+                                <arg value="9002" />
+                                <arg value="-database.0" />
+                     			<arg value="file:${basedir}/test.hsqldb" />
+                     			<arg value="-dbname.0" />
+                     			<arg value="xdb" />
+                            </java>
+                            <echo>.. HSQLDB Server started.</echo>
+                            <java classname="org.hsqldb.cmdline.SqlTool" classpathref="maven.test.classpath" fork="true">
+                                <arg value="--inlineRc=url=jdbc:hsqldb:hsql://localhost:9002/xdb,user=sa,password=" />
+                                <arg value="--sql" />
+                                <arg value="DROP SCHEMA PUBLIC CASCADE ;" />
+                            </java>
+                            <echo>.. Clean up db</echo>
+                            <java classname="org.hsqldb.cmdline.SqlTool" classpathref="maven.test.classpath" fork="true">
+                                <arg value="--inlineRc=url=jdbc:hsqldb:hsql://localhost:9002/xdb,user=sa,password=" />
+                                <arg value="src/main/db/01_create_tables.sql" />
+                            </java>
+                            <echo>.. Tables created</echo>
+                            <java classname="org.hsqldb.cmdline.SqlTool" classpathref="maven.test.classpath" fork="true">
+                                <arg value="--inlineRc=url=jdbc:hsqldb:hsql://localhost:9002/xdb,user=sa,password=" />
+                                <arg value="src/main/db/02_create_constraints.sql" />
+                            </java>
+                            <echo>.. Constraints created</echo>
+                            <java classname="org.hsqldb.cmdline.SqlTool" classpathref="maven.test.classpath" fork="true">
+                                <arg value="--inlineRc=url=jdbc:hsqldb:hsql://localhost:9002/xdb,user=sa,password=" />
+                                <arg value="src/main/db/03_sequences.sql" />
+                            </java>
+                            <echo>.. Sequences created</echo>
+                            <java classname="org.hsqldb.cmdline.SqlTool" classpathref="maven.test.classpath" fork="true">
+                                <arg value="--inlineRc=url=jdbc:hsqldb:hsql://localhost:9002/xdb,user=sa,password=" />
+                                <arg value="src/main/db/04_fill_values.sql" />
+                            </java>
+                        </target>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <version>2.12.4</version>
+            <configuration>
+              <!--parallel>methods</parallel>
+              <threadCount>1</threadCount-->
+                <!-- Setting the unittest environment. This will set the correct database parameters -->
+                <environmentVariables>
+                 <environment>unittest</environment>
+                </environmentVariables>
+            </configuration>
+          </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.7</source>
+          <target>1.7</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.tomcat.maven</groupId>
+        <artifactId>tomcat7-maven-plugin</artifactId>
+        <version>2.0</version>
+      </plugin>
+    </plugins>
+  </build>
+  <!-- The main project dependency reference -->
+  <dependencies>
+    <!-- Spring MVC 3.1 dependency, it will pull all Spring Framework by transitive dependencies -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-webmvc</artifactId>
+      <version>3.1.2.RELEASE</version>
+    </dependency>
+    <!-- Spring transaction management, as it's optional, it's not in transitive dependencies of Spring MVC -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-tx</artifactId>
+      <version>3.1.2.RELEASE</version>
+    </dependency>
+    <!-- Spring Data JPA 1.0 -->
+    <dependency>
+      <groupId>org.springframework.data</groupId>
+      <artifactId>spring-data-jpa</artifactId>
+      <version>1.2.0.RC1</version>
+    </dependency>
+    <!-- Spring Security 3.1 web, as for Spring MVC, this artifact will pull Spring Security core -->
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-web</artifactId>
+      <version>3.1.0.RELEASE</version>
+    </dependency>
+    <!-- Spring Security configuration, this is an optional feature and needs to be declared explicitly -->
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-config</artifactId>
+      <version>3.1.0.RELEASE</version>
+    </dependency>
+      <dependency>
+              <groupId>org.springframework</groupId>
+              <artifactId>spring-test</artifactId>
+              <version>3.1.0.RELEASE</version>
+            </dependency>
+
+    <dependency>
+      <groupId>org.hibernate</groupId>
+      <artifactId>hibernate-entitymanager</artifactId>
+      <version>4.1.7.Final</version>
+    </dependency>
+    <!-- SLF4J is a common interface for logging and can be implemented with all common logging runtime. Here we load the log4j adapter and by relation,
+      the API itself -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>1.6.1</version>
+    </dependency>
+    <!-- Official Servlet API 2.5 which is scoped provided which means that this library is needed to compile but has not to be included in the generated 
+      package because it's "provided" by the runtime environment -->
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>javax.servlet-api</artifactId>
+      <version>3.0.1</version>
+      <scope>provided</scope>
+    </dependency>
+    <!-- Wicket  -->
+      <dependency>
+          <groupId>org.apache.wicket</groupId>
+          <artifactId>wicket-core</artifactId>
+          <version>6.4.0</version>
+      </dependency>
+      <!-- Integrating wicket with spring -->
+      <dependency>
+          <groupId>org.apache.wicket</groupId>
+          <artifactId>wicket-spring</artifactId>
+          <version>6.4.0</version>
+      </dependency>
+      <!-- hsqldb database -->
+      <dependency>
+          <groupId>org.hsqldb</groupId>
+          <artifactId>hsqldb</artifactId>
+          <version>2.2.8</version>
+          <!-- scope>test</scope -->
+     </dependency>
+      <dependency>
+      	<groupId>org.hsqldb</groupId>
+      	<artifactId>sqltool</artifactId>
+      	<version>2.2.8</version>
+      </dependency>
+      <!-- Lombok for shorter getters and setters -->
+      <dependency>
+          <groupId>org.projectlombok</groupId>
+          <artifactId>lombok</artifactId>
+          <version>0.11.6</version>
+          <scope>provided</scope>
+      </dependency>
+      <!-- Junit for testing purposes -->
+      <dependency>
+          <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.8.1</version>
+            <!--scope>test</scope -->
+          </dependency>
+
+      <dependency>
+    			<groupId>org.mockito</groupId>
+    			<artifactId>mockito-all</artifactId>
+    			<version>1.8.5</version>
+    			<scope>test</scope>
+    		</dependency>
+
+  </dependencies>
+
+</project>

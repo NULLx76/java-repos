@@ -1,0 +1,405 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>nz.org.nesi</groupId>
+		<artifactId>nesi</artifactId>
+		<version>1.0</version>
+	</parent>
+
+	<repositories>
+		<repository>
+			<id>releases</id>
+			<url>http://code.ceres.auckland.ac.nz/nexus/content/groups/public/</url>
+			<releases>
+				<enabled>true</enabled>
+				<updatePolicy>daily</updatePolicy>
+				<checksumPolicy>warn</checksumPolicy>
+			</releases>
+			<snapshots>
+				<enabled>false</enabled>
+				<updatePolicy>always</updatePolicy>
+				<checksumPolicy>fail</checksumPolicy>
+			</snapshots>
+		</repository>
+	</repositories>
+
+
+
+	<artifactId>nesi-setup</artifactId>
+	<version>0.18-SNAPSHOT</version>
+	<dependencies>
+		<dependency>
+			<groupId>grisu.frontend</groupId>
+			<artifactId>grisu-client</artifactId>
+			<version>${grisu.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>grith</groupId>
+			<artifactId>jgrith</artifactId>
+			<version>${jgrith.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcprov-jdk15</artifactId>
+			<version>1.45</version>
+		</dependency>
+		<dependency>
+			<groupId>org.ciscavate</groupId>
+			<artifactId>cjwizard</artifactId>
+			<version>nesi-0.22</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.velocity</groupId>
+			<artifactId>velocity</artifactId>
+			<version>1.7</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.velocity</groupId>
+			<artifactId>velocity-tools</artifactId>
+			<version>2.0</version>
+		</dependency>
+	</dependencies>
+	<properties>
+		<grisu.version>0.8.2</grisu.version>
+	        <jgrith.version>1.0.3</jgrith.version>
+	</properties>
+
+	<build>
+		<plugins>
+
+			<plugin>
+				<groupId>com.google.code.maven-replacer-plugin</groupId>
+				<artifactId>maven-replacer-plugin</artifactId>
+				<version>1.4.0</version>
+				<executions>
+					<execution>
+						<!-- the replace should happen before the app is packaged -->
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>replace</goal>
+						</goals>
+					</execution>
+				</executions>
+
+				<configuration>
+					<includes>
+						<!-- replace the token in this file -->
+						<include>target/classes/nesi-setup.version</include>
+					</includes>
+					<regex>false</regex>
+					<!-- the name of the token to replace -->
+					<token>VERSION_TOKEN</token>
+					<!-- replace it with the maven project version -->
+					<value>${project.version} (${maven.build.timestamp})</value>
+				</configuration>
+			</plugin>
+
+			<!-- you can disable the assembly plugin if you want, your builds will
+				be faster I find it quite handy to have maven build an executable jar, though -->
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<configuration>
+
+							<descriptors>
+								<descriptor>client.assembly.xml</descriptor>
+							</descriptors>
+							<finalName>nesi-setup</finalName>
+							<archive>
+								<index>true</index>
+								<manifest>
+									<mainClass>grisu.frontend.view.swing.utils.ssh.wizard.NesiSetupWizard</mainClass>
+								</manifest>
+								<manifestEntries>
+									<Class-Path>bcprov.jar local-backend.jar</Class-Path>
+								</manifestEntries>
+							</archive>
+
+						</configuration>
+						<goals>
+							<goal>attached</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-release-plugin</artifactId>
+				<version>2.4</version>
+				<!-- <inherited>false</inherited> -->
+				<configuration>
+					<autoVersionSubmodules>true</autoVersionSubmodules>
+					<pushChanges>true</pushChanges>
+					<localCheckout>true</localCheckout>
+					<tagNameFormat>@{project.version}</tagNameFormat>
+					<releaseProfiles>deb,rpm</releaseProfiles>
+				</configuration>
+			</plugin>
+
+		</plugins>
+
+	</build>
+
+	<profiles>
+
+		<profile>
+			<id>deb</id>
+			<!-- <activation> -->
+			<!-- <property> -->
+			<!-- <name>BUILD_NUMBER</name> -->
+			<!-- </property> -->
+			<!-- </activation> -->
+
+			<build>
+				<plugins>
+
+					<plugin>
+						<artifactId>maven-resources-plugin</artifactId>
+						<version>2.5</version>
+						<executions>
+							<execution>
+								<id>copy-deb-control</id>
+								<!-- here the phase you need -->
+								<phase>prepare-package</phase>
+								<goals>
+									<goal>copy-resources</goal>
+								</goals>
+								<configuration>
+									<outputDirectory>${basedir}/target/deb/control</outputDirectory>
+									<resources>
+										<resource>
+											<directory>${basedir}/src/deb/control</directory>
+											<filtering>false</filtering>
+										</resource>
+									</resources>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+					<plugin>
+						<groupId>com.google.code.maven-replacer-plugin</groupId>
+						<artifactId>maven-replacer-plugin</artifactId>
+						<version>1.4.0</version>
+						<executions>
+							<execution>
+								<id>fix_in_app_version</id>
+								<phase>prepare-package</phase>
+								<goals>
+									<goal>replace</goal>
+								</goals>
+								<configuration>
+									<includes>
+										<include>target/classes/nesi-setup.version</include>
+									</includes>
+									<ignoreMissingFile>false</ignoreMissingFile>
+
+									<replacements>
+										<replacement>
+											<token>VERSION_TOKEN</token>
+											<value>${project.version} (${maven.build.timestamp})</value>
+										</replacement>
+									</replacements>
+								</configuration>
+							</execution>
+							<execution>
+								<id>fix_deb_version</id>
+								<phase>prepare-package</phase>
+								<goals>
+									<goal>replace</goal>
+								</goals>
+								<configuration>
+									<includes>
+										<include>target/deb/control/control</include>
+									</includes>
+									<ignoreMissingFile>false</ignoreMissingFile>
+
+									<replacements>
+										<replacement>
+											<token>VERSION_TOKEN</token>
+											<value>${project.version}</value>
+										</replacement>
+									</replacements>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+					<plugin>
+						<artifactId>jdeb</artifactId>
+						<groupId>org.vafer</groupId>
+						<version>0.9</version>
+						<executions>
+							<execution>
+								<phase>package</phase>
+								<goals>
+									<goal>jdeb</goal>
+								</goals>
+								<configuration>
+									<changesIn>CHANGES.txt</changesIn>
+									<deb>[[buildDir]]/nesi-setup-${project.version}.deb</deb>
+									<controlDir>target/deb/control</controlDir>
+									<dataSet>
+										<data>
+											<src>${project.build.directory}/nesi-setup-binary.jar</src>
+											<type>file</type>
+											<mapper>
+												<type>perm</type>
+												<prefix>/usr/local/lib/grisu/</prefix>
+												<user>root</user>
+												<group>root</group>
+											</mapper>
+										</data>
+										<data>
+											<src>${project.basedir}/src/deb/data/nesi-setup</src>
+											<type>file</type>
+											<mapper>
+												<type>perm</type>
+												<prefix>/usr/bin/</prefix>
+												<user>root</user>
+												<group>root</group>
+												<filemode>755</filemode>
+											</mapper>
+										</data>
+										<data>
+											<src>${project.basedir}/src/deb/data/nesi-setup.desktop</src>
+											<type>file</type>
+											<mapper>
+												<type>perm</type>
+												<prefix>/usr/share/applications/</prefix>
+												<user>root</user>
+												<group>root</group>
+												<filemode>755</filemode>
+											</mapper>
+										</data>
+										<data>
+											<src>${project.basedir}/src/deb/data/nesi-setup.png</src>
+											<type>file</type>
+											<mapper>
+												<type>perm</type>
+												<prefix>/usr/local/lib/grisu/icons/</prefix>
+												<user>root</user>
+												<group>root</group>
+												<filemode>755</filemode>
+											</mapper>
+										</data>
+									</dataSet>
+
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+				</plugins>
+			</build>
+
+		</profile>
+
+		<profile>
+			<id>rpm</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>rpm-maven-plugin</artifactId>
+						<version>2.1-alpha-1</version>
+						<executions>
+							<execution>
+								<goals>
+									<goal>attached-rpm</goal>
+								</goals>
+							</execution>
+						</executions>
+						<configuration>
+							<copyright>2011, University of Auckland</copyright>
+							<distribution>Grisu</distribution>
+							<group>Application/Other</group>
+							<!-- <icon>src/main/resources/icon.gif</icon> -->
+							<packager>Markus Binsteiner</packager>
+							<!-- <prefix>/usr/local</prefix> -->
+							<version>${project.version}</version>
+							<!-- <changelogFile>src/changelog</changelogFile> -->
+							<!-- <defineStatements> -->
+							<!-- <defineStatement>_unpackaged_files_terminate_build 0</defineStatement> -->
+							<!-- </defineStatements> -->
+							<mappings>
+								<mapping>
+									<directory>/usr/local/lib/grisu</directory>
+									<filemode>755</filemode>
+									<username>root</username>
+									<groupname>root</groupname>
+									<sources>
+										<source>
+											<location>target/nesi-setup-binary.jar</location>
+										</source>
+									</sources>
+								</mapping>
+								<mapping>
+									<directory>/usr/bin</directory>
+									<documentation>false</documentation>
+									<filemode>755</filemode>
+									<username>root</username>
+									<groupname>root</groupname>
+									<sources>
+										<source>
+											<location>src/deb/data/nesi-setup</location>
+										</source>
+									</sources>
+								</mapping>
+								<mapping>
+									<directory>/usr/share/applications/</directory>
+									<documentation>false</documentation>
+									<filemode>755</filemode>
+									<username>root</username>
+									<groupname>root</groupname>
+									<sources>
+										<source>
+											<location>src/deb/data/nesi-setup.desktop</location>
+										</source>
+									</sources>
+								</mapping>
+								<mapping>
+									<directory>/usr/local/lib/grisu/icons/</directory>
+									<documentation>false</documentation>
+									<filemode>755</filemode>
+									<username>root</username>
+									<groupname>root</groupname>
+									<sources>
+										<source>
+											<location>src/deb/data/nesi-setup.png</location>
+										</source>
+									</sources>
+								</mapping>
+							</mappings>
+							<requires>
+								<require>java-1.6.0-openjdk</require>
+								<require>nesi</require>
+							</requires>
+							<preinstallScriptlet>
+								<script>echo "Installing NeSI setup application..."</script>
+							</preinstallScriptlet>
+							<!-- <postinstallScriptlet> <scriptFile>src/main/scripts/postinstall</scriptFile>
+								<fileEncoding>utf-8</fileEncoding> </postinstallScriptlet> <preremoveScriptlet>
+								<scriptFile>src/main/scripts/preremove</scriptFile> <fileEncoding>utf-8</fileEncoding>
+								</preremoveScriptlet> -->
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+
+
+		</profile>
+
+	</profiles>
+
+	<scm>
+		<url>https://github.com/nesi/nesi-setup</url>
+		<connection>scm:git:git://github.com/nesi/nesi-setup.git</connection>
+		<developerConnection>scm:git:git@github.com:nesi/nesi-setup.git</developerConnection>
+	  <tag>HEAD</tag>
+  </scm>
+</project>

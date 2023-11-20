@@ -40,13 +40,8 @@ if [[ -z "${DEPLOY_KEY+x}" ]]; then
     exit 1
 fi
 
-if [[ -z "${HIGHFIVE_GH_TOKEN}" ]]; then
-    echo "Error: the \$HIGHFIVE_GH_TOKEN environment variable is not set!"
-    exit 1
-fi
-
 git checkout "${GIT_BRANCH}"
-GITHUB_TOKEN="${HIGHFIVE_GH_TOKEN}" cargo run --release -- data || true
+cargo run --release -- data || true
 
 
 if git diff --quiet data/; then

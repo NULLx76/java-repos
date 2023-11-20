@@ -51,8 +51,11 @@ use std::time::Instant;
 
 fn app() -> Fallible<()> {
     // Get the GitHub token from the environment
-    let github_token =
-        std::env::var("GITHUB_TOKEN").context("failed to get the GitHub API token")?;
+    let github_tokens: Vec<String> = std::env::var("GH_TOKENS")
+        .context("failed to get the GitHub API token")?
+        .split(',')
+        .map(str::to_string)
+        .collect();
 
     let timeout = if let Ok(var) = std::env::var("RUST_REPOS_TIMEOUT") {
         Some(
@@ -82,7 +85,7 @@ fn app() -> Fallible<()> {
     }
 
     let config = Config {
-        github_token,
+        github_tokens,
         data_dir,
         timeout,
     };

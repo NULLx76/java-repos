@@ -24,6 +24,7 @@ use reqwest::blocking::{Client, RequestBuilder, Response};
 use reqwest::{header, Method, StatusCode};
 use serde::{de::DeserializeOwned, Serialize};
 use std::borrow::Cow;
+use std::sync::RwLock;
 use std::sync::{
     atomic::{AtomicBool, AtomicUsize, Ordering},
     Arc,
@@ -83,6 +84,7 @@ pub struct GitHubApi<'conf> {
     client: Client,
     slow_down: Arc<AtomicBool>,
     concurrent_requests: Arc<AtomicUsize>,
+    token_index: RwLock<usize>,
 }
 
 impl<'conf> GitHubApi<'conf> {
@@ -92,7 +94,28 @@ impl<'conf> GitHubApi<'conf> {
             client: Client::new(),
             slow_down: Arc::new(AtomicBool::new(false)),
             concurrent_requests: Arc::new(AtomicUsize::new(0)),
+            token_index: RwLock::new(0),
         }
+    }
+
+    // Get current used token
+    fn get_token(&self) -> &str {
+        let index = self.token_index.read().unwrap();
+        &self.config.github_tokens[*index]
+    }
+
+    // Increment token, use when hit by rate limit
+    fn next_token(&self) -> bool {
+        let mut index = self.token_index.write().unwrap();
+        let mut reset = false;
+        if *index + 1 >= self.config.github_tokens.len() {
+            *index = 0;
+            reset = true;
+        } else {
+            *index += 1;
+        }
+
+        reset
     }
 
     fn retry<T, F: Fn() -> Fallible<T>>(&self, f: F) -> Fallible<T> {
@@ -148,6 +171,11 @@ impl<'conf> GitHubApi<'conf> {
                 self.slow_down.store(true, Ordering::SeqCst);
             }
 
+            // Don't slow down if going to next token
+            if !self.next_token() {
+                continue;
+            }
+
             ::std::thread::sleep(wait);
 
             // Stop doubling the time after a few increments, to avoid waiting too long
@@ -169,10 +197,7 @@ impl<'conf> GitHubApi<'conf> {
 
         self.client
             .request(method, url.as_ref())
-            .header(
-                header::AUTHORIZATION,
-                format!("token {}", self.config.github_token),
-            )
+            .header(header::AUTHORIZATION, format!("token {}", self.get_token()))
             .header(header::USER_AGENT, USER_AGENT)
     }
 

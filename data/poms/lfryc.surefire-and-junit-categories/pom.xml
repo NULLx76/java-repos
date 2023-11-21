@@ -1,0 +1,193 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.jboss</groupId>
+        <artifactId>jboss-parent</artifactId>
+        <version>10</version>
+    </parent>
+
+    <groupId>eu.fryc</groupId>
+    <artifactId>surefire-test</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+
+    <properties>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.10</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss.arquillian.junit</groupId>
+            <artifactId>arquillian-junit-container</artifactId>
+            <version>1.0.3.Final</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>default-test</id>
+                        <configuration>
+                            <skipTests>${skipTests}</skipTests>
+                            <excludes>
+                                <exclude>**/integration/**</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>integration-tests</id>
+            <activation>
+                <property>
+                    <name>integration</name>
+                </property>
+            </activation>
+            <properties>
+                <testCategory.included.default>NOT category.None</testCategory.included.default>
+                <testCategory.excluded.default>category.Failing</testCategory.excluded.default>
+                <testCategory.excluded.container></testCategory.excluded.container>
+                <testCategory.excluded.browser></testCategory.excluded.browser>
+                <testCategory.excluded.jsf></testCategory.excluded.jsf>
+                <groups>${testCategory.included.default} ${testCategory.excluded.browser} ${testCategory.excluded.container} ${testCategory.excluded.jsf}</groups>
+                <excludedGroups>${testCategory.excluded.default}</excludedGroups>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>add-integration-test-sources</id>
+                                <phase>process-test-sources</phase>
+                                <goals>
+                                    <goal>add-test-source</goal>
+                                </goals>
+                                <configuration>
+                                    <sources>
+                                        <source>src/test/integration</source>
+                                    </sources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>integration-test</id>
+                                <phase>integration-test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <skipTests>${skipITs}</skipTests>
+                                    <includes>
+                                        <include>**/integration/**</include>
+                                    </includes>
+                                    <groups>${groups}</groups>
+                                    <excludedGroups>${excludedGroups}</excludedGroups>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>print-categories</id>
+                                <phase>integration-test</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <echo>groups: ${groups}</echo>
+                                        <echo>excludedGroups: ${excludedGroups}</echo>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>smoke-tests</id>
+            <activation>
+                <property>
+                    <name>smoke</name>
+                </property>
+            </activation>
+            <properties>
+                <testCategory.included.default>category.Smoke</testCategory.included.default>
+            </properties>
+        </profile>
+        <profile>
+            <id>failing-tests</id>
+            <activation>
+                <property>
+                    <name>failing</name>
+                </property>
+            </activation>
+            <properties>
+                <testCategory.included.default>category.Failing</testCategory.included.default>
+                <testCategory.excluded.default>category.None</testCategory.excluded.default>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>container-tomcat</id>
+            <activation>
+                <property>
+                    <name>integration</name>
+                    <value>tomcat6</value>
+                </property>
+            </activation>
+            <properties>
+                <testCategory.excluded.container>AND NOT category.JavaEEOnly</testCategory.excluded.container>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>browser-phantomjs</id>
+            <activation>
+                <property>
+                    <name>browser</name>
+                    <value>phantomjs</value>
+                </property>
+            </activation>
+            <properties>
+                <testCategory.excluded.browser>AND NOT category.NoPhantomJS</testCategory.excluded.browser>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>myfaces</id>
+            <activation>
+                <property>
+                    <name>jsf_profile</name>
+                    <value>myfaces</value>
+                </property>
+            </activation>
+            <properties>
+                <testCategory.excluded.jsf>AND NOT category.FailingOnMyFaces</testCategory.excluded.jsf>
+            </properties>
+        </profile>
+    </profiles>
+
+</project>

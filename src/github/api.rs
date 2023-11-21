@@ -108,13 +108,16 @@ impl<'conf> GitHubApi<'conf> {
 
     // Increment token, use when hit by rate limit
     fn next_token(&self) -> bool {
-        let res = self.token_index.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |i| {
-            if i + 1 >= self.config.github_tokens.len() {
-                Some(0)
-            } else {
-                Some(i + 1)
-            }
-        }).unwrap();
+        let res = self
+            .token_index
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |i| {
+                if i + 1 >= self.config.github_tokens.len() {
+                    Some(0)
+                } else {
+                    Some(i + 1)
+                }
+            })
+            .unwrap();
 
         res == 0
     }

@@ -14,7 +14,7 @@
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// LIABILITk, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
@@ -170,16 +170,16 @@ impl<'conf> GitHubApi<'conf> {
                 }
             }
 
-            // Slow down only once per API call
-            if first {
-                self.slow_down.store(true, Ordering::SeqCst);
-            }
-
             // Don't slow down if going to next token
             if !self.next_token() {
                 continue;
             } else {
                 info!("Geting next token")
+            }
+
+            // Slow down only once per API call
+            if first {
+                self.slow_down.store(true, Ordering::SeqCst);
             }
 
             thread::sleep(wait);

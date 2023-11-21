@@ -1,0 +1,172 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+ 
+    <groupId>com.metadatis.example</groupId>
+    <artifactId>dropwizard-demo</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+ 
+    <name>dropwizard-demo</name>
+ 
+    <dependencies>
+        <dependency>
+            <groupId>com.hubspot.dropwizard</groupId>
+            <artifactId>dropwizard-guice</artifactId>
+            <version>0.6.1.6</version>
+        </dependency>
+        <dependency>
+            <groupId>com.yammer.dropwizard</groupId>
+            <artifactId>dropwizard-core</artifactId>
+            <version>0.6.2</version>
+        </dependency>
+    </dependencies>
+    
+    <properties>
+        <!-- use UTF-8 for everything -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <project.username>dropwizarddemo</project.username>
+    </properties>
+    
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
+                <!-- compile for Java 1.6 -->
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>1.6</version>
+                <configuration>
+                    <createDependencyReducedPom>true</createDependencyReducedPom>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>com.metadatis.dwdemo.config.DemoService</mainClass>
+                                </transformer>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.5</version>
+                <executions>
+                    <execution>
+                        <id>copy-deb-resources</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/deb</outputDirectory>
+                            <resources> 
+                                <resource>
+                                    <directory>src/main/deb</directory>
+                                    <filtering>true</filtering>
+                                </resource>         
+                            </resources>              
+                        </configuration>            
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.7</version>
+                <executions>
+                  <execution>
+                    <id>renameUpstartConf</id>
+                    <phase>prepare-package</phase>
+                    <configuration>
+                      <target>
+                        <move file="${project.build.directory}/deb/etc/init/project.conf"
+                          tofile="${project.build.directory}/deb/etc/init/${project.name}.conf" />
+                        <move file="${project.build.directory}/deb/opt/project-files"
+                          tofile="${project.build.directory}/deb/opt/dropwizard-demo" />
+                      </target>
+                    </configuration>
+                    <goals>
+                      <goal>run</goal>
+                    </goals>
+                  </execution>
+                  <execution>
+                    <id>renameStartCommand</id>
+                    <phase>prepare-package</phase>
+                    <configuration>
+                      <target>
+                      </target>
+                    </configuration>
+                    <goals>
+                      <goal>run</goal>
+                    </goals>
+                  </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>jdeb</artifactId>
+                <groupId>org.vafer</groupId>
+                <version>1.0.1</version>
+                <executions>
+                    <execution>
+                        <phase>integration-test</phase>
+                        <goals>
+                            <goal>jdeb</goal>
+                        </goals>
+                        <configuration>
+                            <controlDir>${project.build.directory}/deb/control</controlDir>
+                            <deb>${project.build.directory}/${project.build.finalName}.deb</deb>
+                            <dataSet>
+                                <data>
+                                    <src>${project.build.directory}/${project.build.finalName}.jar</src>
+                                    <type>file</type>
+                                    <mapper>
+                                        <type>perm</type>
+                                        <prefix>/opt/${project.name}/lib</prefix>
+                                    </mapper>
+                                </data>
+                                <data>
+                                    <type>link</type>
+                                    <symlink>true</symlink>
+                                    <linkName>/opt/${project.name}/lib/${project.name}.jar</linkName>
+                                    <linkTarget>/opt/${project.name}/lib/${project.build.finalName}.jar</linkTarget>
+                                </data>
+                                <data>
+                                    <src>${project.build.directory}/deb</src>
+                                    <type>directory</type>
+                                    <excludes>control/**</excludes>
+                                </data>
+                            </dataSet>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+
+    </build>
+</project>

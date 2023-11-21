@@ -23,7 +23,6 @@ mod api;
 use crate::config::Config;
 use crate::github::api::GitHubApi;
 use crate::utils::wrap_thread;
-use crossbeam_utils::thread::scope;
 use data::{Data, Repo};
 use failure::Fallible;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -82,7 +81,7 @@ pub fn scrape(data: &Data, config: &Config, should_stop: &AtomicBool) -> Fallibl
     let gh = api::GitHubApi::new(config);
     let mut to_load = Vec::with_capacity(100);
 
-    let result = scope(|scope| {
+    let result = std::thread::scope(|scope| {
         let mut last_id = data.get_last_id("github")?.unwrap_or(0);
         let scrape_start = Instant::now();
 
@@ -117,7 +116,7 @@ pub fn scrape(data: &Data, config: &Config, should_stop: &AtomicBool) -> Fallibl
 
                 if to_load.len() == 100 {
                     let to_load_now = to_load.clone();
-                    scope.spawn(|_| wrap_thread(|| load_thread(&gh, data, to_load_now)));
+                    scope.spawn(|| wrap_thread(|| load_thread(&gh, data, to_load_now)));
                     to_load.clear();
                 }
             }
@@ -128,7 +127,7 @@ pub fn scrape(data: &Data, config: &Config, should_stop: &AtomicBool) -> Fallibl
                 // Ensure all the remaining repositories are loaded
                 if !to_load.is_empty() {
                     let to_load_now = to_load.clone();
-                    scope.spawn(|_| wrap_thread(|| load_thread(&gh, data, to_load_now)));
+                    scope.spawn(|| wrap_thread(|| load_thread(&gh, data, to_load_now)));
                 }
 
                 break;
@@ -141,8 +140,7 @@ pub fn scrape(data: &Data, config: &Config, should_stop: &AtomicBool) -> Fallibl
         }
 
         Ok(())
-    })
-    .unwrap();
+    });
 
     info!("finished scraping for GitHub repositories");
     result

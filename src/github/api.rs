@@ -102,24 +102,26 @@ impl<'conf> GitHubApi<'conf> {
 
     // Get current used token
     fn get_token(&self) -> &str {
-        let index = self.token_index.load(Ordering::Relaxed);
-        &self.config.github_tokens[index]
+        // let index = self.token_index.load(Ordering::Relaxed);
+        // &self.config.github_tokens[index]
+        self.config.github_tokens[0].as_str()
     }
 
     // Increment token, use when hit by rate limit
     fn next_token(&self) -> bool {
-        let res = self
-            .token_index
-            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |i| {
-                if i + 1 >= self.config.github_tokens.len() {
-                    Some(0)
-                } else {
-                    Some(i + 1)
-                }
-            })
-            .unwrap();
+        // let res = self
+        //     .token_index
+        //     .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |i| {
+        //         if i + 1 >= self.config.github_tokens.len() {
+        //             Some(0)
+        //         } else {
+        //             Some(i + 1)
+        //         }
+        //     })
+        //     .unwrap();
 
-        res == 0
+        // res == 0
+        true
     }
 
     fn retry<T, F: Fn() -> Fallible<T>>(&self, f: F) -> Fallible<T> {
@@ -176,11 +178,11 @@ impl<'conf> GitHubApi<'conf> {
             }
 
             // Don't slow down if going to next token
-            if !self.next_token() {
-                continue;
-            } else {
-                info!("Geting next token")
-            }
+            // if !self.next_token() {
+            //     continue;
+            // } else {
+            //     info!("Geting next token")
+            // }
 
             thread::sleep(wait);
 

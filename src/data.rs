@@ -19,9 +19,9 @@
 // SOFTWARE.
 
 use config::Config;
-use csv;
-use prelude::*;
-use serde_json;
+
+use failure::{err_msg, Fallible};
+
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -29,6 +29,8 @@ use std::{
     fs::{self, File, OpenOptions},
     io::{prelude::*, BufWriter},
 };
+
+use crate::config;
 
 #[derive(Default, Serialize, Deserialize)]
 struct State {

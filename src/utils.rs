@@ -18,7 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use prelude::*;
+use failure::Error;
+
+use failure::Fallible;
 
 pub fn log_error(err: &Error) {
     error!("{}", err);

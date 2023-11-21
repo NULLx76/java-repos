@@ -19,17 +19,19 @@
 // SOFTWARE.
 
 use config::Config;
-use prelude::*;
+use failure::{err_msg, Fail, Fallible};
 use reqwest::blocking::{Client, RequestBuilder, Response};
 use reqwest::{header, Method, StatusCode};
 use serde::{de::DeserializeOwned, Serialize};
 use std::borrow::Cow;
-use std::sync::RwLock;
 use std::sync::{
     atomic::{AtomicBool, AtomicUsize, Ordering},
     Arc,
 };
+use std::thread;
 use std::time::Duration;
+
+use crate::config;
 
 static USER_AGENT: &str = "rust-repos (https://github.com/rust-ops/rust-repos)";
 
@@ -84,7 +86,7 @@ pub struct GitHubApi<'conf> {
     client: Client,
     slow_down: Arc<AtomicBool>,
     concurrent_requests: Arc<AtomicUsize>,
-    token_index: RwLock<usize>,
+    token_index: AtomicUsize,
 }
 
 impl<'conf> GitHubApi<'conf> {
@@ -94,28 +96,27 @@ impl<'conf> GitHubApi<'conf> {
             client: Client::new(),
             slow_down: Arc::new(AtomicBool::new(false)),
             concurrent_requests: Arc::new(AtomicUsize::new(0)),
-            token_index: RwLock::new(0),
+            token_index: AtomicUsize::new(0),
         }
     }
 
     // Get current used token
     fn get_token(&self) -> &str {
-        let index = self.token_index.read().unwrap();
-        &self.config.github_tokens[*index]
+        let index = self.token_index.load(Ordering::Relaxed);
+        &self.config.github_tokens[index]
     }
 
     // Increment token, use when hit by rate limit
     fn next_token(&self) -> bool {
-        let mut index = self.token_index.write().unwrap();
-        let mut reset = false;
-        if *index + 1 >= self.config.github_tokens.len() {
-            *index = 0;
-            reset = true;
-        } else {
-            *index += 1;
-        }
+        let res = self.token_index.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |i| {
+            if i + 1 >= self.config.github_tokens.len() {
+                Some(0)
+            } else {
+                Some(i + 1)
+            }
+        }).unwrap();
 
-        reset
+        res == 0
     }
 
     fn retry<T, F: Fn() -> Fallible<T>>(&self, f: F) -> Fallible<T> {
@@ -174,9 +175,11 @@ impl<'conf> GitHubApi<'conf> {
             // Don't slow down if going to next token
             if !self.next_token() {
                 continue;
+            } else {
+                info!("Geting next token")
             }
 
-            ::std::thread::sleep(wait);
+            thread::sleep(wait);
 
             // Stop doubling the time after a few increments, to avoid waiting too long
             // This is still a request every ~10 minutes

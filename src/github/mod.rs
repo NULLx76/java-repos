@@ -20,14 +20,16 @@
 
 mod api;
 
-use config::Config;
+use crate::config::Config;
+use crate::github::api::GitHubApi;
+use crate::utils::wrap_thread;
 use crossbeam_utils::thread::scope;
 use data::{Data, Repo};
-use github::api::GitHubApi;
-use prelude::*;
+use failure::Fallible;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
-use utils::wrap_thread;
+
+use crate::data;
 
 const WANTED_LANG: &str = "Java";
 

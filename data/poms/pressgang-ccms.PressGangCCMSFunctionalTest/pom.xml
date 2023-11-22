@@ -1,0 +1,509 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.jboss.pressgang</groupId>
+        <artifactId>pressgang-parent</artifactId>
+        <version>1.5</version>
+    </parent>
+    <groupId>org.jboss.pressgang.ccms</groupId>
+    <artifactId>pressgang-ccms-functional</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <name>PressGang CCMS Functional Test</name>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <selenium.version>2.32.0</selenium.version>
+        <concordion.version>1.4.3</concordion.version>
+        <concordionextensions.version>1.1.0</concordionextensions.version>
+        <log4j.version>1.2.17</log4j.version>
+        <jboss.version>7.1.1.Final</jboss.version>
+        <jacoco.version>0.6.2.201302030002</jacoco.version>
+        <servletapi.version>2.5</servletapi.version>
+        <guava.version>14.0.1</guava.version>
+        <slf4j.version>1.7.5</slf4j.version>
+        <hamcrest.version>1.3</hamcrest.version>
+        <lombok.version>0.11.8</lombok.version>
+
+        <cargoplugin.version>1.4.0</cargoplugin.version>
+        <sqlplugin.version>1.5</sqlplugin.version>
+        <failsafeplugin.version>2.14.1</failsafeplugin.version>
+
+        <!-- Cargo Settings -->
+        <cargo.host>localhost</cargo.host>
+        <cargo.container>jboss71x</cargo.container>
+        <cargo.servlet.port>9898</cargo.servlet.port>
+        <cargo.home>${project.build.directory}/cargo/jboss</cargo.home>
+        <cargo.ajp.port>8809</cargo.ajp.port>
+
+
+        <!-- Data source -->
+        <jdbc.groupId>com.h2database</jdbc.groupId>
+        <jdbc.artifactId>h2</jdbc.artifactId>
+        <jdbc.version>1.3.161</jdbc.version>
+
+        <ds.jndi.name>java:/PressGangCCMSDatasource</ds.jndi.name>
+        <ds.driver>h2</ds.driver>
+        <ds.driver.class>org.h2.Driver</ds.driver.class>
+        <ds.connection.url>jdbc:h2:file:${project.build.directory}/h2/pressgang;MODE=MYSQL</ds.connection.url>
+        <ds.username>sa</ds.username>
+        <ds.password>sa</ds.password>
+
+        <!-- Target PressGang instance -->
+        <pressgang.target.groupid>org.jboss.pressgang.ccms</pressgang.target.groupid>
+        <pressgang.target.artifactid>pressgang-ccms-ui</pressgang.target.artifactid>
+        <pressgang.target.version>1.1-SNAPSHOT</pressgang.target.version>
+        <context.path>pressgang-ccms-ui</context.path>
+        <pressgang.instance.url>http://${cargo.host}:${cargo.servlet.port}/${context.path}</pressgang.instance.url>
+        <pressgang.ping.timeout>60000</pressgang.ping.timeout>
+        <webdriver.log.file>${project.build.directory}/browser_console.log</webdriver.log.file>
+
+        <pressgang.server.target.groupid>org.jboss.pressgang.ccms</pressgang.server.target.groupid>
+        <pressgang.server.target.artifactid>pressgang-ccms-server</pressgang.server.target.artifactid>
+        <pressgang.server.target.version>1.1-SNAPSHOT</pressgang.server.target.version>
+
+        <!-- Concordion output location -->
+        <concordion.output.dir>${project.build.directory}/concordion</concordion.output.dir>
+        <!-- On Jenkins, this needs to be set to empty so that Cargo can shut down; see http://stackoverflow.com/questions/1096642/tomcat-failed-to-shutdown -->
+        <!--<cargo.debug.jvm.args> -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8787 -Xnoagent -Djava.compiler=NONE</cargo.debug.jvm.args>-->
+        <cargo.debug.jvm.args/>
+
+        <include.test.patterns>**/*TestSuite.java</include.test.patterns>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>${pressgang.target.groupid}</groupId>
+            <artifactId>${pressgang.target.artifactid}</artifactId>
+            <version>${pressgang.target.version}</version>
+            <type>war</type>
+        </dependency>
+
+        <dependency>
+            <groupId>${pressgang.server.target.groupid}</groupId>
+            <artifactId>${pressgang.server.target.artifactid}</artifactId>
+            <version>${pressgang.server.target.version}</version>
+            <type>war</type>
+        </dependency>
+
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-java</artifactId>
+            <version>${selenium.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.hamcrest</groupId>
+                    <artifactId>hamcrest-all</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>junit</groupId>
+                    <artifactId>junit</artifactId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>xml-apis</artifactId>
+                    <groupId>xml-apis</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>xercesImpl</artifactId>
+                    <groupId>xerces</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.concordion</groupId>
+            <artifactId>concordion</artifactId>
+            <version>${concordion.version}</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>
+                        junit-dep
+                    </artifactId>
+                    <groupId>junit</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>xml-apis</artifactId>
+                    <groupId>xml-apis</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.concordion</groupId>
+            <artifactId>concordion-extensions</artifactId>
+            <version>${concordionextensions.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>${log4j.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>${slf4j.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-core</artifactId>
+            <version>${hamcrest.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-library</artifactId>
+            <version>${hamcrest.version}</version>
+        </dependency>
+
+        <!-- Cargo needs these -->
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
+            <version>${servletapi.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>${jdbc.groupId}</groupId>
+            <artifactId>${jdbc.artifactId}</artifactId>
+            <version>${jdbc.version}</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jacoco</groupId>
+            <artifactId>org.jacoco.agent</artifactId>
+            <version>${jacoco.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <profiles>
+        <profile>
+            <id>run-functional-test</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.cargo</groupId>
+                        <artifactId>cargo-maven2-plugin</artifactId>
+                        <version>${cargoplugin.version}</version>
+                        <configuration>
+                            <container>
+                                <containerId>${cargo.container}</containerId>
+
+                                <artifactInstaller>
+                                    <groupId>org.jboss.as</groupId>
+                                    <artifactId>jboss-as-dist</artifactId>
+                                    <version>${jboss.version}</version>
+                                    <type>zip</type>
+                                    <extractDir>${project.build.directory}/cargo</extractDir>
+                                </artifactInstaller>
+
+                                <timeout>300000</timeout>
+
+                                <dependencies>
+                                    <dependency>
+                                        <groupId>${jdbc.groupId}</groupId>
+                                        <artifactId>${jdbc.artifactId}</artifactId>
+                                    </dependency>
+                                    <dependency>
+                                        <groupId>javax.servlet</groupId>
+                                        <artifactId>servlet-api</artifactId>
+                                    </dependency>
+
+                                </dependencies>
+                                <output>${project.build.directory}/container.log</output>
+                                <append>false</append>
+                                <log>${project.build.directory}/cargo.log</log>
+                                <systemProperties>
+                                    <!--<ehcache.disk.store.dir>${project.build.directory}/ehcache</ehcache.disk.store.dir>-->
+                                    <jboss.server.log.threshold>INFO</jboss.server.log.threshold>
+                                    <!--<hibernate.search.default.indexBase>${project.build.directory}/pressgangindex</hibernate.search.default.indexBase>-->
+                                </systemProperties>
+                            </container>
+                            <configuration>
+                                <type>standalone</type>
+                                <home>${cargo.home}/configuration</home>
+                                <properties>
+                                    <cargo.hostname>${cargo.host}</cargo.hostname>
+                                    <cargo.servlet.port>${cargo.servlet.port}</cargo.servlet.port>
+                                    <cargo.jboss.ajp.port>${cargo.ajp.port}</cargo.jboss.ajp.port>
+                                    <cargo.jvmargs>
+                                        <!-- NB: JDom parser doesn't like comments starting with '-' -->
+                                        -XX:PermSize=512m -XX:MaxPermSize=1024 -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled ${cargo.debug.jvm.args}
+                                    </cargo.jvmargs>
+                                </properties>
+
+                                <configfiles>
+                                    <configfile>
+                                        <file>${project.build.testOutputDirectory}/pressgang-ds.xml</file>
+                                        <todir>deployments</todir>
+                                    </configfile>
+                                    <configfile>
+                                        <file>${project.build.testOutputDirectory}/pressgang-ccms.war.skipdeploy</file>
+                                        <todir>deployments</todir>
+                                    </configfile>
+                                </configfiles>
+                            </configuration>
+                            <deployables>
+                                <deployable>
+                                    <groupId>${pressgang.target.groupid}</groupId>
+                                    <artifactId>${pressgang.target.artifactid}</artifactId>
+                                    <type>war</type>
+                                    <pingURL>${pressgang.instance.url}/</pingURL>
+                                    <pingTimeout>${pressgang.ping.timeout}</pingTimeout>
+                                    <properties>
+                                        <context>${context.path}</context>
+                                    </properties>
+                                </deployable>
+
+                                <deployable>
+                                    <groupId>${pressgang.server.target.groupid}</groupId>
+                                    <artifactId>${pressgang.server.target.artifactid}</artifactId>
+                                    <type>war</type>
+                                </deployable>
+                            </deployables>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>cargo-start</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>start</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>cargo-stop</id>
+                                <phase>post-integration-test</phase>
+                                <goals>
+                                    <goal>stop</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>sql-maven-plugin</artifactId>
+                        <version>${sqlplugin.version}</version>
+
+                        <dependencies>
+                            <!-- Specify the dependent JDBC driver here -->
+                            <dependency>
+                                <groupId>${jdbc.groupId}</groupId>
+                                <artifactId>${jdbc.artifactId}</artifactId>
+                                <version>${jdbc.version}</version>
+                            </dependency>
+                        </dependencies>
+
+                        <!-- Common configuration shared by all executions -->
+                        <configuration>
+                            <driver>${ds.driver.class}</driver>
+                            <url>${ds.connection.url}</url>
+                            <username>${ds.username}</username>
+                            <password>${ds.password}</password>
+                        </configuration>
+
+                        <executions>
+                            <execution>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>execute</goal>
+                                </goals>
+                                <!-- Specific configuration for this execution -->
+                                <configuration>
+                                    <srcFiles>
+                                        <srcFile>${project.build.testOutputDirectory}/test-setup.sql</srcFile>
+                                    </srcFiles>
+                                    <autocommit>true</autocommit>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>1.7</version>
+                        <executions>
+                            <execution>
+                                <configuration>
+                                    <target>
+                                        <!-- touching the files means they are considered newer than the war files being updated -->
+                                        <touch datetime="now">
+                                            <fileset file="${project.build.testOutputDirectory}/web.xml" />
+                                        </touch>
+                                        <touch datetime="now">
+                                            <fileset file="${project.build.testOutputDirectory}/persistence.xml" />
+                                        </touch>
+                                        <war destfile="${project.build.directory}/cargo/jboss/configuration/deployments/pressgang-ccms.war" update="true">
+                                            <zipfileset file="${project.build.testOutputDirectory}/web.xml" fullpath="WEB-INF/web.xml"/>
+                                        </war>
+                                        <war destfile="${project.build.directory}/cargo/jboss/configuration/deployments/pressgang-ccms.war" update="true">
+                                            <zipfileset file="${project.build.testOutputDirectory}/persistence.xml" fullpath="WEB-INF/classes/META-INF/persistence.xml"/>
+                                        </war>
+                                        <delete file="${project.build.directory}/cargo/jboss/configuration/deployments/pressgang-ccms.war.skipdeploy"/>
+                                        <sleep seconds="10"/>
+                                    </target>
+                                </configuration>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>${failsafeplugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>integration-test</id>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>verify</id>
+                                <goals>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <redirectTestOutputToFile>false</redirectTestOutputToFile>
+                            <printSummary>true</printSummary>
+                            <argLine>-Dconcordion.output.dir=${concordion.output.dir} ${argLine}</argLine>
+                            <includes>
+                                <include>${include.test.patterns}</include>
+                                <!-- Index page -->
+                                <include>**/FeatureTest.java</include>
+                            </includes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+    <build>
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>**/*.properties</include>
+                    <include>**/*.sql</include>
+                    <include>**/log4j.xml</include>
+                    <include>**/pressgang-ds.xml</include>
+                    <include>**/pressgang-ccms.war.skipdeploy</include>
+                    <include>**/web.xml</include>
+                    <include>**/persistence.xml</include>
+                </includes>
+            </testResource>
+            <testResource>
+                <directory>src/test/resources/concordion</directory>
+                <filtering>false</filtering>
+                <includes>
+                    <include>**/*.*</include>
+                </includes>
+            </testResource>
+        </testResources>
+        <plugins>
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <echo>===== Properties that can be set for functional test =====</echo>
+                                <echo>-Dfunctional-test : to activate functional test run</echo>
+                                <echo>-Dpressgang.target.version=version of PressGang UI to deploy
+                                </echo>
+                                <echo>-Dpressgang.instance.url=http://${cargo.host}:${cargo.servlet.port}/${context.path}</echo>
+                                <echo>-Dcargo.debug.jvm.args : Need to set to empty on Jenkins
+                                </echo>
+                                <echo>-Dinclude.test.patterns : Default is **/*TestSuite.java. Can be used to control
+                                    what test to run.
+                                </echo>
+                                <echo>==========================================================</echo>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- We only want to run integration tests with Failsafe -->
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefireplugin.version}</version>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>unit-test</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <skip>true</skip>
+                            <excludes>
+                                <exclude>${include.test.patterns}</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>integration-test</id>
+                        <phase>integration-test</phase>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${skipIntTests}</skip>
+                            <includes>
+                                <include>${include.test.patterns}</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+	xmlns="http://maven.apache.org/POM/4.0.0" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>org.dsource.ddt</groupId>
+	<artifactId>ide-aggregator</artifactId>
+	<version>1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+
+	<properties>
+		<tycho-version>0.26.0</tycho-version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+		<parentBaseDir>${project.parent.basedir}</parentBaseDir>
+		<parentBaseDirRelPath>..</parentBaseDirRelPath>
+		<rootBuildDirectory>${project.parent.basedir}/bin-maven</rootBuildDirectory>
+
+		<qualifier_default_prefix>v</qualifier_default_prefix>
+			
+		<dtool.testdataDir>${parentBaseDir}/plugin_tooling.tests/testdata</dtool.testdataDir>
+	</properties>
+
+	<modules>
+		<module>melnorme_util</module>
+		<module>releng/plugin_jvmcheck</module>
+		<module>plugin_tooling</module>
+		<module>plugin_tooling.tests</module>
+		<module>plugin_ide.core</module>
+		<module>plugin_ide.core.tests</module>
+		<module>plugin_ide.ui</module>
+		<module>plugin_ide.ui.tests</module>
+		<module>plugin_ide.debug</module>
+		<module>feature</module>
+		<module>releng/repository</module>
+	</modules>
+	
+	<!-- 
+		All pom dependencies must be listed ahead in <dependencies>: 
+		
+		NOTE: they also need to be added to 
+			releng/repository/pom.xml  (for the redistrubtion p2 repo)
+			target-platform/category.xml    (just for generation of development-time target platform)
+	-->
+	
+	<dependencies>
+	</dependencies>
+	
+	<repositories>
+		<repository>
+			<layout>p2</layout>
+			<id>neon</id>
+			<url>http://download.eclipse.org/releases/neon</url>
+		</repository>
+		<repository>
+			<layout>p2</layout>
+			<id>orbit</id>
+			<url>http://archive.eclipse.org/tools/orbit/downloads/drops/R20160520211859/repository/</url>
+		</repository>
+	</repositories>
+	
+
+	<!-- Core build -->
+	
+	<build>
+		<directory>${parentBaseDirRelPath}/bin-maven/${project.artifactId}</directory>
+		
+		<plugins>
+			<plugin>
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>tycho-maven-plugin</artifactId>
+				<version>${tycho-version}</version>
+				<extensions>true</extensions>
+			</plugin>
+			
+			
+			<plugin>
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>tycho-compiler-plugin</artifactId>
+				<version>${tycho-version}</version>
+				<configuration>
+					<useProjectSettings>true</useProjectSettings>
+				</configuration>
+			</plugin>
+			
+			<plugin>
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>tycho-packaging-plugin</artifactId>
+				<version>${tycho-version}</version>
+				<configuration>
+					<format>'${qualifier_default_prefix}'yyyyMMddHHmm</format>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>tycho-surefire-plugin</artifactId>
+				<version>${tycho-version}</version>
+				<configuration>
+					<excludes>
+					<!-- Empty so that no class is excluded, otherwise the default excludes inner classes. -->
+					</excludes>
+					<includes>
+						<include>**/*.java</include>
+					</includes>
+				</configuration>
+			</plugin>
+			
+			<plugin>
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>target-platform-configuration</artifactId>
+				<version>${tycho-version}</version>
+				<configuration>
+					<pomDependencies>consider</pomDependencies>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+	<!-- Profiles -->
+	
+	<profiles>
+		<profile>
+			<id>sign-build</id>
+			
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-jarsigner-plugin</artifactId>
+						<version>1.2</version>  
+						<configuration>
+							<keystore>${signing.keystore}</keystore>
+							<storepass>${signing.store_pass}</storepass>
+							<alias>ide_project</alias>
+							<keypass>${signing.key_pass}</keypass>
+						</configuration>
+						<executions>
+						<execution>
+							<id>sign</id>
+							<goals>
+								<goal>sign</goal>
+							</goals>
+						</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+		<profile>
+			<id>platform-windows</id>
+			<activation><os><family>windows</family></os></activation>
+			<properties>
+				<DTool.DubPath>${rootBuildDirectory}/dub/dub.exe</DTool.DubPath>
+			</properties>
+		</profile>
+		<profile>
+			<id>platform-linux</id>
+			<activation><os><family>linux</family></os></activation>
+			<properties>
+				<DTool.DubPath>${rootBuildDirectory}/dub/dub</DTool.DubPath>
+			</properties>
+		</profile>
+		
+		<profile>
+			<id>build-ide-product</id>
+			<modules>
+				<module>releng/ddt-product</module>
+			</modules>
+
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.eclipse.tycho</groupId>
+						<artifactId>target-platform-configuration</artifactId>
+						<version>${tycho-version}</version>
+						<configuration>
+							<environments>
+								<environment>
+									<os>linux</os><ws>gtk</ws><arch>x86</arch>
+								</environment>
+								<environment>
+									<os>linux</os><ws>gtk</ws><arch>x86_64</arch>
+								</environment>
+								<environment>
+									<os>win32</os><ws>win32</ws><arch>x86</arch>
+								</environment>
+								<environment>
+									<os>win32</os><ws>win32</ws><arch>x86_64</arch>
+								</environment>	
+								<environment>
+									<os>macosx</os><ws>cocoa</ws><arch>x86_64</arch>
+								</environment>
+							</environments>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		
+	</profiles>
+
+</project>

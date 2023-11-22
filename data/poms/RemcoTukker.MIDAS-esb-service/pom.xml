@@ -1,0 +1,206 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>Almende</groupId>
+	<artifactId>MIDAS-esb-service</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>MIDAS-Service</name>
+	<description>gateway service for MIDAS</description>
+	<repositories>
+		<repository>
+			<id>jboss</id>
+			<name>JBoss</name>
+			<url>https://repository.jboss.org/nexus/content/groups/public-jboss</url>
+			<layout>default</layout>
+		</repository>
+	</repositories>
+	<dependencies>
+		<dependency>
+			<groupId>org.jboss.soa.bpel.dependencies.esb</groupId>
+			<artifactId>jbossesb-rosetta</artifactId>
+			<version>4.9</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.5.6</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.11</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>cz.certicon.arum.core</groupId>
+			<artifactId>ARUMCore</artifactId>
+			<version>0.0.1</version>
+			<!-- <scope>compile</scope> -->
+		</dependency>
+		<!-- this one requires CERTs sourcecode for now -->
+
+		<!-- <dependency> <groupId>org.zeromq</groupId> <artifactId>jeromq</artifactId> 
+			<version>1.0.0-SNAPSHOT</version> </dependency> -->
+		<!-- this one was built from source, v0.3.3 (aka 1.0.0), see github. See 
+			if we can downgrade for easier build, to: https://oss.sonatype.org/content/repositories/snapshots/org/jeromq/jeromq/ 
+			( this is the 0.3.0-SNAPSHOT ) -->
+		<dependency>
+			<groupId>com.almende.eve</groupId>
+			<artifactId>esbGateway</artifactId>
+			<version>3.0.0-SNAPSHOT</version>  
+			<type>war</type> 
+		</dependency> 
+		<dependency>
+			<groupId>com.almende.eve</groupId>
+			<artifactId>eve-transport-http-apache40</artifactId>
+			<version>3.0.0-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>com.almende.eve</groupId>
+			<artifactId>eve-transform-rpc</artifactId>
+			<version>3.0.0-SNAPSHOT</version>
+		</dependency>
+		
+
+	</dependencies>
+
+	<build>
+		
+		<plugins>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.1</version>
+				<configuration>
+					<source>1.6</source>
+					<target>1.6</target>
+				</configuration>
+			</plugin>
+
+			<!-- extra stuff for WARs -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<version>2.8</version>
+				<executions>
+					<execution>
+						<id>copy-dependencies</id>
+						<phase>package</phase>
+						<goals>
+							<goal>copy-dependencies</goal>
+						</goals>
+						<configuration>
+							<excludeTypes>war</excludeTypes>
+							<outputDirectory>${project.build.directory}/lib</outputDirectory>
+							<overWriteReleases>false</overWriteReleases>
+							<overWriteSnapshots>false</overWriteSnapshots>
+							<overWriteIfNewer>true</overWriteIfNewer>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.2</version>
+				<executions>
+					<execution>
+						<id>with-war</id>
+						<goals>
+							<goal>single</goal>
+						</goals>
+						<phase>package</phase>
+						<configuration>
+							<descriptors>
+								<descriptor>src/assembly/esb.xml</descriptor>
+							</descriptors>
+						</configuration>
+					</execution>
+				</executions>
+				<dependencies>
+					<dependency>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>jboss-packaging-maven-plugin</artifactId>
+						<version>2.2</version>
+					</dependency>
+				</dependencies>
+			</plugin>
+
+			<!-- <plugin> <groupId>org.codehaus.mojo</groupId> <artifactId>jboss-packaging-maven-plugin</artifactId> 
+				<version>2.2</version> <extensions>true</extensions> <configuration> <archiveName>MIDAS-esb-service-0.0.1-SNAPSHOT</archiveName> 
+				</configuration> <executions> <execution> <id>build-esb</id> <goals> <goal>esb</goal> 
+				</goals> </execution> </executions> </plugin> -->
+			<!-- end extra stuff for WARs -->
+			<!-- <plugin> <groupId>org.codehaus.mojo</groupId> <artifactId>jboss-packaging-maven-plugin</artifactId> 
+				<version>2.2</version> <extensions>true</extensions> <configuration> <archiveName>MIDAS-esb-service-0.0.1-SNAPSHOT-with-war.esb</archiveName> 
+				</configuration> <executions> <execution> <id>build-esb</id> <goals> <goal>esb</goal> 
+				</goals> </execution> </executions> </plugin> -->
+			<plugin>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>2.6</version>
+				<executions>
+					<execution>
+						<id>copy-resources</id>
+						<phase>integration-test</phase>
+						<goals>
+							<goal>copy-resources</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${jboss.as.deploy}</outputDirectory>
+							<resources>
+								<resource>
+									<directory>${project.build.directory}</directory>
+									<includes>
+										<include>${project.build.finalName}-with-war.esb</include>
+									</includes>
+								</resource>
+							</resources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+		</plugins>
+		<pluginManagement>
+			<plugins>
+				<!--This plugin's configuration is used to store Eclipse m2e settings 
+					only. It has no influence on the Maven build itself. -->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>
+											org.apache.maven.plugins
+										</groupId>
+										<artifactId>
+											maven-dependency-plugin
+										</artifactId>
+										<versionRange>
+											[2.8,)
+										</versionRange>
+										<goals>
+											<goal>
+												copy-dependencies
+											</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore></ignore>
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+
+</project>

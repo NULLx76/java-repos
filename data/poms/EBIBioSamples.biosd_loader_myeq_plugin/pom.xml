@@ -1,0 +1,344 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>uk.ac.ebi.fg.sampletab.loader.plugins</groupId>
+	<artifactId>biosd_loader_myeq_plugin</artifactId>
+	<version>1.0-SNAPSHOT</version>
+	<name>SampleTab MyEquivalents Plug-in</name>
+	
+	<properties>
+		<h2.version>1.3.168</h2.version>
+	</properties>
+
+	<dependencies>
+
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.6.6</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Use Logback as concrete logger for tests -->
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>0.9.29</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Intercepts log4j and sends it to SL4J -->		
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>log4j-over-slf4j</artifactId>
+			<version>1.6.6</version>
+			<scope>provided</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>uk.ac.ebi.fg.sampletab.loader</groupId>
+			<artifactId>biosd_loader_plugin_api</artifactId>
+			<version>1.0-SNAPSHOT</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>uk.ac.ebi.fg</groupId>
+			<artifactId>biosd_model</artifactId>
+			<version>2.0-SNAPSHOT</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>uk.ac.ebi</groupId>
+			<artifactId>jutils</artifactId>
+			<version>3.0</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>uk.ac.ebi.fg</groupId>
+			<artifactId>myequivalents-db</artifactId>
+			<version>0.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>uk.ac.ebi.fg</groupId>
+			<artifactId>biosd_loader</artifactId>
+			<version>1.0-SNAPSHOT</version>
+			<scope>test</scope>
+		</dependency>
+		
+	</dependencies>
+
+
+	<build>
+		<plugins>
+
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.6</source>
+					<target>1.6</target>
+					<encoding>utf-8</encoding>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<artifactId>maven-source-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>attach-source</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<properties>
+						<property>
+							<!-- Prints out spaces and test name before/after every test method 
+								and automatically -->
+							<name>listener</name>
+							<value>uk.ac.ebi.utils.test.junit.TestOutputDecorator</value>
+						</property>
+					</properties>
+				</configuration>
+			</plugin>
+
+      <!-- 
+         This generates a .properties file, containing a list of all the JPA classes. This is then used by the 
+         resources plug-in, to replace a placeholder in persistence.xml 
+         
+         See http://github.com/ljnelson/jpa-maven-plugin for details
+       -->
+			<plugin>
+			  <groupId>com.edugility</groupId>
+			  <artifactId>jpa-maven-plugin</artifactId>
+			  <version>3-SNAPSHOT</version>
+			  <configuration>
+			  	<outputFile>${project.build.directory}/generated-sources/jpa-maven-plugin/entityClassnames.properties</outputFile>
+			  </configuration>
+			  <executions>
+			    <execution>
+			      <id>Generate entityClassnames.properties</id>
+              <phase>process-classes</phase>
+			      	<goals>
+			        <goal>list-entity-classnames</goal>
+			      </goals>
+			    </execution>
+			  </executions>
+			</plugin>
+		
+      <!-- 
+         See above.
+       -->
+			<plugin>
+			  <artifactId>maven-resources-plugin</artifactId>
+			  <version>2.6</version>
+			  <executions>
+			    <execution>
+			      <id>Copy persistence.xml filtered with generated entityClassnames.properties file</id>
+            <phase>process-classes</phase>
+			      <goals>
+			      	<goal>copy-resources</goal>
+			      </goals>
+			      <configuration>
+			        <filters>
+			        	<filter>${project.build.directory}/generated-sources/jpa-maven-plugin/entityClassnames.properties</filter>
+			        </filters>
+			        <outputDirectory>${project.build.outputDirectory}/META-INF</outputDirectory>
+			        <resources>
+			          <resource>
+			            <filtering>true</filtering>
+			            <directory>src/main/resources/META-INF</directory>
+			            <includes>
+			              <include>persistence.xml</include>
+			            </includes>
+			          </resource>
+			        </resources>
+			      </configuration>
+			    </execution>
+			  </executions>
+			</plugin>		
+			
+		</plugins>
+
+		<testResources>
+			<testResource>
+				<directory>src/test/resources</directory>
+				<filtering>true</filtering>
+			</testResource>
+		</testResources>
+
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+        <excludes>
+        	<exclude>META-INF/persistence.xml</exclude>
+    		</excludes>	      
+				<filtering>true</filtering>
+			</resource>
+		</resources>
+
+		<extensions>
+			<extension>
+				<groupId>org.apache.maven.wagon</groupId>
+				<artifactId>wagon-ssh</artifactId>
+				<version>2.2</version>
+			</extension>
+		</extensions>
+
+	</build>
+
+	<scm>
+		<developerConnection>scm:git:git@github.com:EBIBioSamples/biosd_loader_plugin_api.git</developerConnection>
+	</scm>	
+	
+	<repositories>
+				
+		<repository>
+			<id>ebi-repo</id>
+			<name>EBI repo</name>
+			<url>http://www.ebi.ac.uk/~maven/m2repo</url>
+		</repository>
+		
+		<repository>
+			<id>ebi-repo-snapshots</id>
+			<name>EBI Repo Snapshots</name>
+			<url>http://www.ebi.ac.uk/~maven/m2repo_snapshots</url>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
+		
+		<repository>
+			<id>coconut.ebi.ac.uk-snapshots</id>
+			<name>Coconut Snapshot Repository</name>
+			<url>http://coconut.ebi.ac.uk:8081/artifactory/local-repo/</url>
+			<snapshots>
+			  <enabled>true</enabled>
+			</snapshots>
+		</repository>
+
+    <!-- Used by the JPA plugin -->
+    <repository>
+        <id>sonatype-public</id>
+        <url>https://oss.sonatype.org/content/groups/public/</url>
+        <releases>
+            <enabled>true</enabled>
+        </releases>
+        <snapshots>
+            <enabled>true</enabled>
+        </snapshots>
+    </repository>
+
+    <!-- Used by the JPA plugin -->
+    <repository>
+      <id>eclipselink</id>
+      <url>http://download.eclipse.org/rt/eclipselink/maven.repo</url>
+      <releases>
+          <enabled>true</enabled>
+      </releases>
+      <snapshots>
+          <enabled>true</enabled>
+      </snapshots>
+    </repository>
+    		
+	</repositories>
+
+	<pluginRepositories>
+	
+		<!-- JPA-Plug-in -->
+	  <pluginRepository>
+	      <id>sonatype-public</id>
+	      <url>https://oss.sonatype.org/content/groups/public/</url>
+	      <releases>
+	          <enabled>true</enabled>
+	      </releases>
+	      <snapshots>
+	          <enabled>true</enabled>
+	      </snapshots>
+	  </pluginRepository>
+	  
+		<!-- JPA-Plug-in -->
+	  <pluginRepository>
+	      <id>eclipselink</id>
+	      <url>http://download.eclipse.org/rt/eclipselink/maven.repo</url>
+	      <releases>
+	          <enabled>true</enabled>
+	      </releases>
+	      <snapshots>
+	          <enabled>true</enabled>
+	      </snapshots>
+	  </pluginRepository>
+      	
+	</pluginRepositories>
+
+
+  <distributionManagement>
+
+	  <repository>
+		  <id>ebi-repo-old</id>
+		  <name>EBI Repository</name>
+		  <url>scp://parrot.ebi.ac.uk/homes/maven/public_html/m2repo</url>
+	  </repository>
+		
+	  <snapshotRepository>
+		  <uniqueVersion>false</uniqueVersion>
+		  <id>ebi-repo-old-snapshots</id>
+		  <name>EBI Snapshots Repository</name>
+		  <url>scp://parrot.ebi.ac.uk/homes/maven/public_html/m2repo_snapshots</url>
+	  </snapshotRepository>
+	
+	
+  </distributionManagement>	
+
+
+	<profiles>
+	
+		<profile>
+			<id>test.h2</id>
+			<activation><activeByDefault>true</activeByDefault></activation>
+			<properties>
+				<test.jdbc.username>sa</test.jdbc.username>
+				<test.jdbc.password />
+				<test.jdbc.url>jdbc:h2:mem:testdb</test.jdbc.url>
+				<test.jdbc.driverClassName>org.h2.Driver</test.jdbc.driverClassName>
+				<test.hibernate.dialect>org.hibernate.dialect.H2Dialect</test.hibernate.dialect>
+				<test.hibernate.hbm2ddl.auto>update</test.hibernate.hbm2ddl.auto>
+			</properties>
+			<dependencies>
+				<dependency>
+					<groupId>com.h2database</groupId>
+					<artifactId>h2</artifactId>
+					<version>${h2.version}</version>
+				</dependency>
+			</dependencies>
+		</profile>
+
+		<profile>
+			<id>test.h2_file</id>
+			<properties>
+				<test.jdbc.username>sa</test.jdbc.username>
+				<test.jdbc.password />
+				<test.jdbc.url>jdbc:h2:target/database/testdb</test.jdbc.url>
+				<test.jdbc.driverClassName>org.h2.Driver</test.jdbc.driverClassName>
+				<test.hibernate.dialect>org.hibernate.dialect.H2Dialect</test.hibernate.dialect>
+				<test.hibernate.hbm2ddl.auto>update</test.hibernate.hbm2ddl.auto>
+			</properties>
+			<dependencies>
+				<dependency>
+					<groupId>com.h2database</groupId>
+					<artifactId>h2</artifactId>
+					<version>${h2.version}</version>
+				</dependency>
+			</dependencies>
+		</profile>
+			
+	</profiles>
+</project>

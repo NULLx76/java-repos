@@ -1,0 +1,184 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>ch.kampfnacht</groupId>
+	<artifactId>kampfnacht-ch</artifactId>
+
+	<version>0.0.2-SNAPSHOT</version>
+
+	<name>kampfnacht.ch</name>
+	<url>http://kampfnacht-ch.herokuapp.com/</url>
+
+	<scm>
+		<url>https://github.com/boardend/kampfnacht-ch</url>
+		<connection>scm:git:git://github.com/boardend/kampfnacht-ch.git</connection>
+	</scm>
+	<ciManagement>
+		<system>Travis CI</system>
+		<url>https://travis-ci.org/boardend/kampfnacht-ch</url>
+	</ciManagement>
+	<issueManagement>
+		<system>GitHub Issues</system>
+		<url>https://github.com/boardend/kampfnacht-ch/issues</url>
+	</issueManagement>
+
+	<!-- using Spring Boot -->
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>0.5.0.M6</version>
+	</parent>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-jetty</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-servlets</artifactId>
+			<version>${jetty.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-webmvc</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-config</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.hsqldb</groupId>
+			<artifactId>hsqldb</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<finalName>kampfnacht-ch</finalName>
+		<plugins>
+			<plugin>
+				<groupId>org.codehaus.gmaven</groupId>
+				<artifactId>gmaven-plugin</artifactId>
+				<version>1.4</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>execute</goal>
+						</goals>
+						<configuration>
+							<source><![CDATA[
+log.info('### eating brunch...')
+
+// try to make brunch
+def ant = new AntBuilder()
+try{
+  ant.exec(
+    dir:"brunch",
+    outputproperty:"cmdOut",
+    errorproperty: "cmdErr",
+    resultproperty:"cmdExit",
+    failonerror: "true",
+    executable: 'brunch') {
+      arg(line:"""build""")
+  }
+}catch(Throwable e){
+  ant.property(name:"cmdExit", value:"-1")
+  ant.property(name:"cmdErr", value:e.toString())
+}
+if("${ant.project.properties.cmdExit}".toInteger() == 0) {
+  println "${ ant.project.properties.cmdOut}"
+} else {
+  println "[WARNING] \n${ant.project.properties.cmdErr}"
+  println "(will try to use old files as a fallback)\n\n"
+}
+
+// serve brunch
+try {
+ant.mkdir(dir: "src/main/webapp/app")
+ant.copy(todir: "src/main/webapp/app", failonerror:"false") {
+    fileset(dir : "brunch/public")
+  }
+} catch(Throwable e) {}
+
+// taste brunch and exit
+assert new File("src/main/webapp/app/index.html").exists(), "\n\n### ERROR: teribble brunch, no index.html found!\n(is brunch installed? visit http://brunch.io)\n\n"
+log.info('### just had delicious brunch!')
+							]]></source>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-eclipse-plugin</artifactId>
+				<configuration>
+					<sourceExcludes>
+						<sourceExclude>brunch/**</sourceExclude>
+					</sourceExcludes>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
+	<!-- Allow access to Spring milestones and snapshots -->
+	<repositories>
+		<repository>
+			<id>spring-snapshots</id>
+			<url>http://repo.spring.io/snapshot</url>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
+		<repository>
+			<id>spring-milestones</id>
+			<url>http://repo.spring.io/milestone</url>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
+	</repositories>
+	<pluginRepositories>
+		<pluginRepository>
+			<id>spring-snapshots</id>
+			<url>http://repo.spring.io/snapshot</url>
+		</pluginRepository>
+		<pluginRepository>
+			<id>spring-milestones</id>
+			<url>http://repo.spring.io/milestone</url>
+		</pluginRepository>
+	</pluginRepositories>
+</project>

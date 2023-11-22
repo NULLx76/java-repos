@@ -1,0 +1,603 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>eionet</groupId>
+    <artifactId>rod</artifactId>
+    <packaging>war</packaging>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <env>local</env>
+        <java_version>1.6</java_version>
+        <checkstyle.config.location>${basedir}/docs/checkstyle.xml</checkstyle.config.location>
+        <liquibase.changeLogFile>db/db-struct.xml</liquibase.changeLogFile>
+    </properties>
+
+    <version>4.1-SNAPSHOT</version>
+    <name>webrod</name>
+    <url>http://maven.apache.org</url>
+
+    <!-- configuration of Maven repositories to be used -->
+    <repositories>
+        <repository>
+            <id>archiva.internal</id>
+            <name>Internal Release Repository</name>
+            <url>http://archiva.eionet.europa.eu/repository/internal/</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>archiva.snapshots</id>
+            <name>Internal Snapshot Repository</name>
+            <url>http://archiva.eionet.europa.eu/repository/snapshots/</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <distributionManagement>
+        <repository>
+            <id>archiva.internal</id>
+            <name>Internal Release Repository</name>
+            <url>http://archiva.eionet.europa.eu/repository/internal/</url>
+        </repository>
+        <snapshotRepository>
+            <id>archiva.snapshots</id>
+            <name>Internal Snapshot Repository</name>
+            <url>http://archiva.eionet.europa.eu/repository/snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+    <!-- the build configuration -->
+    <build>
+        <plugins>
+            <!-- maven-compiler-plugin -->
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
+                <inherited>true</inherited>
+                <configuration>
+                    <verbose>false</verbose>
+                    <fork>false</fork>
+                    <compilerVersion>${java_version}</compilerVersion>
+                    <source>${java_version}</source>
+                    <target>${java_version}</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+
+            <!-- maven-eclipse-plugin -->
+            <plugin>
+                <artifactId>maven-eclipse-plugin</artifactId>
+                <version>2.7</version>
+                <configuration>
+                    <wtpversion>1.5</wtpversion>
+                    <downloadSources>true</downloadSources>
+                    <downloadJavadocs>true</downloadJavadocs>
+                </configuration>
+            </plugin>
+
+            <!-- maven-surefire-plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.4</version>
+            </plugin>
+
+            <!-- maven-war-plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>2.1.1</version>
+                <configuration>
+                    <filters>
+                        <filter>${basedir}/${env}.properties</filter>
+                    </filters>
+                    <webResources>
+                        <resource>
+                            <directory>${basedir}/src/main/webapp/META-INF</directory>
+                            <filtering>true</filtering>
+                            <targetPath>META-INF</targetPath>
+                            <includes>
+                                <include>context.xml</include>
+                            </includes>
+                        </resource>
+                        <resource>
+                            <directory>${basedir}/src/main/webapp/WEB-INF</directory>
+                            <filtering>true</filtering>
+                            <targetPath>WEB-INF</targetPath>
+                            <includes>
+                                <include>web.xml</include>
+                            </includes>
+                        </resource>
+                        <resource>
+                            <directory>${basedir}/db</directory>
+                            <targetPath>WEB-INF/classes/db</targetPath>
+                            <includes>
+                                <include>db-struct.xml</include>
+                            </includes>
+                        </resource>
+                    </webResources>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.3</version>
+                <executions>
+                    <execution>
+                        <id>Prepare application home directory</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <tasks>
+                                <loadproperties srcFile="${env}.properties" />
+
+                                <!-- Ensure that necessary direcrtories in
+                                    app-home exist. -->
+                                <mkdir dir="${app.home}" />
+                                <mkdir dir="${app.home}/tmp" />
+                                <mkdir dir="${app.home}/acl" />
+
+                                <!-- Copy all files from acl directory into
+                                    the same directory in app-home, unless they already exist in the latter. -->
+                                <copy todir="${app.home}/acl">
+                                    <fileset dir="acl">
+                                        <present present="srconly"
+                                            targetdir="${app.home}/acl" />
+                                    </fileset>
+                                </copy>
+
+                                <!-- Always overwrite the acl directory's
+                                    permissions definition file(s). -->
+                                <copy todir="${app.home}/acl"
+                                    overwrite="true">
+                                    <fileset dir="acl" includes="*.prms*" />
+                                    <fileset dir="acl"
+                                        includes="*.permissions*" />
+                                </copy>
+                            </tasks>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>copy files</id>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <tasks>
+                                <loadproperties srcFile="${env}.properties" />
+
+                                <!-- we do not care about these files older
+                                    versions -->
+                                <copy file="VERSION.txt" todir="${app.home}"
+                                    overwrite="true" />
+
+                                <!-- Copy supporting scripts -->
+                                <!-- Can be removed if shell skripts will be obsolete and quartz is used -->
+                                <copy todir="${app.home}"
+                                    overwrite="true">
+                                    <fileset dir="scripts"></fileset>
+                                    <filterchain>
+                                        <replacetokens>
+                                            <token key="WEBAPP.HOME"
+                                                value="${webapp.home}" />
+                                            <token key="APP.HOME"
+                                                value="${app.home}" />
+                                            <token key="SERVLETAPI.JAR"
+                                                value="${maven.dependency.javax.servlet.servlet-api.jar.path}" />
+                                            <token key="MYSQL.JAR"
+                                                value="${maven.dependency.mysql.mysql-connector-java.jar.path}" />
+                                            <token key="LDAP.JAR"
+                                                value="${maven.dependency.ldap.ldap.jar.path}" />
+                                            <token key="JNDI.JAR"
+                                                value="${maven.dependency.jndi.jndi.jar.path}" />
+                                            <token key="PROVIDERUTIL.JAR"
+                                                value="${maven.dependency.providerutil.providerutil.jar.path}" />
+                                            <token key="EIONETDIR.JAR"
+                                                value="${maven.dependency.eionet.eionet-dir.jar.path}" />
+                                            <token key="ACL.JAR"
+                                                value="${maven.dependency.eionet.acl.jar.path}" />
+                                            <token key="XMLRPC.JAR"
+                                                value="${maven.dependency.xmlrpc.xmlrpc.jar.path}" />
+                                            <token key="UITCLIENT.JAR"
+                                                value="${maven.dependency.eionet.rpcclient.jar.path}" />
+                                            <token key="LOG4J.JAR"
+                                                value="${maven.dependency.log4j.log4j.jar.path}" />
+                                            <token key="ALIBABA.JAR"
+                                                value="${maven.dependency.org.openrdf.openrdf-alibaba.jar.path}" />
+                                            <token key="SESAME.JAR"
+                                                value="${maven.dependency.org.openrdf.openrdf-sesame.jar.path}" />
+                                            <token key="COMMONSCODEC.JAR"
+                                                value="${maven.dependency.commons-codec.commons-codec.jar.path}" />
+                                            <token
+                                                key="COMMONSHTTPCLIENT.JAR"
+                                                value="${maven.dependency.commons-httpclient.commons-httpclient.jar.path}" />
+                                            <token key="COMMONSLOGGING.JAR"
+                                                value="${maven.dependency.commons-logging.commons-logging.jar.path}" />
+                                            <token key="COMMONSLANG.JAR"
+                                                value="${maven.dependency.commons-lang.commons-lang.jar.path}" />
+                                            <token key="TOMCATUTIL.JAR"
+                                                value="${maven.dependency.org.apache.tomcat.tomcat-util.jar.path}" />
+                                            <token key="SLF4JLOG.JAR"
+                                                value="${maven.dependency.org.slf4j.slf4j-log4j12.jar.path}" />
+                                            <token key="SLF4JAPI.JAR"
+                                                value="${maven.dependency.org.slf4j.slf4j-api.jar.path}" />
+                                        </replacetokens>
+                                    </filterchain>
+                                </copy>
+
+                            </tasks>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.liquibase</groupId>
+                <artifactId>liquibase-maven-plugin</artifactId>
+                <version>2.0.5</version>
+                <configuration>
+                    <!-- Default configuration for application database. -->
+                    <propertyFile>target/classes/liquibase.properties</propertyFile>
+                    <changeLogFile>${liquibase.changeLogFile}</changeLogFile>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>Update test database</id>
+                        <phase>process-test-resources</phase>
+                        <configuration>
+                            <skip>${maven.test.skip}</skip>
+                            <propertyFile>target/test-classes/liquibase.properties</propertyFile>
+                        </configuration>
+                        <goals>
+                            <goal>dropAll</goal>
+                            <goal>update</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>cobertura-maven-plugin</artifactId>
+                <version>2.5.2</version>
+                <configuration>
+                   <formats>
+                       <format>xml</format>
+                   </formats>
+                </configuration>
+            </plugin>
+
+        </plugins>
+
+        <!-- filters for src/main/resources and src/test/resources -->
+        <filters>
+            <filter>${env}.properties</filter>
+        </filters>
+
+        <!-- resources for the main code -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>*.*</include>
+                </includes>
+            </resource>
+        </resources>
+
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <filtering>false</filtering>
+                <includes>
+                    <include>**/*.*</include>
+                </includes>
+                <excludes>
+                    <exclude>*.properties</exclude>
+                </excludes>
+            </testResource>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>*.properties</include>
+                </includes>
+            </testResource>
+        </testResources>
+
+        <!-- name of the bundled project when it is finally built -->
+        <finalName>webrod</finalName>
+    </build>
+
+    <dependencies>
+        <!-- webapp dependencies -->
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
+            <version>2.5</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>jsp-api</artifactId>
+            <version>2.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.sourceforge.stripes</groupId>
+            <artifactId>stripes</artifactId>
+            <version>1.5.1</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>jstl</artifactId>
+            <version>1.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>cas</groupId>
+            <artifactId>casclient</artifactId>
+            <version>2.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>taglibs</groupId>
+            <artifactId>standard</artifactId>
+            <version>1.1.2</version>
+        </dependency>
+        <dependency>
+            <groupId>displaytag</groupId>
+            <artifactId>displaytag</artifactId>
+            <version>1.1.1</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>jcl104-over-slf4j</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.tomcat</groupId>
+            <artifactId>tomcat-util</artifactId>
+            <version>7.0.8</version>
+        </dependency>
+        <dependency>
+            <groupId>org.httpunit</groupId>
+            <artifactId>httpunit</artifactId>
+            <version>1.7.2</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- java additions and apache commons -->
+        <dependency>
+            <groupId>javax.activation</groupId>
+            <artifactId>activation</artifactId>
+            <version>1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.mail</groupId>
+            <artifactId>mail</artifactId>
+            <version>1.4.1</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-collections</groupId>
+            <artifactId>commons-collections</artifactId>
+            <version>3.2</version>
+        </dependency>
+<!--        <dependency>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+            <version>1.1</version>
+        </dependency>-->
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.4</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.1</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-beanutils</groupId>
+            <artifactId>commons-beanutils</artifactId>
+            <version>1.7.0</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-httpclient</groupId>
+            <artifactId>commons-httpclient</artifactId>
+            <version>3.1</version>
+        </dependency>
+        <!-- JDBC -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>5.1.6</version>
+        </dependency>
+        <!-- logging -->
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.17</version>
+        </dependency>
+<!--        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.8.2</version>
+        </dependency>-->
+        <!-- EIONET libraries -->
+        <dependency>
+            <groupId>eionet</groupId>
+            <artifactId>rdf-exporter</artifactId>
+            <version>1.2-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>eionet</groupId>
+            <artifactId>acl</artifactId>
+            <version>3.1-SNAPSHOT</version> <!-- Use prerelease -->
+        </dependency>
+        <dependency>
+            <groupId>eionet</groupId>
+            <artifactId>rpcserver</artifactId>
+            <version>3.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>eionet</groupId>
+            <artifactId>definition</artifactId>
+            <version>3.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>eionet</groupId>
+            <artifactId>rpcclient</artifactId>
+            <version>3.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>eionet</groupId>
+            <artifactId>help</artifactId>
+            <version>3.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>eionet</groupId>
+            <artifactId>eionet-dir</artifactId>
+            <version>3.1-SNAPSHOT</version> <!-- Use prerelease -->
+        </dependency>
+        <dependency>
+            <groupId>eionet</groupId>
+            <artifactId>sparqlclient</artifactId>
+            <version>2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi</artifactId>
+            <version>3.5-FINAL</version>
+        </dependency>
+        <dependency>
+            <groupId>xalan</groupId>
+            <artifactId>xalan</artifactId>
+            <version>2.7.0</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>xerces</groupId>
+            <artifactId>xercesImpl</artifactId>
+            <version>2.4.0</version>
+        </dependency>
+        <dependency>
+            <groupId>xmlrpc</groupId>
+            <artifactId>xmlrpc</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+
+        <!-- Logging dependencies -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.10.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+            <version>2.10.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.25</version>
+            <type>jar</type>
+        </dependency>
+        <!-- jcl-over-slf4j -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jcl-over-slf4j</artifactId>
+            <version>1.7.25</version>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.4</version>
+        </dependency>
+        <!-- RDF utilities -->
+        <dependency>
+            <groupId>org.openrdf.sesame</groupId>
+            <artifactId>sesame-runtime</artifactId>
+            <version>2.6.10</version>
+        </dependency>
+        <!-- DB structure updater -->
+        <dependency>
+            <groupId>org.liquibase</groupId>
+            <artifactId>liquibase-core</artifactId>
+            <version>2.0.5</version>
+        </dependency>
+        <!-- cron jobs scheduler -->
+        <dependency>
+            <groupId>org.quartz-scheduler</groupId>
+            <artifactId>quartz</artifactId>
+            <version>2.2.1</version>
+        </dependency>
+        <!-- TEST libraries -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.3.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.dbunit</groupId>
+            <artifactId>dbunit</artifactId>
+            <version>2.4.7</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-mxj</artifactId>
+            <version>5.0.12</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-mxj-db-files</artifactId>
+            <version>5.0.12</version>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-pmd-plugin</artifactId>
+                <version>2.6</version>
+                <configuration>
+                    <linkXref>false</linkXref>
+                    <sourceEncoding>utf-8</sourceEncoding>
+                    <minimumTokens>300</minimumTokens>
+                    <targetJdk>${java_version}</targetJdk>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>2.6</version>
+                <configuration>
+                    <configLocation>${checkstyle.config.location}</configLocation>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jxr-plugin</artifactId>
+                <version>2.3</version>
+            </plugin>
+        </plugins>
+    </reporting>
+</project>

@@ -1,0 +1,187 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.jboss.demos</groupId>
+  <artifactId>demos</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>Aggregator POM for demos</name>
+  <url>http://www.jboss.org</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <!-- versions -->
+    <args4j.version>2.0.9</args4j.version>
+    <aesh.version>0.49</aesh.version>
+    <junit.version>4.11</junit.version>
+    <jandex.version>1.1.0.Final</jandex.version>
+    <logging.version>3.1.4.GA</logging.version>
+    <sigar.version>1.6.5.132-5</sigar.version>
+    <arg></arg>
+  </properties>
+
+  <modules>
+    <module>common</module>
+  </modules>
+
+ <!-- Dependencies version and common configurations -->
+  <dependencyManagement>
+    <dependencies>
+
+      <dependency>
+        <groupId>org.hyperic</groupId>
+        <artifactId>sigar</artifactId>
+        <version>${sigar.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.hyperic</groupId>
+        <artifactId>sigar-dist</artifactId>
+        <version>${sigar.version}</version>
+        <scope>runtime</scope>
+        <type>zip</type>
+      </dependency>
+
+      <dependency>
+        <groupId>org.jboss.aesh</groupId>
+        <artifactId>aesh</artifactId>
+        <version>${aesh.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jboss</groupId>
+        <artifactId>jandex</artifactId>
+        <version>${jandex.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jboss.logging</groupId>
+        <artifactId>jboss-logging</artifactId>
+        <version>${logging.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>args4j</groupId>
+        <artifactId>args4j</artifactId>
+        <version>${args4j.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>${junit.version}</version>
+        <scope>test</scope>
+      </dependency>
+
+    </dependencies>
+  </dependencyManagement>
+
+  <!-- dependencies needed for each sub project -->
+  <dependencies>
+
+    <!-- Common used compile dependencies -->
+
+    <!-- Common used test scope dependencies -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+ <build>
+	 <pluginManagement>
+	   <plugins>
+		<plugin>
+		  <groupId>org.apache.maven.plugins</groupId>
+		  <artifactId>maven-compiler-plugin</artifactId>
+		  <version>3.1</version>
+		  <configuration>
+		    <showDeprecation>true</showDeprecation>
+		    <showWarnings>true</showWarnings>
+		    <compilerArguments>
+		      <source>1.7</source>
+		      <target>1.7</target>
+		    </compilerArguments>
+		  </configuration>
+		</plugin>
+	     <plugin>
+		<groupId>org.apache.maven.plugins</groupId>
+		<artifactId>maven-antrun-plugin</artifactId>
+		<version>1.7</version>
+                    <!-- need to copy/unzip the native libraries to the target directory and tell SystemInfo where they are -->
+		    <configuration>
+		      <target name="prepare_sigar" if="main">
+			 <echo>SIGAR Java library version used is ${sigar.version}.</echo>
+			 <echo>Copying/unzipping SIGAR native libraries (version ${sigar.version}) to local build directory...</echo>
+			 <mkdir dir="${project.build.directory}/jboss-sigar" />
+			 <copy toDir="${project.build.directory}/jboss-sigar">
+			    <fileset dir="${settings.localRepository}/org/hyperic/sigar-dist/${sigar.version}" includes="*.zip" />
+			 </copy>
+			 <unzip dest="${project.build.directory}/jboss-sigar">
+			    <fileset dir="${project.build.directory}/jboss-sigar" includes="*.zip" />
+			    <patternset>
+			       <include name="**/lib/sigar.jar" />
+			       <include name="**/lib/bcel*.jar" />
+			       <include name="**/lib/*.so" />
+			       <include name="**/lib/*.sl" />
+			       <include name="**/lib/*.dll" />
+			       <include name="**/lib/*.dylib" />
+			    </patternset>
+			 </unzip>
+			 <move todir="${project.build.directory}/jboss-sigar" flatten="true">
+			    <fileset dir="${project.build.directory}/jboss-sigar">
+			       <include name="**/lib/*" />
+			    </fileset>
+			 </move>
+			 <delete dir="${project.build.directory}/jboss-sigar/hyperic-sigar-${sigar.version}" />
+			 <echo>Running demos in a forked JVM</echo>
+			 <java fork="true" failonerror="true" logError="true" maxmemory="1024m" classpathref="maven.compile.classpath" classname="${main}" >
+			   <classpath>
+			     <pathelement path="${maven.compile.classpath}"/>
+			     <pathelement location="${project.build.directory}/classes"/>
+			   </classpath>
+			   <sysproperty key="java.library.path" value="${project.build.directory}/jboss-sigar"/>
+			   <jvmarg value="-Xss160k"></jvmarg>
+			   <arg value="${arg}"/>
+			 </java>
+		      </target>
+		      <failOnError>true</failOnError>
+		    </configuration>
+	     </plugin>
+	   </plugins>
+	 </pluginManagement>
+
+ </build>
+
+      <repositories>
+        <repository>
+          <id>jboss-public</id>
+          <name>JBoss nexus Maven Repository</name>
+          <url>http://repository.jboss.org/nexus/content/groups/public/</url>
+          <releases>
+            <enabled>true</enabled>
+            <updatePolicy>never</updatePolicy>
+          </releases>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+        </repository>
+      </repositories>
+
+      <pluginRepositories>
+        <pluginRepository>
+          <id>jboss-public-plugin</id>
+          <name>JBoss nexus Maven Plugin Repository</name>
+          <url>http://repository.jboss.org/nexus/content/groups/public/</url>
+          <releases>
+            <enabled>true</enabled>
+            <updatePolicy>never</updatePolicy>
+          </releases>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+        </pluginRepository>
+      </pluginRepositories>      
+
+</project>

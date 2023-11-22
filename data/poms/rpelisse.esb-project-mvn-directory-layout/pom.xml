@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>org.jboss.esb.samples</groupId>
+	<artifactId>main</artifactId>
+	<version>1.0-SNAPSHOT</version>
+
+	<packaging>pom</packaging>
+
+    <name>JBoss ESB Maven directory tree</name>
+    <description><![CDATA[
+This project directory tree aims at simplify configuration of ESB project, but also enforce
+a clear separation between the Java source code used by custom action - build in jars from
+the 'jars' submodule, and the project deployed (.esb) archive.
+        ]]></description>
+    <modules>
+      <module>jars</module>
+      <module>esb</module>
+	</modules>
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <jbossesb.version>4.9</jbossesb.version>
+        <junit.version>4.8.2</junit.version>
+        <jboss.plugin.version>1.5.0</jboss.plugin.version>
+        <jboss.home>${env.JBOSS_HOME}</jboss.home>
+        <jboss.server.name>defaut</jboss.server.name>
+	</properties>
+
+	<distributionManagement>
+		<repository>
+			<id>nexus</id>
+			<url>${releaseRepository}</url>
+		</repository>
+		<snapshotRepository>
+			<id>nexus</id>
+			<url>${snapshotRepository}</url>
+		</snapshotRepository>
+	</distributionManagement>
+
+	<build>
+		<finalName>${project.artifactId}-${project.version}</finalName>
+
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>true</filtering>
+				<includes>
+					<include>**/*</include>
+				</includes>
+			</resource>
+		</resources>
+
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<version>1.1.1</version>
+				<executions>
+					<execution>
+						<id>enforce-properties</id>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<requireProperty>
+									<property>jboss.home</property>
+								</requireProperty>
+								<requireProperty>
+									<property>jboss.server.name</property>
+								</requireProperty>
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<!-- Target Java version is 1.6. -->
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>2.5.1</version>
+					<configuration>
+						<source>1.6</source>
+						<target>1.6</target>
+					</configuration>
+				</plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>jboss-maven-plugin</artifactId>
+        <version>${jboss.plugin.version}</version>
+        <configuration>
+          <jbossHome>${jboss.home}</jbossHome>
+          <serverName>${jboss.server.name}</serverName> <!-- Change to JBoss profile (i.e. default) -->
+          <unpack>true</unpack>
+          <fileName>${project.build.directory}/${project.build.finalName}.esb</fileName>
+        </configuration>
+        <executions>
+          <execution>
+            <id>deploy-to-server</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>hard-deploy</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>undeploy-from-server</id>
+            <phase>clean</phase>
+            <goals>
+              <goal>hard-undeploy</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+  			<plugin>
+  				<groupId>org.apache.maven.plugins</groupId>
+  				<artifactId>maven-resources-plugin</artifactId>
+  				<version>2.6</version>
+  			</plugin>
+
+  			<plugin>
+  				<groupId>org.apache.maven.plugins</groupId>
+  				<artifactId>maven-clean-plugin</artifactId>
+  				<version>2.5</version>
+  			</plugin>
+
+  			<plugin>
+  				<groupId>org.apache.maven.plugins</groupId>
+  				<artifactId>maven-surefire-plugin</artifactId>
+  				<version>2.12.3</version>
+  			</plugin>
+
+  			<plugin>
+  				<groupId>org.apache.maven.plugins</groupId>
+  				<artifactId>maven-failsafe-plugin</artifactId>
+  				<version>2.12.3</version>
+  			</plugin>
+
+			</plugins>
+		</pluginManagement>
+	</build>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>junit</groupId>
+				<artifactId>junit</artifactId>
+				<version>4.10</version>
+				<scope>test</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<dependencies>
+		<dependency>
+		  <groupId>junit</groupId>
+		  <artifactId>junit</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.jboss.soa.bpel.dependencies.esb</groupId>
+          <artifactId>jbossesb-rosetta</artifactId>
+          <version>${jbossesb.version}</version>
+          <type>jar</type>
+          <scope>system</scope>
+          <!-- For JBoss ESB 4.3
+          <systemPath>${jboss.home}/server/default/deploy/jbossesb.sar/lib/jbossesb-rosetta.jar</systemPath-->
+          <!-- For JBoss ESB 5.x -->
+          <systemPath>${jboss.home}/server/default/deployers/esb.deployer/lib/jbossesb-rosetta.jar</systemPath>
+        </dependency>
+        <!--dependency>
+          <groupId>log4j</groupId>
+          <artifactId>log4j</artifactId>
+          <version>1.2.17</version>
+          <scope>test</scope>
+        </dependency-->
+	</dependencies>
+
+</project>

@@ -1,0 +1,673 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>de.dynamicfiles.projects.testing</groupId>
+    <artifactId>iCanSeeAliensJSP</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>war</packaging>
+
+    <developers>
+        <developer>
+            <name>Danny Althoff</name>
+            <email>fibrefox@dynamicfiles.de</email>
+        </developer>
+    </developers>
+	
+    <name>Testing with TomEE, JSP, CDI and a lot of Arquillian</name>
+	
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		
+        <!-- Code Coverage with SONAR -->
+        <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis> <!-- Tells Sonar to reuse existing reports, NEEDED when testing with TestNG! -->
+
+        <sonar.surefire.reportsPath>surefire-reports/junitreports</sonar.surefire.reportsPath> <!-- Tells Sonar where the unit tests execution reports are [ sonar does not like TestNG :( ]-->
+        <sonar.surefire.itReportPath>failsafe-reports/junitreports</sonar.surefire.itReportPath> <!-- Tells Sonar where the integration tests execution reports are [ sonar does not like TestNG :( ]-->
+			
+        <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin> <!-- Tells Sonar that the code coverage tool by unit tests is JaCoCo -->
+        <sonar.java.source>1.7</sonar.java.source>
+			
+        <sonar.jacoco.reportPath>${project.build.directory}/jacoco.exec</sonar.jacoco.reportPath> <!-- Tells Sonar where the code coverage report is -->
+        <sonar.jacoco.itReportPath>${project.build.directory}/jacoco-it.exec</sonar.jacoco.itReportPath> <!-- Tells Sonar where the code coverage report is -->
+        <!-- /Code Coverage with SONAR -->
+		
+        <!-- Dependency versions -->
+        <version.javaee-api>6.0-5</version.javaee-api>
+        <version.eclipselink>2.5.1</version.eclipselink>
+        
+        <version.jacoco.maven>0.6.4.201312101107</version.jacoco.maven>
+
+        <version.testng>6.8.7</version.testng>
+        <version.junit>4.10</version.junit>
+		
+        <version.arquillian>1.1.2.Final</version.arquillian>
+        <version.arquillian.drone>1.2.3.Final</version.arquillian.drone>
+        <version.arquillian.graphene>2.0.1.Final</version.arquillian.graphene>
+        <version.arquillian.warp>1.0.0.Alpha6</version.arquillian.warp>
+        
+        <version.arquillian-tomee-embedded>1.6.0</version.arquillian-tomee-embedded>
+		
+		<version.mockito>1.9.5</version.mockito>
+        <!-- /Dependency versions -->
+        
+        <tomee.version>1.6.0</tomee.version>
+        <tomee.classifier>plus</tomee.classifier>
+        
+        <!-- make testing-ports random (avoids conflicts) -->
+        <tomee.arquillian.httpPort>-1</tomee.arquillian.httpPort>
+        <tomee.arquillian.stopPort>-1</tomee.arquillian.stopPort>
+		
+        <!-- to have tools-->
+        <phantomjs.path.prefix>${basedir}/tools/phantomjs</phantomjs.path.prefix>
+        <phantomjs.path.executable></phantomjs.path.executable> <!-- will be defined via OS-profile -->
+    </properties>
+    
+    <build>
+        <finalName>${project.artifactId}</finalName>
+		
+        <pluginManagement>
+            <plugins>
+                <!-- fixate version of sonar-plugin for maven 3.1 -->
+                <plugin>
+                    <groupId>org.codehaus.sonar</groupId>
+                    <artifactId>sonar-maven-plugin</artifactId>
+                    <version>4.0</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+		
+        <!-- needed for replacing test-port -->
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <filtering>true</filtering>
+            </testResource>
+        </testResources>
+		
+        <plugins>
+            <!-- for fast "local development" use tomee as local server -->
+            <plugin>
+                <groupId>org.apache.openejb.maven</groupId>
+                <artifactId>tomee-maven-plugin</artifactId>
+                <version>1.6.0</version>
+                <configuration>
+                    <tomeeVersion>${tomee.version}</tomeeVersion>
+                    <tomeeClassifier>${tomee.classifier}</tomeeClassifier>
+                    <synchronization>
+                        <extensions>
+                            <!-- if you want to update each time you build with mvn compile -->
+                            <extension>.class</extension>
+                            <extension>.jsp</extension>
+                            <extension>.css</extension>
+                            <extension>.js</extension>
+                        </extensions>
+                    </synchronization>
+                    <reloadOnUpdate>true</reloadOnUpdate>
+                </configuration>
+            </plugin>
+			
+            <!-- Code-coverage with jacoco -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${version.jacoco.maven}</version>
+                <executions>
+                    <execution>
+                        <id>jacoco-initialize</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>jacoco-report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <propertyName>jacoco.agent.argLine</propertyName><!-- used for surefire/failsafe-plugin combination -->
+                    <destfile></destfile>
+                </configuration>
+            </plugin>
+            <!-- /Code-coverage with jacoco -->
+			
+            <!-- https://github.com/jacoco/jacoco/pull/40 -->
+            <!-- https://github.com/1and1/foss-parent/issues/19 -->
+            <!-- https://github.com/1and1/foss-parent/commit/4ab810717aafe343954a73ff8dc0c890648536ab -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-report-plugin</artifactId>
+                <version>2.16</version>
+                <configuration>
+                    <reportSets>
+                        <reportSet>
+                            <inherited>true</inherited>
+                            <reports>
+                                <report>report-only</report>
+                                <report>failsafe-report-only</report>
+                            </reports>
+                        </reportSet>
+                    </reportSets>
+                </configuration>
+            </plugin>
+			
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
+                <configuration>
+                    <source>1.7</source>
+                    <target>1.7</target>
+                </configuration>
+				
+                <executions>
+                    <execution>
+                        <id>default-testCompile</id>
+                        <phase>test-compile</phase>
+                        <goals>
+                            <goal>testCompile</goal>
+                        </goals>
+                        <configuration>
+                            <!-- dont compile any-tests, because we want to be able to mix the frameworks (workaround testng+drone) -->
+                            <testExcludes>
+                                <exclude>**/unittest/*.java</exclude>
+                                <exclude>**/unittest/**/*.java</exclude>
+                                <exclude>**/integration/*.java</exclude>
+                                <exclude>**/integration/**/*.java</exclude>
+                                <exclude>**/functional/*.java</exclude>
+                                <exclude>**/functional/**/*.java</exclude>
+                                <exclude>**/graybox/*.java</exclude>
+                                <exclude>**/graybox/**/*.java</exclude>
+                            </testExcludes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>2.4</version>
+                <configuration>
+                    <failOnMissingWebXml>false</failOnMissingWebXml>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+    
+	
+    <dependencyManagement>
+        <dependencies>
+            <!-- Testing: Arquillian -->
+            <dependency>
+                <groupId>org.jboss.arquillian</groupId>
+                <artifactId>arquillian-bom</artifactId>
+                <version>${version.arquillian}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- /Testing: Arquillian -->
+			
+            <!-- Testing: Arquillian Drone/Graphene -->
+            <dependency>
+                <groupId>org.jboss.arquillian.extension</groupId>
+                <artifactId>arquillian-drone-bom</artifactId>
+                <version>${version.arquillian.drone}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- /Testing: Arquillian Drone/Graphene -->
+            
+            <!-- Testing: Arquillian Warp -->
+            <dependency>
+                <groupId>org.jboss.arquillian.extension</groupId>
+                <artifactId>arquillian-warp-bom</artifactId>
+                <version>${version.arquillian.warp}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- /Testing: Arquillian Warp -->
+        </dependencies>
+    </dependencyManagement>
+	
+    <dependencies>
+        <!-- cant use jEE 7 with TomEE :( it will throw this while functional-testing/usage with drone: java.lang.ClassNotFoundException: com.sun.el.ExpressionFactoryImpl -->
+        <!-- javaEE (tomEE) --> 
+        <dependency>
+            <groupId>org.apache.openejb</groupId> <!-- not from javax, because: http://grokbase.com/t/openejb/users/12cea7by1b/javaee-api-incomplete -->
+            <artifactId>javaee-api</artifactId>
+            <version>${version.javaee-api}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- /javaEE (tomEE) -->
+
+        <!-- JPA (eclipselink) -->
+        <dependency>
+            <groupId>org.eclipse.persistence</groupId>
+            <artifactId>eclipselink</artifactId>
+            <version>${version.eclipselink}</version>
+            <!-- <scope>provided</scope> -->
+        </dependency>
+        <!-- /JPA (eclipselink) -->
+
+        <!-- Testing: Arquillian Drone + Graphene2 -->
+        <dependency>
+            <groupId>org.jboss.arquillian.graphene</groupId>
+            <artifactId>graphene-webdriver</artifactId>
+            <version>${version.arquillian.graphene}</version>
+            <type>pom</type>
+            <scope>test</scope>
+        </dependency>
+        <!-- /Testing: Arquillian Drone + Graphene2 -->
+        
+        <!-- Testing: Mockito -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
+            <version>${version.mockito}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- /Testing: Mockito -->
+    </dependencies>
+
+    <!-- for TESTING we have to create profiles (to mix testing-types and testing-frameworks) -->
+    <profiles>
+	
+        <!-- PROFILES FOR OS-DEPENDENCIES (FOR BINARIES) -->
+        <profile>
+            <id>win-binaries</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <phantomjs.path.executable>win/phantomjs.exe</phantomjs.path.executable>
+            </properties>
+        </profile>
+        <profile>
+            <id>linux-binaries</id>
+            <activation>
+                <os>
+                    <family>unix</family>
+                </os>
+            </activation>
+            <properties>
+                <phantomjs.path.executable>linux/phantomjs</phantomjs.path.executable>
+            </properties>
+        </profile>
+        <profile>
+            <id>mac-binaries</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                </os>
+            </activation>
+            <properties>
+                <phantomjs.path.executable>mac/phantomjs</phantomjs.path.executable>
+            </properties>
+        </profile>
+        <!-- /PROFILES FOR OS-DEPENDENCIES (FOR BINARIES) -->
+	
+        <profile>
+            <id>unit</id>
+            <dependencies>
+                <!-- Testing: TestNG -->
+                <dependency>
+                    <groupId>org.testng</groupId>
+                    <artifactId>testng</artifactId>
+                    <version>${version.testng}</version>
+                    <scope>test</scope>
+                </dependency>
+                <!-- /Testing: TestNG -->
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>unit-test-compile</id>
+                                <phase>test-compile</phase>
+                                <goals>
+                                    <goal>testCompile</goal>
+                                </goals>
+                                <configuration>
+                                    <testIncludes>
+                                        <include>**/unittest/*.java</include>
+                                        <include>**/unittest/**/*.java</include>
+                                    </testIncludes>
+                                    <testExcludes>
+                                        <exclude>**/integration/*.java</exclude>
+                                        <exclude>**/integration/**/*.java</exclude>
+                                        <exclude>**/functional/*.java</exclude>
+                                        <exclude>**/functional/**/*.java</exclude>
+                                        <exclude>**/graybox/*.java</exclude>
+                                        <exclude>**/graybox/**/*.java</exclude>
+                                    </testExcludes>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <!-- unit-tests -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>2.16</version>
+                        <configuration>
+                            <argLine>${jacoco.agent.argLine},destfile=${sonar.jacoco.reportPath}</argLine>
+                            <includes>
+                                <include>**/unittest/*.java</include>
+                                <include>**/unittest/**/*.java</include>
+                            </includes>
+                            <excludes>
+                                <exclude>**/integration/*.java</exclude>
+                                <exclude>**/integration/**/*.java</exclude>
+                                <exclude>**/functional/*.java</exclude>
+                                <exclude>**/functional/**/*.java</exclude>
+                                <exclude>**/graybox/*.java</exclude>
+                                <exclude>**/graybox/**/*.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                    <!-- /unit-tests -->
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>integration</id>
+            <dependencies>
+                <!-- Testing: TestNG -->
+                <dependency>
+                    <groupId>org.testng</groupId>
+                    <artifactId>testng</artifactId>
+                    <version>${version.testng}</version>
+                    <scope>test</scope>
+                </dependency>
+                <!-- /Testing: TestNG -->
+                <dependency>
+                    <groupId>org.jboss.arquillian.testng</groupId>
+                    <artifactId>arquillian-testng-container</artifactId>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.openejb</groupId>
+                    <artifactId>arquillian-tomee-embedded</artifactId>
+                    <version>${version.arquillian-tomee-embedded}</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>integration-test-compile</id>
+                                <phase>test-compile</phase>
+                                <goals>
+                                    <goal>testCompile</goal>
+                                </goals>
+                                <configuration>
+                                    <testIncludes>
+                                        <include>**/integration/*.java</include>
+                                        <include>**/integration/**/*.java</include>
+                                    </testIncludes>
+                                    <testExcludes>
+                                        <exclude>**/unittest/*.java</exclude>
+                                        <exclude>**/unittest/**/*.java</exclude>
+                                        <exclude>**/functional/*.java</exclude>
+                                        <exclude>**/functional/**/*.java</exclude>
+                                        <exclude>**/graybox/*.java</exclude>
+                                        <exclude>**/graybox/**/*.java</exclude>
+                                    </testExcludes>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+					
+                    <!-- integration-tests -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>2.16</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <argLine>${jacoco.agent.argLine},destfile=${sonar.jacoco.itReportPath}</argLine>
+                            <includes>
+                                <include>**/integration/*.java</include>
+                                <include>**/integration/**/*.java</include>
+                            </includes>
+                            <excludes>
+                                <exclude>**/unittest/*.java</exclude>
+                                <exclude>**/unittest/**/*.java</exclude>
+                                <exclude>**/functional/*.java</exclude>
+                                <exclude>**/functional/**/*.java</exclude>
+                                <exclude>**/graybox/*.java</exclude>
+                                <exclude>**/graybox/**/*.java</exclude>
+                            </excludes>
+                            <!-- for Arquillian -->
+                            <parallel>none</parallel> <!-- for NOT spawning servers with the same port/port-colision -->
+                            <threadCount>1</threadCount> <!-- for NOT spawning servers with the same port/port-colision -->
+                            <systemPropertyVariables>
+                                <arquillian.launch>tomee</arquillian.launch>
+                            </systemPropertyVariables>
+                            <!-- /for Arquillian -->
+                        </configuration>
+                    </plugin>
+                    <!-- /integration-tests -->
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>functional</id>
+            <dependencies>
+                <dependency>
+                    <groupId>junit</groupId>
+                    <artifactId>junit</artifactId>
+                    <version>${version.junit}</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.jboss.arquillian.junit</groupId>
+                    <artifactId>arquillian-junit-container</artifactId>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.openejb</groupId>
+                    <artifactId>arquillian-tomee-embedded</artifactId>
+                    <version>${version.arquillian-tomee-embedded}</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>functional-test-compile</id>
+                                <phase>test-compile</phase>
+                                <goals>
+                                    <goal>testCompile</goal>
+                                </goals>
+                                <configuration>
+                                    <testIncludes>
+                                        <include>**/functional/*.java</include>
+                                        <include>**/functional/**/*.java</include>
+                                    </testIncludes>
+                                    <testExcludes>
+                                        <exclude>**/unittest/*.java</exclude>
+                                        <exclude>**/unittest/**/*.java</exclude>
+                                        <exclude>**/integration/*.java</exclude>
+                                        <exclude>**/integration/**/*.java</exclude>
+                                        <exclude>**/graybox/*.java</exclude>
+                                        <exclude>**/graybox/**/*.java</exclude>
+                                    </testExcludes>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <!-- functional-tests -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>2.16</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <argLine>${jacoco.agent.argLine},destfile=${sonar.jacoco.itReportPath}</argLine> <!-- jacoco-reports will be APPENDED -->
+                            <includes>
+                                <include>**/functional/*.java</include>
+                                <include>**/functional/**/*.java</include>
+                            </includes>
+                            <excludes>
+                                <exclude>**/unittest/*.java</exclude>
+                                <exclude>**/unittest/**/*.java</exclude>
+                                <exclude>**/integration/*.java</exclude>
+                                <exclude>**/integration/**/*.java</exclude>
+                                <exclude>**/graybox/*.java</exclude>
+                                <exclude>**/graybox/**/*.java</exclude>
+                            </excludes>
+                            <!-- for Arquillian -->
+                            <parallel>none</parallel> <!-- for NOT spawning servers with the same port/port-colision -->
+                            <threadCount>1</threadCount> <!-- for NOT spawning servers with the same port/port-colision -->
+                            <systemPropertyVariables>
+                                <arquillian.launch>tomee</arquillian.launch>
+                            </systemPropertyVariables>
+                            <!-- /for Arquillian -->
+                        </configuration>
+                    </plugin>
+                    <!-- /functional-tests -->
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>graybox</id>
+            <dependencies>
+                <dependency>
+                    <groupId>junit</groupId>
+                    <artifactId>junit</artifactId>
+                    <version>${version.junit}</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.jboss.arquillian.junit</groupId>
+                    <artifactId>arquillian-junit-container</artifactId>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.openejb</groupId>
+                    <artifactId>arquillian-tomee-embedded</artifactId>
+                    <version>${version.arquillian-tomee-embedded}</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.jboss.arquillian.extension</groupId>
+                    <artifactId>arquillian-warp</artifactId>
+                    <type>pom</type>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>graybox-test-compile</id>
+                                <phase>test-compile</phase>
+                                <goals>
+                                    <goal>testCompile</goal>
+                                </goals>
+                                <configuration>
+                                    <testIncludes>
+                                        <include>**/graybox/*.java</include>
+                                        <include>**/graybox/**/*.java</include>
+                                    </testIncludes>
+                                    <testExcludes>
+                                        <exclude>**/unittest/*.java</exclude>
+                                        <exclude>**/unittest/**/*.java</exclude>
+                                        <exclude>**/integration/*.java</exclude>
+                                        <exclude>**/integration/**/*.java</exclude>
+                                        <exclude>**/functional/*.java</exclude>
+                                        <exclude>**/functional/**/*.java</exclude>
+                                    </testExcludes>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <!-- graybox-tests -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>2.16</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <argLine>${jacoco.agent.argLine},destfile=${sonar.jacoco.itReportPath}</argLine> <!-- jacoco-reports will be APPENDED -->
+                            <includes>
+                                <include>**/graybox/*.java</include>
+                                <include>**/graybox/**/*.java</include>
+                            </includes>
+                            <excludes>
+                                <exclude>**/unittest/*.java</exclude>
+                                <exclude>**/unittest/**/*.java</exclude>
+                                <exclude>**/integration/*.java</exclude>
+                                <exclude>**/integration/**/*.java</exclude>
+                                <exclude>**/functional/*.java</exclude>
+                                <exclude>**/functional/**/*.java</exclude>
+                            </excludes>
+                            <!-- for Arquillian -->
+                            <parallel>none</parallel> <!-- for NOT spawning servers with the same port/port-colision -->
+                            <threadCount>1</threadCount> <!-- for NOT spawning servers with the same port/port-colision -->
+                            <systemPropertyVariables>
+                                <arquillian.launch>tomee</arquillian.launch>
+                            </systemPropertyVariables>
+                            <!-- /for Arquillian -->
+                        </configuration>
+                    </plugin>
+                    <!-- /graybox-tests -->
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+    
+    <repositories>
+        <repository>
+            <id>JBoss repository</id>
+            <url>http://repository.jboss.org/nexus/content/groups/public/</url>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>never</updatePolicy>
+            </snapshots>
+        </repository>
+    </repositories>
+</project>

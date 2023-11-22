@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.jacoco.filteringsamples</groupId>
+    <artifactId>root</artifactId>
+    <version>1.2-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>jacoco:: filtering samples root</name>
+    <description>
+        This project produces class files with different Java compilers as needed as input for testing
+        false positives in Jacoco (https://github.com/jacoco/jacoco/wiki/FilteringOptions).
+    </description>
+    <url>https://github.com/mfriedenhagen/org.jacoco.filteringsamples</url>
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>http://opensource.org/licenses/MIT</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>mfriedenhagen</id>
+            <name>Mirko Friedenhagen</name>
+            <url>http://mfriedenhagen.github.io/</url>
+        </developer>
+    </developers>
+
+    <modules>
+        <module>sources</module>
+        <module>jdk5</module>
+        <module>jdk6</module>
+        <module>jdk7</module>
+        <module>jdk8</module>
+        <module>ecj</module>
+    </modules>
+
+    <scm>
+        <connection>scm:git:git@github.com:mfriedenhagen/org.jacoco.filteringsamples.git</connection>
+        <developerConnection>scm:git:git@github.com:mfriedenhagen/org.jacoco.filteringsamples.git</developerConnection>
+        <url>https://github.com/mfriedenhagen/org.jacoco.filteringsamples</url>
+        <tag>HEAD</tag>
+    </scm>
+    <issueManagement>
+        <system>GitHub</system>
+        <url>https://github.com/mfriedenhagen/org.jacoco.filteringsamples/issues</url>
+    </issueManagement>
+    <distributionManagement>
+        <repository>
+            <id>bintray-mfriedenhagen-maven-org.jacoco.filteringsamples</id>
+            <name>mfriedenhagen-maven-org.jacoco.filteringsamples</name>
+            <url>https://api.bintray.com/maven/mfriedenhagen/maven/org.jacoco.filteringsamples</url>
+        </repository>
+    </distributionManagement>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <maven.compiler.compilerId>javac</maven.compiler.compilerId>
+        <maven.compiler.compilerVersion>1.8</maven.compiler.compilerVersion>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <!-- these values need to be overridden on other systems. Instead of modifying the POM,
+             you may do so in your ~/.m2/settings.xml.
+        -->
+        <jdkVersion>[1.8]</jdkVersion>
+        <netbeans.hint.license>mit</netbeans.hint.license>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>sources</artifactId>
+                <version>${project.version}</version>
+                <classifier>sources</classifier>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-antrun-plugin</artifactId>
+                    <version>1.8</version>
+                    <executions>
+                        <execution>
+                            <id>prepare-package</id>
+                            <phase>prepare-package</phase>
+                            <goals>
+                                <goal>run</goal>
+                            </goals>
+                            <configuration>
+                                <target>
+                                    <script language="groovy">
+                                        buildDirectory = project.getProperty("project.build.outputDirectory");
+                                        asmDir = new File(buildDirectory, "../asm/asm");
+                                        asmDir.mkdirs();
+                                        fs = project.createDataType("fileset");
+                                        fs.setDir(new File(buildDirectory));
+                                        fs.setIncludes("**/*.class");
+                                        ds = fs.getDirectoryScanner(project);
+                                        srcFiles = ds.getIncludedFiles();
+                                        oldOut = System.out;
+                                        srcFiles.each() {
+                                            packageDir = new File(asmDir, new File(it).getParent())
+                                            packageDir.mkdirs();
+                                            classFilePath = new File(buildDirectory, it).getPath();
+                                            asmFilePath = new File(packageDir, new File(it).getName().replace(".class", ".java"));
+                                            println asmFilePath;
+                                            asmFilePrintStream = new PrintStream(new FileOutputStream(asmFilePath));
+                                            try {
+                                                System.setOut(asmFilePrintStream);
+                                                org.objectweb.asm.util.ASMifier.main(classFilePath);
+                                            } finally {
+                                                asmFilePrintStream.close();
+                                                System.setOut(oldOut);
+                                            }
+                                        };
+                                    </script>
+                                    <zip 
+                                        destfile="${project.build.directory}/${project.artifactId}-${project.version}-asmified.zip"
+                                        basedir="${project.build.directory}/asm"/>
+                                </target>
+                            </configuration>
+                        </execution>
+                    </executions>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.codehaus.groovy</groupId>
+                            <artifactId>groovy-all</artifactId>
+                            <version>2.4.0</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.ow2.asm</groupId>
+                            <artifactId>asm-all</artifactId>
+                            <version>5.0.3</version>
+                        </dependency>
+                    </dependencies>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.2</version>
+                    <configuration>
+                        <verbose>true</verbose>
+                        <fork>true</fork>
+                        <forceJavacCompilerUse>true</forceJavacCompilerUse>
+                    </configuration>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.codehaus.plexus</groupId>
+                            <artifactId>plexus-compiler-eclipse</artifactId>
+                            <version>2.4</version>
+                        </dependency>
+                    </dependencies>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-deploy-plugin</artifactId>
+                    <version>2.8.2</version>
+                    <configuration>
+                        <deployAtEnd>true</deployAtEnd>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>2.9</version>
+                    <executions>
+                        <execution>
+                            <id>default-unpack-dependencies</id>
+                            <goals>
+                                <goal>unpack-dependencies</goal>
+                            </goals>
+                            <configuration>
+                                <classifier>sources</classifier>
+                                <excludes>META-INF/MANIFEST.MF</excludes>
+                                <outputDirectory>${project.build.directory}/generated-sources/dependency</outputDirectory>
+                                <includeGroupIds>org.jacoco</includeGroupIds>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-gpg-plugin</artifactId>
+                    <version>1.6</version>
+                    <executions>
+                        <execution>
+                            <id>default-sign</id>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>sign</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>2.10.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>2.5</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-release-plugin</artifactId>
+                    <version>2.5.1</version>
+                    <configuration>
+                        <mavenExecutorId>forked-path</mavenExecutorId>
+                        <autoVersionSubmodules>true</autoVersionSubmodules>
+                        <localCheckout>true</localCheckout>
+                        <pushChanges>false</pushChanges>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>2.4</version>
+                    <executions>
+                        <execution>
+                            <id>default-jar-no-fork</id>
+                            <goals>
+                                <goal>jar-no-fork</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>2.18.1</version>
+                    <executions>
+                        <execution>
+                            <id>default-test</id>
+                            <!-- do not execute surefire at all by binding to none -->
+                            <phase>none</phase>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-toolchains-plugin</artifactId>
+                    <version>1.1</version>
+                    <executions>
+                        <execution>
+                            <id>default-toolchain</id>
+                            <goals>
+                                <goal>toolchain</goal>
+                            </goals>
+                            <configuration>
+                                <toolchains>
+                                    <jdk>
+                                        <version>${jdkVersion}</version>
+                                    </jdk>
+                                </toolchains>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>build-helper-maven-plugin</artifactId>
+                    <version>1.9.1</version>
+                    <executions>
+                        <execution>
+                            <id>default-add-source</id>
+                            <goals>
+                                <goal>add-source</goal>
+                            </goals>
+                            <configuration>
+                                <sources>
+                                    <source>${project.build.directory}/generated-sources/dependency</source>
+                                </sources>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>default-attach-artifact</id>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>attach-artifact</goal>
+                            </goals>
+                            <configuration>
+                                <artifacts>
+                                    <artifact>
+                                        <file>${project.build.directory}/${project.artifactId}-${project.version}-asmified.zip</file>
+                                        <type>zip</type>
+                                        <classifier>asmified</classifier>
+                                    </artifact>
+                                </artifacts>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>release-sign-artifacts</id>
+            <activation>
+                <property>
+                    <name>performRelease</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

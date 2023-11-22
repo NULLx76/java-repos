@@ -1,0 +1,501 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.gbif</groupId>
+    <artifactId>motherpom</artifactId>
+    <version>37</version>
+  </parent>
+
+  <artifactId>portal-web</artifactId>
+  <version>0.59-SNAPSHOT</version>
+  <packaging>war</packaging>
+
+  <name>GBIF Portal</name>
+  <description>The new, integrated GBIF Portal</description>
+  <url>http://github.org/gbif/portal-web</url>
+
+  <scm>
+    <connection>scm:git:git@github.com:gbif/portal-web.git</connection>
+    <url>https://github.com/gbif/portal-web</url>
+    <developerConnection>scm:git:git@github.com:gbif/portal-web.git</developerConnection>
+    <tag>HEAD</tag>
+  </scm>
+
+  <properties>
+    <!-- used for packaging and deploying only.
+    We have used a system var localhost configuration for the failsafe and jetty plugin -->
+    <jetty.port>8080</jetty.port>
+    <servername>http://localhost:8080</servername>
+    <!-- configure struts tags to include the servlet context by default -->
+    <url.includeContext>true</url.includeContext>
+    <!-- gbif proxy auth application key. Make sure the matching secret uses the same -->
+    <portal.application.key>gbif.portal</portal.application.key>
+
+    <!-- this looks silly, but we're not aware of a way to negate a variable, so we keep them separate to be used in struts config files -->
+    <devMode>true</devMode>
+    <notDevMode>false</notDevMode>
+    <google.analytics />
+    <occurrence.download.size.limit>-1</occurrence.download.size.limit>
+    <occurrence.search.maxoffset>10000</occurrence.search.maxoffset>
+    <occurrence.facets.enable>true</occurrence.facets.enable>
+    <skipJetty>false</skipJetty>
+
+    <!-- dependency versions -->
+    <bval.version>0.5</bval.version>
+    <checklistbank-ws-client.version>2.50</checklistbank-ws-client.version>
+    <commons-beanutils.version>1.9.2</commons-beanutils.version>
+    <commons-io.version>2.4</commons-io.version>
+    <commons-lang3.version>3.4</commons-lang3.version>
+    <download-query-tools.version>1.17</download-query-tools.version>
+    <drupal-mybatis.version>0.19</drupal-mybatis.version>
+    <dwc-api.version>1.16</dwc-api.version>
+    <findbugs-jsr305.version>3.0.1</findbugs-jsr305.version>
+    <freemarker.version>2.3.25-incubating</freemarker.version>
+    <gbif-api.version>0.52</gbif-api.version>
+    <gbif-common-ws.version>0.38</gbif-common-ws.version>
+    <gbif-common.version>0.32</gbif-common.version>
+    <guava.version>18.0</guava.version>
+    <guice.version>4.0</guice.version>
+    <httpclient.version>4.3.6</httpclient.version>
+    <javax-validation-api.version>1.1.0.Final</javax-validation-api.version>
+    <jersey.version>1.18.3</jersey.version>
+    <jsp.version>2.2</jsp.version>
+    <junit.version>4.12</junit.version>
+    <lesscss-maven-plugin.version>1.3.3</lesscss-maven-plugin.version>
+    <logback.version>1.1.7</logback.version>
+    <lucene.version>5.4.1</lucene.version>
+    <metrics-ws-client.version>0.26</metrics-ws-client.version>
+    <mockito.version>1.9.5</mockito.version>
+    <occurrence-ws-client.version>0.61</occurrence-ws-client.version>
+    <registry-ws-client.version>2.64</registry-ws-client.version>
+    <selenium.version>2.50.1</selenium.version>
+    <servletapi.version>3.0.1</servletapi.version>
+    <slf4j.version>1.7.21</slf4j.version>
+    <struts.version>2.3.32</struts.version>
+    <xerces.version>2.9.1</xerces.version>
+  </properties>
+
+  <build>
+    <defaultGoal>jetty:run</defaultGoal>
+    <plugins>
+        <plugin>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>jetty-maven-plugin</artifactId>
+          <configuration>
+            <webAppConfig>
+              <contextPath>/</contextPath>
+            </webAppConfig>
+            <!-- no scan if used with JRebel -->
+            <scanIntervalSeconds>0</scanIntervalSeconds>
+            <stopKey>stop</stopKey>
+            <stopPort>9362</stopPort>
+            <systemProperties>
+              <systemProperty>
+                <name>servername</name>
+                <value>http://localhost:${jetty.port}</value>
+              </systemProperty>
+            </systemProperties>
+          </configuration>
+          <executions>
+            <execution>
+              <id>start-jetty</id>
+              <phase>pre-integration-test</phase>
+              <goals>
+                <goal>start</goal>
+              </goals>
+              <configuration>
+                <skip>${skipJetty}</skip>
+                <scanIntervalSeconds>0</scanIntervalSeconds>
+                <daemon>true</daemon>
+              </configuration>
+            </execution>
+            <execution>
+              <id>stop-jetty</id>
+              <phase>post-integration-test</phase>
+              <goals>
+                <goal>stop</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <configuration>
+            <skip>${skipJetty}</skip>
+            <systemProperties>
+              <property>
+                <name>servername</name>
+                <value>http://localhost:${jetty.port}</value>
+              </property>
+            </systemProperties>
+          </configuration>
+          <executions>
+            <execution>
+              <id>integration-test</id>
+              <goals>
+                <goal>integration-test</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>verify</id>
+              <goals>
+                <goal>verify</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+      <plugin>
+          <groupId>org.lesscss</groupId>
+          <artifactId>lesscss-maven-plugin</artifactId>
+          <version>${lesscss-maven-plugin.version}</version>
+          <configuration>
+              <sourceDirectory>${project.basedir}/src/main/webapp/less</sourceDirectory>
+              <outputDirectory>${project.basedir}/src/main/webapp/css</outputDirectory>
+              <compress>true</compress>
+              <includes>
+                <include>style.less</include>
+                <include>print.less</include>
+                <include>google.less</include>
+                <include>leaflet.ie.less</include>
+                <include>leaflet.less</include>
+                <include>uniform.less</include>
+                <include>occ_nofacets.less</include>
+              </includes>
+          </configuration>
+          <executions>
+              <execution>
+                  <goals>
+                      <goal>compile</goal>
+                  </goals>
+              </execution>
+          </executions>
+      </plugin>
+    </plugins>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <excludes>
+          <exclude>struts.xml</exclude>
+        </excludes>
+        <filtering>true</filtering>
+      </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+        <includes>
+          <include>struts.xml</include>
+        </includes>
+        <filtering>false</filtering>
+      </resource>
+    </resources>
+    <testResources>
+      <testResource>
+        <directory>src/test/resources</directory>
+        <filtering>true</filtering>
+      </testResource>
+    </testResources>
+  </build>
+
+  <repositories>
+    <repository>
+      <id>gbif-all</id>
+      <url>http://repository.gbif.org/content/groups/gbif</url>
+    </repository>
+  </repositories>
+
+  <dependencies>
+    <!-- GBIF -->
+    <dependency>
+      <groupId>org.gbif</groupId>
+      <artifactId>dwc-api</artifactId>
+      <version>${dwc-api.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.gbif</groupId>
+      <artifactId>gbif-api</artifactId>
+      <version>${gbif-api.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.gbif.checklistbank</groupId>
+      <artifactId>checklistbank-ws-client</artifactId>
+      <version>${checklistbank-ws-client.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.gbif.registry</groupId>
+      <artifactId>registry-ws-client</artifactId>
+      <version>${registry-ws-client.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.gbif.occurrence</groupId>
+      <artifactId>occurrence-ws-client</artifactId>
+      <version>${occurrence-ws-client.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.gbif.metrics</groupId>
+      <artifactId>metrics-ws-client</artifactId>
+      <version>${metrics-ws-client.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.gbif.occurrence</groupId>
+      <artifactId>download-query-tools</artifactId>
+      <version>${download-query-tools.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.gbif</groupId>
+      <artifactId>drupal-mybatis</artifactId>
+      <version>${drupal-mybatis.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.gbif</groupId>
+      <artifactId>gbif-common</artifactId>
+      <version>${gbif-common.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.gbif</groupId>
+      <artifactId>gbif-common-ws</artifactId>
+      <version>${gbif-common-ws.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-api</artifactId>
+      <version>${selenium.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-htmlunit-driver</artifactId>
+      <version>${selenium.version}</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <artifactId>commons-logging</artifactId>
+          <groupId>commons-logging</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <!-- Google -->
+    <dependency>
+      <groupId>com.google.inject</groupId>
+      <artifactId>guice</artifactId>
+      <version>${guice.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.inject.extensions</groupId>
+      <artifactId>guice-servlet</artifactId>
+      <version>${guice.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.inject.extensions</groupId>
+      <artifactId>guice-struts2</artifactId>
+      <version>${guice.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>${guava.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <version>${findbugs-jsr305.version}</version>
+    </dependency>
+
+    <!-- Struts2 -->
+    <dependency>
+      <groupId>org.apache.struts</groupId>
+      <artifactId>struts2-core</artifactId>
+      <version>${struts.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>javassist</groupId>
+          <artifactId>javassist</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.struts.xwork</groupId>
+      <artifactId>xwork-core</artifactId>
+      <version>${struts.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.struts</groupId>
+      <artifactId>struts2-junit-plugin</artifactId>
+      <version>${struts.version}</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <artifactId>commons-logging</artifactId>
+          <groupId>commons-logging</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <!--
+     This plugin provides a faster Java implementation of tags in the "simple" theme then the default one
+     http://struts.apache.org/2.x/docs/javatemplates-plugin.html
+    -->
+    <dependency>
+      <groupId>org.apache.struts</groupId>
+      <artifactId>struts2-javatemplates-plugin</artifactId>
+      <version>${struts.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+
+    <!-- View Engines, Servlet & other web things-->
+    <dependency>
+      <groupId>org.apache.struts</groupId>
+      <artifactId>struts2-sitemesh-plugin</artifactId>
+      <version>${struts.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.freemarker</groupId>
+      <artifactId>freemarker</artifactId>
+      <version>${freemarker.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>javax.servlet-api</artifactId>
+      <version>${servletapi.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- For webservice guice modules -->
+    <dependency>
+      <groupId>com.sun.jersey.contribs</groupId>
+      <artifactId>jersey-apache-client4</artifactId>
+      <version>${jersey.version}</version>
+      <scope>runtime</scope>
+      <exclusions>
+        <exclusion>
+          <artifactId>commons-logging</artifactId>
+          <groupId>commons-logging</groupId>
+        </exclusion>
+        <!-- excluding it as it causes conflicts with the latest httpclient version -->
+        <exclusion>
+          <artifactId>httpclient</artifactId>
+          <groupId>org.apache.httpcomponents</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-client</artifactId>
+      <version>${jersey.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-server</artifactId>
+      <version>${jersey.version}</version>
+    </dependency>
+
+    <!-- Logging -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>${logback.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <!-- Commons logging bridge for Struts2 & Selenium -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jcl-over-slf4j</artifactId>
+      <version>${slf4j.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <!-- To ship JUL (e.g. Guice) logging to SLF4J -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jul-to-slf4j</artifactId>
+      <version>${slf4j.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <!-- Test -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-all</artifactId>
+      <version>${mockito.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>javax.servlet.jsp</groupId>
+      <artifactId>jsp-api</artifactId>
+      <version>${jsp.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- BVal validation framework - bval/guice plugin -->
+    <dependency>
+      <groupId>org.apache.bval</groupId>
+      <artifactId>bval-guice</artifactId>
+      <version>${bval.version}</version>
+    </dependency>
+    <!-- validation -->
+    <dependency>
+      <groupId>javax.validation</groupId>
+      <artifactId>validation-api</artifactId>
+      <version>${javax-validation-api.version}</version>
+    </dependency>
+
+    <!-- Other commons projects -->
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>${commons-io.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-beanutils</groupId>
+      <artifactId>commons-beanutils</artifactId>
+      <version>${commons-beanutils.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-core</artifactId>
+      <version>${lucene.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-analyzers-common</artifactId>
+      <version>${lucene.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+      <version>${httpclient.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>${commons-lang3.version}</version>
+    </dependency>
+  </dependencies>
+
+  <profiles>
+    <!--
+     Profile to activate during releases like this:
+     mvn -P uat,secrets-uat,release -Darguments="-DskipTests" release:prepare
+    -->
+    <profile>
+      <id>release</id>
+      <properties>
+        <skipJetty>true</skipJetty>
+      </properties>
+    </profile>
+
+  </profiles>
+
+</project>

@@ -1,0 +1,183 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>pl.greenpath.mockito</groupId>
+	<artifactId>mockito-eclipse-tools</artifactId>
+	<version>1.3.0-SNAPSHOT</version>
+	<packaging>pom</packaging>
+
+	<properties>
+		<tycho-version>0.20.0</tycho-version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<eclipse-repo.url>https://repo.eclipse.org/content/repositories/releases/</eclipse-repo.url>
+	</properties>
+
+	<modules>
+		<module>features/pl.greenpath.eclipse.refactoring.feature</module>
+		<module>pl.greenpath.eclipse.updatesite</module>
+		<module>plugins/pl.greenpath.mockito.ide.refactoring</module>
+		<module>plugins/pl.greenpath.mockito.ide.refactoring.tests</module>
+	</modules>
+
+	<repositories>
+		<repository>
+			<id>kepler</id>
+			<layout>p2</layout>
+			<url>http://download.eclipse.org/releases/kepler</url>
+			<snapshots>
+				<updatePolicy>daily</updatePolicy>
+			</snapshots>
+		</repository>
+
+		<repository>
+			<id>m2e</id>
+			<layout>p2</layout>
+			<url>http://download.eclipse.org/technology/m2e/releases/</url>
+			<snapshots>
+				<updatePolicy>daily</updatePolicy>
+			</snapshots>
+		</repository>
+		<repository>
+			<id>testing-artifacts</id>
+			<layout>p2</layout>
+			<url>http://eclipse.greenpath.pl/testing-artifacts</url>
+			<snapshots>
+				<updatePolicy>daily</updatePolicy>
+			</snapshots>
+		</repository>
+	</repositories>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>tycho-maven-plugin</artifactId>
+				<version>${tycho-version}</version>
+				<extensions>true</extensions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>target-platform-configuration</artifactId>
+				<version>${tycho-version}</version>
+				<configuration>
+					<resolver>p2</resolver>
+					<ignoreTychoRepositories>true</ignoreTychoRepositories>
+					<dependency-resolution>
+						<extraRequirements>
+							<requirement>
+								<type>p2-installable-unit</type>
+								<id>org.eclipse.jdt.feature.group</id>
+								<versionRange>0.0.0</versionRange>
+							</requirement>
+						</extraRequirements>
+					</dependency-resolution>
+				</configuration>
+			</plugin>
+
+
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>0.7.0.201403182114</version>
+				<executions>
+					<execution>
+						<id>prepare-integration-tests</id>
+						<phase>pre-integration-test</phase>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>1.7</version>
+				<dependencies>
+					<dependency>
+						<groupId>org.jacoco</groupId>
+						<artifactId>org.jacoco.ant</artifactId>
+						<version>0.5.6.201201232323</version>
+					</dependency>
+					<dependency>
+						<groupId>ant-contrib</groupId>
+						<artifactId>ant-contrib</artifactId>
+						<version>20020829</version>
+					</dependency>
+				</dependencies>
+				<executions>
+					<execution>
+						<id>jacoco-report</id>
+						<phase>post-integration-test</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<target>
+								<property name="source-location" location="../" />
+								<taskdef name="jacoco-report" classname="org.jacoco.ant.ReportTask"
+									classpathref="maven.plugin.classpath" />
+								<taskdef classpathref="maven.runtime.classpath"
+									resource="net/sf/antcontrib/antcontrib.properties" />
+								<available file="${project.basedir}/target/jacoco.exec"
+									property="jacoco.exec.file.exists" />
+								<echo message="${project.basedir}/target/jacoco.exec" />
+								<if>
+									<equals arg1="${jacoco.exec.file.exists}" arg2="true" />
+									<then>
+										<echo message="Executing jacoco report" />
+										<echo message="${source-location}" />
+										<trycatch>
+											<try>
+												<jacoco-report>
+													<executiondata>
+														<file file="${project.basedir}/target/jacoco.exec" />
+													</executiondata>
+
+													<structure name="QuickFixTools">
+														<classfiles>
+															<fileset
+																dir="${source-location}/pl.greenpath.mockito.ide.refactoring/target/classes" />
+														</classfiles>
+														<sourcefiles encoding="UTF-8">
+															<fileset
+																dir="${source-location}/pl.greenpath.mockito.ide.refactoring/src" />
+														</sourcefiles>
+													</structure>
+													<html destdir="${project.basedir}/target/jacoco/report" />
+													<xml destfile="${project.basedir}/target/jacoco/report/jacoco.xml" />
+												</jacoco-report>
+											</try>
+											<catch>
+												<echo>skipping</echo>
+											</catch>
+										</trycatch>
+									</then>
+									<else>
+										<echo message="No jacoco.exec file found." />
+									</else>
+								</if>
+							</target>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+
+	<pluginRepositories>
+		<pluginRepository>
+			<id>eclipse</id>
+			<url>${eclipse-repo.url}</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</pluginRepository>
+	</pluginRepositories>
+
+</project>

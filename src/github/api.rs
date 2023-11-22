@@ -174,7 +174,7 @@ impl<'conf> GitHubApi<'conf> {
             if !self.next_token() {
                 continue;
             } else {
-                info!("Geting next token")
+                warn!("Geting next token")
             }
 
             // Slow down only once per API call

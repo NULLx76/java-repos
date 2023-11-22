@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>transapps</groupId>
+	<artifactId>-gpx-fitness</artifactId>
+	<packaging>apk</packaging>
+	<version>1.1.0-SNAPSHOT</version>
+	<name>gpx-fitness</name>
+
+		<distributionManagement>
+		<repository>
+			<id>${transapps.release.id}</id>
+			<url>${transapps.release.url}</url>
+		</repository>
+		<snapshotRepository>
+			<id>${transapps.snapshot.id}</id>
+			<url>${transapps.snapshot.url}</url>
+		</snapshotRepository>
+	</distributionManagement>
+
+	<pluginRepositories>
+		<pluginRepository>
+			<id>${transapps.public.id}</id>
+			<url>${transapps.public.url}</url>
+		</pluginRepository>
+	</pluginRepositories>
+	<properties>
+		<android-support.version>r13</android-support.version>
+	</properties>
+
+	<repositories>
+		<repository>
+    		<id>achartengine</id>
+    		<name>Public AChartEngine repository</name>
+    		<url>https://repository-achartengine.forge.cloudbees.com/snapshot/</url>
+		</repository>
+	</repositories>
+	
+
+	<dependencies>
+	    <dependency>
+    		<groupId>org.achartengine</groupId>
+    		<artifactId>achartengine</artifactId>
+    		<version>1.1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.android</groupId>
+			<artifactId>android</artifactId>
+			<version>4.0.1.2</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.google.android</groupId>
+			<artifactId>support-v4</artifactId>
+			<version>${android-support.version}</version>
+		</dependency>
+		
+		
+	</dependencies>
+
+	<build>
+		<sourceDirectory>src</sourceDirectory>
+		<finalName>gpx-fitness</finalName>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>2.9</version>
+				<configuration>
+					<notimestamp>true</notimestamp>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>2.3.2</version>
+				<configuration>
+					<source>1.6</source>
+					<target>1.6</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>com.jayway.maven.plugins.android.generation2</groupId>
+				<artifactId>android-maven-plugin</artifactId>
+				<version>3.6.0</version>
+				<configuration>
+					<sdk><platform>15</platform></sdk>
+					<deleteConflictingFiles>true</deleteConflictingFiles>
+					<undeployBeforeDeploy>true</undeployBeforeDeploy>
+					<!-- attachJar false required because deploying both jar and apk to Nexus appears to make APK inaccessible vai search -->
+					<attachJar>false</attachJar>
+					<dexJvmArguments><jvmArgument>-Xmx1500m</jvmArgument></dexJvmArguments>
+					<jvmArguments><jvmArgument>-Xmx1500m</jvmArgument></jvmArguments>
+				</configuration>
+				<extensions>true</extensions>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.groovy.maven</groupId>
+				<artifactId>gmaven-plugin</artifactId>
+				<version>1.0</version>
+				<executions>
+					<execution>
+						<id>package</id>
+						<phase>validate</phase>
+						<goals>
+							<goal>execute</goal>
+						</goals>
+						<configuration>
+							<source>
+								cal = Calendar.instance
+								Y = cal.get(Calendar.YEAR)
+								M = cal.get(Calendar.MONTH) + 1
+								D = cal.get(Calendar.DATE)
+								H = "git log --format=%h -1".execute(null, project.basedir).text.replaceAll(/\s*$/, '')
+								versionformat = project.properties['versionformat']
+								if (versionformat=="RELEASE") {
+									buildNumber = System.getenv('bamboo.buildNumber')
+									version = "$Y.$M.$D.$H" + (buildNumber==null?"":"." + buildNumber)
+									def manifest = new File(project.basedir, 'AndroidManifest.xml')
+									content = manifest.text;
+									content = content.replaceAll(/android:versionName="[^"]+"/, /android:versionName="/+/$version/+/"/)
+									manifest.write(content);
+								}
+							</source>
+						</configuration>
+					</execution>
+					<execution>
+						<id>reset</id>
+						<phase>install</phase>
+						<goals>
+							<goal>execute</goal>
+						</goals>
+						<configuration>
+							<source>
+								versionformat = project.properties['versionformat']
+								if (versionformat=="RELEASE") {
+									version = "DEVELOPMENT"
+									def manifest = new File(project.basedir, 'AndroidManifest.xml')
+									content = manifest.text;
+									content = content.replaceAll(/android:versionName="[^"]+"/, /android:versionName="DEVELOPMENT"/)
+									manifest.write(content);
+								}
+							</source>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+		<pluginManagement>
+			<plugins>
+				<!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>com.jayway.maven.plugins.android.generation2</groupId>
+										<artifactId>android-maven-plugin</artifactId>
+										<versionRange>[3.0.0,)</versionRange>
+										<goals><goal>proguard</goal></goals>
+									</pluginExecutionFilter>
+									<action><ignore></ignore></action>
+								</pluginExecution>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>org.codehaus.groovy.maven</groupId>
+										<artifactId>gmaven-plugin</artifactId>
+										<versionRange>[1.0,)</versionRange>
+										<goals><goal>execute</goal></goals>
+									</pluginExecutionFilter>
+									<action><ignore></ignore></action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+	<profiles>
+		<profile>
+			<id>dev</id>
+		</profile>
+		<profile>
+			<id>release</id>
+			<properties>
+				<versionformat>RELEASE</versionformat>
+			</properties>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-jarsigner-plugin</artifactId>
+						<version>1.2</version>
+						<executions>
+							<execution>
+								<id>signing</id>
+								<goals><goal>sign</goal></goals>
+								<phase>package</phase>
+								<inherited>true</inherited>
+								<configuration>
+									<archiveDirectory />
+									<includes>
+										<include>target/*.apk</include>
+									</includes>
+									<keystore>keystore</keystore>
+									<storepass>GPXFitness</storepass>
+									<keypass>GPXFitness</keypass>
+									<alias>GPXFitness</alias>
+									<arguments>
+										<!-- for java-version >= 7 -->
+										<argument>-sigalg</argument><argument>MD5withRSA</argument>
+										<argument>-digestalg</argument><argument>SHA1</argument>
+									</arguments>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>com.jayway.maven.plugins.android.generation2</groupId>
+						<artifactId>android-maven-plugin</artifactId>
+						<version>3.6.0</version>
+						<inherited>true</inherited>
+						<configuration>
+						  <sdk><platform>15</platform></sdk>
+							<sign><debug>false</debug></sign>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+</project>

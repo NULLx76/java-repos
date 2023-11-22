@@ -1,0 +1,245 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <artifactId>fcrepo-test-profiles</artifactId>
+  <groupId>org.fcrepo</groupId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>fcrepo-test-profiles</name>
+ 
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <http.port>51200</http.port>
+  </properties>
+  
+  <dependencies>
+    <dependency>
+      <groupId>org.fcrepo</groupId>
+      <artifactId>fcrepo-webapp</artifactId>
+      <version>4.0.0-alpha-3-SNAPSHOT</version>
+      <type>war</type>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.ant</groupId>
+      <artifactId>ant</artifactId>
+      <version>1.7.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.fcrepo.bench</groupId>
+      <artifactId>bench-tool</artifactId>
+      <version>0.0.1-SNAPSHOT</version>
+    </dependency>
+  </dependencies>
+  
+  <profiles>
+ 
+    <profile>
+      <id>localhost-config-example</id>
+      <properties>
+      
+        <!-- this should be an apache host, running mod_proxy to load balance f4 nodes -->
+        <fedora.host>fcrepo-access.example.com</fedora.host>
+        
+        <!-- local node storage, by default within target -->
+        <fcrepo.store.fast>target/stores</fcrepo.store.fast>
+        <fcrepo.store.slow>target/stores</fcrepo.store.slow>
+        
+        <!-- your cluster host name, port -->
+        <jgroups.tcpping.initial_hosts>fedora4-master.example.com[7800]</jgroups.tcpping.initial_hosts>
+      </properties>
+    </profile>
+  
+    <!-- These configs are mutually exclusive cluster configurations that define the platform. -->
+    <profile>
+      <id>platform-cluster-baseline</id>
+      <properties>
+        <max.memory>2g</max.memory>
+        <fcrepo.ispn.numOwners>1</fcrepo.ispn.numOwners>
+        <fcrepo.infinispan.cache_configuration>config/infinispan/clustered/infinispan.xml</fcrepo.infinispan.cache_configuration>
+        <fcrepo.modeshape.configuration>classpath:config/clustered/repository.json</fcrepo.modeshape.configuration>
+        <fcrepo.ispn.jgroups.configuration>${project.build.outputDirectory}/jgroups-fcrepo-tcp.xml</fcrepo.ispn.jgroups.configuration>
+      </properties>
+    </profile>
+    
+    <profile>
+      <id>platform-cluster-leveldb</id>
+      <!-- activate this profile when you want maven to filter stock cluster config files -->
+      <properties>
+        <max.memory>2g</max.memory>
+        <fcrepo.ispn.numOwners>1</fcrepo.ispn.numOwners>
+        <fcrepo.infinispan.cache_configuration>config/infinispan/leveldb/infinispan.xml</fcrepo.infinispan.cache_configuration>
+        <fcrepo.modeshape.configuration>classpath:config/clustered/repository.json</fcrepo.modeshape.configuration>
+        <fcrepo.ispn.jgroups.configuration>${project.build.outputDirectory}/jgroups-fcrepo-tcp.xml</fcrepo.ispn.jgroups.configuration>
+      </properties>
+    </profile>
+  
+    <!-- A setup profile tells tests how many objects of what type to preload, before tests -->
+    <profile>
+      <id>setup-100o-50mb-10t</id>
+      <properties>
+        <setup.data.size>52428800</setup.data.size>
+        <setup.number.objects>100</setup.number.objects>
+        <setup.threads>10</setup.threads>
+      </properties>
+    </profile>
+    
+    <!-- A repository profiles tells tests how many objects of what type to use as test data. -->
+    <profile>
+      <id>repository-100o-50mb-3t</id>
+      <properties>
+        <data.size>52428800</data.size>
+        <number.objects>100</number.objects>
+        <threads>10</threads>
+      </properties>
+    </profile>
+    
+    <!-- simulating thumbnail data -->
+    <profile>
+      <id>repository-10000o-50k-10t</id>
+      <properties>
+        <data.size>51200</data.size>
+        <number.objects>10000</number.objects>
+        <threads>10</threads>
+      </properties>
+    </profile>
+    
+    <!-- Defines the operations that make up a test, including setup tasks. -->
+    <profile>
+      <id>workflow-profile</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <build>
+      <plugins>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.7</version>
+        <executions>
+          <execution>
+            <phase>integration-test</phase>
+            <configuration>
+              <tasks>
+                <input message="Start other cluster nodes, then press Return key to continue..."/>
+                <taskdef name="benchrun" classname="org.fcrepo.test.profiles.ant.Benchrun" classpath="target/classes"/>
+                <!-- setup tasks go here if we ever need them.. -->
+                <benchrun datasize="${data.size}" numObjects="${number.objects}" threads="${threads}" action="ingest" uri="http://${fedora.host}:${http.port}/fedora"/>
+                <benchrun datasize="${data.size}" numObjects="${number.objects}" threads="${threads}" action="read" uri="http://${fedora.host}:${http.port}/fedora"/>
+                <benchrun datasize="${data.size}" numObjects="${number.objects}" threads="${threads}" action="update" uri="http://${fedora.host}:${http.port}/fedora"/>
+                <benchrun datasize="${data.size}" numObjects="${number.objects}" threads="${threads}" action="delete" uri="http://${fedora.host}:${http.port}/fedora"/>
+              </tasks>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>org.fcrepo.bench</groupId>
+            <artifactId>bench-tool</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+      </plugins>
+      </build>
+    </profile>
+  </profiles>
+  
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+        <includes>
+          <include>**/*.json</include>
+          <include>**/*.json</include>
+        </includes>
+      </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+        <excludes>
+          <exclude>**/*.json</exclude>
+        </excludes>
+      </resource>
+    </resources>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.cargo</groupId>
+        <artifactId>cargo-maven2-plugin</artifactId>
+        <version>1.4.5</version>
+        <configuration>
+          <configuration>
+            <properties>
+              <cargo.servlet.port>${http.port}</cargo.servlet.port>
+              <cargo.jvmargs>-Xmx${max.memory}</cargo.jvmargs>
+            </properties>
+          </configuration>
+          <!-- Container configuration -->
+          <container>
+            <containerId>jetty9x</containerId>
+            <type>embedded</type>
+            <timeout>120000</timeout>
+            <systemProperties>
+              <jms.port>51201</jms.port>
+              <stomp.port>51202</stomp.port>
+              <STOP.PORT>51203</STOP.PORT>
+              <STOP.KEY>cargo-test-profiles</STOP.KEY>
+              
+              <!-- cluster config -->
+              <jgroups.tcp.address>${host.ip}</jgroups.tcp.address>
+              <jgroups.tcpping.initial_hosts>${jgroups.tcpping.initial_hosts}</jgroups.tcpping.initial_hosts>
+              
+              <!-- config files -->
+              <fcrepo.infinispan.cache_configuration>${fcrepo.infinispan.cache_configuration}</fcrepo.infinispan.cache_configuration>
+              <fcrepo.modeshape.configuration>${fcrepo.modeshape.configuration}</fcrepo.modeshape.configuration>
+              <fcrepo.ispn.jgroups.configuration>${fcrepo.ispn.jgroups.configuration}</fcrepo.ispn.jgroups.configuration>
+              
+              <!-- fedora storage -->
+              <fcrepo.ispn.numOwners>${fcrepo.ispn.numOwners}</fcrepo.ispn.numOwners>
+              <fcrepo.ispn.repo.CacheDirPath>${fcrepo.store.slow}/fir</fcrepo.ispn.repo.CacheDirPath>
+              <fcrepo.modeshape.index.location>${fcrepo.store.fast}/fmi</fcrepo.modeshape.index.location>
+              <fcrepo.ispn.binary.CacheDirPath>${fcrepo.store.slow}/fib</fcrepo.ispn.binary.CacheDirPath>
+              <fcrepo.ispn.CacheDirPath>${fcrepo.store.slow}/fi</fcrepo.ispn.CacheDirPath>
+            </systemProperties>
+          </container>
+          <!-- Configuration to use with the container or the deployer -->
+          <deployables>
+            <deployable>
+              <groupId>org.fcrepo</groupId>
+              <artifactId>fcrepo-webapp</artifactId>
+              <type>war</type>
+              <properties>
+                <context>fedora</context>
+              </properties>
+              <!-- <pingURL>http://${host.ip}:${http.port}/fedora/rest/</pingURL> -->
+            </deployable>
+          </deployables>
+        </configuration>
+      </plugin>
+        <plugin>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.1</version>
+          <configuration>
+            <debug>true</debug>
+            <source>1.7</source>
+            <target>1.7</target>
+          </configuration>
+        </plugin>
+    </plugins>
+  </build>
+  <repositories>
+    <repository>
+      <id>fcrepo-snapshot</id>
+      <name>Fcrepo Snapshot Repository</name>
+      <url>http://oss.sonatype.org/content/repositories/snapshots/</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+</project>

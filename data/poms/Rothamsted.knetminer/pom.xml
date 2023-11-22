@@ -1,0 +1,452 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+	  <groupId>uk.ac.rothamsted.knetminer</groupId>
+	  <artifactId>knetminer-common</artifactId>
+  	<version>5.0</version>
+	</parent>  
+
+	<artifactId>app-common</artifactId>
+	<name>app-common - KnetMiner App top/common POM container</name>
+	<version>5.7-SNAPSHOT</version>
+	<description>
+		KnetMiner is a platform for fast candidate gene discovery using data mining techniques.
+		See http://github.com/Rothamsted/knetminer/wiki for technical details.
+	</description>
+	<url>http://knetminer.org/</url>
+	<packaging>pom</packaging>
+
+	<organization>
+		<name>Rothamsted Research</name>
+		<url>http://www.rothamsted.ac.uk/</url>
+	</organization>
+
+	<licenses>
+		<license>
+			<name>GNU GPL</name>
+			<url>http://www.gnu.org/licenses/gpl.html</url>
+		</license>
+	</licenses>
+
+	<modules>
+    <module>client-base</module>
+    <module>server-base</module>
+    <module>server-datasource-api</module>
+    <module>server-datasource-ondexlocal</module>
+    <module>server-ondex</module>
+    <module>aratiny</module>
+    <module>knetminer-initializer</module>
+    <module>knetminer-initializer-cli</module>
+	</modules>
+
+	<properties>
+		
+		<!-- 
+			This is the default dir where Knetminer looks for its configuration (ie, config.xml, as defined
+		  in web.xml). 
+		  
+		  This default works under the Docker instance. It's not hard-wired for the case you want to build
+		  the WS WAR for another environment. As you can see in web.xml, this default can also be 
+		  overridden by the Java property (-D) knetminer.api.configFilePath, to be passed at runtime
+		  (eg, to your Tomcat's JVM).
+		-->
+		<knetminer.defaultConfigDir>/root/knetminer-dataset/config</knetminer.defaultConfigDir>
+		<!-- A different one is used for the neo4j profile -->
+		<knetminer.testConfigFileName>test-cfg.yml</knetminer.testConfigFileName>		
+		
+		<!-- 
+		  Several of these properties can be overriden by instance-specific Maven profiles.
+		  Here, we give values suitable for maven tests (eg, in aratiny).
+		  
+		  See https://github.com/Rothamsted/knetminer/wiki/3.-Deploying-KnetMiner-with-Docker
+		  
+		  TODO: Update docs
+		  
+		  
+		  ***** WARNING ****
+		   
+		  NEVER EVER USE Maven properties for production configurations (eg, Docker)!
+		  
+		  While we used to do it in the past, now these values are used for Maven interpolation during
+		  Maven builds ONLY (and to make different builds, eg, for testing or for Docker. 
+		  
+		  Once a distro file has been built via Maven using these values (eg, a .war, the Docker 
+		  image using that .war), then that file has NO REFERENCE to these POM properties.
+		  Therefore, you CAN'T change them from here (without rebuilding everything, which is 
+		  STRONGLY discouraged practice).
+		
+		  Configuration values for knetminer is done via YAML files (see TODO). Some sub-component
+		  still needs Java system properties (eg, the Neo4j traverser). In such cases, you can use
+		  "systemProperties" in the YAML configuration (see documentation and existing examples).
+		 -->
+		
+		<!--
+			In most cases, probably you'll be fine with the overriding provided below, in the 'docker' profile.
+			For aratiny, we need this non-common value since it's difficult to rename a downloaded test file. 
+		-->
+		<knetminer.oxlFile>${project.build.directory}/dependency/poaceae-sample.oxl</knetminer.oxlFile>
+								
+		<knetminer.api.httpPort>9090</knetminer.api.httpPort>
+		<knetminer.api.url>http://localhost:${knetminer.api.httpPort}/ws/aratiny</knetminer.api.url>
+
+
+		<!--
+			These shouldn't need to be changed (apart from development purposes).
+		-->
+		
+		<!-- 
+			=========> WARNING! <=========
+			
+			Unless you need to repeat a version more times (eg, a group of modules produced by the same developer that have 
+			their versions aligned), IT IS ABSOLUTELY FORBIDDEN to set a plug-in or dependency version in a property and use
+			it later ONLY ONCE, or doing it for the sole purpose of inserting that dependency in multiple submodules. 
+			MAVEN HAS PLUG-IN AND MODULE MANAGEMENT SECTIONS FOR THIS PURPOSE. USE MAVEN PROPERLY! 
+
+			Violating this rule might condemn you to an afterlife in the Hell of Developers, where the damned are forced 
+			to give IT support to biologists who are still using Windows XP.      
+		-->
+			
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<java.version>17</java.version>
+
+		<ondex.version>7.0.1</ondex.version>
+		<knetminer.backend.version>4.0.1</knetminer.backend.version>
+
+		
+		<!-- We define these using the Jetty properties, so that they can be overridden from the 
+		     command line -->
+		<jetty.http.port>8080</jetty.http.port>
+		<jetty.http.stopPort>8081</jetty.http.stopPort>
+		
+	</properties>
+
+
+	<scm>
+		<connection>scm:git:https://github.com/Rothamsted/knetminer</connection>
+		<developerConnection>scm:git:https://github.com/Rothamsted/knetminer</developerConnection>
+		<url>https://github.com/Rothamsted/knetminer</url>
+	</scm>
+
+	<ciManagement>
+		<system>GitHub Actions</system>
+		<url>https://github.com/Rothamsted/knetminer/actions</url>
+	</ciManagement>
+  
+	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-war-plugin</artifactId>
+					<version>3.4.0</version>
+				</plugin>
+			
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-surefire-plugin</artifactId>
+					<configuration>
+						<!-- TODO: remove, the default reuseForks=true and forkCount=1 should be the same-->
+						<!-- <forkMode>always</forkMode> -->
+						<forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
+						<argLine>-Xms4G -Xmx4G</argLine>
+						<failIfNoTests>false</failIfNoTests>
+						<enableAssertions>true</enableAssertions>
+						<redirectTestOutputToFile>false</redirectTestOutputToFile>
+						<useFile>false</useFile>
+					</configuration>
+				</plugin>
+								
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-source-plugin</artifactId>
+					<executions>
+						<execution>
+							<id>attach-sources</id>
+							<phase>verify</phase>
+							<goals>
+								<goal>jar-no-fork</goal>
+							</goals>
+						</execution>
+					</executions>
+				</plugin>
+				
+				<plugin>
+				  <groupId>org.eclipse.jetty</groupId>
+				  <artifactId>jetty-maven-plugin</artifactId>
+			    <version>11.0.18</version>
+				  <executions>
+				  	<execution>
+				  		<id>start</id>
+				  		<phase>pre-integration-test</phase>
+				  		<goals><goal>start</goal></goals>
+				  	</execution>
+				  	<execution>
+				  		<id>stop</id>
+				  		<phase>post-integration-test</phase>
+				  		<goals><goal>stop</goal></goals>
+				  	</execution>
+				  </executions>
+				  <configuration>
+				    <scan>10</scan>
+		        <!-- This is defined in the properties section -->
+		        <!-- httpConnector>
+		          <port>8080</port>
+		        </httpConnector -->			    
+				    <webApp>
+				      <contextPath>/</contextPath>
+							<allowDuplicateFragmentNames>true</allowDuplicateFragmentNames>
+				    </webApp>
+				    <!-- Again, this is in the properties above -->
+				    <!--stopPort>8081</stopPort -->
+				    <stopKey>araTinyJetty</stopKey>
+				    <stopWait>10</stopWait>
+
+						<systemProperties>
+							<!-- 
+								This is the absolute value of the current projet's 'target/'.
+								It's used by provisional code taking mockup data from this dir.							
+							-->
+							<maven.target>${project.build.directory}</maven.target>
+						</systemProperties>			      
+				    
+				  </configuration>
+				</plugin>
+
+				<plugin>
+					<groupId>org.codehaus.mojo</groupId>
+					<artifactId>properties-maven-plugin</artifactId>
+					<version>1.2.1</version>
+					<executions>
+						<execution>
+							<goals>
+								<goal>set-system-properties</goal>
+							</goals>
+							<configuration>
+								<properties>
+									<property>
+										<!-- 
+											WS scanning sometimes times out with the default (#551) 
+											TODO: Is still needed with recent Jetty? Does it need a new
+											variable name?
+										-->
+										<name>org.eclipse.jetty.annotations.maxWait</name>
+										<value>600</value>
+									</property>
+								</properties>
+							</configuration>
+						</execution>
+					</executions>
+				</plugin>
+
+			</plugins>		
+		</pluginManagement>
+		
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-clean-plugin</artifactId>
+			</plugin>
+
+		</plugins>
+	</build>
+
+
+	<profiles>
+		
+		<profile>
+			<id>docker</id>
+			<activation><activeByDefault>false</activeByDefault></activation>
+			<properties>
+								
+				<knetminer.api.httpPort>8080</knetminer.api.httpPort>
+				
+				<!-- It's just this, so that our Tomcat can append the right prefix automatically -->
+				<knetminer.api.url>/ws/aratiny</knetminer.api.url>
+
+			</properties>
+				
+		</profile>
+
+	</profiles>
+
+	<repositories>
+	  <repository>
+	  	<!-- This is needed to let Maven find the parent POM -->
+			<id>knetminer-repo</id>
+			<name>Knetminer Unified Repository</name>
+			<url>https://knetminer.com/artifactory/repository/maven-public</url>
+			<snapshots><enabled>true</enabled></snapshots>
+			<releases><enabled>true</enabled></releases>
+	  </repository>
+	</repositories>
+  
+	<dependencyManagement>
+		<dependencies>
+
+			<dependency>
+				<groupId>uk.ac.rothamsted.knetminer</groupId>
+				<artifactId>server-datasource-ondexlocal</artifactId>
+				<version>${project.version}</version>
+				<exclusions>
+					<!-- Removes the old log4j and requires a replacement with log4j-1.2-api (listed below) -->
+					<exclusion>
+						<groupId>log4j</groupId>
+						<artifactId>log4j</artifactId>
+					</exclusion>
+				</exclusions>
+			</dependency>
+			
+			<!-- The new backend, based on Neo4j -->
+			<dependency>
+				<groupId>uk.ac.rothamsted.knetminer.backend</groupId>
+				<artifactId>cypher-client</artifactId>
+				<version>${knetminer.backend.version}</version>
+				<exclusions>
+					<exclusion>
+						<groupId>org.slf4j</groupId>
+						<artifactId>log4j-over-slf4j</artifactId>
+					</exclusion>
+				</exclusions>
+			</dependency>
+					
+			<dependency>
+				<groupId>jakarta.servlet</groupId>
+				<artifactId>jakarta.servlet-api</artifactId>
+				<version>6.0.0</version>
+			</dependency>
+			<dependency>
+				<groupId>org.glassfish.web</groupId>
+				<artifactId>jakarta.servlet.jsp.jstl</artifactId>
+				<version>3.0.1</version>
+			</dependency>
+
+	    <dependency>
+	      <groupId>net.sourceforge.ondex.core</groupId>
+	      <artifactId>tools</artifactId>
+	      <version>${ondex.version}</version>
+	    </dependency>
+
+			<dependency>
+				<groupId>net.sourceforge.ondex.core</groupId>
+				<artifactId>workflow-api</artifactId>
+				<version>${ondex.version}</version>
+				<exclusions>
+					<exclusion>
+						<groupId>org.slf4j</groupId>
+						<artifactId>slf4j-log4j12</artifactId>
+					</exclusion>
+				</exclusions>
+			</dependency>
+			<dependency>
+				<groupId>net.sourceforge.ondex.core</groupId>
+				<artifactId>memory</artifactId>
+				<version>${ondex.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>net.sourceforge.ondex.core</groupId>
+				<artifactId>lucene</artifactId>
+				<version>${ondex.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>net.sourceforge.ondex.modules</groupId>
+				<artifactId>generic</artifactId>
+				<version>${ondex.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>net.sourceforge.ondex.modules</groupId>
+				<artifactId>oxl</artifactId>
+				<version>${ondex.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>net.sourceforge.ondex.modules</groupId>
+				<artifactId>cyjs_json</artifactId>
+				<version>${ondex.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.apache.lucene</groupId>
+				<artifactId>lucene-analyzers-common</artifactId>
+				<version>6.6.0</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.apache.logging.log4j</groupId>
+				<artifactId>log4j-api</artifactId>
+				<version>${log4j.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.logging.log4j</groupId>
+				<artifactId>log4j-core</artifactId>
+				<version>${log4j.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.logging.log4j</groupId>
+				<artifactId>log4j-jcl</artifactId>
+				<version>${log4j.version}</version>
+			</dependency>
+			<dependency>
+			 	<groupId>org.apache.logging.log4j</groupId>
+			 	<artifactId>log4j-slf4j-impl</artifactId>
+				<version>${log4j.version}</version>
+				<exclusions>
+					<exclusion>
+						<!-- We use our own -->
+						<groupId>org.slf4j</groupId>
+						<artifactId>slf4j-api</artifactId>
+					</exclusion>
+				</exclusions>
+			</dependency>
+			<!-- 
+				The old log4j v1.2 can be replaced by this, but only if the dependant is written well-enough.
+				(https://logging.apache.org/log4j/2.x/manual/migration.html)
+			 -->
+			<dependency>
+				<groupId>org.apache.logging.log4j</groupId>
+				<artifactId>log4j-1.2-api</artifactId>
+				<version>${log4j.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.logging.log4j</groupId>
+				<artifactId>log4j-web</artifactId>
+				<version>${log4j.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>junit</groupId>
+				<artifactId>junit</artifactId>
+				<version>4.13.2</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.apache.httpcomponents</groupId>
+				<artifactId>httpclient</artifactId>
+				<version>4.5.14</version>
+				<exclusions>
+					<exclusion>
+						<groupId>commons-logging</groupId>
+					  <artifactId>commons-logging</artifactId>
+					</exclusion>			
+				</exclusions>
+			</dependency>
+			
+			<!-- Needed in Java >= 11 -->	  
+			<dependency>
+				<groupId>javax.annotation</groupId>
+				<artifactId>javax.annotation-api</artifactId>
+				<version>1.3.2</version>
+			</dependency>
+			
+		</dependencies>
+	</dependencyManagement>
+
+</project>

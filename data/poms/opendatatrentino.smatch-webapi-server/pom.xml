@@ -1,0 +1,347 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.sonatype.oss</groupId>
+        <artifactId>oss-parent</artifactId>
+        <version>7</version>
+    </parent>
+  
+    <groupId>it.unitn.disi</groupId>
+    <artifactId>smatch-webapi-server</artifactId>
+    <version>1.0.0-RC2-SNAPSHOT</version>
+    <packaging>war</packaging>
+
+    <name>smatch-webapi-server</name>
+    <description>A Web API Server for S-Match</description>
+    <url>https://github.com/opendatatrentino/smatch-webapi-server</url>
+	
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <comms.version>2.4.1-SNAPSHOT</comms.version>
+        <spring.version>3.1.0.RELEASE</spring.version>
+        <aspectj.version>1.6.10</aspectj.version>
+        <jettyVersion>9.0.2.v20130417</jettyVersion>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.1</version>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>2.1.1</version>
+                <configuration>
+                    <warName>webapi</warName>
+                    <packagingExcludes>WEB-INF/lib/jetty-man*.jar,
+                        WEB-INF/lib/jetty-6.1.5.jar, WEB-INF/lib/jasper*.jar,
+                        WEB-INF/lib/el-api*.jar,
+                        WEB-INF/lib/jsp*.jar,
+                        WEB-INF/lib/catalina*.jar,
+                        WEB-INF/lib/july*.jar,
+                        WEB-INF/lib/servlet*.jar</packagingExcludes>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.2.1</version>
+                <configuration>
+                    <descriptors>
+                        <descriptor>bin.xml</descriptor>
+                    </descriptors>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <goals>
+                            <goal>attached</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.12.4</version>
+                <configuration>
+                    <includes>
+                        <include>**/*ITCase*</include>
+                    </includes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.12.4</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**/*ITCase*</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.cargo</groupId>
+                <artifactId>cargo-maven2-plugin</artifactId>
+                <version>1.2.2</version>
+                <configuration>
+                    <container>
+                        <containerId>jetty8x</containerId>
+                        <type>embedded</type>
+                    </container>
+                    <configuration>
+                        <type>standalone</type>
+                        <properties>
+                            <cargo.servlet.port>8080</cargo.servlet.port>
+                        </properties>
+                        <deployables>
+                            <!-- It's possible to declare multiple deployable points -->
+                            <deployable>
+                                <groupId>it.unitn.disi</groupId>
+                                <artifactId>smatch-webapi-server</artifactId>
+                                <type>war</type>
+                                <!-- used by cargo to monitor if deploying is finished -->
+                                <pingURL>http://localhost:8080/</pingURL>
+                                <properties>
+                                    <context>/</context>
+                                </properties>
+                            </deployable> 
+                        </deployables>
+                    </configuration>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>start-server</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>start</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>stop-server</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>unpack-shared-resources</id>
+                        <goals>
+                            <goal>unpack-dependencies</goal>
+                        </goals>
+                        <phase>generate-resources</phase>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/classes</outputDirectory>
+                            <includeArtifacIds>shared-resources</includeArtifacIds>
+                            <includeGroupIds>${project.groupId}</includeGroupIds>
+                            <excludeTransitive>true</excludeTransitive>
+                            <!--use as much as needed to be specific...also scope,type,classifier etc-->
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+        
+        <resources>
+            <resource>
+                <directory>${basedir}/src/main/resources</directory>
+            </resource>
+            <resource>
+                <directory>${project.build.directory}/generated-resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+    </build>
+    
+    <dependencies>
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20090211</version>
+        </dependency>
+            
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.7.5</version>
+        </dependency>
+            
+        <dependency>
+            <groupId>it.unitn.disi</groupId>
+            <artifactId>smatch-webapi-model</artifactId>
+            <version>1.0.0-RC1</version>
+        </dependency>
+      
+        <!-- Spring MVC -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+        <!-- JETTY -->
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-server</artifactId>
+            <version>${jettyVersion}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mortbay.jetty</groupId>
+            <artifactId>jetty-util</artifactId>
+            <version>6.1.24</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mortbay.jetty</groupId>
+            <artifactId>jetty-management</artifactId>
+            <version>6.1.24</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.tomcat</groupId>
+            <artifactId>jasper</artifactId>
+            <version>6.0.26</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>servlet-api</artifactId>
+                    <groupId>org.apache.tomcat</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>jstl</artifactId>
+            <version>1.2</version>
+        </dependency>
+        <!-- HTTP Client -->
+        <dependency>
+            <groupId>commons-httpclient</groupId>
+            <artifactId>commons-httpclient</artifactId>
+            <version>3.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.james</groupId>
+            <artifactId>apache-mime4j</artifactId>
+            <version>0.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpmime</artifactId>
+            <version>4.0.1</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-fileupload</groupId>
+            <artifactId>commons-fileupload</artifactId>
+            <version>1.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.16</version>
+        </dependency>   
+     
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.7</version>
+            <scope>test</scope>
+        </dependency>
+    
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjrt</artifactId>
+            <version>${aspectj.version}</version>
+        </dependency>
+		
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+            <version>${aspectj.version}</version>
+        </dependency>
+        
+        <dependency>                 
+            <groupId>it.unitn.disi</groupId>
+            <artifactId>s-match</artifactId>
+            <version>0.9.21</version>
+        </dependency>
+                
+        <dependency>  
+            <groupId>it.unitn.disi</groupId>
+            <artifactId>smatch-webapi-client</artifactId>
+            <version>1.0.0-RC1</version>
+            <scope>test</scope>            
+        </dependency>
+        
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>smatch-data</artifactId>
+            <version>1.0</version>
+            <classifier>resources</classifier>
+            <type>zip</type>
+            <!-- Make sure this isn't included on any classpath-->
+            <scope>provided</scope>
+        </dependency>
+        
+    </dependencies>
+
+    <scm>
+        <url>git@github.com:opendatatrentino/smatch-webapi-server.git</url>
+        <connection>scm:git:git://github.com/opendatatrentino/smatch-webapi-server</connection>
+        <developerConnection>scm:git:https://github.com/opendatatrentino/smatch-webapi-server.git</developerConnection>
+    </scm>
+    
+    <developers>
+        <developer>
+            <id>moaz</id>
+            <name>Moaz Reyad</name>
+            <email>reyad@disi.unitn.it</email>
+            <organization>DISI</organization>
+        </developer>
+        <developer>
+            <id>pravdin</id>
+            <name>Viktor Pravdin</name>
+            <email>pravdin@disi.unitn.it</email>
+            <organization>DISI</organization>
+        </developer>
+        <developer>
+            <id>marco</id>
+            <name>Marco Marasca</name>
+            <email>marasca@disi.unitn.it</email>
+            <organization>DISI</organization>
+        </developer>        
+        <developer>
+            <id>sergey</id>
+            <name>Sergey Kanshin</name>
+            <email>kanshinn@disi.unitn.it</email>
+            <organization>DISI</organization>
+        </developer>
+    </developers>
+    
+</project>

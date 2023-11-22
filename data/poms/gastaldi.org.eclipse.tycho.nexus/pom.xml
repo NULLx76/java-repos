@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ - Copyright (c) 2010, 2013 SAP AG and others.
+ - All rights reserved. This program and the accompanying materials
+ - are made available under the terms of the Eclipse Public License v1.0
+ - which accompanies this distribution, and is available at
+ - http://www.eclipse.org/legal/epl-v10.html
+ -
+ - Contributors:
+ -    SAP AG - initial API and implementation
+ -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>org.eclipse.tycho.nexus</groupId>
+	<artifactId>unzip-repository-plugin</artifactId>
+	<version>0.12.0-SNAPSHOT</version>
+
+	<inceptionYear>2010</inceptionYear>
+	<url>http://www.eclipse.org/tycho/</url>
+	<scm>
+		<url>http://git.eclipse.org/c/tycho/org.eclipse.tycho.nexus.git/</url>
+		<connection>scm:git:http://git.eclipse.org/gitroot/tycho/org.eclipse.tycho.nexus.git</connection>
+		<developerConnection>scm:git:ssh://git.eclipse.org/gitroot/tycho/org.eclipse.tycho.nexus.git</developerConnection>
+	</scm>
+	<ciManagement>
+		<system>hudson</system>
+		<url>https://hudson.eclipse.org/hudson</url>
+	</ciManagement>
+	<licenses>
+		<license>
+			<name>Eclipse Public License</name>
+			<url>http://www.eclipse.org/legal/epl-v10.html</url>
+		</license>
+	</licenses>
+	<organization>
+		<name>Eclipse Foundation</name>
+		<url>http://www.eclipse.org/</url>
+	</organization>
+	<developers>
+		<developer>
+			<name>Igor Fedorenko</name>
+			<organization>Sonatype</organization>
+			<organizationUrl>http://www.sonatype.com</organizationUrl>
+		</developer>
+		<developer>
+			<name>Tobias Oberlies</name>
+			<organization>SAP</organization>
+			<organizationUrl>http://www.sap.com</organizationUrl>
+		</developer>
+		<developer>
+			<name>Jan Sievers</name>
+			<organization>SAP</organization>
+			<organizationUrl>http://www.sap.com</organizationUrl>
+		</developer>
+	</developers>
+	<issueManagement>
+		<system>Bugzilla</system>
+		<url>https://bugs.eclipse.org/bugs/buglist.cgi?product=Tycho&amp;component=Nexus%20Plugins</url>
+	</issueManagement>
+
+	<packaging>nexus-plugin</packaging>
+
+	<name>Unzip Repository Nexus Plugin (Incubation)</name>
+	<description>
+	The Unzip Repository is a Nexus repository type that shadows the build results of a standard 
+	Maven 2 repository and allows to browse into zip and jar artifacts. 
+	The use case for Tycho is to to offer p2 repositories that were build with Tycho and deployed 
+	to Nexus as zip so that other Tycho projects can reference them.
+	</description>
+	
+	<properties>
+		<nexus-version>2.5.0-04</nexus-version>
+	</properties>
+
+	<repositories>
+		<repository>
+			<id>repository.sonatype.org</id>
+			<url>https://repository.sonatype.org/content/groups/forge/</url>
+		</repository>
+	</repositories>
+	<pluginRepositories>
+		<pluginRepository>
+			<id>repository.sonatype.org</id>
+			<url>https://repository.sonatype.org/content/groups/forge/</url>
+		</pluginRepository>
+	</pluginRepositories>
+
+	<profiles>
+		<profile>
+			<id>release</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-source-plugin</artifactId>
+						<version>2.2.1</version>
+						<executions>
+							<execution>
+								<phase>package</phase>
+								<goals>
+									<goal>jar-no-fork</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<!-- see https://docs.sonatype.org/display/Repository/How+To+Generate+PGP+Signatures+With+Maven -->
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-gpg-plugin</artifactId>
+						<version>1.4</version>
+						<executions>
+							<execution>
+								<id>sign-artifacts</id>
+								<phase>verify</phase>
+								<goals>
+									<goal>sign</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-javadoc-plugin</artifactId>
+						<version>2.9</version>
+						<executions>
+							<execution>
+								<id>javadoc-jar</id>
+								<goals>
+									<goal>jar</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+  
+	<dependencyManagement>
+		<dependencies>
+			<!-- plexus-utils are provided by Nexus -> mark as "provided", otherwise they will be
+			   packaged into the plugin archive and this can lead to runtime version mismatches! -->
+			<dependency>
+				<groupId>org.codehaus.plexus</groupId>
+				<artifactId>plexus-utils</artifactId>
+				<version>2.0.5</version>
+				<scope>provided</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.apache.maven</groupId>
+			<artifactId>maven-artifact</artifactId>
+			<version>3.0.4</version>
+		</dependency>
+		<!-- Main plugin API, pulling in what is needed -->
+		<dependency>
+			<groupId>org.sonatype.nexus</groupId>
+			<artifactId>nexus-plugin-api</artifactId>
+			<version>${nexus-version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- This dependency is only needed if you want to include REST Resources -->
+		<dependency>
+			<groupId>org.sonatype.nexus.plugins</groupId>
+			<artifactId>nexus-restlet1x-plugin</artifactId>
+			<version>${nexus-version}</version>
+            <type>nexus-plugin</type>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Basic testing -->
+		<dependency>
+			<groupId>org.sonatype.nexus</groupId>
+			<artifactId>nexus-plugin-test-api</artifactId>
+			<version>${nexus-version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.10</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.easymock</groupId>
+			<artifactId>easymock</artifactId>
+			<version>3.1</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<!-- Needed for custom packaging -->
+			<plugin>
+				<groupId>org.sonatype.plugins</groupId>
+				<artifactId>app-lifecycle-maven-plugin</artifactId>
+				<version>1.7</version>
+				<extensions>true</extensions>
+				<dependencies>
+					<dependency>
+						<groupId>org.sonatype.plugins</groupId>
+						<artifactId>app-lifecycle-nexus</artifactId>
+						<version>1.7</version>
+					</dependency>
+				</dependencies>
+			</plugin>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>2.5.1</version>
+				<configuration>
+					<source>1.6</source>
+					<target>1.6</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>2.2.1</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>jar-no-fork</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- Generate components.xml to use Plexus style of dependency injection -->
+			<plugin>
+				<groupId>org.codehaus.plexus</groupId>
+				<artifactId>plexus-component-metadata</artifactId>
+				<version>1.5.5</version>
+				<executions>
+					<execution>
+						<id>process-classes</id>
+						<goals>
+							<goal>generate-metadata</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>process-test-classes</id>
+						<goals>
+							<goal>generate-test-metadata</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+
+		<pluginManagement>
+		   <plugins>
+		      <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+		      <plugin>
+		         <groupId>org.eclipse.m2e</groupId>
+		         <artifactId>lifecycle-mapping</artifactId>
+		         <version>1.0.0</version>
+		         <configuration>
+		            <lifecycleMappingMetadata>
+		               <pluginExecutions>
+		                  <pluginExecution>
+		                     <pluginExecutionFilter>
+		                        <groupId>org.sonatype.plugins</groupId>
+		                        <artifactId>app-lifecycle-maven-plugin</artifactId>
+		                        <versionRange>[1.7,)</versionRange>
+		                        <goals>
+		                           <goal>generate-metadata</goal>
+		                           <goal>check-dependencies</goal>
+		                        </goals>
+		                     </pluginExecutionFilter>
+		                     <action>
+		                        <ignore></ignore>
+		                     </action>
+		                  </pluginExecution>
+		               </pluginExecutions>
+		            </lifecycleMappingMetadata>
+		         </configuration>
+		      </plugin>
+		   </plugins>
+		</pluginManagement>
+	</build>
+
+</project>

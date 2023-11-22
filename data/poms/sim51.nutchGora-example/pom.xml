@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <packaging>pom</packaging>
+
+    <!-- =========== -->
+    <!-- = General = -->
+    <!-- =========== -->
+    <groupId>com.logisima</groupId>
+    <artifactId>nucth</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <name>Web crawler</name>
+    
+    <!-- ============== -->
+    <!-- = Developers = -->
+    <!-- ============== -->
+    <developers>
+    <developer>
+            <id>bsimard</id>
+            <name>Benoît Simard</name>
+            <email>bsimard@logisima.com</email>
+        </developer>
+    </developers>
+
+    <!-- ============== -->
+    <!-- = Properties = -->
+    <!-- ============== -->
+    <properties>
+        <nutch.version>2.2.1</nutch.version>
+        <nutch.download>http://mir2.ovh.net/ftp.apache.org/dist/nutch/${nutch.version}/apache-nutch-${nutch.version}-src.tar.gz</nutch.download>
+    </properties>
+
+    <!-- ================ -->
+    <!-- = Dependencies = -->
+    <!-- ================ -->
+    <dependencies>
+    </dependencies>
+
+    <!-- ========= -->
+    <!-- = Build = -->
+    <!-- ========= -->
+    <build>      
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>2.6</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-antrun-plugin</artifactId>
+                    <version>1.6</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-resources</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                        	<encoding>UTF-8</encoding>
+                            <outputDirectory>${project.build.directory}/apache-nutch-${nutch.version}</outputDirectory>
+                            <filters>
+                                <filter>${project.basedir}/src/filters/filter.properties</filter>
+                            </filters>
+                            <resources>          
+                                <resource>
+                                    <directory>src/main/resources</directory>
+                                    <filtering>true</filtering>
+				    <excludes>
+				    <exclude>build.xml</exclude>
+				  </excludes>
+                                </resource>
+                            </resources>              
+                        </configuration>            
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <!-- Adding this so we can invoke javac in ant build's file-->
+                <dependencies>
+                    <dependency>
+                        <groupId>com.sun</groupId>
+                        <artifactId>tools</artifactId>
+                        <version>1.6</version>
+                        <scope>system</scope>
+                        <systemPath>${java.home}/../lib/tools.jar</systemPath>
+                    </dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <id>dependency</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <tasks>
+                                <echo message="Downloading nutch src archive at ${nutch.download}" />
+                                <get src="${nutch.download}" dest="${project.build.directory}"/>
+                                <echo message="Untar nutch archive apache-nutch-${nutch.version}-src.tar.gz"/>
+                                <gunzip src="${project.build.directory}/apache-nutch-${nutch.version}-src.tar.gz"/>
+                                <untar src="${project.build.directory}/apache-nutch-${nutch.version}-src.tar" dest="${project.build.directory}"/>
+                                <echo message="Copy build.xml for ressources to target directory"/>
+                                <copy file="${project.basedir}/src/main/resources/build.xml" tofile="${project.build.directory}/apache-nutch-${nutch.version}/build.xml" />
+                            </tasks>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>compile</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <tasks>
+                                <echo message="Compile nutch" />
+                                <ant antfile="${project.build.directory}/apache-nutch-${nutch.version}/build.xml" target="runtime"  dir="${project.build.directory}/apache-nutch-${nutch.version}">
+                                    <property name="final.name" value="${project.artifactId}"/>
+                                </ant>
+                                <move file="${project.build.directory}/apache-nutch-${nutch.version}/urls" todir="${project.build.directory}/apache-nutch-${nutch.version}/runtime/local/" />
+                            </tasks>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>package</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <tasks>
+                                <echo message="Packaging" />
+                                <delete dir="${project.build.directory}/apache-nutch-${nutch.version}/runtime/local/test"/>
+                                <zip destfile="${project.build.directory}/${project.artifactId}.zip" basedir="${project.build.directory}/apache-nutch-${nutch.version}/runtime/local/"/>
+                            </tasks>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

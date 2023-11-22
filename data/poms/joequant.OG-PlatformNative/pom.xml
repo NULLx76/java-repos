@@ -1,0 +1,1081 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project
+    xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.opengamma</groupId>
+    <artifactId>corporate-parent</artifactId>
+    <version>1.1.1</version>
+  </parent>  
+  <groupId>com.opengamma.platform</groupId>
+  <artifactId>og-platform-native</artifactId>
+  <version>2.0.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+  <name>OG-Platform-Native</name>
+  <description>OpenGamma platform native aggregator project</description>
+
+  <modules>
+    <module>og-install</module>
+    <module>og-language</module>
+    <module>og-rstats</module>
+  </modules>
+
+  <properties>
+    <version.fudge-c>0.2</version.fudge-c>
+    <version.log4cxx>0.10.0</version.log4cxx>
+    <version.apr>1.4.2</version.apr>
+    <version.apr-util>1.3.9</version.apr-util>
+    <version.maven-antrun-plugin>1.6</version.maven-antrun-plugin>
+    <version.maven-surefire-plugin>2.15</version.maven-surefire-plugin>
+    <version.maven-dependency-plugin>2.8</version.maven-dependency-plugin>
+    <version.exec-maven-plugin>1.1.1</version.exec-maven-plugin>
+    <version.build-helper-maven-plugin>1.8</version.build-helper-maven-plugin>
+    <version.paranamer>2.3</version.paranamer>
+    <version.cpptasks>1.0b5</version.cpptasks>
+    <version.properties-maven-plugin>1.0-alpha-1</version.properties-maven-plugin>
+    <version.ant-junit>1.6.5</version.ant-junit>
+    <version.ehcache>2.6.3</version.ehcache>
+    <version.activemq>5.3.0</version.activemq>
+    <version.ant-contrib>1.0b3</version.ant-contrib>
+    <skip.msbuild>true</skip.msbuild>
+    <skip.cpptasks-build>true</skip.cpptasks-build>
+    <skip.cpptasks-build-tests>true</skip.cpptasks-build-tests>
+    <skip.attach-native>true</skip.attach-native>
+    <skip.unit-tests-java>true</skip.unit-tests-java>
+    <skip.unit-tests-native>true</skip.unit-tests-native>
+    <skip.integration-tests-java>true</skip.integration-tests-java>
+    <skip.integration-tests-native>true</skip.integration-tests-native>
+    <skip.generate-version-header>true</skip.generate-version-header>
+  </properties>
+
+  <distributionManagement>
+    <repository>
+      <id>og-public-release</id>
+      <name>OpenGamma public maven repository</name>
+      <url>${og-public-release.url}</url>
+    </repository>
+    <snapshotRepository>
+      <id>og-public-snapshot</id>
+      <name>OpenGamma public snapshot maven repository</name>
+      <url>${og-public-snapshot.url}</url>
+    </snapshotRepository>
+  </distributionManagement>
+
+  <profiles>
+    <profile>
+      <id>og-platformnative-member</id>
+      <activation>
+        <file>
+          <exists>${root.dir}/.og-platformnative</exists>
+        </file>
+      </activation>
+      <properties>
+        <common.dir>${root.dir}/common</common.dir>
+      </properties>
+    </profile>
+    <profile>
+      <id>og-platformnative-parent</id>
+      <activation>
+        <file>
+          <exists>.og-platformnative</exists>
+        </file>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>${version.maven-antrun-plugin}</version>
+            <executions>
+              <execution>
+                <id>package-ant-common</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <ant antfile="common/archive.xml" target="archive-ant" />
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>${version.build-helper-maven-plugin}</version>
+            <executions>
+              <execution>
+                <id>attach-ant-common</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>attach-artifact</goal>
+                </goals>
+                <configuration>
+                  <artifacts>
+                    <artifact>
+                      <file>target/ant-common.zip</file>
+                      <type>zip</type>
+                      <classifier>ant-common</classifier>
+                    </artifact>
+                  </artifacts>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>og-platformnative-child</id>
+      <activation>
+        <file>
+          <missing>${root.dir}/.og-platformnative</missing>
+        </file>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>com.opengamma.platform</groupId>
+          <artifactId>og-platform-native</artifactId>
+          <version>${project.version}</version>
+          <type>zip</type>
+          <classifier>ant-common</classifier>
+        </dependency>
+      </dependencies>
+      <properties>
+        <common.dir>${localTarget}/dependency/ant-common</common.dir>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <version>${version.maven-dependency-plugin}</version>
+            <executions>
+              <execution>
+                <id>consume-ant-common</id>
+                <phase>initialize</phase>
+                <goals>
+                  <goal>unpack-dependencies</goal>
+                </goals>
+                <configuration>
+                  <includeArtifactIds>og-platform-native</includeArtifactIds>
+                  <includeTypes>zip</includeTypes>
+                  <outputDirectory>${localTarget}/dependency</outputDirectory>
+                  <classifier>ant-common</classifier>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>debug-windows-win32-msvc</id>
+      <activation>
+        <file>
+          <exists>${root.dir}/local/profile/debug-windows-win32-msvc</exists>
+        </file>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>${version.exec-maven-plugin}</version>
+            <executions>
+              <execution>
+                <id>debug-windows-win32-msbuild</id>
+                <phase>compile</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <skip>${skip.msbuild}</skip>
+                  <executable>${cmd.msbuild}</executable>
+                  <arguments>
+                    <argument>/nologo</argument>
+                    <argument>/maxcpucount</argument>
+                    <argument>/p:SolutionDir=${solutionDir}${file.separator}</argument>
+                    <argument>/p:Configuration=Debug</argument>
+                    <argument>/p:Platform=Win32</argument>
+                    <argument>${solutionDir}${file.separator}${solutionFile}</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>${version.build-helper-maven-plugin}</version>
+            <executions>
+              <execution>
+                <id>debug-windows-win32-attach-native</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>attach-artifact</goal>
+                </goals>
+                <configuration>
+                  <skipAttach>${skip.attach-native}</skipAttach>
+                  <artifacts>
+                    <artifact>
+                      <file>${localTarget}/DebugWin32.zip</file>
+                      <type>zip</type>
+                      <classifier>debug-windows-win32</classifier>
+                    </artifact>
+                  </artifacts>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>${version.maven-antrun-plugin}</version>
+            <executions>
+              <execution>
+                <id>debug-windows-win32-unit-tests</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.unit-tests-native}">
+                    <property name="maven.classpath" refid="maven.test.classpath" />
+                    <ant antfile="${common.dir}/tests.xml" target="unit-test">
+                      <property name="test.configuration" value="DebugWin32" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>debug-windows-win32-archive-native</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.attach-native}">
+                    <ant antfile="${common.dir}/archive.xml" target="create-archive">
+                      <property name="archive.configuration" value="DebugWin32" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>debug-windows-win32-integration-tests-attach</id>
+                <phase>pre-integration-test</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <ant antfile="${common.dir}/tests.xml" target="attach-exe">
+                      <property name="test.configuration" value="DebugWin32" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>debug-windows-win32-integration-tests-init</id>
+                <phase>pre-integration-test</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.integration-tests-native}">
+                    <ant antfile="${common.dir}/tests.xml" target="copy-integration-test">
+                      <property name="test.configuration" value="DebugWin32" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>debug-windows-win32-integration-tests</id>
+                <phase>integration-test</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.integration-tests-native}">
+                    <property name="maven.classpath" refid="maven.test.classpath" />
+                    <ant antfile="${common.dir}/tests.xml" target="integration-test">
+                      <property name="test.configuration" value="DebugWin32" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>debug-windows-x64-msvc</id>
+      <activation>
+        <file>
+          <exists>${root.dir}/local/profile/debug-windows-x64-msvc</exists>
+        </file>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>${version.exec-maven-plugin}</version>
+            <executions>
+              <execution>
+                <id>debug-windows-x64-msbuild</id>
+                <phase>compile</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <skip>${skip.msbuild}</skip>
+                  <executable>${cmd.msbuild}</executable>
+                  <arguments>
+                    <argument>/nologo</argument>
+                    <argument>/maxcpucount</argument>
+                    <argument>/p:SolutionDir=${solutionDir}\</argument>
+                    <argument>/p:Configuration=Debug</argument>
+                    <argument>/p:Platform=x64</argument>
+                    <argument>${solutionDir}${file.separator}${solutionFile}</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>${version.build-helper-maven-plugin}</version>
+            <executions>
+              <execution>
+                <id>debug-windows-x64-attach-native</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>attach-artifact</goal>
+                </goals>
+                <configuration>
+                  <skipAttach>${skip.attach-native}</skipAttach>
+                  <artifacts>
+                    <artifact>
+                      <file>${localTarget}/Debugx64.zip</file>
+                      <type>zip</type>
+                      <classifier>debug-windows-x64</classifier>
+                    </artifact>
+                  </artifacts>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>${version.maven-antrun-plugin}</version>
+            <executions>
+              <execution>
+                <id>debug-windows-x64-archive-native</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.attach-native}">
+                    <ant antfile="${common.dir}/archive.xml" target="create-archive">
+                      <property name="archive.configuration" value="Debugx64" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>release-windows-win32-msvc</id>
+      <activation>
+        <file>
+          <exists>${root.dir}/local/profile/release-windows-win32-msvc</exists>
+        </file>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>${version.exec-maven-plugin}</version>
+            <executions>
+              <execution>
+                <id>release-windows-win32-msbuild</id>
+                <phase>compile</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <skip>${skip.msbuild}</skip>
+                  <executable>${cmd.msbuild}</executable>
+                  <arguments>
+                    <argument>/nologo</argument>
+                    <argument>/maxcpucount</argument>
+                    <argument>/p:SolutionDir=${solutionDir}\</argument>
+                    <argument>/p:Configuration=Release</argument>
+                    <argument>/p:Platform=Win32</argument>
+                    <argument>${solutionDir}${file.separator}${solutionFile}</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>${version.build-helper-maven-plugin}</version>
+            <executions>
+              <execution>
+                <id>release-windows-win32-attach-native</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>attach-artifact</goal>
+                </goals>
+                <configuration>
+                  <skipAttach>${skip.attach-native}</skipAttach>
+                  <artifacts>
+                    <artifact>
+                      <file>${localTarget}/ReleaseWin32.zip</file>
+                      <type>zip</type>
+                      <classifier>release-windows-win32</classifier>
+                    </artifact>
+                  </artifacts>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>${version.maven-antrun-plugin}</version>
+            <executions>
+              <execution>
+                <id>release-windows-win32-unit-tests</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.unit-tests-native}">
+                    <property name="maven.classpath" refid="maven.test.classpath" />
+                    <ant antfile="${common.dir}/tests.xml" target="unit-test">
+                      <property name="test.configuration" value="ReleaseWin32" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>release-windows-win32-archive-native</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.attach-native}">
+                    <ant antfile="${common.dir}/archive.xml" target="create-archive">
+                      <property name="archive.configuration" value="ReleaseWin32" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>release-windows-win32-integration-tests-attach</id>
+                <phase>pre-integration-test</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <ant antfile="${common.dir}/tests.xml" target="attach-exe">
+                      <property name="test.configuration" value="ReleaseWin32" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>release-windows-win32-integration-tests-init</id>
+                <phase>pre-integration-test</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.integration-tests-native}">
+                    <ant antfile="${common.dir}/tests.xml" target="copy-integration-test">
+                      <property name="test.configuration" value="ReleaseWin32" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>release-windows-win32-integration-tests</id>
+                <phase>integration-test</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.integration-tests-native}">
+                    <property name="maven.classpath" refid="maven.test.classpath" />
+                    <ant antfile="${common.dir}/tests.xml" target="integration-test">
+                      <property name="test.configuration" value="ReleaseWin32" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>release-windows-x64-msvc</id>
+      <activation>
+        <file>
+          <exists>${root.dir}/local/profile/release-windows-x64-msvc</exists>
+        </file>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>${version.exec-maven-plugin}</version>
+            <executions>
+              <execution>
+                <id>release-windows-x64-msbuild</id>
+                <phase>compile</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <skip>${skip.msbuild}</skip>
+                  <executable>${cmd.msbuild}</executable>
+                  <arguments>
+                    <argument>/nologo</argument>
+                    <argument>/maxcpucount</argument>
+                    <argument>/p:SolutionDir=${solutionDir}\</argument>
+                    <argument>/p:Configuration=Release</argument>
+                    <argument>/p:Platform=x64</argument>
+                    <argument>${solutionDir}${file.separator}${solutionFile}</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>${version.build-helper-maven-plugin}</version>
+            <executions>
+              <execution>
+                <id>release-windows-x64-attach-native</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>attach-artifact</goal>
+                </goals>
+                <configuration>
+                  <skipAttach>${skip.attach-native}</skipAttach>
+                  <artifacts>
+                    <artifact>
+                      <file>${localTarget}/Releasex64.zip</file>
+                      <type>zip</type>
+                      <classifier>release-windows-x64</classifier>
+                    </artifact>
+                  </artifacts>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>${version.maven-antrun-plugin}</version>
+            <executions>
+              <execution>
+                <id>release-windows-x64-archive-native</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.attach-native}">
+                    <ant antfile="${common.dir}/archive.xml" target="create-archive">
+                      <property name="archive.configuration" value="Releasex64" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>windows-msvc</id>
+      <activation>
+        <file>
+          <exists>${root.dir}/local/profile/windows-msvc</exists>
+        </file>
+      </activation>
+      <properties>
+        <profile.windows.msvc>true</profile.windows.msvc>
+      </properties>
+    </profile>
+    <profile>
+      <id>windows-ai</id>
+      <activation>
+        <file>
+          <exists>${root.dir}/local/profile/windows-ai</exists>
+        </file>
+      </activation>
+      <properties>
+        <profile.windows.ai>true</profile.windows.ai>
+      </properties>
+    </profile>
+    <profile>
+      <id>debug-nix-cpptasks</id>
+      <activation>
+        <file>
+          <exists>${root.dir}/local/profile/debug-nix-cpptasks</exists>
+        </file>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>${version.maven-antrun-plugin}</version>
+            <executions>
+              <execution>
+                <id>debug-nix-cpptasks-build</id>
+                <phase>compile</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.cpptasks-build}">
+                    <taskdef resource="cpptasks.tasks" classpathref="maven.compile.classpath" />
+                    <ant antfile="${project.basedir}/cpptasks.xml" target="compile">
+                      <property name="cpp.debug" value="true" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>debug-nix-cpptasks-build-tests</id>
+                <phase>test-compile</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.cpptasks-build-tests}">
+                    <taskdef resource="cpptasks.tasks" classpathref="maven.compile.classpath" />
+                    <ant antfile="${project.basedir}/cpptasks.xml" target="compile">
+                      <property name="cpp.debug" value="true" />
+                      <property name="cpp.outtype" value="executable" />
+                      <property name="cpp.source.dir" value="${cpp.test-source.dir}" />
+                      <property name="publishFile" value="${publishFile}Test" />
+                      <property name="cpp.project" value="${cpp.project}-test" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>debug-nix-cpptasks-unit-tests</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.unit-tests-native}">
+                    <property name="maven.classpath" refid="maven.test.classpath" />
+                    <ant antfile="${common.dir}/tests.xml" target="unit-test">
+                      <property name="test.configuration" value="Debug" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>debug-nix-cpptasks-archive-native</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.attach-native}">
+                    <ant antfile="${common.dir}/archive.xml" target="create-archive">
+                      <property name="archive.configuration" value="Debug" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>debug-nix-cpptasks-integration-tests-attach</id>
+                <phase>pre-integration-test</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <ant antfile="${common.dir}/tests.xml" target="attach-exe">
+                      <property name="test.configuration" value="Debug" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>debug-nix-cpptasks-integration-tests-init</id>
+                <phase>pre-integration-test</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.integration-tests-native}">
+                    <ant antfile="${common.dir}/tests.xml" target="copy-integration-test">
+                      <property name="test.configuration" value="Debug" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>debug-nix-cpptasks-integration-tests</id>
+                <phase>integration-test</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.integration-tests-native}">
+                    <property name="maven.classpath" refid="maven.test.classpath" />
+                    <ant antfile="${common.dir}/tests.xml" target="integration-test">
+                      <property name="test.configuration" value="Debug" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>${version.build-helper-maven-plugin}</version>
+            <executions>
+              <execution>
+                <id>debug-nix-cpptasks-attach-native</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>attach-artifact</goal>
+                </goals>
+                <configuration>
+                  <skipAttach>${skip.attach-native}</skipAttach>
+                  <artifacts>
+                    <artifact>
+                      <file>${localTarget}/Debug.zip</file>
+                      <type>zip</type>
+                      <classifier>debug-${os.family}-${os.arch}</classifier>
+                    </artifact>
+                  </artifacts>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>release-nix-cpptasks</id>
+      <activation>
+        <file>
+          <exists>${root.dir}/local/profile/release-nix-cpptasks</exists>
+        </file>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>${version.maven-antrun-plugin}</version>
+            <executions>
+              <execution>
+                <id>release-nix-cpptasks-build</id>
+                <phase>compile</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.cpptasks-build}">
+                    <taskdef resource="cpptasks.tasks" classpathref="maven.compile.classpath" />
+                    <ant antfile="${project.basedir}/cpptasks.xml" target="compile" />
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>release-nix-cpptasks-build-tests</id>
+                <phase>test-compile</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.cpptasks-build-tests}">
+                    <taskdef resource="cpptasks.tasks" classpathref="maven.compile.classpath" />
+                    <ant antfile="${project.basedir}/cpptasks.xml" target="compile">
+                      <property name="cpp.outtype" value="executable" />
+                      <property name="cpp.source.dir" value="${cpp.test-source.dir}" />
+                      <property name="publishFile" value="${publishFile}Test" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>release-nix-cpptasks-unit-tests</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.unit-tests-native}">
+                    <property name="maven.classpath" refid="maven.test.classpath" />
+                    <ant antfile="${common.dir}/tests.xml" target="unit-test">
+                      <property name="test.configuration" value="Release" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>release-nix-cpptasks-archive-native</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.attach-native}">
+                    <ant antfile="${common.dir}/archive.xml" target="create-archive">
+                      <property name="archive.configuration" value="Release" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>release-nix-cpptasks-integration-tests-attach</id>
+                <phase>pre-integration-test</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <ant antfile="${common.dir}/tests.xml" target="attach-exe">
+                      <property name="test.configuration" value="Release" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>release-nix-cpptasks-integration-tests-init</id>
+                <phase>pre-integration-test</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.integration-tests-native}">
+                    <ant antfile="${common.dir}/tests.xml" target="copy-integration-test">
+                      <property name="test.configuration" value="Release" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>release-nix-cpptasks-integration-tests</id>
+                <phase>integration-test</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target unless="${skip.integration-tests-native}">
+                    <property name="maven.classpath" refid="maven.test.classpath" />
+                    <ant antfile="${common.dir}/tests.xml" target="integration-test">
+                      <property name="test.configuration" value="Release" />
+                    </ant>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>${version.build-helper-maven-plugin}</version>
+            <executions>
+              <execution>
+                <id>release-nix-cpptasks-attach-native</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>attach-artifact</goal>
+                </goals>
+                <configuration>
+                  <skipAttach>${skip.attach-native}</skipAttach>
+                  <artifacts>
+                    <artifact>
+                      <file>${localTarget}/Release.zip</file>
+                      <type>zip</type>
+                      <classifier>release-${os.family}-${os.arch}</classifier>
+                    </artifact>
+                  </artifacts>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>nix-cpptasks</id>
+      <activation>
+        <file>
+          <exists>${root.dir}/local/profile/nix-cpptasks</exists>
+        </file>
+      </activation>
+      <properties>
+        <profile.nix.cpptasks>true</profile.nix.cpptasks>
+      </properties>
+    </profile>
+    <profile>
+      <id>root-properties</id>
+      <activation>
+        <file>
+          <exists>${root.dir}/default.properties</exists>
+        </file>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>properties-maven-plugin</artifactId>
+            <version>${version.properties-maven-plugin}</version>
+            <executions>
+              <execution>
+                <phase>initialize</phase>
+                <goals>
+                  <goal>read-project-properties</goal>
+                </goals>
+                <configuration>
+                  <files>
+                    <file>${root.dir}/default.properties</file>
+                    <file>${properties.file}</file>
+                    <file>${root.dir}/target/command-line.properties</file>
+                  </files>
+                  <quiet>true</quiet>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${version.maven-surefire-plugin}</version>
+        <configuration>
+          <skipTests>true</skipTests>
+          <argLine>-Dlogback.configurationFile=com/opengamma/util/warn-logback.xml</argLine>
+          <parallel>classes</parallel>
+          <threadCount>4</threadCount>
+        </configuration>
+        <executions>
+          <execution>
+            <id>tests-unit</id>
+            <phase>test</phase>
+            <goals>
+              <goal>test</goal>
+            </goals>
+            <configuration>
+              <skipTests>${skip.unit-tests-java}</skipTests>
+              <groups>unit</groups>
+              <reportsDirectory>${localTarget}/${project.artifactId}-unit-tests-java</reportsDirectory>
+            </configuration>
+          </execution>
+          <execution>
+            <id>tests-integration</id>
+            <phase>integration-test</phase>
+            <goals>
+              <goal>test</goal>
+            </goals>
+            <configuration>
+              <skipTests>${skip.integration-tests-java}</skipTests>
+              <groups>integration</groups>
+              <reportsDirectory>${localTarget}/${project.artifactId}-integration-tests-java</reportsDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>${version.maven-antrun-plugin}</version>
+        <executions>
+          <execution>
+            <id>generate-version-header</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target unless="${skip.generate-version-header}">
+                <ant antfile="${common.dir}/version.xml" target="version-cpp-header" />
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>ant-contrib</groupId>
+            <artifactId>ant-contrib</artifactId>
+            <version>${version.ant-contrib}</version>
+            <exclusions>
+              <exclusion>
+                <groupId>ant</groupId>
+                <artifactId>ant</artifactId>
+              </exclusion>
+            </exclusions>
+          </dependency>
+        </dependencies>
+      </plugin>
+    </plugins>
+  </build>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.testng</groupId>
+      <artifactId>testng</artifactId>
+      <scope>test</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>ant-contrib</groupId>
+      <artifactId>cpptasks</artifactId>
+      <version>${version.cpptasks}</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.opengamma.platform</groupId>
+      <artifactId>og-util</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+  </dependencies>
+
+</project>

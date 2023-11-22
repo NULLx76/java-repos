@@ -1,0 +1,454 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	
+	<groupId>br.com.wjaa</groupId>
+	<artifactId>meuportaretrato</artifactId>
+	<packaging>war</packaging>
+	<version>1.0.0</version>
+	<url>http://www.wjaa.com.br</url>
+
+	<properties>
+		<project.dependecy.junit.version>4.9</project.dependecy.junit.version>
+		<project.dependecy.log4j.version>1.2.16</project.dependecy.log4j.version>
+		<project.dependecy.commons-logging.version>1.1.1</project.dependecy.commons-logging.version>
+		<maven-surefire-plugin.version>2.8.1</maven-surefire-plugin.version>
+		<maven-compiler-plugin.version>2.3.2</maven-compiler-plugin.version>
+		<maven-eclipse-plugin.version>2.8</maven-eclipse-plugin.version>
+		<maven-resources-plugin.version>2.5</maven-resources-plugin.version>
+		<maven-source-plugin.version>2.1.2</maven-source-plugin.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.build.jdk.version>1.6</project.build.jdk.version>
+		<project.dependecy.springframework.version>3.1.2.RELEASE</project.dependecy.springframework.version>
+		<project.dependecy.hibernate-core.version>3.6.10.Final</project.dependecy.hibernate-core.version>
+	</properties>
+	
+	<profiles>
+        <profile>
+            <id>homolog</id>
+            <properties>
+                <server.endereco>www.wjaa.com.br</server.endereco>
+                <server.keyfile>/home/wagner/.ssh/wjaa.pem</server.keyfile>
+                <server.pass></server.pass>
+                <server.user>ubuntu</server.user>
+                <server.sudo>sudo</server.sudo>
+            </properties>
+        </profile>
+        <profile>
+            <id>producao</id>
+            <properties>
+                <server.endereco>www.meuportaretrato.com</server.endereco>
+                <server.keyfile>/home/wagner/.ssh/wjaa.pem</server.keyfile>
+                <server.pass>753951</server.pass>
+                <server.user>root</server.user>
+                <server.sudo></server.sudo>
+            </properties>
+        </profile>
+    </profiles>
+	
+	<build>
+	   <defaultGoal>install</defaultGoal>
+	    
+	   
+	   
+		<plugins>
+		      <plugin>
+		        <artifactId>maven-war-plugin</artifactId>
+		        <version>2.4</version>
+		        <configuration>
+		          <packagingExcludes>WEB-INF/lib/*.jar</packagingExcludes>
+		        </configuration>
+		      </plugin>
+		    <plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-eclipse-plugin</artifactId>
+				<version>${maven-eclipse-plugin.version}</version>
+				<configuration>
+					<wtpapplicationxml>true</wtpapplicationxml>
+					<wtpversion>2.0</wtpversion>
+					<downloadSources>true</downloadSources>
+					<downloadJavadocs>true</downloadJavadocs>
+				</configuration>
+			</plugin>
+		    <plugin>
+	        	<artifactId>maven-eclipse-plugin</artifactId>
+	        	<version>2.7</version>
+	        	<configuration>
+	          		<classpathContainers>
+	            		<classpathContainer>org.eclipse.jdt.launching.JRE_CONTAINER</classpathContainer>
+	          		</classpathContainers>
+	        	</configuration>
+	      	</plugin>
+			<plugin>
+				<inherited>true</inherited>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${maven-compiler-plugin.version}</version>
+				
+				<configuration>
+					<encoding>${project.build.sourceEncoding}</encoding>
+					<source>${project.build.jdk.version}</source>
+					<target>${project.build.jdk.version}</target>
+					<optimize>true</optimize>
+					
+				</configuration>
+			</plugin>
+			<plugin>
+				<artifactId>maven-eclipse-plugin</artifactId>
+				<version>${maven-eclipse-plugin.version}</version>
+				<configuration>
+					<downloadSources>true</downloadSources>
+					<downloadJavadocs>true</downloadJavadocs>
+				</configuration>
+			</plugin>
+			
+			<plugin>
+		    <groupId>org.apache.maven.plugins</groupId>
+		    <artifactId>maven-antrun-plugin</artifactId>
+		    <version>1.6</version>
+		    <configuration>
+		        <target>  
+		            <echo message="Parando o servidor ..." />
+		            <sshexec trust="true" host="${server.endereco}"
+		                username="${server.user}" password="${server.pass}"
+		                command="${server.sudo} service tomcat6 stop" 
+		                keyfile="${server.keyfile}" 
+		                failonerror="true"/>        
+		            <sleep seconds="10" />
+		            
+		            <echo message="Removendo a versao antiga." />
+		            <sshexec trust="true" host="${server.endereco}"
+		                username="${server.user}" password="${server.pass}"
+		                command="rm -r /usr/local/deploy/mpr.war" failonerror="false" 
+		                keyfile="${server.keyfile}" />
+		            <sleep seconds="5" />
+		            
+		            <sshexec trust="true" host="${server.endereco}"
+		                username="${server.user}" password="${server.pass}" 
+		                command="rm -r /usr/local/deploy/mpr" failonerror="false"  
+		                keyfile="${server.keyfile}" />
+		            <sleep seconds="5" />
+		             
+		            <echo message="Copiando o war pra o server ..." />       
+		            <scp trust="true"
+		                file="${project.build.directory}/${project.build.finalName}.war"
+		                password="${server.pass}"
+		                remoteTofile="${server.user}@${server.endereco}:/usr/local/deploy/mpr.war" 
+		                keyfile="${server.keyfile}" failonerror="true"/>
+		            
+		            <echo message="descompactando war...." />
+		            <sshexec trust="true" host="${server.endereco}" 
+		                username="${server.user}" password="${server.pass}" 
+		                command="unzip /usr/local/deploy/mpr.war -d /usr/local/deploy/mpr" failonerror="true" 
+		                keyfile="${server.keyfile}" />
+		            <sleep seconds="5" />
+		            
+		            <echo message="Iniciando o tomcat ..." />        
+		            <sshexec trust="true" host="${server.endereco}" 
+		                username="${server.user}" password="${server.pass}" 
+		                 command="${server.sudo} service tomcat6 start" 
+		                 keyfile="${server.keyfile}"/>
+		            
+		            <echo message="Deployando aplicacao ..." /> 
+		            <waitfor maxwait="1" maxwaitunit="minute" checkevery="10" checkeveryunit="second">
+		                <http url="http://${server.endereco}/" />
+		            </waitfor>        
+		        </target>
+		    </configuration>
+		    <dependencies>
+		        <dependency>
+		            <groupId>org.apache.ant</groupId>
+		            <artifactId>ant-jsch</artifactId>
+		            <version>1.8.2</version>
+		        </dependency>
+		        <dependency>
+		            <groupId>com.jcraft</groupId>
+		            <artifactId>jsch</artifactId>
+		            <version>0.1.44-1</version>
+		        </dependency>
+		    </dependencies>
+		</plugin>
+			
+			
+			<plugin>
+				<groupId>net.alchim31.maven</groupId>
+				<artifactId>yuicompressor-maven-plugin</artifactId>
+				<executions>
+					<execution>
+						<phase>test</phase>
+						<goals>
+							<goal>compress</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<nosuffix>true</nosuffix>
+					<aggregations>
+						<aggregation>
+							<!-- remove files after aggregation (default: false) <removeIncluded>true</removeIncluded> -->
+							<!-- insert new line after each concatenation (default: false) -->
+							<insertNewLine>true</insertNewLine>
+							<output>${basedir}/target/${project.build.finalName}/assets/js/</output>
+							 <!-- files to include, path relative to output's directory or absolute 
+								path -->
+							<!--inputDir>base directory for non absolute includes, default to 
+								parent dir of output</inputDir -->
+							<includes>
+								<include>*.js</include>
+							</includes>
+							<!-- files to exclude, path relative to output's directory -->
+							<excludes>
+					            <exclude>**/*-min.js</exclude>
+					            <exclude>**/*.min.js</exclude>
+					            <exclude>**/*-min.css</exclude>
+					            <exclude>**/*.min.css</exclude>
+					        </excludes>
+						</aggregation>						
+					</aggregations>
+				</configuration>
+			</plugin>
+			
+		</plugins>
+	</build>
+		
+	<dependencies>
+	
+	    <dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>servlet-api</artifactId>
+			<scope>provided</scope>
+			<version>2.5</version>
+		</dependency>
+		
+		<dependency>
+     		<groupId>commons-fileupload</groupId>
+     		<artifactId>commons-fileupload</artifactId>
+     		<version>1.2.2</version>
+		</dependency>
+
+		<dependency>
+	    	<groupId>commons-io</groupId>
+     		<artifactId>commons-io</artifactId>
+		    <version>2.4</version>
+		</dependency>
+      	
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>jsp-api</artifactId>
+			<version>2.0</version>
+			<scope>provided</scope>
+		</dependency>
+            
+		<dependency>
+			<groupId>jstl</groupId>
+			<artifactId>jstl</artifactId>
+			<version>1.2</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>taglibs</groupId>
+			<artifactId>standard</artifactId>
+			<version>1.0.6</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20090211</version>
+		</dependency>
+		<dependency>
+			<groupId>org.imgscalr</groupId>
+			<artifactId>imgscalr-lib</artifactId>
+			<version>4.2</version>
+		</dependency>
+             
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.17</version>
+		</dependency>
+           
+		<dependency>
+			<groupId>commons-logging</groupId>
+			<artifactId>commons-logging</artifactId>
+			<version>1.1.3</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
+			<version>2.2.4</version>
+		</dependency>
+        
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-core</artifactId>
+			<version>${project.dependecy.springframework.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-beans</artifactId>
+			<version>${project.dependecy.springframework.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-aop</artifactId>
+			<version>${project.dependecy.springframework.version}</version>
+		</dependency>
+
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-aspects</artifactId>
+            <version>${project.dependecy.springframework.version}</version>
+        </dependency>
+		
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context</artifactId>
+			<version>${project.dependecy.springframework.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context-support</artifactId>
+			<version>${project.dependecy.springframework.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-tx</artifactId>
+			<version>${project.dependecy.springframework.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-jdbc</artifactId>
+			<version>${project.dependecy.springframework.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-orm</artifactId>
+			<version>${project.dependecy.springframework.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-oxm</artifactId>
+			<version>${project.dependecy.springframework.version}</version>
+		</dependency>
+
+		
+		<dependency>
+			<groupId>org.springframework</groupId>
+  			<artifactId>spring-struts</artifactId>
+  			<version>${project.dependecy.springframework.version}</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-test</artifactId>
+			<version>${project.dependecy.springframework.version}</version>
+			<scope>test</scope>
+		</dependency>
+		
+		
+		
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-web</artifactId>
+			<version>${project.dependecy.springframework.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>log4j</groupId>
+					<artifactId>log4j</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-api</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-log4j12</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+	
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-core</artifactId>
+			<version>3.6.10.Final</version>
+		</dependency>
+            
+		
+		
+		<dependency>
+			<groupId>commons-lang</groupId>
+			<artifactId>commons-lang</artifactId>
+			<version>2.6</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>struts</groupId>
+			<artifactId>struts</artifactId>
+			<version>1.2.9</version>
+		</dependency>
+            
+		<dependency>
+			<groupId>commons-collections</groupId>
+			<artifactId>commons-collections</artifactId>
+			<version>3.2.1</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+			<version>5.1.21</version>
+		</dependency>
+		
+		
+	   	<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>${project.dependecy.junit.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>commons-logging</groupId>
+			<artifactId>commons-logging</artifactId>
+			<version>${project.dependecy.commons-logging.version}</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>javassist</groupId>
+			<artifactId>javassist</artifactId>
+			<version>3.12.1.GA</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>br.com.uol.pagseguro</groupId>
+			<artifactId>pagseguro-api</artifactId>
+			<version>2.0.4</version>
+		</dependency>
+
+		
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-email</artifactId>
+			<version>1.2</version>
+		</dependency>
+		
+		
+		<dependency>
+			<groupId>javax.mail</groupId>
+			<artifactId>mail</artifactId>
+			<version>1.4.5</version>
+		</dependency>
+            
+            
+	</dependencies>
+	
+	
+</project>

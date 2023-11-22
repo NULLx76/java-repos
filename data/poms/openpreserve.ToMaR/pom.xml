@@ -1,0 +1,191 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    
+	<parent>
+		<groupId>eu.scape-project</groupId>
+		<artifactId>scape-parent</artifactId>
+		<version>1.0.0-SNAPSHOT</version>
+	</parent>
+    
+	<modelVersion>4.0.0</modelVersion>
+	<artifactId>tomar</artifactId>
+	<name>SCAPE Tool-to-MapReduce Wrapper</name>
+	<description>Invokes SCAPE preservation tools on Hadoop MapReduce environments</description>
+	<version>2.0.0-SNAPSHOT</version>
+
+	<properties>
+        <!-- version of toolspec.xsd schema to work with, scape-toolspec 2.0 uses schemas 1.1 -->
+        <scape-toolspec.version>2.0.0-SNAPSHOT</scape-toolspec.version>
+        <!-- version of Hadoop infrastructure tools -->
+		<hadoop.version>2.0.0-cdh4.2.0</hadoop.version>
+		<pig.version>0.10.0-cdh4.2.0</pig.version>
+	</properties>
+
+    <repositories>
+        <repository>
+            <id>sonatypesnapshots</id>
+            <url>http://oss.sonatype.org/content/repositories/snapshots/</url>
+            <layout>default</layout>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>cloudera</id>
+            <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
+        </repository>
+    </repositories>
+    
+	<build>
+		<plugins>
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<configuration>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+					<archive>
+						<manifest>
+							<addClasspath>true</addClasspath>
+							<mainClass>eu.scape_project.pt.mapred.CLIWrapper</mainClass>
+						</manifest>
+					</archive>
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-assembly</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.6</source>
+					<target>1.6</target>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+    
+	<dependencies>
+		<dependency>
+            <groupId>eu.scape-project.tool</groupId>
+            <artifactId>toolwrapper-data</artifactId>
+            <version>${scape-toolspec.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>log4j</groupId>
+                    <artifactId>log4j</artifactId>
+                </exclusion>
+            </exclusions>
+		</dependency>
+
+		<dependency>
+			<groupId>net.sf.jopt-simple</groupId>
+			<artifactId>jopt-simple</artifactId>
+			<version>4.0-beta1</version>
+		</dependency>
+
+        <!-- environment -->
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <version>${hadoop.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-client</artifactId>
+            <version>${hadoop.version}</version>
+            <scope>provided</scope>
+        </dependency>
+		<dependency>
+			<groupId>org.apache.pig</groupId>
+			<artifactId>pig</artifactId>
+			<version>${pig.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		
+		<!-- enforce recent parser version -->
+		<dependency>
+    		<groupId>xerces</groupId>
+    		<artifactId>xercesImpl</artifactId>
+    		<version>2.9.1</version>
+			</dependency>
+		<dependency>
+    		<groupId>xalan</groupId>
+    		<artifactId>xalan</artifactId>
+    		<version>2.7.1</version>
+		</dependency>
+
+        <!-- test -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.11</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+    
+	<!-- for snapshot builds when building with travis -->
+	<profiles>
+		<!-- For Maven site publication on OPF Jenkins server -->
+		<profile>
+			<id>opf-jenkins-site</id>
+			<distributionManagement>
+				<site>
+					<id>opf.jenkins.local.site</id>
+					<name>OPF Projects Website</name>
+					<url>file:///var/www/projects.opf-labs.org/scape/${project.name}</url>
+				</site>
+			</distributionManagement>
+		</profile>
+        <profile>
+            <id>must-use-64bit-windows</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <!-- update versions so the provided DLLs work -->
+            <properties>
+                <hadoop.version>2.3.0-cdh5.0.0</hadoop.version>
+                <pig.version>0.12.0-cdh5.0.0</pig.version>
+            </properties>
+            <build>
+                <plugins>
+                    <!-- enforce 64bit Java so the provided DLLs work -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-enforcer-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>enforce-os</id>
+                                <goals>
+                                    <goal>enforce</goal>
+                                </goals>
+                                <configuration>
+                                    <rules>
+                                        <!-- see http://stackoverflow.com/questions/2854882/maven-finding-out-whether-running-in-a-32-or-a-64-bit-jvm -->
+                                        <requireProperty>
+                                            <property>sun.arch.data.model</property>
+                                            <message>Only configured to use Oracle JDK under Windows!</message>
+                                            <regex>64$</regex>
+                                            <regexMessage>The "os.arch" running Windows must be 64bit.</regexMessage>
+                                        </requireProperty>
+                                    </rules>
+                                    <fail>true</fail>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+	</profiles>
+</project>

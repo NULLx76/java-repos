@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+
+  <groupId>eu.reuland.sonar</groupId>
+  <artifactId>sonar-auto-assign-plugin</artifactId>
+  <packaging>sonar-plugin</packaging>
+  <version>1.1-SNAPSHOT</version>
+
+  <name>Sonar Auto Assign Plugin</name>
+  <description>Plugin that assigns automatically issues to developers based on SCM blame information</description>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <sonar.buildVersion>4.0</sonar.buildVersion>
+    <jdk.min.version>1.6</jdk.min.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.codehaus.sonar</groupId>
+      <artifactId>sonar-plugin-api</artifactId>
+      <version>${sonar.buildVersion}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.codehaus.sonar.plugins</groupId>
+      <artifactId>sonar-email-notifications-plugin</artifactId>
+      <version>${sonar.buildVersion}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.codehaus.sonar</groupId>
+      <artifactId>sonar-batch</artifactId>
+      <version>${sonar.buildVersion}</version>
+      <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <!--
+            Exclude antlr: Trick to workaround sonar-packaging-maven-plugin and be able to get "antlr:antlr" jar artifact bundled in the plugin jar.
+            Indeed, sonar-packaging-maven-plugin avoid packaging all dependencies of "org.codehaus.sonar" artifacts (even if we are in childFirst classloading...).
+
+            antlr.jar packaged with the plugin is necessary to avoid ClassNotFound exceptions when using "org.antlr:ST4".
+            (antlr.jar must imperatively be loaded using the same class loader than the "org.antlr:ST4" dependency below)
+          -->
+          <groupId>antlr</groupId>
+          <artifactId>antlr</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <!-- SpringTemplate library: Used to format email template -->
+    <dependency>
+      <groupId>org.antlr</groupId>
+      <artifactId>ST4</artifactId>
+      <version>4.0.7</version>
+    </dependency>
+
+    <!-- unit tests -->
+    <dependency>
+      <groupId>org.codehaus.sonar</groupId>
+      <artifactId>sonar-testing-harness</artifactId>
+      <version>${sonar.buildVersion}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.easytesting</groupId>
+      <artifactId>fest-assert</artifactId>
+      <version>1.4</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-project</artifactId>
+      <version>2.2.1</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.sonar</groupId>
+        <artifactId>sonar-packaging-maven-plugin</artifactId>
+        <version>1.9</version>
+        <extensions>true</extensions>
+        <configuration>
+          <pluginName>Auto Assign</pluginName>
+          <pluginKey>autoassign</pluginKey>
+          <pluginClass>eu.reuland.sonar.plugin.issue.assignment.IssueAutoAssignPlugin</pluginClass>
+          <requirePlugins>scmactivity:1.4</requirePlugins>
+          <useChildFirstClassLoader>true</useChildFirstClassLoader>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>2.5.1</version>
+        <configuration>
+          <source>${jdk.min.version}</source>
+          <target>${jdk.min.version}</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <!-- UTF-8 bundles are not supported by Java, so they must be converted during build -->
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>native2ascii-maven-plugin</artifactId>
+        <version>1.0-beta-1</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>native2ascii</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

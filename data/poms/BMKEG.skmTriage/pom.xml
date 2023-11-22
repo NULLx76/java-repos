@@ -1,0 +1,322 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<artifactId>bmkeg-parent</artifactId>
+		<groupId>edu.isi.bmkeg</groupId>
+		<version>1.1.5-SNAPSHOT</version>
+		<relativePath>../bmkeg-parent</relativePath>
+	</parent>
+
+	<groupId>edu.isi.bmkeg</groupId>
+	<artifactId>skmTriage</artifactId>
+	<version>1.1.5-SNAPSHOT</version>
+	<name>SciKnowMine Triage Workflow Execution</name>
+
+	<properties>
+		<maven.compiler.target>1.7</maven.compiler.target>
+		<maven.compiler.source>1.7</maven.compiler.source>
+	</properties>
+
+	<build>
+		<plugins>
+
+			<!-- NOTE: We don't need a groupId specification because the group is 
+				org.apache.maven.plugins ...which is assumed by default. -->
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.2.1</version>
+				<configuration>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+				</configuration>
+			</plugin>
+			<!-- We want the test that populates the test DB to run before the rest. -->
+			<plugin>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<runOrder>alphabetical</runOrder>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.2</version>
+				<executions>
+					<execution>
+						<phase>process-resources</phase>
+						<goals>
+							<goal>java</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<mainClass>org.uimafit.util.JCasGenPomFriendly</mainClass>
+					<arguments>
+						<argument>file:${project.basedir}/src/main/resources/edu/isi/bmkeg/skm/cleartk/TypeSystem.xml
+						</argument>
+						<argument>${project.build.directory}/generated-sources/jcasgen</argument>
+					</arguments>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<version>2.6</version>
+				<executions>
+					<execution>
+						<id>copy-vpdmf</id>
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>copy</goal>
+						</goals>
+						<configuration>
+							<artifactItems>
+								<artifactItem>
+									<groupId>edu.isi.bmkeg</groupId>
+									<artifactId>vpdmf-triage</artifactId>
+									<type>zip</type>
+									<classifier>mysql</classifier>
+									<outputDirectory>${project.build.directory}/vpdmf/edu/isi/bmkeg/skm/triage</outputDirectory>
+									<destFileName>triage-mysql.zip</destFileName>
+								</artifactItem>
+							</artifactItems>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<version>1.7</version>
+				<executions>
+					<execution>
+						<id>add-sources</id>
+						<configuration>
+							<sources>
+								<source>${project.build.directory}/generated-sources/jcasgen</source>
+							</sources>
+						</configuration>
+						<goals>
+							<goal>add-source</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>add-resources</id>
+						<configuration>
+							<resources>
+								<resource>
+									<directory>${project.build.directory}/vpdmf</directory>
+								</resource>
+							</resources>
+						</configuration>
+						<goals>
+							<goal>add-resource</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+
+		</plugins>
+		<pluginManagement>
+			<plugins>
+				<!--This plugin's configuration is used to store Eclipse m2e settings 
+					only. It has no influence on the Maven build itself. -->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>
+											org.apache.maven.plugins
+										</groupId>
+										<artifactId>
+											maven-dependency-plugin
+										</artifactId>
+										<versionRange>
+											[2.6,)
+										</versionRange>
+										<goals>
+											<goal>copy</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore></ignore>
+									</action>
+								</pluginExecution>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>
+											org.codehaus.mojo
+										</groupId>
+										<artifactId>
+											exec-maven-plugin
+										</artifactId>
+										<versionRange>
+											[1.2,)
+										</versionRange>
+										<goals>
+											<goal>java</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore></ignore>
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+
+	<dependencies>
+
+		<dependency>
+			<groupId>edu.isi.bmkeg</groupId>
+			<artifactId>vpdmf-triage</artifactId>
+			<type>zip</type>
+			<classifier>mysql</classifier>
+			<exclusions>
+				<exclusion>
+					<artifactId>vpdmfGenerator</artifactId>
+					<groupId>edu.isi.bmkeg</groupId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<dependency>
+			<groupId>edu.isi.bmkeg</groupId>
+			<artifactId>vpdmf-triage-jpa</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>edu.isi.bmkeg</groupId>
+			<artifactId>vpdmf-triage-services</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>edu.isi.bmkeg</groupId>
+			<artifactId>vpdmfCore</artifactId>
+			<exclusions>
+				<exclusion>
+					<artifactId>hibernate-jpa-2.0-api</artifactId>
+					<groupId>org.hibernate.javax.persistence</groupId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<dependency>
+			<groupId>edu.isi.bmkeg</groupId>
+			<artifactId>digitalLibraryDao</artifactId>
+		</dependency>
+		
+		<dependency>
+			<groupId>commons-net</groupId>
+			<artifactId>commons-net</artifactId>
+		</dependency>
+
+		<!-- Importing cleartk dependency management (Notice scope: import) 
+		<dependency>
+			<groupId>org.cleartk</groupId>
+			<artifactId>cleartk-release</artifactId>
+			<version>1.4.1</version>
+			<type>pom</type>
+			<scope>import</scope>
+		</dependency>-->
+
+		<!-- Omitting versions of clearTk dependencies because they are handle 
+			in the dependency management imported from cleartk-release -->
+		<dependency>
+			<groupId>org.cleartk</groupId>
+			<artifactId>cleartk-eval</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.cleartk</groupId>
+			<artifactId>cleartk-ml</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.cleartk</groupId>
+			<artifactId>cleartk-ml-opennlp-maxent</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.cleartk</groupId>
+			<artifactId>cleartk-ml-liblinear</artifactId>
+		</dependency>
+
+ 		<dependency>
+			<groupId>org.cleartk</groupId>
+			<artifactId>cleartk-ml-libsvm</artifactId>
+		</dependency>
+
+		<!-- <dependency>
+			<groupId>org.cleartk</groupId>
+			<artifactId>cleartk-ml-mallet</artifactId>
+		</dependency> -->
+
+		<dependency>
+			<groupId>org.cleartk</groupId>
+			<artifactId>cleartk-ml-svmlight</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.cleartk</groupId>
+			<artifactId>cleartk-ml-tksvmlight</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.cleartk</groupId>
+			<artifactId>cleartk-opennlp-tools</artifactId>
+		</dependency>
+
+ 		<dependency>
+			<groupId>org.cleartk</groupId>
+			<artifactId>cleartk-util</artifactId>
+		</dependency>
+
+ 		<dependency>
+			<groupId>org.cleartk</groupId>
+			<artifactId>cleartk-snowball</artifactId>
+		</dependency>
+
+   		<dependency>
+			<groupId>org.cleartk</groupId>
+			<artifactId>cleartk-token</artifactId>
+		</dependency> 
+	 						 					
+		<dependency>
+			<groupId>org.cleartk</groupId>
+			<artifactId>cleartk-ml-mallet</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-beans</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+</project>

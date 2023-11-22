@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+   Copyright 2014 TangoMe Inc.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.tango.morphlines</groupId>
+	<artifactId>tango-morphlines</artifactId>
+	<version>1.0.0-SNAPSHOT</version>
+	<packaging>jar</packaging>
+	<name>Tango specific morphlines commands</name>
+
+	<properties>
+		<!-- Set default encoding to UTF-8 to remove maven complaints -->
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+		<!-- Java compiler configuration -->
+		<sourceJavaVersion>1.6</sourceJavaVersion>
+		<targetJavaVersion>1.6</targetJavaVersion>
+
+		<maven.compiler.version>2.3.2</maven.compiler.version>
+		<maven.surefire.version>2.16</maven.surefire.version>
+		<maven.assembly.version>2.4</maven.assembly.version>
+		<maven.rpm.version>2.1-alpha-3</maven.rpm.version>
+		<surefire.forkcount>1C</surefire.forkcount>
+
+		<kite.version>0.14.1</kite.version>
+
+		<rpm.root.dir>/usr/lib/flume-ng/plugins.d/tango-morphlines</rpm.root.dir>
+
+		<!-- Tests to run -->
+		<test.include.pattern>**/Test*.java</test.include.pattern>
+
+		<junit.version>4.10</junit.version>
+		<mockito.version>1.9.0</mockito.version>
+	</properties>
+
+
+	<build>
+		<finalName>tango-morphlines-${project.version}</finalName>
+
+		<plugins>
+
+			<plugin>
+				<groupId>org.apache.rat</groupId>
+				<artifactId>apache-rat-plugin</artifactId>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${maven.compiler.version}</version>
+				<configuration>
+					<source>${sourceJavaVersion}</source>
+					<target>${targetJavaVersion}</target>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>${maven.surefire.version}</version>
+				<configuration>
+					<forkCount>${surefire.forkcount}</forkCount>
+					<reuseForks>true</reuseForks>
+					<forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
+					<redirectTestOutputToFile>true</redirectTestOutputToFile>
+					<includes>
+						<include>${test.include.pattern}</include>
+					</includes>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>${maven.assembly.version}</version>
+
+				<configuration>
+					<descriptors>
+						<descriptor>src/main/assembly/tango-morphlines.xml</descriptor>
+					</descriptors>
+				</configuration>
+
+				<executions>
+					<execution>
+						<id>create-artifacts</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>rpm-maven-plugin</artifactId>
+				<version>${maven.rpm.version}</version>
+				<executions>
+					<execution>
+						<id>generate-rpm</id>
+						<goals>
+							<goal>rpm</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<name>flume-tango-morphlines</name>
+					<copyright>2014, Tango</copyright>
+					<distribution>Tango</distribution>
+					<group>Development/Libraries</group>
+					<packager>Tango</packager>
+					<defineStatements>
+						<defineStatement>_unpackaged_files_terminate_build 0</defineStatement>
+					</defineStatements>
+					<requires>
+						<require>flume-ng &gt; 1.5.0+cdh5.1.0+10</require>
+					</requires>
+					<mappings>
+						<mapping>
+							<directory>${rpm.root.dir}</directory>
+						</mapping>
+						<!-- Main artefacts go in <plugin_base_dir>/lib -->
+            <mapping>
+							<directory>${rpm.root.dir}/lib</directory>
+							<username>flume</username>
+							<groupname>flume</groupname>
+              <artifact>
+                <classifiers>
+                  <classifier/>
+                </classifiers>
+              </artifact>
+						</mapping>
+						<!-- Dependencies go in <plugin_base_dir>/libext -->
+            <mapping>
+							<directory>${rpm.root.dir}/libext</directory>
+							<username>flume</username>
+							<groupname>flume</groupname>
+							<dependency>
+								<includes>
+									<include>log4j:log4j</include>
+								</includes>
+							</dependency>
+            </mapping>
+					</mappings>
+				</configuration>
+			</plugin>
+	
+		</plugins>
+	</build>
+
+	<dependencies>
+		<!-- Modules -->
+		<dependency>
+			<groupId>org.kitesdk</groupId>
+			<artifactId>kite-morphlines-all</artifactId>
+			<version>${kite.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.apache.hadoop</groupId>
+					<artifactId>hadoop-common</artifactId>
+				</exclusion>
+			</exclusions>
+			<type>pom</type>
+			<optional>true</optional>
+		</dependency>
+
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.17</version>
+		</dependency>
+
+
+		<!-- Test dependencies -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>${junit.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-all</artifactId>
+			<version>${mockito.version}</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<repositories>
+		<repository>
+			<id>cdh.repo</id>
+			<url>https://repository.cloudera.com/artifactory/cloudera-repos</url>
+			<name>Cloudera Repositories</name>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</repository>
+
+		<repository>
+			<id>cdh.snapshots.repo</id>
+			<url>https://repository.cloudera.com/artifactory/libs-snapshot-local</url>
+			<name>Cloudera Snapshots Repository</name>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+			<releases>
+				<enabled>false</enabled>
+			</releases>
+		</repository>
+	</repositories>
+</project>

@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>sonar_analysis</groupId>
+    <artifactId>sonar_analysis</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+	<dependencies>
+		<dependency>
+			<groupId>com.sun.jersey</groupId>
+			<artifactId>jersey-server</artifactId>
+			<version>1.9.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.sun.jersey</groupId>
+			<artifactId>jersey-json</artifactId>
+			<version>1.9.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>4.2.2</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.4</version>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.10</version>
+		</dependency>
+	</dependencies>
+
+<!--In production it would be better to create a separate profile with all these properties and run
+integration tests with command mvn clean verify sonar:sonar -P integration-tests-->
+
+	<properties>
+		<pathToCoverageDump>${basedir}/target/jacocoIT.exec</pathToCoverageDump>
+		<skipTests>false</skipTests>
+		<skipITs>false</skipITs>
+		<sonar.language>java</sonar.language>
+		<!--Properties for already installed sonar-->
+		<sonar.host.url>http://URL</sonar.host.url>
+		<sonar.jdbc.url>
+			jdbc:mysql://URL
+		</sonar.jdbc.url>
+		<sonar.jdbc.driverClassName>com.mysql.jdbc.Driver</sonar.jdbc.driverClassName>
+		<sonar.jdbc.username>sonar</sonar.jdbc.username>
+		<sonar.jdbc.password>sonar</sonar.jdbc.password>
+		<sonar.jacoco.itReportPath>${pathToCoverageDump}</sonar.jacoco.itReportPath>
+		<sonar.dynamicAnalysis>true</sonar.dynamicAnalysis>
+	</properties>
+
+	<build>
+		<testSourceDirectory>${project.basedir}/test</testSourceDirectory>
+		<testOutputDirectory>${project.build.directory}/test-classes</testOutputDirectory>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<version>2.14.1</version>
+				<configuration>
+					<additionalClasspathElements>
+						<additionalClasspathElement>${basedir}/test-resources/jetty-resources/classpath_resources
+						</additionalClasspathElement>
+					</additionalClasspathElements>
+					<!--If u need to set values with credentials for connection to jetty in your tests, use this node.
+					And these properties should be read in tests as System.getProperty -->
+					<!--<systemPropertyVariables>
+						<RestTest.APP_URL>APP_URL</RestTest.APP_URL>
+						<RestTest.USER>USER</RestTest.USER>
+						<RestTest.PASSWORD>PASSWORD</RestTest.PASSWORD>
+					</systemPropertyVariables>-->
+					<argLine>${coverageAgent}</argLine>
+					<skipTests>${skipTests}</skipTests>
+					<skipITs>${skipITs}</skipITs>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>integration-test</goal>
+						</goals>
+						<configuration>
+							<includes>
+								<include>**/*IT.class</include>
+							</includes>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>0.6.2.201302030002</version>
+				<configuration>
+					<propertyName>coverageAgent</propertyName>
+					<append>true</append>
+					<destFile>${pathToCoverageDump}</destFile>
+					<!--<includes>
+					    Include classes to analyse here, worked bad for me (i mean as docs say, only * and ? wildcards are supported)
+					</includes>-->
+				</configuration>
+				<executions>
+					<execution>
+						<id>prepare</id>
+						<phase>pre-integration-test</phase>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.eclipse.jetty</groupId>
+				<artifactId>jetty-maven-plugin</artifactId>
+				<version>9.0.2.v20130417</version>
+				<executions>
+					<execution>
+						<id>start_jetty</id>
+						<phase>pre-integration-test</phase>
+						<goals>
+							<goal>run-forked</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>stop_after</id>
+						<phase>post-integration-test</phase>
+						<goals>
+							<goal>stop</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<jvmArgs>${coverageAgent}</jvmArgs>
+					<waitForChild>false</waitForChild>
+					<contextPath>/helloapp</contextPath>
+					<stopKey>STOPIT</stopKey>
+					<stopPort>13083</stopPort>
+					<webXml>${basedir}/web/WEB-INF/web.xml</webXml>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>sonar-maven-plugin</artifactId>
+				<version>2.0</version>
+			</plugin>
+		</plugins>
+	</build>
+</project>

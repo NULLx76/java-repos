@@ -1,0 +1,249 @@
+<project
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+  xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <!-- Should you want to build it locally, parent pom source is here: https://github.com/jbosstools/jbosstools-build/blob/master/parent/ -->
+  <parent>
+		<groupId>org.jboss.tools</groupId>
+		<artifactId>parent</artifactId>
+		<version>4.23.0.Final-SNAPSHOT</version>
+  </parent>
+  <groupId>com.jboss.devstudio</groupId>
+  <artifactId>product</artifactId>
+  <version>12.23.0-SNAPSHOT</version>
+  <name>devstudio - Product, Installers</name>
+  <packaging>pom</packaging>
+  <modules>
+    <module>plugins</module>
+    <module>features</module>
+    <module>site</module>
+    <module>p2-director</module>
+    <module>installer</module>
+    <!-- JBIDE-20158 since results/ is the folder from which we publish, no need to run this unless we're deploying too <module>results</module> -->
+  </modules>
+  <!-- Should you want to build it locally, target platform sources are here: https://github.com/jbosstools/jbosstools-target-platforms/tree/4.60.x/ -->
+  <properties>
+    <!-- <BUILD_ALIAS>GA</BUILD_ALIAS> -->
+    <tpc.version>${TARGET_PLATFORM_VERSION_MAX}</tpc.version>
+    <tycho.scmUrl>scm:git:https://github.com/jbdevstudio/jbdevstudio-product.git</tycho.scmUrl>
+    <!-- JBDS-2805 used in results/pom.xml to provide link to Central zip -->
+    <JBOSS_CENTRAL_ZIP>https://devstudio.redhat.com/${devstudioReleaseVersion}/snapshots/builds/jbosstools-build-sites.aggregate.central-site_${stream_jbt}/latest/all/repository.zip</JBOSS_CENTRAL_ZIP>
+
+    <jbosstools-site>https://download.jboss.org/jbosstools/${eclipseReleaseName}/snapshots/updates/core/${stream_jbt}/</jbosstools-site>
+    <stagingBaselineRepository>https://devstudio.redhat.com/12/staging/updates/</stagingBaselineRepository>
+
+    <devstudio.version>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion}.${BUILD_ALIAS}</devstudio.version>
+    <p2StatsUrl>https://devstudio.redhat.com/usage/installs/local/${project.version}/${BUILD_ALIAS}/${buildQualifier}/</p2StatsUrl>
+    <antVersion>1.10.9</antVersion>
+  </properties>
+
+  <build>
+    <plugins>
+      <!-- get major.minor.incremental from root pom, then use devstudio.version = ${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion}.${BUILD_ALIAS} -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>1.9.1</version>
+        <executions>
+          <execution>
+            <phase>validate</phase>
+            <id>parse-version</id>
+            <goals>
+              <goal>parse-version</goal>
+            </goals>
+            <configuration>
+              <versionString>${project.version}</versionString>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>1.3.1</version>
+          <executions>
+              <execution>
+                  <id>enforce-properversion</id>
+                  <goals>
+                    <goal>enforce</goal>
+                  </goals>
+                  <configuration>
+                    <rules>
+                      <requireProperty>
+                        <property>BUILD_ALIAS</property>
+                        <message>BUILD_ALIAS is missing, it must be specified.</message>
+                        <regex>.*((AM|Alpha|Beta|CR)\d+[a-z]?)|GA</regex>
+                        <regexMessage>The BUILD_ALIAS (${BUILD_ALIAS}) is invalid. Must contain either AM, Alpha, Beta or CR with postfix, or be GA.</regexMessage>
+                      </requireProperty>
+                    </rules>
+                    <fail>true</fail>
+                  </configuration>
+              </execution>
+          </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>local-sources</id>
+      <properties>
+        <skipBaselineComparison>true</skipBaselineComparison>
+        <mavanagaiata.skip>true</mavanagaiata.skip>
+      </properties>
+      <build>
+        <plugins>
+          <!-- disable git-based source reference generation in MANIFEST.MF -->
+          <plugin>
+            <groupId>org.eclipse.tycho</groupId>
+            <artifactId>tycho-packaging-plugin</artifactId>
+            <version>${tychoVersion}</version>
+            <configuration>
+              <sourceReferences>
+                <generate>false</generate>
+              </sourceReferences>
+            </configuration>
+          </plugin>
+
+          <!-- disable this from the site/pom.xml -->
+          <plugin>
+            <groupId>pl.project13.maven</groupId>
+            <artifactId>git-commit-id-plugin</artifactId>
+            <version>2.1.13</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>revision</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <skip>true</skip>
+            </configuration>
+          </plugin>
+
+	  <!-- disable fetching sources from manifests and creation of HTML facade on update site -->
+          <plugin>
+            <groupId>org.jboss.tools.tycho-plugins</groupId>
+            <artifactId>repository-utils</artifactId>
+            <version>${jbossTychoPluginsVersion}</version>
+            <executions>
+              <execution>
+                <id>generate-facade</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>generate-repository-facade</goal>
+                </goals>
+                <configuration>
+                  <skip>true</skip>
+                  <skipBuildInfo>true</skipBuildInfo>
+                  <skipWebContentGeneration>true</skipWebContentGeneration>
+                  <fetch-sources-from-manifests.skip>true</fetch-sources-from-manifests.skip>
+                </configuration>
+              </execution>
+              <execution>
+                <id>fetch-sources</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>fetch-sources-from-manifests</goal>
+                </goals>
+                <configuration>
+                  <skip>true</skip>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!-- 
+        Uncomment this profile to optionally enable a target platform site instead of (or in addition to) the default target platform. 
+        Use -Dno-target-platform if you want to disable the default target platform in favour of a specified target platform site
+          mvn clean install -Dno-target-platform \
+          -Djbosstools-target-site=file:///path/to/jbosstools-target-platforms/jbdevstudio/multiple/target/jbdevstudio-multiple.target.repo/
+    -->
+    <!-- <profile>
+      <id>target-site</id>
+      <activation>
+        <property>
+          <name>jbosstools-target-site</name>
+        </property>
+      </activation>
+      <repositories>
+        <repository>
+          <id>jbosstools-target-site</id>
+          <layout>p2</layout>
+          <url>${jbosstools-target-site}</url>
+        </repository>
+      </repositories>
+    </profile> -->
+  </profiles>
+
+  <repositories>
+    <repository>
+      <id>jboss-releases</id>
+      <name>JBoss Releases Maven Repository</name>
+      <url>https://repository.jboss.org/nexus/content/repositories/releases/</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </repository>
+    <repository>
+      <id>jboss-snapshots-repository</id>
+      <name>JBoss Snapshots Repository</name>
+      <url>https://repository.jboss.org/nexus/content/repositories/snapshots/</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+    <!-- since JBT site is no longer set in parent pom, must explicitly define it here -->
+    <repository>
+      <id>jbosstools-site</id>
+      <layout>p2</layout>
+      <url>${jbosstools-site}</url>
+    </repository>    
+  </repositories>
+
+  <!-- Additional m2 repos to resolve things like org.eclipse.tycho:tycho-maven-plugin:0.16.0-SNAPSHOT -->
+  <!-- JBoss Nexus repos are also added, but in settings.xml -->
+  <pluginRepositories>
+    <pluginRepository>
+      <id>sonatype-public-grid</id>
+      <url>https://repository.sonatype.org/content/groups/sonatype-public-grid</url>
+    </pluginRepository>
+    <pluginRepository>
+      <id>sonatype-public-repository</id>
+      <url>https://oss.sonatype.org/content/groups/public</url>
+    </pluginRepository>
+     <pluginRepository>
+      <id>jboss-releases</id>
+      <name>JBoss Releases Maven Repository</name>
+      <url>https://repository.jboss.org/nexus/content/repositories/releases/</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </pluginRepository>
+    <pluginRepository>
+      <id>jboss-snapshots-repository</id>
+      <name>JBoss Snapshots Repository</name>
+      <url>https://repository.jboss.org/nexus/content/repositories/snapshots/</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </pluginRepository>
+  </pluginRepositories>
+</project>
+<!--
+
+Build product features, site, and installers like this:
+
+  mvn clean install 
+
+To replicate a Jenkins CI build, run like this (unified.target and hudson profile require VPN access):
+
+  mvn clean install -P hudson,pack200 -Dtpc.version=4.60.0.Final-SNAPSHOT -DBUILD_NUMBER=460000 -DJOB_NAME=devstudio.product_master -Dupdate.site.description="Development Milestone" -Dstream_jbt=master -DBUILD_ALIAS=GA
+
+See README.md for information building, installing, contributing, generated artifacts, and more.
+
+-->

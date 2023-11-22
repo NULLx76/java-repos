@@ -1,0 +1,418 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright (c) 2013 Luca De Petrillo.
+  All rights reserved. This program and the accompanying materials
+  are made available under the terms of the GNU Public License v3.0
+  which accompanies this distribution, and is available at
+  http://www.gnu.org/licenses/gpl.html
+  
+  Contributors:
+      Luca De Petrillo - initial API and implementation
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.voicecontrolapp</groupId>
+	<artifactId>klets-pluginpack</artifactId>
+	<version>1.0.4-SNAPSHOT</version>
+
+	<packaging>apk</packaging>
+
+	<name>Plugin Pack for KLets - VoiceControl</name>
+
+	<licenses>
+		<license>
+			<name>GNU General Public License (GPL), Version 3</name>
+			<url>http://www.gnu.org/licenses/gpl-3.0.txt</url>
+		</license>
+	</licenses>
+
+	<properties>
+		<!-- 
+		Declare and configure the following properties either in this pom or in a local or global maven profile.
+		
+		<foursquareAppId>YOUR_FOURSQUARE_APP_ID</foursquareAppId>
+		<foursquareAppSecret>YOUR_FOURSQUARE_APP_SECRET</foursquareAppSecret>
+				
+		<googlePlacesKey>YOUR_GOOGLE_PLACES_API_KEY</googlePlacesKey>
+		
+		<weatherKey>YOUR_WORLD_WEATHER_ONLINE_API_KEY</weatherKey>
+			
+		Set these to sign the APK, or comment out the sign-jar plugin.
+		
+		<signKeystore>YOUR_KEYSTORE_PATH</signKeystore>
+		<signKeystorePwd>YOUR_KEYSTORE_PASSWORD</signKeystorePwd>
+		<signAlias>YOUR_SIGNATURE_ALIAS</signAlias>
+		<signPwd>YOUR_SIGNATURE_PASSWORD</signPwd>
+		-->
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>com.google.android</groupId>
+			<artifactId>android</artifactId>
+			<version>4.1.1.4</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.voicecontrolapp</groupId>
+			<artifactId>klets-plugin-api</artifactId>
+			<version>1.1.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
+			<version>2.2.1</version>
+		</dependency>
+
+		<!-- 
+			Foursquare didn't released the parent pom used by this artifact on global maven repositories, so you
+			need to checkout the project source code from https://github.com/foursquare/foursquare-android-oauth,
+			moving to the 1.0.0 tag and performing a local install.
+		-->
+		<dependency>
+			<groupId>com.foursquare</groupId>
+			<artifactId>foursquare-android-nativeoauth-lib</artifactId>
+			<version>1.0.0</version>
+			<type>apklib</type>
+			<exclusions>
+				<exclusion>
+					<artifactId>support-v4</artifactId>
+					<groupId>com.google.android</groupId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<!-- Support library taken from Android SDK -->
+		<dependency>
+			<groupId>com.voicecontrolapp.libs.android.support</groupId>
+			<artifactId>compatibility-v4</artifactId>
+			<version>19</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.google.android.annotations</groupId>
+			<artifactId>annotations</artifactId>
+			<version>21.0.1</version>
+			<scope>provided</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<finalName>${project.artifactId}</finalName>
+		<sourceDirectory>src</sourceDirectory>
+
+		<plugins>
+
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>buildnumber-maven-plugin</artifactId>
+				<version>1.2</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>create-timestamp</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+				  <timestampFormat>yyMMddHHmm</timestampFormat>
+				  <timestampPropertyName>versionCode</timestampPropertyName>
+				</configuration>
+			</plugin>
+			
+			<plugin>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>2.5</version>
+				<executions>
+					<execution>
+						<id>copy-manifest</id>
+						<phase>initialize</phase>
+						<goals>
+							<goal>copy-resources</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${project.build.directory}/filtered-manifest/</outputDirectory>
+							<includeEmptyDirs>true</includeEmptyDirs>
+							<resources>          
+								<resource>
+									<directory>.</directory>
+									<filtering>false</filtering>
+									<includes>
+										<include>AndroidManifest.xml</include>
+									</includes>
+								</resource>
+							</resources>              
+						</configuration>            
+					</execution>
+				</executions>
+			</plugin>
+			
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>2.3.2</version>
+				<configuration>
+					<source>1.6</source>
+					<target>1.6</target>
+				</configuration>
+			</plugin>	
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jarsigner-plugin</artifactId>
+				<version>1.2</version>
+				<executions>
+					<execution>
+						<id>signing</id>
+						<goals>
+							<goal>sign</goal>
+						</goals>
+						<phase>package</phase>
+						<inherited>true</inherited>
+						<configuration>
+							<keystore>${signKeystore}</keystore>
+							<storepass>${signKeystorePwd}</storepass>
+							<alias>${signAlias}</alias>
+							<keypass>${signPwd}</keypass>
+							<archiveDirectory />
+							<includes>
+								<include>target/*.apk</include>
+							</includes>
+							<arguments>
+								<argument>-sigalg</argument>
+								<argument>SHA1withRSA</argument>
+								<argument>-digestalg</argument>
+								<argument>SHA1</argument>
+							</arguments>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>com.jayway.maven.plugins.android.generation2</groupId>
+				<artifactId>android-maven-plugin</artifactId>
+				<version>3.7.0</version>
+				<extensions>true</extensions>
+				<executions>
+					<execution>
+						<id>manifest-update</id>
+						<goals>
+							<goal>manifest-update</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>alignApk</id>
+						<phase>package</phase>
+						<goals>
+							<goal>zipalign</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<release>true</release>
+
+					<manifest>
+						<debuggable>false</debuggable>
+						<versionName>${project.version}</versionName>
+						<versionCode>${versionCode}</versionCode>
+					</manifest>
+
+					<zipalign>
+						<verbose>true</verbose>
+						<skip>false</skip>
+						<inputApk>${project.build.directory}/${project.artifactId}.apk</inputApk>
+						<outputApk>${project.build.directory}/${project.artifactId}-aligned.apk</outputApk>
+					</zipalign>
+
+					<sdk>
+						<platform>14</platform>
+					</sdk>
+					<deleteConflictingFiles>true</deleteConflictingFiles>
+					<undeployBeforeDeploy>true</undeployBeforeDeploy>
+
+					<sign>
+						<debug>false</debug>
+					</sign>
+
+					<zipalign>
+						<skip>false</skip>
+					</zipalign>
+
+					<proguardFile>${project.build.directory}/proguard/additional-proguard.cfg</proguardFile>
+					<proguard>
+						<skip>false</skip>
+						<config>${project.basedir}/proguard.cfg</config>
+						<configs>
+							<config>"${env.ANDROID_HOME}/tools/proguard/proguard-android-optimize.txt"</config>
+						</configs>
+						<jvmArguments>
+							<jvmArgument>-Xms256m</jvmArgument>
+							<jvmArgument>-Xmx512m</jvmArgument>
+							<jvmArgument>-DANDROID_HOME=${env.ANDROID_HOME}</jvmArgument>
+						</jvmArguments>
+					</proguard>
+
+					<buildConfigConstants>
+						<constant>
+							<name>FOURSQUARE_OAUTH_APP_ID</name>
+							<type>String</type>
+							<value>${foursquareAppId}</value>
+						</constant>
+						<constant>
+							<name>FOURSQUARE_OAUTH_APP_SECRET</name>
+							<type>String</type>
+							<value>${foursquareAppSecret}</value>
+						</constant>
+						<constant>
+							<name>GOOGLE_PLACES_KEY</name>
+							<type>String</type>
+							<value>${googlePlacesKey}</value>
+						</constant>
+						<constant>
+							<name>WEATHER_KEY</name>
+							<type>String</type>
+							<value>${weatherKey}</value>
+						</constant>
+					</buildConfigConstants>
+					
+					
+
+					<androidManifestFile>${project.build.directory}/filtered-manifest/AndroidManifest.xml</androidManifestFile>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+	<profiles>
+		<!-- Configuration for eclipse development -->
+		<profile>
+			<id>m2e</id>
+			<activation>
+				<property>
+					<name>m2e.version</name>
+				</property>
+			</activation>
+
+			<build>
+				<plugins>
+					<!-- 
+						Use R.java and BuildConfig.java sources generated by the maven plugin while developing in Eclipse, in
+						order to take advantage of additional constants inside BuildConfig.java (used for build-time 
+						configurable external API credentials).
+					-->
+					<plugin>
+						<groupId>com.jayway.maven.plugins.android.generation2</groupId>
+						<artifactId>android-maven-plugin</artifactId>
+						<version>3.6.1</version>
+						<configuration>
+							<release>false</release>
+							<genDirectory>${project.basedir}/gen</genDirectory>
+						</configuration>
+					</plugin>
+				</plugins>
+
+				<pluginManagement>
+					<plugins>
+						<plugin>
+							<groupId>org.eclipse.m2e</groupId>
+							<artifactId>lifecycle-mapping</artifactId>
+							<version>1.0.0</version>
+							<configuration>
+								<lifecycleMappingMetadata>
+									<pluginExecutions>
+										<pluginExecution>
+											<pluginExecutionFilter>
+												<groupId>com.jayway.maven.plugins.android.generation2</groupId>
+												<artifactId>android-maven-plugin</artifactId>
+												<versionRange>[3.6.1,)</versionRange>
+												<goals>
+													<goal>manifest-update</goal>
+												</goals>
+											</pluginExecutionFilter>
+											<action>
+												<ignore/>
+											</action>
+										</pluginExecution>
+
+										<pluginExecution>
+											<pluginExecutionFilter>
+												<groupId>com.jayway.maven.plugins.android.generation2</groupId>
+												<artifactId>android-maven-plugin</artifactId>
+												<versionRange>[3.6.1,)</versionRange>
+												<goals>
+													<goal>generate-sources</goal>
+												</goals>
+											</pluginExecutionFilter>
+											<action>
+												<execute>
+													<runOnIncremental>false</runOnIncremental>
+													<runOnConfiguration>true</runOnConfiguration>
+												</execute>
+											</action>
+										</pluginExecution>
+
+										<pluginExecution>
+											<pluginExecutionFilter>
+												<groupId>org.apache.maven.plugins</groupId>
+												<artifactId>maven-antrun-plugin</artifactId>
+												<versionRange>[1.7,)</versionRange>
+												<goals>
+													<goal>run</goal>
+												</goals>
+											</pluginExecutionFilter>
+											<action>
+												<execute>
+													<runOnIncremental>false</runOnIncremental>
+													<runOnConfiguration>true</runOnConfiguration>
+												</execute>
+											</action>
+										</pluginExecution>
+										<pluginExecution>
+											<pluginExecutionFilter>
+												<groupId>org.codehaus.groovy.maven</groupId>
+												<artifactId>gmaven-plugin</artifactId>
+												<versionRange>[1.0,)</versionRange>
+												<goals>
+													<goal>execute</goal>
+												</goals>
+											</pluginExecutionFilter>
+											<action>
+												<ignore/>
+											</action>
+										</pluginExecution>
+									</pluginExecutions>
+								</lifecycleMappingMetadata>
+							</configuration>
+						</plugin>
+					</plugins>
+				</pluginManagement>
+			</build>
+		</profile>
+	</profiles>
+
+	<distributionManagement>
+		<!-- Using private repository for KLets api (until it is released on maven public repos) -->
+		<repository>
+			<id>remoteRepo_voicecontrolapp_nexus</id>
+			<name>Public Releases</name>
+			<url>http://www.voicecontrolapp.com:8081/nexus/content/repositories/releases/</url>
+		</repository>
+		<snapshotRepository>
+			<id>remoteRepo_voicecontrolapp_nexus</id>
+			<name>Public Releases</name>
+			<url>http://www.voicecontrolapp.com:8081/nexus/content/repositories/snapshots/</url>
+		</snapshotRepository>
+	</distributionManagement>
+
+	<repositories>
+		<repository>
+			<id>project.local</id>
+			<name>project</name>
+			<url>file://${project.basedir}/libs/repo</url>
+		</repository>
+	</repositories>
+</project>

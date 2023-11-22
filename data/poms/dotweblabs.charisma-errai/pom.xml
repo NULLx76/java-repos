@@ -1,0 +1,1226 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>ph.weblabs</groupId>
+    <artifactId>charisma-errai</artifactId>
+    <packaging>war</packaging>
+    <version>1.0-SNAPSHOT</version>
+    <name>charisma-errai</name>
+
+    <properties>
+        <version.gae>1.9.4</version.gae>
+        <version.gwt>2.5.1</version.gwt>
+        <resty.version>1.4-SNAPSHOT</resty.version>
+        <version.datanucleus>1.1.5</version.datanucleus>
+        <version.slf4j>1.7.5</version.slf4j>
+        <version.errai>3.0.0.Final</version.errai>
+        <version.mvel>2.1.Beta8</version.mvel>
+        <version.resteasy>3.0-beta-3</version.resteasy>
+        <version.hibernate>4.2.0.Final</version.hibernate>
+        <version.arquillian_container_jbossas>1.0.0.CR2</version.arquillian_container_jbossas>
+        <version.arquillian.gae>1.0.0.Beta7</version.arquillian.gae>
+        <version.shrinkwrap>1.1.0</version.shrinkwrap>
+        <version.shrinkwrap.maven-resolver>2.0.0-alpha-4</version.shrinkwrap.maven-resolver>
+
+        <version.jboss.as7>7.2.0.Final</version.jboss.as7>
+        <version.org.jboss.capedwarf>1.0.0-SNAPSHOT</version.org.jboss.capedwarf>
+        <version.org.jboss.xnio>3.0.7.GA</version.org.jboss.xnio>
+
+        <webappDirectory>${project.build.directory}/${project.build.finalName}</webappDirectory>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+    <dependencies>
+        <!-- SLF4J logging libraries -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${version.slf4j}</version>
+        </dependency>
+
+        <!-- any library that uses commons-logging will be directed to slf4j -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jcl-over-slf4j</artifactId>
+            <version>${version.slf4j}</version>
+        </dependency>
+
+        <!-- any library that uses slf4j will be directed to java.util.logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-jdk14</artifactId>
+            <version>${version.slf4j}</version>
+        </dependency>
+
+        <!-- End SLF4J logging libraries -->
+        <!-- Libraries used for testing -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.8.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
+            <version>1.9.0</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- End Libraries used for testing -->
+        <dependency>
+            <!-- 	lucene must come before the appengine-api-1.0-sdk on the classpath during compilation because
+                   of a namespace clash. maven uses order in pom to determine order of jars on classpath.
+                   our project needs 3.4.0 but the appengine-api-sdk jar bundles 2.9
+                   See http://code.google.com/p/googleappengine/issues/detail?id=8451 -->
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-analyzers</artifactId>
+            <version>3.4.0</version>
+        </dependency>
+        <!-- Google App Engine libraries -->
+        <dependency>
+            <!-- this library provides the core appengine features -->
+            <groupId>com.google.appengine</groupId>
+            <artifactId>appengine-api-1.0-sdk</artifactId>
+            <version>${version.gae}</version>
+        </dependency>
+        <dependency>
+            <!-- this library provides experimental appengine features -->
+            <groupId>com.google.appengine</groupId>
+            <artifactId>appengine-api-labs</artifactId>
+            <version>${version.gae}</version>
+        </dependency>
+        <dependency>
+            <!-- required for app engine based unit tests -->
+            <groupId>com.google.appengine</groupId>
+            <artifactId>appengine-testing</artifactId>
+            <version>${version.gae}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- required for app engine based unit tests -->
+            <groupId>com.google.appengine</groupId>
+            <artifactId>appengine-api-stubs</artifactId>
+            <version>${version.gae}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- required for app engine based unit tests -->
+            <groupId>com.google.appengine</groupId>
+            <artifactId>appengine-tools-sdk</artifactId>
+            <version>${version.gae}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- Google App Engine supports both JPA1 and JPA2.
+                    JPA1: datanucleus appengine plugin v1 (1.0.10) + datanucleus v1 (1.1.5)
+                    JPA2: datanucleus appengine plugin v2 (2.1.1) + datanucleus v3 (3.1.1) -->
+            <groupId>com.google.appengine.orm</groupId>
+            <artifactId>datanucleus-appengine</artifactId>
+            <version>1.0.10</version>
+        </dependency>
+        <dependency>
+            <!-- datanucleus-core is not needed for compilation. in fact, it cannot have compile
+                      scope because the datanucleus plugin automatically adds it during enhancement and complains
+                      if there are two copies. app should not depend on any classes in this lib anyways. -->
+            <groupId>org.datanucleus</groupId>
+            <artifactId>datanucleus-core</artifactId>
+            <version>${version.datanucleus}</version>
+            <scope>runtime</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>javax.transaction</groupId>
+                    <artifactId>transaction-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <!-- datanucleus-jpa is needed during compilation for its @Extension annotation which is used throughout entity classes -->
+            <groupId>org.datanucleus</groupId>
+            <artifactId>datanucleus-jpa</artifactId>
+            <version>${version.datanucleus}</version>
+        </dependency>
+        <dependency>
+            <!-- 	normally this library is only needed when using JDO however datanucleus throws
+                      some JDO exceptions even when using JPA. there are several places in our code that
+                      explicitly catch these JDO exceptions therefore it is needed during compilation -->
+            <groupId>javax.jdo</groupId>
+            <artifactId>jdo2-api</artifactId>
+            <version>2.3-eb</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>javax.transaction</groupId>
+                    <artifactId>transaction-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- End Google App Engine libraries -->
+
+        <!-- GAE SDK Runtime used during dev -->
+        <!--  	  <dependency>  -->
+        <!--  		<groupId>com.google.gae</groupId> -->
+        <!--  		<artifactId>appengine-local-runtime-shared</artifactId> -->
+        <!--  		<scope>system</scope>  -->
+        <!--  		<version>${version.gae}</version>  -->
+        <!--  		<systemPath>D:/buildtools/appengine-java-sdk-1.7.4/lib/shared/appengine-local-runtime-shared.jar</systemPath> -->
+        <!--       </dependency>        -->
+
+        <!-- GWT libraries -->
+        <dependency>
+            <!-- this library provides classes required by GWT-RPC servlets on the server -->
+            <groupId>com.google.gwt</groupId>
+            <artifactId>gwt-servlet</artifactId>
+            <version>${version.gwt}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.gwt</groupId>
+            <artifactId>gwt-user</artifactId>
+            <version>${version.gwt}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!--
+        <dependency>
+          <groupId>com.google.gwt</groupId>
+          <artifactId>gwt-codeserver</artifactId>
+          <version>${version.gwt}</version>
+        </dependency>
+        -->
+        <!-- RestyGWT -->
+        <dependency>
+            <groupId>org.fusesource.restygwt</groupId>
+            <artifactId>restygwt</artifactId>
+            <version>${resty.version}</version>
+        </dependency>
+        <!-- GWT OAuth2 Library -->
+        <dependency>
+            <groupId>com.google.api</groupId>
+            <artifactId>gwt-oauth2</artifactId>
+            <version>0.2</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.google.gwt</groupId>
+                    <artifactId>gwt-dev</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- May not be needed anymore! -->
+        <dependency>
+            <groupId>name.pehl</groupId>
+            <artifactId>piriti-dev</artifactId>
+            <version>0.8</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.tractionsoftware</groupId>
+            <artifactId>gwt-traction</artifactId>
+            <version>1.5.9-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- GWT Exporter -->
+        <dependency>
+            <groupId>org.timepedia.exporter</groupId>
+            <artifactId>gwtexporter</artifactId>
+            <version>2.4.0</version>
+            <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.sun</groupId>
+                    <artifactId>tools</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- Errai Validation-->
+
+        <dependency>
+            <groupId>org.jboss.errai</groupId>
+            <artifactId>errai-validation</artifactId>
+            <version>${version.errai}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
+            <version>1.0.0.GA</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
+            <version>1.0.0.GA</version>
+            <classifier>sources</classifier>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <!-- Hibernate Validator is used for validation in the client and on the server -->
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <version>${version.hibernate}</version>
+            <!--<scope>runtime</scope>-->
+        </dependency>
+        <dependency>
+            <!-- this has a scope of provided because the Hibernate Validator sources must
+                      be on the classpath during gwt:compile but it shouldnt be bundled with the war -->
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <version>${version.hibernate}</version>
+            <classifier>sources</classifier>
+            <scope>provided</scope>
+        </dependency>
+        <!-- End GWT libraries -->
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.6</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.1</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.4</version>
+        </dependency>
+        <dependency>
+            <groupId>net.sourceforge.htmlunit</groupId>
+            <artifactId>htmlunit</artifactId>
+            <version>2.10</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.rosaloves</groupId>
+            <artifactId>bitlyj</artifactId>
+            <version>2.0.0</version>
+        </dependency>
+
+        <!-- GwtQuery -->
+        <dependency>
+            <groupId>com.googlecode.gwtquery</groupId>
+            <artifactId>gwtquery</artifactId>
+            <version>1.4.0-SNAPSHOT</version>
+        </dependency>
+
+        <!-- Errai Dependencies -->
+        <dependency>
+            <groupId>org.jboss.errai</groupId>
+            <artifactId>errai-jpa-client</artifactId>
+            <version>${version.errai}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.errai</groupId>
+            <artifactId>errai-ui</artifactId>
+            <version>${version.errai}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.errai</groupId>
+            <artifactId>errai-data-binding</artifactId>
+            <version>${version.errai}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.errai</groupId>
+            <artifactId>errai-cdi-client</artifactId>
+            <version>${version.errai}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.errai</groupId>
+            <artifactId>errai-navigation</artifactId>
+            <version>${version.errai}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
+            <version>2.5</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.enterprise</groupId>
+            <artifactId>cdi-api</artifactId>
+            <scope>provided</scope>
+            <version>1.0-SP4</version>
+        </dependency>
+
+        <!-- Errai Core -->
+        <!--<dependency>-->
+        <!--<groupId>org.jboss.errai</groupId>-->
+        <!--<artifactId>errai-bus</artifactId>-->
+        <!--<version>${version.errai}</version>-->
+        <!--<exclusions>-->
+        <!--<exclusion>-->
+        <!--<groupId>javax.inject</groupId>-->
+        <!--<artifactId>javax.inject</artifactId>-->
+        <!--</exclusion>-->
+        <!--<exclusion>-->
+        <!--<groupId>javax.annotation</groupId>-->
+        <!--<artifactId>jsr250-api</artifactId>-->
+        <!--</exclusion>-->
+        <!--&lt;!&ndash; Exclude this as we need version 1.7.5 &ndash;&gt;-->
+        <!--<exclusion>-->
+        <!--<groupId>org.slf4j</groupId>-->
+        <!--<artifactId>slf4j-api</artifactId>-->
+        <!--</exclusion>-->
+        <!--</exclusions>-->
+        <!--</dependency>-->
+
+        <dependency>
+            <groupId>org.jboss.errai</groupId>
+            <artifactId>errai-ioc</artifactId>
+            <version>${version.errai}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>javax.inject</groupId>
+                    <artifactId>javax.inject</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>javax.annotation</groupId>
+                    <artifactId>jsr250-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.errai</groupId>
+            <artifactId>errai-tools</artifactId>
+            <version>${version.errai}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mvel</groupId>
+            <artifactId>mvel2</artifactId>
+            <version>${version.mvel}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.sgx</groupId>
+            <artifactId>momentgwt</artifactId>
+            <version>1.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.google.gwt</groupId>
+                    <artifactId>gwt-dev</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!--
+         <dependency>
+             <groupId>org.jboss.errai</groupId>
+             <artifactId>errai-jaxrs-client</artifactId>
+             <version>${version.errai}</version>
+             <exclusions>
+                 <exclusion>
+                     <groupId>org.jboss.resteasy</groupId>
+                     <artifactId>jaxrs-api</artifactId>
+                 </exclusion>
+              </exclusions>
+         </dependency>
+
+         <dependency>
+           <groupId>org.jboss.errai</groupId>
+           <artifactId>errai-jaxrs-provider</artifactId>
+           <version>${version.errai}</version>
+         </dependency>
+        -->
+
+        <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>javax.ws.rs-api</artifactId>
+            <version>2.0-rc3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.inject</groupId>
+            <artifactId>guice</artifactId>
+            <version>3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.inject.extensions</groupId>
+            <artifactId>guice-servlet</artifactId>
+            <version>3.0</version>
+        </dependency>
+        <!--         <dependency> -->
+        <!--             <groupId>com.google.guava</groupId> -->
+        <!--             <artifactId>guava</artifactId> -->
+        <!--             <version>13.0.1</version> -->
+        <!--         </dependency>	 -->
+        <dependency>
+            <groupId>com.googlecode.objectify</groupId>
+            <artifactId>objectify</artifactId>
+            <version>3.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.shiro</groupId>
+            <artifactId>shiro-core</artifactId>
+            <version>1.2.1</version>
+            <!-- Exclude this as we need version 1.7.5 -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.shiro</groupId>
+            <artifactId>shiro-web</artifactId>
+            <version>1.2.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.persistence</groupId>
+            <artifactId>persistence-api</artifactId>
+            <version>1.0.2</version>
+        </dependency>
+
+        <!-- Added for GAEshiro app compatibility -->
+        <!-- Not needed in production -->
+        <dependency>
+            <groupId>org.freemarker</groupId>
+            <artifactId>freemarker-gae</artifactId>
+            <version>2.3.19</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.freemarker</groupId>
+                    <artifactId>freemarker</artifactId>
+                </exclusion>
+            </exclusions>
+
+        </dependency>
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20090211</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.mail</groupId>
+            <artifactId>mail</artifactId>
+            <version>1.4.4</version>
+        </dependency>
+        <dependency>
+            <groupId>org.scribe</groupId>
+            <artifactId>scribe</artifactId>
+            <version>1.3.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.beanshell</groupId>
+            <artifactId>bsh</artifactId>
+            <version>1.3.0</version>
+        </dependency>
+
+
+        <!-- JBoss Resteasy -->
+        <dependency>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-guice</artifactId>
+            <version>${version.resteasy}</version>
+            <!-- Exclude this as we need version 1.7.5 -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-multipart-provider</artifactId>
+            <version>${version.resteasy}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-jackson-provider</artifactId>
+            <version>${version.resteasy}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-jettison-provider</artifactId>
+            <version>${version.resteasy}</version>
+        </dependency>
+
+        <!-- Google Http Client for GAE -->
+        <dependency>
+            <groupId>com.google.http-client</groupId>
+            <artifactId>google-http-client-appengine</artifactId>
+            <version>1.17.0-rc</version>
+        </dependency>
+
+        <!-- URLRewriteFilter -->
+        <dependency>
+            <groupId>org.tuckey</groupId>
+            <artifactId>urlrewritefilter</artifactId>
+            <version>4.0.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-fileupload</groupId>
+            <artifactId>commons-fileupload</artifactId>
+            <version>1.3</version>
+        </dependency>
+
+
+        <!-- Added for Arquillian Testing -->
+        <dependency>
+            <groupId>org.jboss.spec</groupId>
+            <artifactId>jboss-javaee-6.0</artifactId>
+            <version>1.0.0.Final</version>
+            <type>pom</type>
+            <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.jboss.resteasy</groupId>
+                    <artifactId>jaxrs-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss.arquillian.junit</groupId>
+            <artifactId>arquillian-junit-container</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>${version.slf4j}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss.shrinkwrap.descriptors</groupId>
+            <artifactId>shrinkwrap-descriptors-impl-javaee</artifactId>
+        </dependency>
+
+        <!-- GAE Arquillian Testing -->
+        <!--
+        <dependency>
+            <groupId>org.jboss.arquillian.container</groupId>
+            <artifactId>arquillian-gae-embedded</artifactId>
+            <version>1.0.0.Beta7</version>
+        </dependency>
+        -->
+        <!-- End GAE Arquillian Testing -->
+
+        <!-- BCrypt Hashing -->
+        <dependency>
+            <groupId>org.mindrot</groupId>
+            <artifactId>jbcrypt</artifactId>
+            <version>0.3m</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.bitbucket.dollar</groupId>
+            <artifactId>dollar</artifactId>
+            <version>1.0-beta2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.fastjson</groupId>
+            <artifactId>boon</artifactId>
+            <version>0.22</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>org.apache.geronimo.specs</groupId>
+            <artifactId>geronimo-servlet_2.5_spec</artifactId>
+            <version>1.2</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>${version.slf4j}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+            <version>1.1.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.16</version>
+        </dependency>
+
+        <!--
+        <dependency>
+            <groupId>com.pagecrumb</groupId>
+            <artifactId>mungo</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+        -->
+
+        <!-- Needed by XStream JSON -->
+        <dependency>
+            <groupId>org.codehaus.jettison</groupId>
+            <artifactId>jettison</artifactId>
+            <version>1.3.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.thoughtworks.xstream</groupId>
+            <artifactId>xstream</artifactId>
+            <version>1.4.2</version>
+        </dependency>
+        <dependency>
+            <groupId>xpp3</groupId>
+            <artifactId>xpp3_min</artifactId>
+            <version>1.1.4c</version>
+        </dependency>
+
+        <!-- Third Party API's -->
+        <!-- Postmark API and dependencies-->
+        <dependency>
+            <groupId>com.postmark</groupId>
+            <artifactId>postmark-client</artifactId>
+            <version>0.3.2</version>
+        </dependency>
+        <!-- End Postmark dependencies -->
+    </dependencies>
+
+    <!-- Profiles -->
+    <profiles>
+        <!-- GAE -->
+        <profile>
+            <id>sdk</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+                <property>
+                    <name>sdk</name>
+                </property>
+            </activation>
+
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                            <includes>
+                                <include>com/google/appengine/tck/**/*Test.java</include>
+                            </includes>
+                            <systemProperties>
+                                <appengine.test.datastore.default_high_rep_job_policy_unapplied_job_pct>20</appengine.test.datastore.default_high_rep_job_policy_unapplied_job_pct>
+                            </systemProperties>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+            <dependencies>
+                <!--<dependency>-->
+                <!--<groupId>com.google.appengine.tck</groupId>-->
+                <!--<artifactId>sdk-env</artifactId>-->
+                <!--<version>1.0.0-SNAPSHOT</version>-->
+                <!--</dependency>-->
+
+                <dependency>
+                    <groupId>org.jboss.arquillian.container</groupId>
+                    <artifactId>arquillian-gae-local</artifactId>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+        <!-- Embedded Weld -->
+        <profile>
+            <id>arquillian-weld-ee-embedded</id>
+            <dependencies>
+                <dependency>
+                    <groupId>org.jboss.spec</groupId>
+                    <artifactId>jboss-javaee-6.0</artifactId>
+                    <version>1.0.0.Final</version>
+                    <type>pom</type>
+                    <scope>provided</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.jboss.arquillian.container</groupId>
+                    <artifactId>arquillian-weld-ee-embedded-1.1</artifactId>
+                    <version>1.0.0.CR3</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.jboss.weld</groupId>
+                    <artifactId>weld-core</artifactId>
+                    <version>1.1.5.Final</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-simple</artifactId>
+                    <!-- 	                <version>1.6.4</version> -->
+                    <version>${version.slf4j}</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+        <!-- Managed JBoss AS -->
+        <profile>
+            <id>arquillian-jbossas-managed</id>
+            <dependencies>
+                <dependency>
+                    <groupId>org.jboss.spec</groupId>
+                    <artifactId>jboss-javaee-6.0</artifactId>
+                    <version>1.0.0.Final</version>
+                    <type>pom</type>
+                    <scope>provided</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.jboss.as</groupId>
+                    <artifactId>jboss-as-arquillian-container-managed</artifactId>
+                    <version>7.1.1.Final</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.jboss.arquillian.protocol</groupId>
+                    <artifactId>arquillian-protocol-servlet</artifactId>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+        <!-- GAE -->
+        <!--
+        <profile>
+            <id>gae</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+                <property>
+                    <name>gae</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                            <groups>org.jboss.test.capedwarf.common.support.GAE</groups>
+                            <includes>
+                                <include>org/jboss/test/**/*Test.java</include>
+                            </includes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+            <dependencies>
+                <dependency>
+                    <groupId>org.jboss.capedwarf.blue</groupId>
+                    <artifactId>capedwarf-arquillian</artifactId>
+                    <version>${version.org.jboss.capedwarf}</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.jboss.arquillian.container</groupId>
+                    <artifactId>arquillian-gae-local</artifactId>
+                    <version>${version.arquillian.gae}</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.jboss.shrinkwrap</groupId>
+                    <artifactId>shrinkwrap-api</artifactId>
+                    <version>${version.shrinkwrap}</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.jboss.shrinkwrap.resolver</groupId>
+                    <artifactId>shrinkwrap-resolver-api-maven</artifactId>
+                    <version>${version.shrinkwrap.maven-resolver}</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.jboss.shrinkwrap.resolver</groupId>
+                    <artifactId>shrinkwrap-resolver-impl-maven</artifactId>
+                    <version>${version.shrinkwrap.maven-resolver}</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+        -->
+    </profiles>
+    <build>
+        <!-- Compiled java classes and all the resources get dumped into target/${webappDirectory}/WEB-INF/classes during the build -->
+        <outputDirectory>${webappDirectory}/WEB-INF/classes</outputDirectory>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <resource>
+                <!-- the java source files must be on the classpath during gwt:compile -->
+                <directory>src/main/java</directory>
+            </resource>
+            <resource>
+                <!-- the java source files that override/emulate server-side classes in the client must be on the classpath during gwt:compile -->
+                <directory>src/main/super</directory>
+            </resource>
+        </resources>
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+            </testResource>
+        </testResources>
+        <plugins>
+            <plugin>
+                <groupId>com.google.appengine</groupId>
+                <artifactId>appengine-maven-plugin</artifactId>
+                <version>${version.gae}</version>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>gwt-maven-plugin</artifactId>
+                <version>${version.gwt}</version>
+                <executions>
+                    <execution>
+                        <!-- gwt:compile happens just before package phase -->
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <modules>
+                        <!-- Marketplace gwt module inherits Core gwt module therefore both will be gwt:compiled -->
+                        <module>com.pagecrumb.charismaerrai.App</module>
+                    </modules>
+                    <logLevel>DEBUG</logLevel>
+                    <!--<logLevel>WARN</logLevel>-->
+                    <runTarget>index.html</runTarget>
+                    <!--<extraJvmArgs>-Xmx1000m -XX:MaxPermSize=500m -XX:-UseSplitVerifier</extraJvmArgs>-->
+                    <appEngineVersion>${version.gae}</appEngineVersion>
+                    <!--  <appEngineHome>D:/buildtools/appengine-java-sdk-1.8.0</appEngineHome> -->
+                    <!-- tell the gwt plugin that the webapp source resides in src/main/webapp -->
+                    <webappDirectory>${webappDirectory}</webappDirectory>
+                    <!-- tell the gwt plugin that dev mode should be run using the webapp that resides in target/${webappDirectory} -->
+                    <hostedWebapp>${webappDirectory}</hostedWebapp>
+                    <!-- Normally the gwt maven plugin executes dev mode using a builtin jetty server.
+                         This config property instructs the gwt maven plugin to execute dev mode using the
+                         jetty server supplied by the appengine sdk. -->
+                    <server>com.google.appengine.tools.development.gwt.AppEngineLauncher</server>
+                    <!--<jvmFlags>-->
+                    <!--<jvmFlag>-Ddatastore.default_high_rep_job_policy_unapplied_job_pct=20</jvmFlag>-->
+                    <!--</jvmFlags>-->
+                </configuration>
+            </plugin>
+            <plugin>
+                <!-- Copies static web files from src/main/webapp to target/${webappDirectory} -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>2.1.1</version>
+                <executions>
+                    <execution>
+                        <!-- the exploded goal gets executed during compile phase -->
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>exploded</goal>
+                            <!--                      <goal>war</goal> -->
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <!-- 				<failOnMissingWebXml>false</failOnMissingWebXml> -->
+                    <warName>${project.artifactId}</warName>
+                    <!-- Exclude GWT client local classes from the deployment, lest
+                  classpath scanners such as Hibernate and Weld get confused when the webapp
+                  is bootstrapping. -->
+                    <!--          		<packagingExcludes>**/javax/**/*.*,**/client/local/**/*.class</packagingExcludes> -->
+                    <!--           		<warSourceExcludes>WEB-INF/web.xml</warSourceExcludes>             -->
+                    <!-- the exploded war structure ends up in target/${webappDirectory} -->
+                    <webappDirectory>${webappDirectory}</webappDirectory>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>1.6</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <minimizeJar>true</minimizeJar>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.datanucleus</groupId>
+                <artifactId>maven-datanucleus-plugin</artifactId>
+                <version>1.1.4</version>
+                <configuration>
+                    <api>JPA</api>
+                    <mappingIncludes>net/styleguise/marketplace/core/shared/**/*.class,net/styleguise/marketplace/server/**/*.class</mappingIncludes>
+                    <verbose>true</verbose>
+                </configuration>
+                <executions>
+                    <execution>
+                        <!-- classes get enhanced immediately after compile phase -->
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>enhance</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <!-- enhancement requires the gwt-user jar because many of the entity classes implement
+                            IsSerializable and the enhancer needs it on the classpath to function. because the
+                            gwt-user library has a scope of provided, it is only available on the compilation
+                            and test classpath, and is not transitive to the ehancement classpath.-->
+                        <groupId>com.google.gwt</groupId>
+                        <artifactId>gwt-user</artifactId>
+                        <version>${version.gwt}</version>
+                    </dependency>
+                    <dependency>
+                        <!-- force maven-datanucleus-plugin to use the same version of datanucleus-core -->
+                        <groupId>org.datanucleus</groupId>
+                        <artifactId>datanucleus-core</artifactId>
+                        <version>${version.datanucleus}</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <!-- JRebel -->
+            <!--
+            <plugin>
+             <groupId>org.zeroturnaround</groupId>
+             <artifactId>jrebel-maven-plugin</artifactId>
+             <version>1.1.1</version>
+             <executions>
+               <execution>
+                 <id>generate-rebel-xml</id>
+                 <phase>process-resources</phase>
+                 <goals>
+                   <goal>generate</goal>
+                 </goals>
+               </execution>
+             </executions>
+           </plugin>   -->
+        </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.eclipse.m2e</groupId>
+                    <artifactId>lifecycle-mapping</artifactId>
+                    <version>1.0.0</version>
+                    <configuration>
+                        <lifecycleMappingMetadata>
+                            <pluginExecutions>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.apache.maven.plugins</groupId>
+                                        <artifactId>maven-war-plugin</artifactId>
+                                        <versionRange>2.1.1</versionRange>
+                                        <goals>
+                                            <goal>exploded</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <execute />
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.datanucleus</groupId>
+                                        <artifactId>maven-datanucleus-plugin</artifactId>
+                                        <versionRange>1.1.4</versionRange>
+                                        <goals>
+                                            <goal>enhance</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <execute />
+                                    </action>
+                                </pluginExecution>
+                            </pluginExecutions>
+                        </lifecycleMappingMetadata>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.jboss.arquillian</groupId>
+                <artifactId>arquillian-bom</artifactId>
+                <version>1.0.3.Final</version>        <!-- These dependencies are here just for enabling logging -->
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jboss.capedwarf.blue</groupId>
+                <artifactId>capedwarf-arquillian</artifactId>
+                <version>${version.org.jboss.capedwarf}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jboss.arquillian.container</groupId>
+                <artifactId>arquillian-gae-local</artifactId>
+                <version>${version.arquillian.gae}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- GAE-Arquillian Testing -->
+            <!--             <dependency> -->
+            <!--                 <groupId>org.jboss.arquillian.container</groupId> -->
+            <!--                 <artifactId>arquillian-gae-local</artifactId> -->
+            <!--                 <version>${version.arquillian.gae}</version> -->
+            <!--                 <scope>test</scope> -->
+            <!--             </dependency> -->
+
+            <!--             <dependency> -->
+            <!--                 <groupId>org.jboss.arquillian.container</groupId> -->
+            <!--                 <artifactId>arquillian-gae-tools</artifactId> -->
+            <!--                 <version>${version.arquillian.gae}</version> -->
+            <!--                 <scope>test</scope> -->
+            <!--             </dependency> -->
+
+        </dependencies>
+    </dependencyManagement>
+
+    <!-- Added for GAE-Shiro -->
+    <repositories>
+        <repository>
+            <id>gwt-traction-mvn-repo</id>
+            <url>https://raw.github.com/kerbymart/gwt-traction/mvn-repo/</url>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>maven2-repository.dev.java.net</id>
+            <name>Java.net Repository for Maven</name>
+            <url>http://download.java.net/maven/2/</url>
+            <layout>default</layout>
+        </repository>
+        <repository>
+            <id>objectify-appengine</id>
+            <url>http://objectify-appengine.googlecode.com/svn/maven</url>
+        </repository>
+        <repository>
+            <id>spy</id>
+            <name>Spy Repository</name>
+            <layout>default</layout>
+            <url>http://files.couchbase.com/maven2/</url>
+        </repository>
+        <repository>
+            <id>apache</id>
+            <url>http://repository.apache.org/snapshots</url>
+        </repository>
+        <!-- GWTQuery -->
+        <repository>
+            <id>sonatype</id>
+            <url>http://oss.sonatype.org/content/repositories/snapshots</url>
+            <snapshots><enabled>true</enabled></snapshots>
+            <releases><enabled>false</enabled></releases>
+        </repository>
+        <!-- RestyGWT Snapshot -->
+        <repository>
+            <id>fusesource-snapshots</id>
+            <name>Fusesource Snapshots</name>
+            <url>http://repo.fusesource.com/nexus/content/repositories/snapshots</url>
+            <snapshots><enabled>true</enabled></snapshots>
+            <releases><enabled>false</enabled></releases>
+        </repository>
+        <repository>
+            <id>sgmavenrepo</id>
+            <name>Maven Repository for sg libraries</name>
+            <url>http://sgmavenrepo.googlecode.com/svn/maven/repo</url>
+        </repository>
+        <!-- Postmark Java API -->
+        <repository>
+            <id>postmark-repo</id>
+            <url>https://raw.github.com/pastekit/postmark-java-appengine/mvn-repo/</url>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
+        </repository>
+        <!-- GAE Arquillian -->
+        <repository>
+            <id>jboss-public-repository-group</id>
+            <name>JBoss Public Repository Group</name>
+            <url>http://repository.jboss.org/nexus/content/groups/public/</url>
+            <layout>default</layout>
+            <releases>
+                <enabled>true</enabled>
+                <updatePolicy>never</updatePolicy>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>never</updatePolicy>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>jboss-deprecated</id>
+            <name>JBoss Deprecated</name>
+            <url>https://repository.jboss.org/nexus/content/repositories/deprecated/</url>
+            <layout>default</layout>
+            <releases>
+                <enabled>true</enabled>
+                <updatePolicy>never</updatePolicy>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>maven-gae-plugin-repo</id>
+            <name>Maven Google App Engine Repository</name>
+            <url>http://maven-gae-plugin.googlecode.com/svn/repository/</url>
+        </pluginRepository>
+        <pluginRepository>
+            <name>oss.sonatype.org</name>
+            <id>oss.sonatype.org</id>
+            <url>http://oss.sonatype.org/content/groups/public</url>
+        </pluginRepository>
+        <pluginRepository>
+            <id>google-snapshots</id>
+            <name>Google Snapshots</name>
+            <url>https://oss.sonatype.org/content/repositories/google-snapshots/</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+        </pluginRepository>
+    </pluginRepositories>
+    <!-- End of Added for GAE-Shiro -->
+</project>

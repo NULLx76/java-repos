@@ -1,0 +1,408 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.javabenchmark</groupId>
+    <artifactId>jvm-watchdog</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>JVM Watchdog</name>
+    <url>http://blog.javabenchmark.org</url>
+    <description>
+        This is a tool that monitors a given JVM process in order to detect any failures that may occur.
+        JVM Watchdog dynamically attaches java agents to JVMs, and agents send heartbeats
+        every second to the watchdog. Each heartbeat contains monitoring data that are stored by the watchdog
+        within CSV files in a dedicated directory.
+    </description>
+    
+    <developers>
+        <developer>
+            <id>JPAO</id>
+            <email>julien.paoletti@gmail.com</email>
+            <name>Julien Paoletti</name>
+        </developer>
+    </developers>
+
+    <scm>
+        <url>https://github.com/julien-paoletti/jvm-watchdog</url>
+        <connection>scm:git:ssh://git@github.com/julien-paoletti/jvm-watchdog.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/julien-paoletti/jvm-watchdog.git</developerConnection>
+    </scm>
+    
+    <!--
+                                                                                        
+                                                                    ,,                  
+    `7MM"""Mq.                                               mm     db                  
+      MM   `MM.                                              MM                         
+      MM   ,M9 `7Mb,od8 ,pW"Wq.`7MMpdMAo.  .gP"Ya `7Mb,od8 mmMMmm `7MM  .gP"Ya  ,pP"Ybd 
+      MMmmdM9    MM' "'6W'   `Wb MM   `Wb ,M'   Yb  MM' "'   MM     MM ,M'   Yb 8I   `" 
+      MM         MM    8M     M8 MM    M8 8M""""""  MM       MM     MM 8M"""""" `YMMMa. 
+      MM         MM    YA.   ,A9 MM   ,AP YM.    ,  MM       MM     MM YM.    , L.   I8 
+    .JMML.     .JMML.   `Ybmd9'  MMbmmd'   `Mbmmd'.JMML.     `Mbmo.JMML.`Mbmmd' M9mmmP' 
+                                 MM                                                     
+                               .JMML.                                                   
+                           
+    -->
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <jacoco-version>0.6.3.201306030806</jacoco-version>
+    </properties>
+  
+    <build>
+        
+        <!--
+        
+                    ,,                        ,,                      
+        `7MM"""Mq.`7MM                        db                      
+          MM   `MM. MM                                                
+          MM   ,M9  MM `7MM  `7MM  .P"Ybmmm `7MM  `7MMpMMMb.  ,pP"Ybd 
+          MMmmdM9   MM   MM    MM :MI  I8     MM    MM    MM  8I   `" 
+          MM        MM   MM    MM  WmmmP"     MM    MM    MM  `YMMMa. 
+          MM        MM   MM    MM 8M          MM    MM    MM  L.   I8 
+        .JMML.    .JMML. `Mbod"YML.YMMMMMb  .JMML..JMML  JMML.M9mmmP' 
+                                  6'     dP                           
+                                  Ybmmmd'        
+                                                       
+        -->
+        <plugins>
+            
+            <!-- Prepares Agent JAR before Tests execution -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.4</version>
+                <executions>
+                    <execution>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <configuration>
+                            <archive>
+                                <manifestEntries>
+                                    <!-- to enable agent -->
+                                    <Agent-Class>org.javabenchmark.jvmwatchdog.Agent</Agent-Class>
+                                </manifestEntries>
+                            </archive>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            
+            <!-- copies all dependencies into the target/lib -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>2.8</version>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                            <goal>build-classpath</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                            <includeScope>runtime</includeScope>
+                            <outputProperty>jvm-classpath</outputProperty>
+                            <prefix>lib</prefix>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            
+            <!-- makes a zip of the project's binaries -->
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.4</version>
+                <configuration>
+                    <descriptors>
+                        <descriptor>src/main/assembly/descriptor.xml</descriptor>
+                    </descriptors>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            
+            <!-- compilation -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+            
+            <!-- unit test -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.16</version>
+                <configuration>
+                    <!-- runs 1 test at time because of JMX listening on the 9999 port -->
+                    <forkCount>1</forkCount>
+                    <!-- dedicated JVM for each test -->
+                    <reuseForks>false</reuseForks>
+                    <!-- enable code coverage & JMX on port 9999 without authentication -->
+                    <argLine>${surefireArgLine} -Dcom.sun.management.jmxremote.port=9999 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false</argLine>
+                </configuration>
+            </plugin>
+            
+            <!-- coverage test -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco-version}</version>
+                <executions>
+                    <execution>
+                        <id>pre-unit-test</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Sets the path to the file which contains the execution data. -->
+                            <destFile>${project.build.directory}/coverage-reports/jacoco-ut.exec</destFile>
+                            <!--
+                                Sets the name of the property containing the settings
+                                for JaCoCo runtime agent.
+                            -->
+                            <propertyName>surefireArgLine</propertyName>
+                        </configuration>
+                    </execution>
+                    <!--
+                        Ensures that the code coverage report for unit tests is created after
+                        unit tests have been run.
+                    -->
+                    <execution>
+                        <id>post-unit-test</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Sets the path to the file which contains the execution data. -->
+                            <dataFile>${project.build.directory}/coverage-reports/jacoco-ut.exec</dataFile>
+                            <!-- Sets the output directory for the code coverage report. -->
+                            <outputDirectory>${project.reporting.outputDirectory}/jacoco-ut</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            
+        </plugins>
+    </build>
+
+    <!--
+                                                              ,,                              ,,                  
+    `7MM"""Yb.                                              `7MM                              db                  
+      MM    `Yb.                                              MM                                                  
+      MM     `Mb  .gP"Ya `7MMpdMAo.  .gP"Ya `7MMpMMMb.   ,M""bMM  .gP"Ya `7MMpMMMb.  ,p6"bo `7MM  .gP"Ya  ,pP"Ybd 
+      MM      MM ,M'   Yb  MM   `Wb ,M'   Yb  MM    MM ,AP    MM ,M'   Yb  MM    MM 6M'  OO   MM ,M'   Yb 8I   `" 
+      MM     ,MP 8M""""""  MM    M8 8M""""""  MM    MM 8MI    MM 8M""""""  MM    MM 8M        MM 8M"""""" `YMMMa. 
+      MM    ,dP' YM.    ,  MM   ,AP YM.    ,  MM    MM `Mb    MM YM.    ,  MM    MM YM.    ,  MM YM.    , L.   I8 
+    .JMMmmmdP'    `Mbmmd'  MMbmmd'   `Mbmmd'.JMML  JMML.`Wbmd"MML.`Mbmmd'.JMML  JMML.YMbmd' .JMML.`Mbmmd' M9mmmP' 
+                           MM                                                                                     
+                         .JMML.                                                                                   
+    -->
+    <dependencies>
+        
+        <!-- logging -->
+        <dependency> 
+            <groupId>org.tinylog</groupId> 
+            <artifactId>tinylog</artifactId> 
+            <version>0.8</version> 
+        </dependency>
+        
+        <!-- options parsing -->
+        <dependency>
+            <groupId>net.sf.jopt-simple</groupId>
+            <artifactId>jopt-simple</artifactId>
+            <version>4.5</version>
+        </dependency>
+        
+        <!-- JUnit -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <!-- test assertions -->
+        <dependency>
+            <groupId>org.easytesting</groupId>
+            <artifactId>fest-assert-core</artifactId>
+            <version>2.0M10</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <!-- fault injection -->
+        <dependency>
+            <groupId>org.jboss.byteman</groupId>
+            <artifactId>byteman-bmunit</artifactId>
+            <version>2.1.2</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <!-- tools RT -->
+        <dependency>
+            <groupId>com.sun</groupId>
+            <artifactId>tools</artifactId>
+            <version>1.6</version>
+            <scope>system</scope>
+            <systemPath>${java.home}/../lib/tools.jar</systemPath>
+        </dependency>
+        
+    </dependencies>
+    
+    <!--
+                                                                 
+                                    ,...,,    ,,                  
+     `7MM"""Mq.                   .d' ""db  `7MM                  
+       MM   `MM.                  dM`         MM                  
+       MM   ,M9 `7Mb,od8 ,pW"Wq. mMMmm`7MM    MM  .gP"Ya  ,pP"Ybd 
+       MMmmdM9    MM' "'6W'   `Wb MM    MM    MM ,M'   Yb 8I   `" 
+       MM         MM    8M     M8 MM    MM    MM 8M"""""" `YMMMa. 
+       MM         MM    YA.   ,A9 MM    MM    MM YM.    , L.   I8 
+     .JMML.     .JMML.   `Ybmd9'.JMML..JMML..JMML.`Mbmmd' M9mmmP' 
+
+                                                             
+    -->
+    <profiles>
+        <profile>
+            <id>site</id>
+            
+            <build>
+                
+                <plugins>
+                    
+                    <!-- site configuration -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-site-plugin</artifactId>
+                        <version>3.2</version>
+                        <configuration>
+                            <!--<locales>en,fr</locales>-->
+                            <reportPlugins>
+                                <plugin>
+                                    <groupId>org.apache.maven.plugins</groupId>
+                                    <artifactId>maven-project-info-reports-plugin</artifactId>
+                                    <version>2.4</version>
+                                    <configuration>
+                                        <dependencyDetailsEnabled>false</dependencyDetailsEnabled>
+                                        <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
+                                    </configuration>
+                                    <reports>
+                                        <report>index</report>
+                                        <report>project-team</report>
+                                        <!--<report>license</report>-->
+                                        <!--<report>mailing-list</report>-->
+                                        <report>dependencies</report>
+                                        <report>dependency-convergence</report>
+                                        <report>plugin-management</report>
+                                        <!--<report>cim</report>-->
+                                        <!--<report>issue-tracking</report>-->
+                                        <report>scm</report>
+                                        <report>summary</report>
+                                    </reports>
+                                </plugin>
+                                
+                                <!-- tests reporting -->
+                                <plugin>
+                                    <groupId>org.apache.maven.plugins</groupId>
+                                    <artifactId>maven-surefire-report-plugin</artifactId>
+                                    <version>2.12.4</version>
+                                </plugin>
+                                
+                                <!-- unit test code coverage -->
+                                <plugin>
+                                    <groupId>org.jacoco</groupId>
+                                    <artifactId>jacoco-maven-plugin</artifactId>
+                                    <version>${jacoco-version}</version>
+                                    <configuration>
+                                        <!-- Sets the path to the file which contains the execution data. -->
+                                        <dataFile>${project.build.directory}/coverage-reports/jacoco-ut.exec</dataFile>
+                                        <!-- Sets the output directory for the code coverage report. -->
+                                        <outputDirectory>${project.reporting.outputDirectory}/jacoco-ut</outputDirectory>
+                                    </configuration>
+                                </plugin>
+                        
+                                <plugin>
+                                    <groupId>org.apache.maven.plugins</groupId>
+                                    <artifactId>maven-javadoc-plugin</artifactId>
+                                    <version>2.9</version>
+                                    <configuration>
+                                
+                                        <!-- custom css -->
+                                        <stylesheetfile>${basedir}/src/site/resources/css/javadoc.css</stylesheetfile>
+                                        
+                                    </configuration>
+                                </plugin>
+                        
+                                <!-- findbugs -->
+                                <plugin>
+                                    <groupId>org.codehaus.mojo</groupId>
+                                    <artifactId>findbugs-maven-plugin</artifactId>
+                                    <version>2.5.2</version>
+                                    <configuration>
+                                        <argLine>-Xmx256m</argLine>
+                                        <argLine>-XX:MaxPermSize=256m</argLine>
+                                    </configuration>
+                                </plugin>
+                        
+                                <!-- jdepend for package cycles -->
+                                <plugin>
+                                    <groupId>org.codehaus.mojo</groupId>
+                                    <artifactId>jdepend-maven-plugin</artifactId>
+                                </plugin>
+                        
+                                <!-- pmd -->
+                                <plugin>
+                                    <groupId>org.apache.maven.plugins</groupId>
+                                    <artifactId>maven-pmd-plugin</artifactId>
+                                    <version>2.7.1</version>
+                                    <configuration>
+                                        <linkXref>true</linkXref>
+                                        <minimumTokens>100</minimumTokens>
+                                        <minimumPriority>3</minimumPriority>
+                                        <targetJdk>1.5</targetJdk>
+                                    </configuration>
+                                </plugin>
+                        
+                                <!-- todo tags check -->
+                                <plugin>
+                                    <groupId>org.codehaus.mojo</groupId>
+                                    <artifactId>taglist-maven-plugin</artifactId>
+                                    <version>2.4</version>
+                                </plugin>
+                        
+                            </reportPlugins>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>make-site</id> 
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>site</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    
+                </plugins>
+                
+            </build>
+        </profile>
+    </profiles>
+</project>

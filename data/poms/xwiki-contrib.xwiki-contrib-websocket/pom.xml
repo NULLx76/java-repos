@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+-->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.xwiki.contrib</groupId>
+    <artifactId>parent-platform</artifactId>
+    <version>11.10-1</version>
+  </parent>
+  <artifactId>xwiki-contrib-websocket</artifactId>
+  <name>WebSocket Integration</name>
+  <version>1.10-SNAPSHOT</version>
+  <description>Adds support for creating WebSocket enabled applications in XWiki</description>
+  <developers>
+    <developer>
+      <id>cjdelisle</id>
+      <name>Caleb James DeLisle</name>
+    </developer>
+    <developer>
+      <id>dgervalle</id>
+      <name>Denis Gervalle</name>
+    </developer>
+    <developer>
+      <id>mouhb</id>
+      <name>Mohamed Boussaa</name>
+    </developer>
+  </developers>
+  <scm>
+    <connection>scm:git:git://github.com/xwiki-contrib/xwiki-contrib-websocket.git</connection>
+    <developerConnection>scm:git:git@github.com:xwiki-contrib/xwiki-contrib-websocket.git</developerConnection>
+    <url>https://github.com/xwiki-contrib/xwiki-contrib-websocket</url>
+    <tag>HEAD</tag>
+  </scm>
+  <properties>
+    <!-- The extension name shown in the Extension Manager -->
+    <xwiki.extension.name>[Deprecated] WebSocket Integration</xwiki.extension.name>
+    <!-- The extension's category -->
+    <xwiki.extension.category>api</xwiki.extension.category>
+    <checkstyle.suppressions.location>${basedir}/src/checkstyle/checkstyle-suppressions.xml</checkstyle.suppressions.location>
+    <!-- Force the installation on root in order to ensure we start a single Netty server. -->
+    <xwiki.extension.namespaces>{root}</xwiki.extension.namespaces>
+    <xwiki.jacoco.instructionRatio>0.05</xwiki.jacoco.instructionRatio>
+    <!-- TODO: Drop this when upgrading the parent to 12.10 (which defines this property) -->
+    <netty.version>4.1.48.Final</netty.version>
+  </properties>
+  <dependencies>
+    <!-- WebSocket handlers are implemented as components. -->
+    <dependency>
+      <groupId>org.xwiki.commons</groupId>
+      <artifactId>xwiki-commons-component-api</artifactId>
+      <version>${commons.version}</version>
+    </dependency>
+    <!-- We need to initialize the XWikiContext for WebSocket handlers that may need it (e.g. to access the current user
+      or to access XWiki documents) -->
+    <dependency>
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-oldcore</artifactId>
+      <version>${platform.version}</version>
+    </dependency>
+    <!-- Used to get information about the current request (e.g. to build the WebSocket URL). -->
+    <dependency>
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-container-servlet</artifactId>
+      <version>${platform.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>javax.servlet-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-handler</artifactId>
+      <version>${netty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-http</artifactId>
+      <version>${netty.version}</version>
+    </dependency>
+    <!-- Test dependencies -->
+    <dependency>
+      <groupId>org.xwiki.commons</groupId>
+      <artifactId>xwiki-commons-tool-test-component</artifactId>
+      <version>${commons.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.revapi</groupId>
+        <artifactId>revapi-maven-plugin</artifactId>
+        <configuration>
+          <analysisConfiguration><![CDATA[
+            {
+              "revapi": {
+                "ignore" : [
+                  {
+                    "code": "java.class.removed",
+                    "old": "interface org.xwiki.contrib.websocket.WebSocket.Callback",
+                    "justification": "Replaced by Java standard interfaces (Consumer and Runnable)"
+                  },
+                  {
+                    "code": "java.method.removed",
+                    "old": "method java.util.Map<java.lang.String, java.util.List<java.lang.String>> org.xwiki.contrib.websocket.WebSocket::getParameters()",
+                    "justification": "Unused method that complicates the API"
+                  },
+                  {
+                    "code": "java.method.removed",
+                    "old": "method java.lang.String org.xwiki.contrib.websocket.WebSocket::getPath()",
+                    "justification": "Unused method that complicates the API"
+                  },
+                  {
+                    "code": "java.method.removed",
+                    "old": "method org.xwiki.model.reference.DocumentReference org.xwiki.contrib.websocket.WebSocket::getUser()",
+                    "justification": "Use instead the XWiki API to get the current user."
+                  },
+                  {
+                    "code": "java.method.removed",
+                    "old": "method java.lang.String org.xwiki.contrib.websocket.WebSocket::getWiki()",
+                    "justification": "Use instead the XWiki API to get the current wiki."
+                  },
+                  {
+                    "code": "java.method.parameterTypeChanged",
+                    "old": "parameter void org.xwiki.contrib.websocket.WebSocket::onDisconnect(===org.xwiki.contrib.websocket.WebSocket.Callback===)",
+                    "new": "parameter void org.xwiki.contrib.websocket.WebSocket::onDisconnect(===java.lang.Runnable===)",
+                    "justification": "Replaced custom callback interface with Java standard one"
+                  },
+                  {
+                    "code": "java.method.parameterTypeChanged",
+                    "old": "parameter void org.xwiki.contrib.websocket.WebSocket::onMessage(===org.xwiki.contrib.websocket.WebSocket.Callback===)",
+                    "new": "parameter void org.xwiki.contrib.websocket.WebSocket::onMessage(===java.util.function.Consumer<java.lang.String>===)",
+                    "justification": "Replaced custom callback interface with Java standard one"
+                  },
+                  {
+                    "code": "java.method.removed",
+                    "old": "method java.lang.String org.xwiki.contrib.websocket.WebSocket::recv()",
+                    "justification": "The message is now passed to the onMessage callback"
+                  },
+                  {
+                    "code": "java.method.addedToInterface",
+                    "new": "method void org.xwiki.contrib.websocket.WebSocketHandler::onConnect(org.xwiki.contrib.websocket.WebSocket)",
+                    "justification": "Replaces onWebSocketConnect"
+                  },
+                  {
+                    "code": "java.method.removed",
+                    "old": "method void org.xwiki.contrib.websocket.WebSocketHandler::onWebSocketConnect(org.xwiki.contrib.websocket.WebSocket)",
+                    "justification": "Renamed to onConnect"
+                  },
+                  {
+                    "code": "java.class.removed",
+                    "old": "class org.xwiki.contrib.websocket.script.XWikiWebSocketScriptService",
+                    "justification": "Renamed to WebSocketScriptService"
+                  }
+                ]
+              }
+            }
+          ]]></analysisConfiguration>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

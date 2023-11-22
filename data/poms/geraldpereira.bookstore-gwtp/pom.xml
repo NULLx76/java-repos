@@ -1,0 +1,386 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>fr.gpereira.bookstore</groupId>
+	<artifactId>bookstore-gwtp</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>war</packaging>
+
+	<properties>
+		<!-- client -->
+		<gwt.version>2.5.1</gwt.version>
+		<gwtp.version>1.0.1</gwtp.version>
+		<gin.version>2.0.0</gin.version>
+
+		<!-- server -->
+		<guice.version>3.0</guice.version>
+
+		<restygwt.version>1.3.1</restygwt.version>
+		<jsr311-api.version>1.1.1</jsr311-api.version>
+		<guava.version>14.0.1</guava.version>
+
+		<!-- testing -->
+		<junit.version>4.11</junit.version>
+		<jukito.version>1.1</jukito.version>
+
+		<!-- maven -->
+		<gwt-maven-plugin.version>2.5.0</gwt-maven-plugin.version>
+		<maven-surefire-plugin.version>2.6</maven-surefire-plugin.version>
+		<maven-compiler-plugin.version>2.3.2</maven-compiler-plugin.version>
+		<maven-resources-plugin.version>2.5</maven-resources-plugin.version>
+		<maven-processor-plugin.version>2.0.5</maven-processor-plugin.version>
+		<maven-build-helper-plugin.version>1.7</maven-build-helper-plugin.version>
+
+		<target.jdk>1.6</target.jdk>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+		<webappDirectory>${project.build.directory}/${project.build.finalName}</webappDirectory>
+
+		<!-- <bootstrap.version>2.2.1.0</bootstrap.version> -->
+		<bootstrap.version>2.3.2.0-SNAPSHOT</bootstrap.version>
+
+		<beanstalk-maven-plugin.version>0.2.8</beanstalk-maven-plugin.version>
+		<maven.build.timestamp.format>yyyyMMddHHmmss</maven.build.timestamp.format>
+	</properties>
+
+	<profiles>
+		<profile>
+			<id>dev</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+				<property>
+					<name>skipPermutations</name>
+				</property>
+			</activation>
+			<build>
+				<plugins>
+					<!-- GWT -->
+					<!-- 'mvn gwt:run' - runs development mode -->
+					<!-- 'mvn gwt:debug' - runs debug mode -->
+					<!-- 'mvn gwt:compile' - compiles gwt -->
+					<!-- 'mvn integration-test' - runs the gwt tests (*GwtTest.java) -->
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>gwt-maven-plugin</artifactId>
+						<version>${gwt.version}</version>
+						<configuration>
+							<!-- With multiple tests use GwtTestSuite.java for speed -->
+							<includes>**/*GwtTest.java</includes>
+							<extraJvmArgs>-Xss1024K -Xmx1024M -XX:MaxPermSize=256M</extraJvmArgs>
+
+							<copyWebapp>true</copyWebapp>
+							<hostedWebapp>${webappDirectory}</hostedWebapp>
+
+							<!-- DEV only -->
+							<draftCompile>true</draftCompile>
+							<optimizationLevel>0</optimizationLevel>
+							<disableAggressiveOptimization>true</disableAggressiveOptimization>
+							<userAgents>safari</userAgents>
+							<disableCastChecking>true</disableCastChecking>
+							<disableClassMetadata>true</disableClassMetadata>
+							<!-- DEV only -->
+
+							<runTarget>Project.html</runTarget>
+							<modules>
+								<module>fr.gpereira.bookstore.Project</module>
+							</modules>
+
+						</configuration>
+						<executions>
+							<execution>
+								<goals>
+									<goal>compile</goal>
+									<goal>test</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>prod</id>
+			<build>
+				<plugins>
+					<!-- GWT -->
+					<!-- 'mvn gwt:run' - runs development mode -->
+					<!-- 'mvn gwt:debug' - runs debug mode -->
+					<!-- 'mvn gwt:compile' - compiles gwt -->
+					<!-- 'mvn integration-test' - runs the gwt tests (*GwtTest.java) -->
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>gwt-maven-plugin</artifactId>
+						<version>${gwt.version}</version>
+						<configuration>
+							<!-- With multiple tests use GwtTestSuite.java for speed -->
+							<includes>**/*GwtTest.java</includes>
+							<extraJvmArgs>-Xss1024K -Xmx1024M -XX:MaxPermSize=256M</extraJvmArgs>
+
+							<copyWebapp>true</copyWebapp>
+							<hostedWebapp>${webappDirectory}</hostedWebapp>
+							<runTarget>Project.html</runTarget>
+							<modules>
+								<module>fr.gpereira.bookstore.Project</module>
+							</modules>
+						</configuration>
+						<executions>
+							<execution>
+								<goals>
+									<goal>compile</goal>
+									<goal>test</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+
+					<plugin>
+						<groupId>br.com.ingenieux</groupId>
+						<artifactId>beanstalk-maven-plugin</artifactId>
+						<version>${beanstalk-maven-plugin.version}</version>
+						<configuration>
+							<applicationName>bookstore-gwtp</applicationName>
+							<environmentName>bookstore-gwtp</environmentName>
+							<cnamePrefix>bookstore-gwtp</cnamePrefix>
+							<region>eu-west-1</region>
+							<versionLabel>Bookstore GWTP ${project.version}
+								${maven.build.timestamp}</versionLabel>
+							<versionDescription>Deployed from maven</versionDescription>
+							<s3Bucket>elasticbeanstalk-eu-west-1-746400314410</s3Bucket>
+							<s3Key>${project.artifactId}/${project.build.finalName}-${maven.build.timestamp}.war</s3Key>
+							<accessKey>xxx</accessKey>
+							<secretKey>xxx</secretKey>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+	
+	<build>
+		<outputDirectory>${webappDirectory}/WEB-INF/classes</outputDirectory>
+
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${maven-compiler-plugin.version}</version>
+				<configuration>
+					<source>${target.jdk}</source>
+					<target>${target.jdk}</target>
+					<encoding>${project.build.sourceEncoding}</encoding>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<version>2.4</version>
+				<executions>
+					<execution>
+						<phase>compile</phase>
+						<goals>
+							<goal>exploded</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<webappDirectory>${webappDirectory}</webappDirectory>
+					<!-- <packagingExcludes>WEB-INF/**</packagingExcludes> -->
+				</configuration>
+			</plugin>
+
+			<!-- JUnit Testing - skip *.GwtTest cases -->
+			<!-- 'mvn test' - runs the Jukito tests -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>${maven-surefire-plugin.version}</version>
+				<configuration>
+					<includes>
+						<include>**/*Test.java</include>
+					</includes>
+					<excludes>
+						<exclude>**/*GwtTest.java</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+
+			<!-- <plugin>
+				<groupId>com.google.appengine</groupId>
+				<artifactId>appengine-maven-plugin</artifactId>
+				<version>1.8.3</version>
+			</plugin> -->
+		</plugins>
+	</build>
+
+	<dependencies>
+		<!-- GAE -->
+		<!-- <dependency>
+			<groupId>com.google.appengine</groupId>
+			<artifactId>appengine-api-1.0-sdk</artifactId>
+			<version>1.8.3</version>
+		</dependency>
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>servlet-api</artifactId>
+			<version>2.5</version>
+			<scope>provided</scope>
+		</dependency> -->
+
+		<!-- Proxy servlet -> No S3 hosting :( -->
+		<dependency>
+			<groupId>org.mortbay.jetty</groupId>
+			<artifactId>jetty-util</artifactId>
+			<version>6.1.22</version>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!-- Guava -->
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava-gwt</artifactId>
+			<version>${guava.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>${guava.version}</version>
+		</dependency>
+
+		<!-- REstyGWT -->
+		<dependency>
+			<groupId>org.fusesource.restygwt</groupId>
+			<artifactId>restygwt</artifactId>
+			<version>${restygwt.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>javax.ws.rs</groupId>
+			<artifactId>jsr311-api</artifactId>
+			<version>${jsr311-api.version}</version>
+		</dependency>
+
+		<!-- Model -->
+
+		<dependency>
+			<groupId>fr.gpereira.bookstore</groupId>
+			<artifactId>bookstore-model</artifactId>
+			<version>[0.0.2-SNAPSHOT,)</version>
+		</dependency>
+
+		<!-- Bean validation -->
+
+		<dependency>
+			<groupId>javax.validation</groupId>
+			<artifactId>validation-api</artifactId>
+			<version>1.1.0.Final</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.6.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>1.6.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.16</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-validator</artifactId>
+			<version>4.1.0.Final</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-validator</artifactId>
+			<version>4.1.0.Final</version>
+			<classifier>sources</classifier>
+		</dependency>
+
+		<!-- validation-api-1.0.0.GA.jar slf4j-api-1.6.1.jar slf4j-log4j12-1.6.1.jar 
+			log4j-1.2.16.jar hibernate-validator-4.1.0.Final.jar hibernate-validator-4.1.0.Final-sources.jar -->
+
+		<dependency>
+			<groupId>com.github.gwtbootstrap</groupId>
+			<artifactId>gwt-bootstrap</artifactId>
+			<version>${bootstrap.version}</version>
+		</dependency>
+
+		<!-- Google Web Toolkit -->
+		<dependency>
+			<groupId>com.google.gwt</groupId>
+			<artifactId>gwt-user</artifactId>
+			<version>${gwt.version}</version>
+		</dependency>
+
+		<!-- GWT-Platform -->
+		<dependency>
+			<groupId>com.gwtplatform</groupId>
+			<artifactId>gwtp-mvp-client</artifactId>
+			<version>${gwtp.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.gwtplatform</groupId>
+			<artifactId>gwtp-dispatch-client</artifactId>
+			<version>${gwtp.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.gwtplatform</groupId>
+			<artifactId>gwtp-dispatch-server-guice</artifactId>
+			<version>${gwtp.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.gwtplatform</groupId>
+			<artifactId>gwtp-dispatch-shared</artifactId>
+			<version>${gwtp.version}</version>
+		</dependency>
+
+		<!-- DI -->
+		<dependency>
+			<groupId>com.google.inject</groupId>
+			<artifactId>guice</artifactId>
+			<version>${guice.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.inject.extensions</groupId>
+			<artifactId>guice-servlet</artifactId>
+			<version>${guice.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.inject.extensions</groupId>
+			<artifactId>guice-assistedinject</artifactId>
+			<version>${guice.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.gwt.inject</groupId>
+			<artifactId>gin</artifactId>
+			<version>${gin.version}</version>
+		</dependency>
+
+		<!-- Test -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>${junit.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.jukito</groupId>
+			<artifactId>jukito</artifactId>
+			<version>${jukito.version}</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+</project>

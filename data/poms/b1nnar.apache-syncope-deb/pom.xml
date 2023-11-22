@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.apache.syncope</groupId>
+        <artifactId>syncope</artifactId>
+        <version>1.1.4</version>
+    </parent>
+
+    <properties>
+        <syncope.version>1.1.4</syncope.version>
+        <connid.location>file:/opt/syncope/bundles</connid.location>
+        <log.directory>/opt/syncope/log</log.directory>
+        <tomcat-jdbc.version>7.0.28</tomcat-jdbc.version>
+        <postgresql-jdbc.version>9.1-901.jdbc4</postgresql-jdbc.version>
+        <jdbc.location>/usr/share/tomcat7/lib</jdbc.location>
+        <jdeb.version>1.0.1</jdeb.version>
+        <maven-resources-plugin.version>2.6</maven-resources-plugin.version>
+        <webapp.deployLocation>/var/lib/tomcat7/webapps</webapp.deployLocation>
+        <debian.dependencies>tomcat7,postgresql-9.1</debian.dependencies>
+        <console.finalName>console</console.finalName>
+        <core.finalName>syncope</core.finalName>
+        <packager.finalName>syncope-packager</packager.finalName>
+        <maven-release-plugin.version>2.4.1</maven-release-plugin.version>
+        <maven-gpg-plugin.version>1.4</maven-gpg-plugin.version>
+
+        <!--security configuration in core/src/main/resources/META-INF/security.properties-->
+        <security.username>admin</security.username>
+        <security.password>5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8</security.password>
+        <security.passwordAlgorithm>SHA1</security.passwordAlgorithm>
+        <security.secretKey>ro.b1nnar.projects.apache-syncope-deb</security.secretKey>
+
+        <!--database configuration in core/src/main/resources/META-INF/persistence.properties-->
+        <database.username>syncope</database.username>
+        <database.password>password</database.password>
+    </properties>
+
+    <groupId>ro.b1nnar.projects</groupId>
+    <artifactId>apache-syncope-deb</artifactId>
+    <version>0.3-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>Apache Syncope :: Debian Packager</name>
+    <description>Generates a debian package for installing Apache Syncope web application with Apache Tomcat 7 servlet container</description>
+
+    <scm>
+        <connection>scm:git:https://github.com/b1nnar/apache-syncope-deb.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com:b1nnar/apache-syncope-deb.git</developerConnection>
+        <url>https://github.com/b1nnar/apache-syncope-deb</url>
+        <tag>v0.2</tag>
+    </scm>
+
+    <dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.syncope</groupId>
+            <artifactId>syncope-client</artifactId>
+            <version>${syncope.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.syncope</groupId>
+            <artifactId>syncope-build-tools</artifactId>
+            <version>${syncope.version}</version>
+            <type>war</type>
+            <scope>test</scope>
+        </dependency>
+            
+        <dependency>
+            <groupId>org.apache.syncope</groupId>
+            <artifactId>syncope-core</artifactId>
+            <version>${syncope.version}</version>
+            <type>war</type>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.syncope</groupId>
+            <artifactId>syncope-core</artifactId>
+            <version>${syncope.version}</version>
+            <classifier>classes</classifier>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.syncope</groupId>
+            <artifactId>syncope-console</artifactId>
+            <version>${syncope.version}</version>
+            <type>war</type>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.syncope</groupId>
+            <artifactId>syncope-console</artifactId>
+            <version>${syncope.version}</version>
+            <classifier>classes</classifier>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    </dependencyManagement>
+    
+    <build>
+    
+        <pluginManagement>
+
+          <plugins>
+            <!-- Disable LICENSE / NOTICE inclusion: see SYNCOPE-84 -->
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-war-plugin</artifactId>
+              <inherited>false</inherited>
+              <configuration>
+                <webResources>
+                  <resource>
+                    <directory>src/main/webapp</directory>
+                    <includes>
+                      <include>**/*.jsp</include>
+                    </includes>
+                    <filtering>true</filtering>
+                  </resource>
+                </webResources>
+              </configuration>
+            </plugin>
+          </plugins>
+
+        </pluginManagement>
+
+        <plugins>
+
+          <!-- Disable legal check for generated projects: see SYNCOPE-84 -->
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>ianal-maven-plugin</artifactId>
+            <inherited>true</inherited>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>verify-legal-files</goal>
+                </goals>
+                <phase>none</phase>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.rat</groupId>
+            <artifactId>apache-rat-plugin</artifactId>
+            <inherited>true</inherited>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>check</goal>
+                </goals>
+                <phase>none</phase>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-release-plugin</artifactId>
+            <version>${maven-release-plugin.version}</version>
+            <configuration>
+                    <tagNameFormat>v@{project.version}</tagNameFormat>
+                    <pushChanges>false</pushChanges>
+                    <localCheckout>true</localCheckout>
+            </configuration>
+          </plugin>
+
+          <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-gpg-plugin</artifactId>
+              <version>${maven-gpg-plugin.version}</version>
+              <configuration>
+                  <skip>true</skip>
+              </configuration>
+          </plugin>
+
+        </plugins>
+
+    </build>
+
+    <modules>
+        <module>core</module>
+        <module>console</module>
+        <module>packager</module>
+    </modules>
+
+    <developers>
+        <developer>
+            <id>b1nnar</id>
+            <name>Alexandru</name>
+            <email>piticas.alexandru@gmail.com</email>
+            <organization>b1nnar</organization>
+        </developer>
+    </developers>
+
+</project>

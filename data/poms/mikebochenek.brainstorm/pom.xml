@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>ca.bochenek</groupId>
+	<artifactId>brainstorm</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>war</packaging>
+
+	<name>brainstorm</name>
+
+	<properties>
+		<endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<glassfish.home>/home/mike/Dev/glassfish4</glassfish.home>
+		<domain.username>admin</domain.username>
+		<domain.password>admin</domain.password>
+	</properties>
+
+	<repositories>
+		<repository>
+			<id>Java EE 7</id>
+			<url>https://maven.java.net/content/groups/promoted/</url>
+		</repository>
+	</repositories>
+
+	<dependencies>
+		<dependency>
+			<groupId>javax</groupId>
+			<artifactId>javaee-web-api</artifactId>
+			<version>7.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>javax</groupId>
+			<artifactId>javaee-web-api</artifactId>
+			<version>7.0-b86</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>javax</groupId>
+			<artifactId>javaee-api</artifactId>
+			<version>7.0-b86</version>
+			<scope>provided</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.1</version>
+				<configuration>
+					<source>1.7</source>
+					<target>1.7</target>
+					<compilerArguments>
+						<endorseddirs>${endorsed.dir}</endorseddirs>
+					</compilerArguments>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<version>2.3</version>
+				<configuration>
+					<failOnMissingWebXml>false</failOnMissingWebXml>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<version>2.6</version>
+				<executions>
+					<execution>
+						<phase>install</phase>
+						<goals>
+							<goal>copy</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${endorsed.dir}</outputDirectory>
+							<silent>true</silent>
+							<artifactItems>
+								<artifactItem>
+									<groupId>javax</groupId>
+									<artifactId>javaee-endorsed-api</artifactId>
+									<version>7.0</version>
+									<type>jar</type>
+								</artifactItem>
+							</artifactItems>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<!--  https://maven-glassfish-plugin.java.net/examples/complete.html
+						Goals Overview
+					glassfish:create-domain Create a new Glassfish domain. (Creating an existing domain will cause it to be deleted and recreated.)
+					glassfish:start-domain Start an existing Glassfish domain. (Starting a non-existent domain will cause it to be created.)
+					glassfish:deploy Deploy JavaEE artifacts to a running domain. (Deploying to an inactive domain will cause it to be started and created if necessary.)
+					glassfish:redeploy Redeploy JavaEE artifacts to a running domain. (Cold redeployment by first calling undeploy and then deploy . Use deploy to effect a hot deployment.)
+					glassfish:undeploy Undeploy JavaEE components from a running domain.
+					glassfish:stop-domain Stop a running Glassfish domain.
+					glassfish:delete-domain Delete an existing Glassfish domain. -->
+				<groupId>org.glassfish.maven.plugin</groupId>
+				<artifactId>maven-glassfish-plugin</artifactId>
+				<version>2.1</version>
+				<configuration>
+					<glassfishDirectory>${glassfish.home}</glassfishDirectory>
+					<user>${domain.username}</user>
+					<adminPassword>${domain.password}</adminPassword>
+					<!-- <passFile>path/to/asadmin/passfile</passFile> -->
+					<autoCreate>true</autoCreate>
+					<debug>true</debug>
+					<echo>false</echo>
+					<terse>true</terse>
+					<skip>${test.int.skip}</skip>
+					<domain>
+						<name>${project.artifactId}</name>
+						<adminPort>4848</adminPort>
+						<httpPort>8080</httpPort>
+						<httpsPort>8443</httpsPort>
+						<iiopPort>3700</iiopPort>
+						<jmsPort>7676</jmsPort>
+						<reuse>false</reuse>
+						<jvmOptions>
+							<option>-Djava.security.auth.login.config=${project.build.testOutputDirectory}/login.conf</option>
+						</jvmOptions>
+						<properties>
+							<property>
+								<name>server.log-service.file</name>
+								<value>${domain.log.dir}/server.log</value>
+							</property>
+						</properties>
+						<auth>
+							<realm>
+								<name>testRealm</name>
+								<className>com.sun.enterprise.security.auth.realm.file.FileRealm</className>
+								<properties>
+									<property>
+										<name>jaas-context</name>
+										<value>test</value>
+									</property>
+									<property>
+										<name>file</name>
+										<value>${project.build.outputDirectory}/keyfile</value>
+									</property>
+								</properties>
+							</realm>
+						</auth>
+						<!-- <resourceDescriptor>path/to/resources.xml</resourceDescriptor> -->
+						<resources>
+							<connectionFactory>
+								<jndiName>jms/queue/myqueue</jndiName>
+								<properties>
+									<property>
+										<name>UserName</name>
+										<value>guest</value>
+									</property>
+									<property>
+										<name>Password</name>
+										<value>guest</value>
+									</property>
+									<property>
+										<name>AddressList</name>
+										<value>localhost:7676</value>
+									</property>
+								</properties>
+							</connectionFactory>
+							<jdbcDataSource>
+								<name>SomeDS</name>
+								<type>connectionPoolDataSource</type>
+								<poolName>SomePool</poolName>
+								<className>com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource</className>
+								<description>Some JDBC Connection Pool</description>
+								<allowNonComponentCallers>false</allowNonComponentCallers>
+								<validateConnections>true</validateConnections>
+								<validationMethod>metaData</validationMethod>
+								<properties>
+									<property>
+										<name>portNumber</name>
+										<value>3306</value>
+									</property>
+									<property>
+										<name>password</name>
+										<value></value>
+									</property>
+									<property>
+										<name>user</name>
+										<value>test</value>
+									</property>
+									<property>
+										<name>serverName</name>
+										<value>localhost</value>
+									</property>
+									<property>
+										<name>databaseName</name>
+										<value>test</value>
+									</property>
+								</properties>
+							</jdbcDataSource>
+						</resources>
+					</domain>
+					<components>
+						<component>
+							<name>${project.artifactId}</name>
+							<artifact>${project.build.directory}/${project.build.finalName}.war</artifact>
+						</component>
+					</components>
+				</configuration>
+			</plugin>
+
+		</plugins>
+	</build>
+
+</project>

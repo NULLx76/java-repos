@@ -1,0 +1,330 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.github.shyiko.rook</groupId>
+    <artifactId>rook</artifactId>
+    <packaging>pom</packaging>
+    <version>0.1.4-SNAPSHOT</version>
+
+    <name>rook</name>
+    <description>Change Data Capture (CDC) toolkit for keeping system layers in sync with the database</description>
+    <url>https://github.com/shyiko/rook</url>
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <scm>
+        <connection>scm:git:git@github.com:shyiko/rook.git</connection>
+        <developerConnection>scm:git:git@github.com:shyiko/rook.git</developerConnection>
+        <url>git@github.com:shyiko/rook.git</url>
+    </scm>
+    <developers>
+        <developer>
+            <id>stanley.shyiko</id>
+            <email>stanley.shyiko@gmail.com</email>
+            <name>Stanley Shyiko</name>
+        </developer>
+    </developers>
+    <distributionManagement>
+        <repository>
+            <id>sonatype-nexus-staging</id>
+            <name>Sonatype Nexus Staging</name>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
+        </repository>
+        <snapshotRepository>
+            <id>sonatype-nexus-snapshots</id>
+            <name>Sonatype Nexus Snapshots</name>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
+
+    <modules>
+        <module>rook-api</module>
+        <module>rook-source-mysql</module>
+        <module>rook-target-hibernate4-cache</module>
+        <module>rook-target-hibernate4-fulltextindex</module>
+    </modules>
+
+    <reporting>
+        <plugins>
+            <plugin>
+                <!-- added to suppress "[WARNING] Unable to locate Source XRef to link to - DISABLED" -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jxr-plugin</artifactId>
+                <version>2.3</version>
+            </plugin>
+        </plugins>
+    </reporting>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>2.9.1</version>
+                <configuration>
+                    <failsOnError>true</failsOnError>
+                    <configLocation>supplement/codequality/checkstyle.xml</configLocation>
+                    <headerLocation>supplement/codequality/license.header</headerLocation>
+                    <includeTestSourceDirectory>true</includeTestSourceDirectory>
+                    <consoleOutput>true</consoleOutput>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>checkstyle</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.github.shyiko</groupId>
+                        <artifactId>checkstyle-nonstandard</artifactId>
+                        <version>0.1.0</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>2.8.2</version>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.github.shyiko.usage-maven-plugin</groupId>
+                <artifactId>usage-maven-plugin</artifactId>
+                <version>1.0.0</version>
+                <configuration>
+                    <usage>
+                        # build everything (append "-DskipTests=true" if you wish to skip tests)
+                        mvn clean install
+
+                        # run unit + integration tests, validate codebase using checkstyle and measure test coverage
+                        mvn -P coverage,with-integration-tests clean verify
+                        mvn -P coverage -N antrun:run # for aggregated coverage results
+
+                        # submit coverage report to coveralls
+                        mvn -P coverage -N coveralls:jacoco -DrepoToken=&lt;coveralls.io&gt;
+
+                        # publish a new version
+                        ./mvnw versions:set -DnewVersion=&lt;version&gt;
+                        ./mvnw -s .mvn/settings.xml -Ddeploy=maven-central
+                    </usage>
+                </configuration>
+            </plugin>
+        </plugins>
+        <extensions>
+            <extension>
+                <groupId>com.github.shyiko.usage-maven-plugin</groupId>
+                <artifactId>usage-maven-plugin</artifactId>
+                <version>1.0.0</version>
+            </extension>
+        </extensions>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>coverage</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>0.5.5.201112152213</version>
+                        <configuration>
+                            <destFile>${basedir}/target/coverage-reports/jacoco-unit.exec</destFile>
+                            <dataFile>${basedir}/target/coverage-reports/jacoco-unit.exec</dataFile>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>jacoco-initialize</id>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>jacoco-site</id>
+                                <phase>post-integration-test</phase>
+                                <goals>
+                                    <goal>report</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>1.7</version>
+                        <configuration>
+                            <target>
+                                <typedef resource="org/jacoco/ant/antlib.xml" />
+                                <report>
+                                    <executiondata>
+                                        <fileset dir="rook-target-hibernate4-cache/target/coverage-reports" includes="jacoco-unit.exec" />
+                                        <fileset dir="supplement/integration-testing/hibernate4-cache-over-mysql/target/coverage-reports" includes="jacoco-unit.exec" />
+                                        <fileset dir="supplement/integration-testing/hibernate4-fulltextindex-over-mysql/target/coverage-reports" includes="jacoco-unit.exec" />
+                                    </executiondata>
+                                    <structure name="rook">
+                                        <group name="rook-api">
+                                            <classfiles>
+                                                <fileset dir="rook-api/target/classes" includes="**/*.class" />
+                                            </classfiles>
+                                            <sourcefiles>
+                                                <fileset dir="rook-api/src/main/java" />
+                                            </sourcefiles>
+                                        </group>
+                                        <group name="rook-source-mysql">
+                                            <classfiles>
+                                                <fileset dir="rook-source-mysql/target/classes" includes="**/*.class" />
+                                            </classfiles>
+                                            <sourcefiles>
+                                                <fileset dir="rook-source-mysql/src/main/java" />
+                                            </sourcefiles>
+                                        </group>
+                                        <group name="rook-target-hibernate4-cache">
+                                            <classfiles>
+                                                <fileset dir="rook-target-hibernate4-cache/target/classes" includes="**/*.class" />
+                                            </classfiles>
+                                            <sourcefiles>
+                                                <fileset dir="rook-target-hibernate4-cache/src/main/java" />
+                                            </sourcefiles>
+                                        </group>
+                                        <group name="rook-target-hibernate4-fulltextindex">
+                                            <classfiles>
+                                                <fileset dir="rook-target-hibernate4-fulltextindex/target/classes" includes="**/*.class" />
+                                            </classfiles>
+                                            <sourcefiles>
+                                                <fileset dir="rook-target-hibernate4-fulltextindex/src/main/java" />
+                                            </sourcefiles>
+                                        </group>
+                                    </structure>
+                                    <html destdir="${project.build.directory}/coverage" />
+                                    <csv destfile="${project.build.directory}/coverage/coverage.csv" />
+                                    <xml destfile="${project.build.directory}/coverage/coverage.xml" />
+                                </report>
+                                <echo message="Report saved to ${project.build.directory}/coverage/index.html" />
+                            </target>
+                        </configuration>
+                        <dependencies>
+                            <dependency>
+                                <groupId>org.jacoco</groupId>
+                                <artifactId>org.jacoco.ant</artifactId>
+                                <version>0.6.3.201306030806</version>
+                            </dependency>
+                        </dependencies>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.eluder.coveralls</groupId>
+                        <artifactId>coveralls-maven-plugin</artifactId>
+                        <version>2.0.0</version>
+                        <configuration>
+                            <coverageFile>${project.build.directory}/coverage/coverage.xml</coverageFile>
+                            <sourceDirectories>
+                                <sourceDirectory>rook-api/src/main/java</sourceDirectory>
+                                <sourceDirectory>rook-source-mysql/src/main/java</sourceDirectory>
+                                <sourceDirectory>rook-target-hibernate4-cache/src/main/java</sourceDirectory>
+                                <sourceDirectory>rook-target-hibernate4-fulltextindex/src/main/java</sourceDirectory>
+                            </sourceDirectories>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>with-integration-tests</id>
+            <modules>
+                <module>supplement/integration-testing/hibernate4-cache-over-mysql</module>
+                <module>supplement/integration-testing/hibernate4-fulltextindex-over-mysql</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>deploy-to-maven-central</id>
+            <activation>
+                <property>
+                    <name>deploy</name>
+                    <value>maven-central</value>
+                </property>
+            </activation>
+            <build>
+                <defaultGoal>clean deploy</defaultGoal>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>3.0.1</version>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>2.9</version>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.6</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.sonatype.plugins</groupId>
+                        <artifactId>nexus-staging-maven-plugin</artifactId>
+                        <version>1.6.7</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                            <serverId>maven-central</serverId>
+                            <skipStagingRepositoryClose>true</skipStagingRepositoryClose>
+                            <!--<autoReleaseAfterClose>true</autoReleaseAfterClose>-->
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+</project>

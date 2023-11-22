@@ -1,0 +1,159 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>edu.umn.ao</groupId>
+  <artifactId>ao-batch-analyst</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>ao-batch-analyst</name>
+  <url>http://maven.apache.org</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+<repositories>
+    <!-- Hack to force maven to check central first. Maven central is inherited from the superpom,
+      but ends up at the end of the list. Though most of the time the artifact is in central, 
+      Maven tries to download from every other repository and fails before checking central.  
+      Do not change the id from central2 to central, otherwise the entry will be ignored. -->
+    <repository>
+      <id>central2</id>
+      <name>check central first to avoid a lot of not found warnings</name>
+      <url>http://repo1.maven.org/maven2</url>
+    </repository>    
+    <repository>
+        <id>download.java.net</id>
+        <name>Java.net Repository for Maven</name>
+        <url>http://download.java.net/maven/2/</url>
+        <layout>default</layout>
+    </repository>
+    <repository>
+      <id>releases.developer.onebusaway.org</id>
+      <url>http://developer.onebusaway.org/maven/repository/</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+    <repository>
+      <id>osgeo</id>
+      <name>Open Source Geospatial Foundation Repository</name>
+      <url>http://download.osgeo.org/webdav/geotools/</url>
+    </repository>
+    <repository>
+      <id>axis</id>
+      <name>axis</name>
+      <url>http://people.apache.org/repo/m1-ibiblio-rsync-repository/org.apache.axis2/</url>
+    </repository>
+    <repository>
+      <id>opengeo</id>
+      <name>OpenGeo Maven Repository</name>
+      <url>http://repo.opengeo.org/</url>
+    </repository>
+  </repositories>
+
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>3.8.1</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+    	<groupId>org.projectlombok</groupId>
+    	<artifactId>lombok</artifactId>
+    	<version>0.11.8</version>
+    </dependency>
+    <dependency>
+    	<groupId>org.opentripplanner</groupId>
+    	<artifactId>opentripplanner-analyst</artifactId>
+    	<version>0.9.2-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+    	<groupId>org.geotools</groupId>
+    	<artifactId>gt-shapefile</artifactId>
+    	<version>9.2</version>
+    </dependency>
+    <dependency>
+    	<groupId>org.geotools</groupId>
+    	<artifactId>gt-epsg-hsql</artifactId>
+    	<version>9.2</version>
+    </dependency>
+    <dependency>
+    	<groupId>com.sun.jersey</groupId>
+    	<artifactId>jersey-core</artifactId>
+    	<version>1.18</version>
+    </dependency>
+    <dependency>
+    	<groupId>org.geotools</groupId>
+    	<artifactId>gt-coverage</artifactId>
+    	<version>9.2</version>
+    </dependency>
+  </dependencies>
+      <build>
+      <plugins>
+        <!-- We want to create a standalone batch processor/analyst jar that can 
+          be run on the command line. Java does not really allow this - you cannot place jars
+          inside of jars. You must either provide all the dependency jars to the user in the original 
+          directory structure (usually lib/ under the directory containing the runnable jar) or 
+          explode all the jars and repackage them into a single jar.
+          The problem is that while class files are nicely organized into the package namespace and
+          should not collide, the META-INF directories of the jars will collide. Maven's standard
+          assembly plugin does not account for this and will just clobber metadata. This then
+          causes runtime errors, particularly with Spring.
+          Instead, we use the shade plugin which has transformers that will for example append files
+          of the same name rather than overwrite them in the combined JAR. NB: Don't use a version 
+          of the shade plugin older than 1.3.2, as it fixed MSHADE-76 (files not merged properly 
+          if some input files are missing a terminating newline) -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>1.7.1</version>
+          <executions>
+            <execution>
+              <phase>package</phase>
+              <goals>
+                <goal>shade</goal>
+              </goals>
+				<configuration>
+                <finalName>ao-otp-analyst</finalName> <!-- the shaded jar file's name --> 
+                <transformers>
+                  <transformer
+                    implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                    <resource>META-INF/spring.handlers</resource>
+                  </transformer>
+                  <transformer
+                    implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                    <resource>META-INF/spring.schemas</resource>
+                  </transformer>
+                  <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                  <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                    <!-- JAI-ImageIO will throw an IllegalArgumentException complaining that 
+                         vendorName == null because it depends on information from the manifest.
+                         This information is clobbered by the shading process and must be re-added.
+                         See: http://www.java.net/node/695773 -->
+                    <manifestEntries>
+                        <Main-Class>edu.umn.ao.ao_batch_analyst.AOBatchProcessor</Main-Class>
+                        <Specification-Title>Java Advanced Imaging Image I/O Tools</Specification-Title>
+                        <Specification-Version>1.1</Specification-Version>
+                        <Specification-Vendor>Sun Microsystems, Inc.</Specification-Vendor>
+                        <Implementation-Title>com.sun.media.imageio</Implementation-Title>
+                        <Implementation-Version>1.1</Implementation-Version>
+                        <Implementation-Vendor>Sun Microsystems, Inc.</Implementation-Vendor>
+                        <Extension-Name>com.sun.media.imageio</Extension-Name>
+                    </manifestEntries>
+                  </transformer>
+                </transformers>
+                <shadedArtifactAttached>true</shadedArtifactAttached>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </build>
+</project>

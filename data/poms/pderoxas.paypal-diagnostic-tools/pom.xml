@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.paypal.merchant.retail</groupId>
+    <artifactId>sdk-diagnostic-tools</artifactId>
+    <version>1.0.0</version>
+    <organization>
+        <name>PayPal</name>
+    </organization>
+
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+    </properties>
+
+    <repositories>
+        <repository>
+            <!-- Local Project Maven Repo //-->
+            <id>project.local</id>
+            <name>local-repo</name>
+            <url>file:${project.basedir}/repo</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+
+        <!-- PayPal POS SDK //-->
+        <dependency>
+            <groupId>com.paypal.merchant.retail.sdk</groupId>
+            <artifactId>paypal-retail-api-sdk</artifactId>
+            <version>1.0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.paypal.merchant.retail.sdk</groupId>
+            <artifactId>paypal-retail-api-log4jLogger</artifactId>
+            <version>1.0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.paypal.merchant.retail.sdk</groupId>
+            <artifactId>paypal-retail-api-sdk-resources</artifactId>
+            <version>1.0.1-SNAPSHOT</version>
+        </dependency>
+        <!-- End PayPal POS SDK //-->
+
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.7</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.7.7</version>
+        </dependency>
+
+        <!-- Third-party Tools -->
+        <dependency>
+            <groupId>org.controlsfx</groupId>
+            <artifactId>controlsfx</artifactId>
+            <version>8.0.6</version>
+        </dependency>
+        <dependency>
+            <groupId>com.thoughtworks.xstream</groupId>
+            <artifactId>xstream</artifactId>
+            <version>1.4.7</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.3.2</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>17.0</version>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <finalName>paypal-sdk-diagnostic-tools</finalName>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+        <plugins>
+
+            <plugin>
+                <groupId>com.zenjava</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>2.0</version>
+                <configuration>
+                    <mainClass>com.paypal.merchant.retail.tools.Main</mainClass>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.twdata.maven</groupId>
+                        <artifactId>mojo-executor</artifactId>
+                        <version>2.0</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>2.2</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>com.paypal.merchant.retail.tools.Main</mainClass>
+                                    <manifestEntries>
+                                        <!-- Define the classpath including the individual SDK jars -->
+                                        <Class-Path>./ ./paypal-pos-sdk.jar ./paypal-retail-api-log4jLogger.jar ./paypal-retail-api-sdk-resources.jar</Class-Path>
+                                        <Version>${version}</Version>
+                                        <Build-Time>${maven.build.timestamp}</Build-Time>
+                                        <Build-User>${user.name}</Build-User>
+                                        <Build-Java>${java.version}</Build-Java>
+                                        <Build-OS>${os.name}</Build-OS>
+                                        <Build-Label>${project.version}</Build-Label>
+                                        <Build-Path>${basedir}</Build-Path>
+                                    </manifestEntries>
+                                </transformer>
+                            </transformers>
+
+                            <filters>
+                                <filter>
+                                    <artifact>com.paypal.merchant.retail:*</artifact>
+                                    <!--exclude the config and sample files from the uber jar-->
+                                    <excludes>
+                                        <exclude>Config.xml</exclude>
+                                        <exclude>log4j.xml</exclude>
+                                        <exclude>sdk-tool-properties.xml</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.6</version>
+                <executions>
+                    <execution>
+                        <!--copy the external configs to the target/config dir-->
+                        <id>copy-configs</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>target</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${basedir}/src/main/resources/</directory>
+                                    <filtering>true</filtering>
+                                    <includes>
+                                        <include>**.xml</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <!-- copy the launch.cmd file to the target dir-->
+                        <id>copy-launch-file</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>target</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${basedir}/src/main/</directory>
+                                    <filtering>false</filtering>
+                                    <includes>
+                                        <include>launch.cmd</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
+</project>

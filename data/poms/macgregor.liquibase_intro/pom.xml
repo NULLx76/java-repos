@@ -1,0 +1,162 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.mmstratton.sandbox</groupId>
+	<artifactId>LiquibaseIntro</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>LiquibaseIntro</name>
+	<description>an introduction to Liquibase database migrations</description>
+
+	<dependencies>
+
+		<!-- Liquibase -->
+		<dependency>
+			<groupId>org.liquibase</groupId>
+			<artifactId>liquibase-core</artifactId>
+			<version>3.2.2</version>
+		</dependency>
+
+		<!-- Spring Dependencies -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context</artifactId>
+			<version>4.1.0.RELEASE</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-test</artifactId>
+			<version>4.1.0.RELEASE</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-jdbc</artifactId>
+			<version>4.1.0.RELEASE</version>
+		</dependency>
+
+		<!-- Postgresql JDBC Driver -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>9.3-1102-jdbc41</version>
+		</dependency>
+
+
+		<!-- H2 In Memory Database -->
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<version>1.4.181</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Needed for datasource class implementation -->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-dbcp2</artifactId>
+			<version>2.0.1</version>
+		</dependency>
+
+		<!-- Unit Testing -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.11</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Logging Framework -->
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>1.7.5</version>
+		</dependency>
+
+		<!-- Fix Liquibase's unique logging -->
+		<dependency>
+			<groupId>com.mattbertolini</groupId>
+			<artifactId>liquibase-slf4j</artifactId>
+			<version>1.2.1</version>
+		</dependency>
+
+	</dependencies>
+
+	<profiles>
+		<!-- use Postgres datasource configuration (default) -->
+		<profile>
+			<id>pg</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<properties>
+				<property.file>postgres.properties</property.file>
+			</properties>
+		</profile>
+		<!-- use h2 datasource configuration -->
+		<profile>
+			<id>h2</id>
+			<properties>
+				<property.file>h2.properties</property.file>
+			</properties>
+		</profile>
+	</profiles>
+
+	<build>
+		<pluginManagement>
+			<plugins>
+				<!-- Running Liquibase manually: mvn liquibase:update -->
+				<plugin>
+					<groupId>org.liquibase</groupId>
+					<artifactId>liquibase-maven-plugin</artifactId>
+					<version>3.1.0</version>
+					<dependencies>
+						<!-- dont forget to fix the ugly log output -->
+						<dependency>
+							<groupId>com.mattbertolini</groupId>
+							<artifactId>liquibase-slf4j</artifactId>
+							<version>1.2.1</version>
+						</dependency>
+					</dependencies>
+					<configuration>
+						<propertyFile>src/main/resources/${property.file}</propertyFile>
+					</configuration>
+					<executions>
+						<execution>
+							<phase>process-resources</phase>
+							<goals>
+								<goal>update</goal>
+							</goals>
+						</execution>
+					</executions>
+				</plugin>
+
+				<!-- mvn test configtuation -->
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-surefire-plugin</artifactId>
+					<dependencies>
+						<dependency>
+							<groupId>org.apache.maven.surefire</groupId>
+							<artifactId>surefire-junit4</artifactId>
+							<version>2.7.2</version>
+						</dependency>
+					</dependencies>
+					<configuration>
+						<includes>
+							<include>**/*Tests.java</include>
+						</includes>
+						<!-- Set system properties based on maven profile -->
+						<systemPropertyVariables>
+							<property.file>${property.file}</property.file>
+
+							<!-- dont use Spring Integration to run Liquibase -->
+							<!-- need to set any value so the unit test doesnt override it when 
+								it runs -->
+							<spring.profiles.active>default</spring.profiles.active>
+						</systemPropertyVariables>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+</project>

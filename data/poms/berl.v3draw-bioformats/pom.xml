@@ -1,0 +1,426 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+    http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>ome</groupId>
+  <artifactId>pom-bio-formats</artifactId>
+  <version>5.1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>Bio-Formats projects</name>
+  <description>Umbrella project for the Bio-Formats software project.</description>
+  <url>http://www.openmicroscopy.org/site/products/bio-formats</url>
+  <inceptionYear>2005</inceptionYear>
+
+  <modules>
+    <module>components/specification</module>
+    <module>components/forks/jai</module>
+    <module>components/forks/mdbtools</module>
+    <module>components/forks/poi</module>
+    <module>components/forks/turbojpeg</module>
+    <module>components/autogen</module>
+    <module>components/formats-api</module>
+    <module>components/formats-bsd</module>
+    <module>components/formats-gpl</module>
+    <module>components/bundles/bioformats_package</module>
+    <module>components/formats-common</module>
+    <module>components/bio-formats-plugins</module>
+    <module>components/bundles/loci-tools</module>
+    <module>components/metakit</module>
+    <module>components/bundles/ome-tools</module>
+    <module>components/ome-xml</module>
+    <module>components/bio-formats-tools</module>
+    <module>components/test-suite</module>
+    <module>components/stubs/lwf-stubs</module>
+    <module>components/xsd-fu</module>
+  </modules>
+
+  <properties>
+    <maven.build.timestamp.format>d MMMMM yyyy</maven.build.timestamp.format>
+
+    <vcs.revision>${revision}</vcs.revision>
+    <release.version>5.1.0-SNAPSHOT</release.version>
+    <date>${maven.build.timestamp}</date>
+    <year>2013</year>
+    <project.rootdir>${basedir}</project.rootdir>
+    <log4j.version>1.2.17</log4j.version>
+    <logback.version>1.0.9</logback.version>
+    <slf4j.version>1.7.2</slf4j.version>
+    <xsdfu.schemaver>2013-06</xsdfu.schemaver>
+    <xsdfu.schemapath>components/specification/released-schema/${xsdfu.schemaver}</xsdfu.schemapath>
+    <xsdfu.ome>${xsdfu.schemapath}/ome.xsd</xsdfu.ome>
+    <xsdfu.binaryfile>${xsdfu.schemapath}/BinaryFile.xsd</xsdfu.binaryfile>
+    <xsdfu.roi>${xsdfu.schemapath}/ROI.xsd</xsdfu.roi>
+    <xsdfu.sa>${xsdfu.schemapath}/SA.xsd</xsdfu.sa>
+    <xsdfu.spw>${xsdfu.schemapath}/SPW.xsd</xsdfu.spw>
+
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+  </properties>
+
+  <build>
+    <defaultGoal>install</defaultGoal>
+
+    <sourceDirectory>${project.basedir}/src</sourceDirectory>
+    <testSourceDirectory>${project.basedir}/test</testSourceDirectory>
+    <resources>
+      <resource>
+        <directory>${project.basedir}/src</directory>
+        <excludes>
+          <exclude>**/*.java</exclude>
+          <exclude>**/package.html</exclude>
+          <exclude>**/*.properties</exclude>
+        </excludes>
+      </resource>
+      <resource>
+        <targetPath>META-INF/lib</targetPath>
+        <directory>${project.basedir}/lib</directory>
+      </resource>
+      <resource>
+        <directory>${project.basedir}/src</directory>
+        <includes>
+          <include>**/*.properties</include>
+        </includes>
+        <filtering>true</filtering>
+      </resource>
+      <resource>
+        <directory>${project.basedir}</directory>
+        <includes>
+          <include>**/*.cpp</include>
+        </includes>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
+    <testResources>
+      <testResource>
+        <directory>${project.basedir}/test</directory>
+        <excludes>
+          <exclude>**/*.java</exclude>
+          <exclude>**/package.html</exclude>
+        </excludes>
+      </testResource>
+    </testResources>
+    <plugins>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+          <version>2.4</version>
+          <!-- Always add classpath to JAR manifests. -->
+          <configuration>
+            <archive>
+              <manifest>
+                <addClasspath>true</addClasspath>
+                <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+              </manifest>
+              <manifestEntries>
+                <Implementation-Build>${revision}</Implementation-Build>
+                <Implementation-Date>${maven.build.timestamp}</Implementation-Date>
+              </manifestEntries>
+            </archive>
+            <excludes>
+              <exclude>**/*.cpp</exclude>
+              <exclude>**/*.h</exclude>
+            </excludes>
+          </configuration>
+        </plugin>
+        <plugin>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>2.12</version>
+          <configuration>
+            <argLine>-Xms512m -Xmx512m</argLine>
+          </configuration>
+        </plugin>
+      <plugin>
+        <groupId>org.codehaus.gmaven</groupId>
+        <artifactId>gmaven-plugin</artifactId>
+        <version>1.4</version>
+        <executions>
+          <execution>
+            <phase>initialize</phase>
+            <goals>
+              <goal>execute</goal>
+            </goals>
+            <configuration>
+              <defaults>
+                <default>UNKNOWN</default>
+              </defaults>
+              <source>
+                import java.util.regex.Pattern
+
+                def ant = new AntBuilder()
+                try {
+                  ant.exec(outputproperty:"revision",
+                    failifexecutionfails:"false",
+                    executable: 'git') {
+                      arg(line:"rev-parse --short HEAD")
+                  }
+                }
+                catch (Exception e) { }
+
+                try {
+                  ant.exec(outputproperty:"exactTag",
+                    resultproperty:"exactTagRC",
+                    failifexecutionfails:"true",
+                    failonerror:"false",
+                    executable: 'git') {
+                      arg(line:"describe --match=v[0-9]* --exact")
+                  }
+                }
+                catch (Exception e) {
+                  ant.project.properties.exactTagRC = ""
+                  ant.project.properties.exactTag = ""
+                }
+
+                try {
+                  ant.exec(outputproperty:"describe",
+                    failifexecutionfails:"true",
+                    executable: 'git') {
+                      arg(line:"describe --match=v[0-9]*")
+                  }
+                }
+                catch (Exception e) {
+                  ant.project.properties.describe = ""
+                }
+
+                println ant.project.properties.exactTagRC
+                println ant.project.properties.exactTag
+                println ant.project.properties.describe
+
+                if (ant.project.properties.exactTagRC == 0) {
+                  // if we're building from a tag, set the release name
+                  // to be the tag name, minus the leading 'v'
+                  project.properties.release = ant.project.properties.exactTag.substring(1)
+                }
+                else if (ant.project.properties.describe) {
+                  // if we're building within Git, but not from a tag,
+                  // then use the last known tag's number to set a snapshot
+                  // version
+                  try {
+                    def regex = Pattern.compile("v([0-9]+)[.]([0-9]+)[.]([0-9]+)(.*)")
+                    def groups = regex.matcher(ant.project.properties.describe)
+                    groups.matches()
+                    def major = groups.group(1)
+                    def minor = groups.group(2)
+                    def patch = groups.group(3)
+                    project.properties.release = major + "." + minor + "." + patch + "-SNAPSHOT"
+                  }
+                  catch (IllegalStateException e) {
+                    project.properties.release = ""
+                  }
+                }
+                else {
+                  // if we're building outside of Git, set a default
+                  // version number
+                  project.properties.release = project.properties.default
+                }
+                project.properties.revision = ant.project.properties.revision
+
+                if (!project.properties.release) {
+                  // assume this is a source package outside of Git
+                  // there should be a ant/gitversion.xml file with the
+                  // version information used when the package was created
+
+                  def xml = new XmlParser().parse("./ant/gitversion.xml")
+                  for (property in xml.property) {
+                    println "parsing " + property.'@name'
+                    if ('release.version' == property.'@name') {
+                      project.properties.release = property.'@value'
+                    }
+                    else if ('vcs.revision' == property.'@name') {
+                      project.properties.revision = property.'@value'
+                    }
+                  }
+                }
+
+                println "revision = " + project.properties.revision
+                println "release = " + project.properties.release
+              </source>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.6</source>
+          <target>1.6</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>buildnumber-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>license-maven-plugin</artifactId>
+        <configuration>
+          <licenseName>gpl_v2</licenseName>
+          <licenseResolver>file://${project.rootdir}/license</licenseResolver>
+          <organizationName>Open Microscopy Environment:
+  - Board of Regents of the University of Wisconsin-Madison
+  - Glencoe Software, Inc.
+  - University of Dundee</organizationName>
+          <addJavaLicenseAfterPackage>false</addJavaLicenseAfterPackage>
+          <canUpdateDescription>true</canUpdateDescription>
+          <roots>
+            <root>src</root>
+            <root>target/generated-sources</root>
+            <root>target/processed-sources</root>
+            <root>test</root>
+            <root>utils</root>
+            <root>doc</root>
+            <root>cppwrap</root>
+          </roots>
+        </configuration>
+      </plugin>
+    </plugins>
+    <extensions>
+      <extension>
+        <groupId>org.apache.maven.wagon</groupId>
+        <artifactId>wagon-webdav-jackrabbit</artifactId>
+        <version>1.0</version>
+      </extension>
+    </extensions>
+    <pluginManagement>
+      <plugins>
+        <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+        <plugin>
+          <groupId>org.eclipse.m2e</groupId>
+          <artifactId>lifecycle-mapping</artifactId>
+          <version>1.0.0</version>
+          <configuration>
+            <lifecycleMappingMetadata>
+              <pluginExecutions>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>
+                      org.codehaus.gmaven
+                    </groupId>
+                    <artifactId>
+                      gmaven-plugin
+                    </artifactId>
+                    <versionRange>[1.4,)</versionRange>
+                    <goals>
+                      <goal>execute</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore></ignore>
+                  </action>
+                </pluginExecution>
+              </pluginExecutions>
+            </lifecycleMappingMetadata>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+  <reporting>
+    <plugins>
+      <plugin>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <configuration>
+          <javadocDirectory>${project.basedir}/src</javadocDirectory>
+        </configuration>
+      </plugin>
+    </plugins>
+  </reporting>
+
+  <organization>
+    <name>Open Microscopy Environment</name>
+    <url>http://www.openmicroscopy.org/</url>
+  </organization>
+
+  <issueManagement>
+    <system>Trac</system>
+    <url>http://trac.openmicroscopy.org.uk/ome/wiki/BioFormats</url>
+  </issueManagement>
+
+  <ciManagement>
+    <system>Jenkins</system>
+    <url>http://ci.openmicroscopy.org/</url>
+  </ciManagement>
+
+  <mailingLists>
+    <mailingList>
+      <name>OME-users</name>
+      <subscribe>http://lists.openmicroscopy.org.uk/mailman/listinfo/ome-users/</subscribe>
+      <unsubscribe>http://lists.openmicroscopy.org.uk/mailman/listinfo/ome-users/</unsubscribe>
+      <post>ome-users@lists.openmicroscopy.org.uk</post>
+      <archive>http://lists.openmicroscopy.org.uk/pipermail/ome-users/</archive>
+    </mailingList>
+    <mailingList>
+      <name>OME-devel</name>
+      <subscribe>http://lists.openmicroscopy.org.uk/mailman/listinfo/ome-devel/</subscribe>
+      <unsubscribe>http://lists.openmicroscopy.org.uk/mailman/listinfo/ome-devel/</unsubscribe>
+      <post>ome-devel@lists.openmicroscopy.org.uk</post>
+      <archive>http://lists.openmicroscopy.org.uk/pipermail/ome-devel/</archive>
+    </mailingList>
+  </mailingLists>
+
+  <scm>
+    <connection>scm:git:git://github.com/openmicroscopy/bioformats.git</connection>
+    <developerConnection>scm:git:git@github.com:openmicroscopy/bioformats.git</developerConnection>
+    <tag>HEAD</tag>
+    <url>http://github.com/openmicroscopy/bioformats</url>
+  </scm>
+
+  <!-- NB: for parent project -->
+  <repositories>
+    <repository>
+      <id>ome.external</id>
+      <url>http://artifacts.openmicroscopy.org/artifactory/ome.external</url>
+    </repository>
+    <repository>
+      <id>ome.releases</id>
+      <url>http://artifacts.openmicroscopy.org/artifactory/ome.releases</url>
+    </repository>
+    <repository>
+      <id>ome.snapshots</id>
+      <url>http://artifacts.openmicroscopy.org/artifactory/ome.snapshots</url>
+    </repository>
+    <repository>
+      <id>unidata.releases</id>
+      <url>http://artifacts.unidata.ucar.edu/content/repositories/unidata-releases</url>
+    </repository>
+  </repositories>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>ome.releases</id>
+      <url>http://artifacts.openmicroscopy.org/artifactory/ome.releases</url>
+    </pluginRepository>
+    <pluginRepository>
+      <id>ome.snapshots</id>
+      <url>http://artifacts.openmicroscopy.org/artifactory/ome.snapshots</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </pluginRepository>
+    <pluginRepository>
+      <id>ome.external</id>
+      <url>http://artifacts.openmicroscopy.org/artifactory/ome.external</url>
+    </pluginRepository>
+  </pluginRepositories>
+
+  <distributionManagement>
+    <repository>
+      <id>ome.releases</id>
+      <name>OME Releases Repository</name>
+      <url>http://artifacts.openmicroscopy.org/artifactory/ome.releases</url>
+    </repository>
+    <snapshotRepository>
+      <id>ome.snapshots</id>
+      <name>OME Snapshots Repository</name>
+      <url>http://artifacts.openmicroscopy.org/artifactory/ome.snapshots</url>
+    </snapshotRepository>
+  </distributionManagement>
+
+</project>

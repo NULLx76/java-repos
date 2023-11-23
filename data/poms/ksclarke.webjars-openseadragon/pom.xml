@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.sonatype.oss</groupId>
+        <artifactId>oss-parent</artifactId>
+        <version>7</version>
+    </parent>
+
+    <packaging>jar</packaging>
+    <groupId>org.webjars</groupId>
+    <artifactId>openseadragon</artifactId>
+    <version>2.1.0-SNAPSHOT</version>
+    <name>WebJar-OpenSeadragon</name>
+    <description>WebJar for OpenSeadragon</description>
+    <url>http://webjars.org</url>
+
+    <properties>
+        <!-- The upstream version of OpenSeadragon pulled by this project -->
+        <upstream.version>2.1.0</upstream.version>
+        <!-- Path from which to grab the upstream package -->
+        <upstream.url>https://github.com/openseadragon/openseadragon/releases/download/v${upstream.version}/</upstream.url>
+        <!-- Destination into which to unpack the upstream package -->
+        <destDir>${project.build.outputDirectory}/META-INF/resources/webjars/${project.artifactId}/${upstream.version}</destDir>
+        <requirejs> { "paths": { "openseadragon": "openseadragon" } } </requirejs>
+        <!-- Run tests from temporarily built local repo -->
+        <test-repo>${project.build.directory}/test-classes/test-repo</test-repo>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <!-- Versions of dependencies in the test project; they're just easier to manage here -->
+        <jetty.version>9.2.2.v20140723</jetty.version>
+        <failsafe.version>2.17</failsafe.version>
+        <logback.version>1.1.2</logback.version>
+        <junit.version>4.12-beta-1</junit.version>
+        <ghostdriver.version>1.1.0</ghostdriver.version>
+        <phantomjs.version>1.9.7</phantomjs.version>
+        <phantomjs.plugin.version>0.4</phantomjs.plugin.version>
+        <!-- Set this here so we can use it in our test project -->
+        <webjars.osd.project.version>${project.version}</webjars.osd.project.version>
+    </properties>
+
+    <developers>
+        <developer>
+            <id>ksclarke</id>
+            <name>Kevin S. Clarke</name>
+            <email>ksclarke@gmail.com</email>
+        </developer>
+    </developers>
+
+    <licenses>
+        <license>
+            <name>BSD 3-Clause License</name>
+            <url>https://github.com/openseadragon/openseadragon/blob/master/LICENSE.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <scm>
+        <url>http://github.com/webjars/openseadragon</url>
+        <connection>scm:git:https://github.com/webjars/openseadragon.git</connection>
+        <developerConnection>scm:git:https://github.com/webjars/openseadragon.git</developerConnection>
+      <tag>HEAD</tag>
+  </scm>
+
+    <dependencies>
+        <!-- Only dependencies listed here are those used for testing -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven.shared</groupId>
+            <artifactId>maven-verifier</artifactId>
+            <version>1.5</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- The following are here so I can edit SanityIT in Eclipse -->
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${logback.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.github.detro.ghostdriver</groupId>
+            <artifactId>phantomjsdriver</artifactId>
+            <version>${ghostdriver.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <!-- Filter our settings into the test project's configuration -->
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <filtering>true</filtering>
+            </testResource>
+        </testResources>
+        <plugins>
+            <!-- Get two free ports for our test server to use -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.6</version>
+                <configuration>
+                    <portNames>
+                        <portName>jetty.port</portName>
+                        <portName>jetty.port.stop</portName>
+                    </portNames>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>reserve-port</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>reserve-network-port</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Installs the jar artifact from this project into our test project -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-install-plugin</artifactId>
+                <version>2.3.1</version>
+                <executions>
+                    <execution>
+                        <id>install-plugin-for-it</id>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <phase>pre-integration-test</phase>
+                        <configuration>
+                            <file>${project.build.directory}/${project.build.finalName}.jar</file>
+                            <generatePom>true</generatePom>
+                            <pomFile>pom.xml</pomFile>
+                            <packaging>jar</packaging>
+                            <version>${project.version}</version>
+                            <localRepositoryPath>${test-repo}</localRepositoryPath>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Fires off the test that runs this project's test project -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.17</version>
+                <configuration>
+                    <argLine>-Djetty.port=${jetty.port}</argLine>
+                    <excludes>
+                        <exclude>**/*Test.java</exclude>
+                    </excludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>integration-test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <phase>integration-test</phase>
+                        <configuration>
+                            <excludes>
+                                <exclude>none</exclude>
+                            </excludes>
+                            <includes>
+                                <include>**/*Test.java</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Downloads the OpenSeadragon zip file -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>wagon-maven-plugin</artifactId>
+                <version>1.0-beta-5</version>
+                <executions>
+                    <execution>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>download-single</goal>
+                        </goals>
+                        <configuration>
+                            <url>${upstream.url}</url>
+                            <fromFile>openseadragon-bin-${upstream.version}.zip</fromFile>
+                            <toFile>${project.build.directory}/${project.artifactId}.zip</toFile>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Processes the OpenSeadragon resources to put them where we need them -->
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.7</version>
+                <executions>
+                    <execution>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <echo message="Unzipping upstream archive" />
+                                <unzip src="${project.build.directory}/${project.artifactId}.zip" dest="${project.build.directory}" />
+                                <echo message="Moving upstream resources" />
+                                <move todir="${destDir}">
+                                    <fileset dir="${project.build.directory}/openseadragon-bin-${upstream.version}" />
+                                </move>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- For releasing artifacts of this project -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>2.5.1</version>
+            </plugin>
+            <!-- For staging artifacts of this project -->
+            <plugin>
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>nexus-staging-maven-plugin</artifactId>
+                <version>1.6.5</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <serverId>sonatype-nexus-staging</serverId>
+                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

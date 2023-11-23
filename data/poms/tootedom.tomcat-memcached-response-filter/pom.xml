@@ -1,0 +1,940 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>org.greencheek.memcached</groupId>
+	<artifactId>caching-filter</artifactId>
+	<version>0.0.13-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>tomcat-memcached-response-filter</name>
+	<description>A Lazy mans servlet filter that stores the responses in memcached</description>
+    <url>https://github.com/tootedom/tomcat-memcached-response-filter</url>
+    <!-- Required: license information: -->
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+            <comments>A business-friendly OSS license</comments>
+        </license>
+    </licenses>
+
+    <!-- Required: developer information: -->
+    <developers>
+        <developer>
+            <id>tootedom</id>
+            <name>Dominic Tootell</name>
+            <email>dominic.tootell@gmail.com</email>
+            <organization>greencheek.org</organization>
+            <organizationUrl>https://github.com/tootedom</organizationUrl>
+            <url>https://github.com/tootedom</url>
+        </developer>
+    </developers>
+    <scm>
+        <connection>scm:git:git@github.com:tootedom/tomcat-memcached-response-filter.git</connection>
+        <url>scm:git:git@github.com:tootedom/tomcat-memcached-response-filter.git</url>
+        <developerConnection>scm:git:git@github.com:tootedom/tomcat-memcached-response-filter.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
+	<properties>
+        <jvmargs />
+        <gatling.simulationClass>org.greencheek.web.filter.memcached.ExecuteSimpleGetRequestIT</gatling.simulationClass>
+        <scala.version>2.9.3</scala.version>
+        <gatling.version>1.5.5</gatling.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<catalina.version>7.0.53</catalina.version>
+		<catalina.groupId>org.apache.tomcat</catalina.groupId>
+        <spy.version>2.11.2</spy.version>
+        <maven-compiler-plugin.version>3.1</maven-compiler-plugin.version>
+        <maven-source-plugin.version>2.2.1</maven-source-plugin.version>
+        <maven-assembly-plugin.version>2.4</maven-assembly-plugin.version>
+        <maven-jar-plugin.version>2.4</maven-jar-plugin.version>
+        <scala-maven-plugin.version>3.1.6</scala-maven-plugin.version>
+        <maven-surefire-plugin.version>2.16</maven-surefire-plugin.version>
+        <maven-release-plugin.version>2.3.2</maven-release-plugin.version>
+        <maven-license-plugin.version>1.10.b1</maven-license-plugin.version>
+        <maven-plugin-plugin.version>3.2</maven-plugin-plugin.version>
+        <maven-shade-plugin.version>2.2</maven-shade-plugin.version>
+        <maven-site-plugin.version>3.3</maven-site-plugin.version>
+        <memcachedtest.version>1.0.0</memcachedtest.version>
+        <async.version>1.8.3</async.version>
+        <logback.version>1.1.2</logback.version>
+        <slf4j.version>1.7.7</slf4j.version>
+        <hystrix.version>1.4.0-RC4</hystrix.version>
+        <snappy.version>1.1.1-M1</snappy.version>
+        <jsnappy.version>0.3</jsnappy.version>
+    </properties>
+
+	<dependencies>
+        <dependency>
+            <groupId>org.iq80.snappy</groupId>
+            <artifactId>snappy</artifactId>
+            <version>${jsnappy.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.spy</groupId>
+            <artifactId>spymemcached</artifactId>
+            <version>${spy.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>net.sf.trove4j</groupId>
+            <artifactId>trove4j</artifactId>
+            <version>3.0.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>net.jpountz.lz4</groupId>
+            <artifactId>lz4</artifactId>
+            <version>1.2.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.netflix.hystrix</groupId>
+            <artifactId>hystrix-core</artifactId>
+            <version>${hystrix.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.netflix.hystrix</groupId>
+            <artifactId>hystrix-metrics-event-stream</artifactId>
+            <version>${hystrix.version}</version>
+        </dependency>
+
+        <!--<dependency>-->
+            <!--<groupId>org.xerial.snappy</groupId>-->
+            <!--<artifactId>snappy-java</artifactId>-->
+            <!--<version>${snappy.version}</version>-->
+            <!--<type>jar</type>-->
+            <!--<scope>compile</scope>-->
+        <!--</dependency>-->
+
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <version>3.0.1</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!--<dependency>-->
+            <!--<groupId>javax.servlet</groupId>-->
+            <!--<artifactId>servlet-api</artifactId>-->
+            <!--<version>2.5</version>-->
+        <!--</dependency>-->
+
+        <!-- Jmocking, for tomcat request mock -->
+        <dependency>
+            <groupId>org.jmock</groupId>
+            <artifactId>jmock</artifactId>
+            <version>2.5.1</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- JMock for mocking tomcat request class -->
+        <dependency>
+            <groupId>cglib</groupId>
+            <artifactId>cglib</artifactId>
+            <version>2.2.2</version>
+            <scope>test</scope>
+        </dependency>
+		<dependency>
+			<groupId>org.objenesis</groupId>
+			<artifactId>objenesis</artifactId>
+			<version>1.2</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.jmock</groupId>
+			<artifactId>jmock-legacy</artifactId>
+			<version>2.5.1</version>
+			<scope>test</scope>
+		</dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>1.9.5</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-all</artifactId>
+            <version>1.1</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.ning</groupId>
+            <artifactId>async-http-client</artifactId>
+            <version>${async.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+
+        <dependency>
+            <groupId>org.apache.tomcat.embed</groupId>
+            <artifactId>tomcat-embed-core</artifactId>
+            <version>${catalina.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.tomcat.embed</groupId>
+            <artifactId>tomcat-embed-logging-juli</artifactId>
+            <version>${catalina.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jdt.core.compiler</groupId>
+            <artifactId>ecj</artifactId>
+            <version>3.7.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.tomcat.embed</groupId>
+            <artifactId>tomcat-embed-jasper</artifactId>
+            <version>${catalina.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.faces</groupId>
+            <artifactId>jsf-impl</artifactId>
+            <version>2.2.4</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!--<dependency>-->
+            <!--<groupId>com.thimbleware.jmemcached</groupId>-->
+            <!--<artifactId>jmemcached-core</artifactId>-->
+            <!--<version>${memcachedtest.version}</version>-->
+            <!--<scope>test</scope>-->
+        <!--</dependency>-->
+
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.4</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.excilys.ebi.gatling.highcharts</groupId>
+            <artifactId>gatling-charts-highcharts</artifactId>
+            <version>${gatling.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-compiler</artifactId>
+            <version>${scala.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <version>${scala.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.excilys.ebi.gatling</groupId>
+            <artifactId>gatling-core</artifactId>
+            <version>${gatling.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.excilys.ebi.gatling</groupId>
+            <artifactId>gatling-http</artifactId>
+            <version>${gatling.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.thimbleware.jmemcached</groupId>
+            <artifactId>jmemcached-core</artifactId>
+            <version>1.0.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-core</artifactId>
+            <version>1.1.2</version>
+            <scope>provided</scope>
+        </dependency>
+
+    </dependencies>
+	
+	<build>
+		<plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.5</version>
+                <executions>
+                    <execution>
+                        <id>add-test-source</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>add-test-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>src/integration-test/scala</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
+                <version>${scala-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>test-scalac</id>
+                        <goals>
+                            <goal>testCompile</goal>
+                        </goals>
+                        <configuration>
+                            <args>
+                                <arg>-encoding</arg>
+                                <arg>UTF-8</arg>
+                                <!--<arg>-target:jvm-1.6</arg>-->
+                                <arg>-deprecation</arg>
+                                <!--<arg>-feature</arg>-->
+                                <arg>-unchecked</arg>
+                                <!--<arg>-language:implicitConversions</arg>-->
+                                <!--<arg>-language:reflectiveCalls</arg>-->
+                                <!--<arg>-language:postfixOps</arg>-->
+                            </args>
+                            <jvmArgs>
+                                <jvmArg>-Xms64m</jvmArg>
+                                <jvmArg>-Xmx1024m</jvmArg>
+                            </jvmArgs>
+                            <scalaVersion>${scala.version}</scalaVersion>
+                            <testSourceDir>src/integration-test/scala</testSourceDir>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>doc-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.7.0.201403182114</version>
+                <executions>
+                    <!--
+                       Prepares the property pointing to the JaCoCo runtime agent which
+                       is passed as VM argument when Maven the Surefire plugin is executed.
+                   -->
+                    <execution>
+                        <id>pre-unit-test</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Sets the path to the file which contains the execution data. -->
+                            <destFile>${project.build.directory}/jacoco-ut.exec</destFile>
+                            <!--
+                               Sets the name of the property containing the settings
+                               for JaCoCo runtime agent.
+                           -->
+                            <propertyName>surefireArgLine</propertyName>
+
+                        </configuration>
+                    </execution>
+                    <!--
+                       Ensures that the code coverage report for unit tests is created after
+                       unit tests have been run.
+                   -->
+                    <execution>
+                        <id>post-unit-test</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/*IT</exclude>
+                            </excludes>
+
+                            <!-- Sets the path to the file which contains the execution data. -->
+                            <dataFile>${project.build.directory}/jacoco-ut.exec</dataFile>
+                            <!-- Sets the output directory for the code coverage report. -->
+                            <outputDirectory>${project.reporting.outputDirectory}/jacoco-ut</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.0</version>
+                <configuration>
+                    <compilerVersion>1.7</compilerVersion>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>2.3</version>
+				<executions>
+					<execution>
+						<id>shade-including-slf4japi</id>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+                            <relocations>
+                                <relocation>
+                                    <pattern>org.slf4j</pattern>
+                                    <shadedPattern>org.greencheek.org.slf4j</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>gnu.trove</pattern>
+                                    <shadedPattern>org.greencheek.gnu.trove</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>net.spy.memcached</pattern>
+                                    <shadedPattern>org.greencheek.net.spy.memcached</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>net.jpountz</pattern>
+                                    <shadedPattern>org.greencheek.net.jpountz</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.iq80.snappy</pattern>
+                                    <shadedPattern>org.greencheek.org.iq80.snappy</shadedPattern>
+                                </relocation>
+                            </relocations>
+							<shadedArtifactAttached>true</shadedArtifactAttached>
+							<shadedClassifierName>shadewithslf4j</shadedClassifierName>
+                            <artifactSet>
+                                <excludes>
+                                    <exclude>ch.qos.logback:*</exclude>
+                                    <exclude>org.slf4j:jul-to-slf4j</exclude>
+                                    <exclude>com.netflix.hystrix:*</exclude>
+                                    <exclude>com.netflix.rxjava:*</exclude>
+                                    <exclude>com.netflix.archaius:*</exclude>
+                                    <exclude>com.netflix.hystrix:*</exclude>
+                                    <exclude>com.netflix.rxjava:*</exclude>
+                                    <exclude>com.netflix.archaius:*</exclude>
+                                    <exclude>org.codehaus.jackson</exclude>
+                                    <exclude>commons-configuration:*</exclude>
+                                    <exclude>commons-lang:*</exclude>
+                                    <exclude>commons-logging:*</exclude>
+                                </excludes>
+                            </artifactSet>
+							<transformers>
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ComponentsXmlResourceTransformer" />
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer" />																	
+							</transformers>
+						</configuration>
+					</execution>
+                    <execution>
+                        <id>shade-including-logback</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <relocations>
+                                <relocation>
+                                    <pattern>org.slf4j</pattern>
+                                    <shadedPattern>org.greencheek.org.slf4j</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>ch.qos</pattern>
+                                    <shadedPattern>org.greencheek.ch.qos</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>gnu.trove</pattern>
+                                    <shadedPattern>org.greencheek.gnu.trove</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>net.spy.memcached</pattern>
+                                    <shadedPattern>org.greencheek.net.spy.memcached</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>net.jpountz</pattern>
+                                    <shadedPattern>org.greencheek.net.jpountz</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.iq80.snappy</pattern>
+                                    <shadedPattern>org.greencheek.org.iq80.snappy</shadedPattern>
+                                </relocation>
+                            </relocations>
+                            <artifactSet>
+                                <includes>
+                                    <include>ch.qos.logback:*</include>
+                                    <include>org.slf4j:*</include>
+                                    <include>net.spy:spymemcached</include>
+                                    <include>net.jpountz.lz4:*</include>
+                                    <include>net.sf.trove4j:*</include>
+                                    <include>org.iq80.snappy:snappy</include>
+                                </includes>
+                                <excludes>
+                                    <exclude>com.netflix.hystrix:*</exclude>
+                                    <exclude>com.netflix.rxjava:*</exclude>
+                                    <exclude>com.netflix.archaius:*</exclude>
+                                    <exclude>org.codehaus.jackson</exclude>
+                                    <exclude>commons-configuration:*</exclude>
+                                    <exclude>commons-lang:*</exclude>
+                                    <exclude>commons-logging:*</exclude>
+                                </excludes>
+                            </artifactSet>
+
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <shadedClassifierName>shadewithlogback</shadedClassifierName>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ComponentsXmlResourceTransformer" />
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer" />
+                            </transformers>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>shade-including-logbackandhystrix</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <relocations>
+                                <relocation>
+                                    <pattern>org.slf4j</pattern>
+                                    <shadedPattern>org.greencheek.org.slf4j</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>ch.qos</pattern>
+                                    <shadedPattern>org.greencheek.ch.qos</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>gnu.trove</pattern>
+                                    <shadedPattern>org.greencheek.gnu.trove</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>net.spy.memcached</pattern>
+                                    <shadedPattern>org.greencheek.net.spy.memcached</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>net.jpountz</pattern>
+                                    <shadedPattern>org.greencheek.net.jpountz</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com.netflix</pattern>
+                                    <shadedPattern>org.greencheek.com.netflix</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>rx</pattern>
+                                    <shadedPattern>org.greencheek.rx</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.apache</pattern>
+                                    <shadedPattern>org.greencheek.org.apache</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.codehaus</pattern>
+                                    <shadedPattern>org.greencheek.org.codehaus</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.iq80.snappy</pattern>
+                                    <shadedPattern>org.greencheek.org.iq80.snappy</shadedPattern>
+                                </relocation>
+                            </relocations>
+                            <artifactSet>
+                                <includes>
+                                    <include>ch.qos.logback:*</include>
+                                    <include>org.slf4j:*</include>
+                                    <include>net.spy:spymemcached</include>
+                                    <include>net.jpountz.lz4:*</include>
+                                    <include>net.sf.trove4j:*</include>
+                                    <include>com.netflix.hystrix:*</include>
+                                    <include>com.netflix.rxjava:*</include>
+                                    <include>com.netflix.archaius:*</include>
+                                    <include>org.codehaus.jackson</include>
+                                    <include>commons-configuration:*</include>
+                                    <include>commons-lang:*</include>
+                                    <include>commons-logging:*</include>
+                                    <include>org.iq80.snappy:snappy</include>
+                                </includes>
+                            </artifactSet>
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <shadedClassifierName>shadewithlogbackandhystrix</shadedClassifierName>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ComponentsXmlResourceTransformer" />
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer" />
+                            </transformers>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>shade-excluing-slf4j</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <relocations>
+                                <relocation>
+                                    <pattern>gnu.trove</pattern>
+                                    <shadedPattern>org.greencheek.gnu.trove</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>net.spy.memcached</pattern>
+                                    <shadedPattern>org.greencheek.net.spy.memcached</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>net.jpountz</pattern>
+                                    <shadedPattern>org.greencheek.net.jpountz</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.iq80.snappy</pattern>
+                                    <shadedPattern>org.greencheek.org.iq80.snappy</shadedPattern>
+                                </relocation>
+                            </relocations>
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <shadedClassifierName>shadenoslf4j</shadedClassifierName>
+                            <artifactSet>
+                                <excludes>
+                                    <exclude>org.slf4j:slf4j-api</exclude>
+                                    <exclude>ch.qos.logback:*</exclude>
+                                    <exclude>org.slf4j:jul-to-slf4j</exclude>
+                                    <exclude>com.netflix.hystrix:*</exclude>
+                                    <exclude>com.netflix.rxjava:*</exclude>
+                                    <exclude>com.netflix.archaius:*</exclude>
+                                    <exclude>org.codehaus.jackson</exclude>
+                                    <exclude>commons-configuration:*</exclude>
+                                    <exclude>commons-lang:*</exclude>
+                                    <exclude>commons-logging:*</exclude>
+                                </excludes>
+                            </artifactSet>
+                        </configuration>
+                    </execution>
+				</executions>
+			</plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>2.1.2</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.codehaus.plexus</groupId>
+                        <artifactId>plexus-io</artifactId>
+                        <version>1.0.1</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.8.1</version>
+                <configuration>
+                    <useStandardDocletOptions>true</useStandardDocletOptions>
+                    <show>public</show>
+                    <charset>UTF-8</charset>
+                    <encoding>UTF-8</encoding>
+                    <docencoding>UTF-8</docencoding>
+                    <breakiterator>true</breakiterator>
+                    <version>true</version>
+                    <author>true</author>
+                    <keywords>true</keywords>
+                    <links>
+                        <link>http://docs.oracle.com/javase/6/docs/api/</link>
+                    </links>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>${maven-assembly-plugin.version}</version>
+            </plugin>
+            <plugin>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>${maven-jar-plugin.version}</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven-surefire-plugin.version}</version>
+                <configuration>
+                    <!-- Sets the VM argument line used when unit tests are run. -->
+                    <argLine>${surefireArgLine} -Dsun.net.spi.nameservice.provider.1=dns,delayeddns -Dnameservice.enabled=false -Dsun.net.inetaddr.ttl=0 -Dnetworkaddress.cache.ttl=0 -Dnetworkaddress.cache.negative.ttl=0 -Dsun.net.inetaddr.negative.ttl=0</argLine>
+                    <!-- Skips unit tests if the value of skip.unit.tests property is true -->
+                    <skipTests>${skip.unit.tests}</skipTests>
+                    <!-- Excludes integration tests when unit tests are run. -->
+                    <excludes>
+                        <exclude>**/IT*.java</exclude>
+                    </excludes>
+
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-site-plugin</artifactId>
+                <version>${maven-site-plugin.version}</version>
+                <configuration>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>2.4.1</version>
+                <configuration>
+
+                    <!-- Automated passphrase entry: -->
+
+                    <!-- To pass your passphrase to the build automatically, so avoiding
+                        manual interaction, you'll need to put the passphrase into settings.xml.
+                        You don't really want that to be in plain text, so you'll want to follow:
+                        http://maven.apache.org/guides/mini/guide-encryption.html -->
+                    <!-- <arguments>-Dgpg.passphrase=${gpg.passphrase}</arguments> -->
+
+                    <!-- Manual passphrase entry: -->
+
+                    <!-- This is the simplest secure solution, but requires you to type
+                        your key passphrase in manually when performing a release. No biggie unless
+                        you want your CI server to decide when to release for you. -->
+                    <mavenExecutorId>forked-path</mavenExecutorId>
+
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-scm-plugin</artifactId>
+                <version>1.1</version>
+            </plugin>
+		</plugins>
+	</build>
+    <distributionManagement>
+        <!-- You'll probably want to test this out with a local copy of Nexus OSS. -->
+        <!-- Remove these entries and uncomment the Sonatype Nexus repositories
+            below when you actually want to release. -->
+        <!--
+        <snapshotRepository>
+            <id>localhost-nexus-snapshots</id>
+            <name>Local Nexus snapshot repository</name>
+            <url>http://localhost:8081/nexus/content/repositories/snapshots/</url>
+        </snapshotRepository>
+        <repository>
+            <id>localhost-nexus-staging</id>
+            <name>Local Nexus release repository</name>
+            <url>http://localhost:8081/nexus/content/repositories/releases/</url>
+        </repository>
+        -->
+        <snapshotRepository>
+            <id>sonatype-nexus-snapshots</id>
+            <name>Sonatype Nexus snapshot repository</name>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>sonatype-nexus-staging</id>
+            <name>Sonatype Nexus release repository</name>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
+        </repository>
+    </distributionManagement>
+    <profiles>
+        <!-- GPG Signature on release -->
+        <profile>
+            <id>release-sign-artifacts</id>
+            <activation>
+                <property>
+                    <name>performRelease</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.4</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>flightrecorder</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.excilys.ebi.gatling</groupId>
+                        <artifactId>gatling-maven-plugin</artifactId>
+                        <version>${gatling.version}</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>execute</goal>
+                                </goals>
+                                <configuration>
+                                    <configDir>src/integration-test/resources</configDir>
+                                    <dataFolder>src/integration-test/resources/data</dataFolder>
+                                    <resultsFolder>target/gatling/results</resultsFolder>
+                                    <requestBodiesFolder>src/integration-test/resources/request-bodies</requestBodiesFolder>
+                                    <simulationsFolder>src/integration-test/scala</simulationsFolder>
+                                    <includes>
+                                        <include>**/*.scala</include>
+                                    </includes>
+                                    <simulationClass>${gatling.simulationClass}</simulationClass>
+
+                                    <!--    <noReports>false</noReports> -->
+                                    <!--    <reportsOnly>false</reportsOnly> -->
+                                    <!--    <simulationClass>foo.Bar</simulationClass> -->
+                                    <jvmArgs>
+                                        <jvmArg>-Xmx1024m</jvmArg>
+                                        <jvmArg>-Xms1024m</jvmArg>
+                                        <jvmArg>-XX:MaxPermSize=512m</jvmArg>
+                                        <jvmArg>-XX:+UnlockCommercialFeatures</jvmArg>
+                                        <jvmArg>-XX:+FlightRecorder</jvmArg>
+                                        <jvmArg>-XX:StartFlightRecording=duration=160s,delay=10s,settings=profile,filename=target/recording.jfr</jvmArg>
+                                    </jvmArgs>
+
+                                    <fork>true</fork>
+                                    <!--    <propagateSystemProperties>true</propagateSystemProperties> -->
+                                    <!--    <failOnError>true</failOnError> -->
+
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>noflightrecorder</id>
+             <activation>
+                 <activeByDefault>true</activeByDefault>
+             </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.excilys.ebi.gatling</groupId>
+                        <artifactId>gatling-maven-plugin</artifactId>
+                        <version>${gatling.version}</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>execute</goal>
+                                </goals>
+                                <configuration>
+                                    <configDir>src/integration-test/resources</configDir>
+                                    <dataFolder>src/integration-test/resources/data</dataFolder>
+                                    <resultsFolder>target/gatling/results</resultsFolder>
+                                    <requestBodiesFolder>src/integration-test/resources/request-bodies</requestBodiesFolder>
+                                    <simulationsFolder>src/integration-test/scala</simulationsFolder>
+                                    <includes>
+                                        <include>**/*.scala</include>
+                                    </includes>
+                                    <simulationClass>${gatling.simulationClass}</simulationClass>
+
+                                    <!--    <noReports>false</noReports> -->
+                                    <!--    <reportsOnly>false</reportsOnly> -->
+                                    <!--    <simulationClass>foo.Bar</simulationClass> -->
+                                    <jvmArgs>
+                                        <jvmArg>-Xmx1024m</jvmArg>
+                                        <jvmArg>-Xms1024m</jvmArg>
+                                        <jvmArg>-XX:MaxPermSize=512m</jvmArg>
+                                    </jvmArgs>
+
+                                    <fork>true</fork>
+                                    <!--    <propagateSystemProperties>true</propagateSystemProperties> -->
+                                    <!--    <failOnError>true</failOnError> -->
+
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>nocoverage</id>
+            <properties>
+                <surefireArgLine />
+            </properties>
+        </profile>
+        <profile>
+            <id>addlogback</id>
+
+                <dependencies>
+                    <dependency>
+                        <groupId>ch.qos.logback</groupId>
+                        <artifactId>logback-classic</artifactId>
+                        <version>${logback.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>jul-to-slf4j</artifactId>
+                        <version>${slf4j.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>ch.qos.logback</groupId>
+                        <artifactId>logback-core</artifactId>
+                        <version>${logback.version}</version>
+                    </dependency>
+                </dependencies>
+
+        </profile>
+    </profiles>
+    <repositories>
+        <repository>
+            <id>excilys</id>
+            <name>Excilys Repository</name>
+            <url>http://repository.excilys.com/content/groups/public</url>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>excilys</id>
+            <name>Excilys Repository</name>
+            <url>http://repository.excilys.com/content/groups/public</url>
+        </pluginRepository>
+    </pluginRepositories>
+</project>

@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.mule</groupId>
+    <artifactId>apikitStandaloneAutomation</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <!--<packaging>pom</packaging>-->
+
+    <properties>
+        <mule.version>3.5.0</mule.version>
+        <mule.start.command>mule</mule.start.command>
+        <apikit.version>1.4.3</apikit.version>
+        <artifact.id>mule-ee-distribution-standalone</artifact.id>
+        <group.id>com.mulesoft.muleesb.distributions</group.id>
+        <distribution.folder.final.name>mule-ee-standalone</distribution.folder.final.name>
+        <mule.home>${project.build.directory}/test-classes/distributions/${distribution.folder.final.name}-${mule.version}</mule.home>
+        <application.name>interopTest-1.0</application.name>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.raml</groupId>
+            <artifactId>raml-parser</artifactId>
+            <version>0.8.4</version>
+        </dependency>
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-java</artifactId>
+            <version>2.43.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jayway.restassured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <version>2.3.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.3.4</version>
+        </dependency>
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>6.8.8</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.18</version>
+                <configuration>
+                    <suiteXmlFiles>
+                        <suiteXmlFile>testng.xml</suiteXmlFile>
+                    </suiteXmlFiles>
+                    <systemPropertyVariables>
+                        <app.name>${application.name}</app.name>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>2.5.1</version>
+                <inherited>false</inherited>
+                <executions>
+                    <execution>
+                        <id>install-mule</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>${group.id}</groupId>
+                                    <artifactId>${artifact.id}</artifactId>
+                                    <version>${mule.version}</version>
+                                    <type>tar.gz</type>
+                                    <outputDirectory>${project.build.directory}/test-classes/distributions</outputDirectory>
+                                    <destFileName>${distribution.folder.final.name}</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.mule.tools</groupId>
+                <artifactId>maven-mule-plugin</artifactId>
+                <version>1.6</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <copyToAppsDirectory>true</copyToAppsDirectory>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>1.1.1</version>
+                <executions>
+                    <execution>
+                        <id>enforce-variables</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <phase>validate</phase>
+                    </execution>
+                </executions>
+                <configuration>
+                    <rules>
+                        <requireProperty>
+                            <property>mule.start.command</property>
+                        </requireProperty>
+                        <requireProperty>
+                            <property>artifact.id</property>
+                        </requireProperty>
+                        <requireProperty>
+                            <property>group.id</property>
+                        </requireProperty>
+                        <requireProperty>
+                            <property>mule.version</property>
+                        </requireProperty>
+                        <requireProperty>
+                            <property>apikit.version</property>
+                        </requireProperty>
+                        <requireProperty>
+                            <property>distribution.folder.final.name</property>
+                        </requireProperty>
+                    </rules>
+                    <fail>false</fail>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.7</version>
+                <executions>
+                    <execution>
+                        <id>create-apikit-project-and-deploy</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <exec executable="sh">
+                                    <arg value="${project.basedir}/src/main/resources/mavenAutomation.sh"/>
+                                    <arg value="-p"/>
+                                    <arg value="${mule.home}"/>
+                                    <arg value="-v"/>
+                                    <arg value="${apikit.version}"/>
+                                    <arg value="-a"/>
+                                    <arg value="${project.basedir}/src/test/resources"/>
+                                    <arg value="-r"/>
+                                    <arg value="${project.basedir}/src/test/resources/interop.raml"/>
+                                    <arg value="-s"/>
+                                    <arg value="${mule.start.command}"/>
+                                </exec>
+                                <exec executable="ls">
+                                    <arg value="${mule.home}/apps/"/>
+                                </exec>
+                                <echo message="Wait for ${mule.home}/apps/${application.name}-anchor.txt to be available."/>
+                                <waitfor maxwait="60" maxwaitunit="second" checkevery="500">
+                                    <available file="${mule.home}/apps/${application.name}-anchor.txt"/>
+                                </waitfor>
+                                <exec executable="ls">
+                                    <arg value="${mule.home}/apps/"/>
+                                </exec>
+                                <echo message="**********************************"/>
+                                <echo message="* Project created and depoloyed. *"/>
+                                <echo message="**********************************"/>
+                            </target>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>stop-gateway</id>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <phase>package</phase>
+                        <configuration>
+                            <target>
+                                <exec executable="${mule.home}/bin/${mule.start.command}">
+                                    <arg value="stop"/>
+                                </exec>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>mule-ee-releases</id>
+            <url>http://repository-master.mulesoft.org/nexus/content/repositories/ci-releases/</url>
+        </pluginRepository>
+        <pluginRepository>
+            <id>mule-ee-snapshots</id>
+            <url>http://repository-master.mulesoft.org/nexus/content/repositories/ci-snapshots/</url>
+        </pluginRepository>
+    </pluginRepositories>
+
+    <repositories>
+        <repository>
+            <id>mule-ce-releases</id>
+            <layout>default</layout>
+            <url>http://repository.mulesoft.org/releases/</url>
+        </repository>
+        <repository>
+            <id>mule-ce-snapshots</id>
+            <layout>default</layout>
+            <url>http://repository.mulesoft.org/snapshots/</url>
+        </repository>
+        <repository>
+            <id>mule-ee-releases</id>
+            <layout>default</layout>
+            <url>https://repository.mulesoft.org/nexus/content/repositories/ci-releases/</url>
+        </repository>
+        <repository>
+            <id>mule-ee-snapshots</id>
+            <layout>default</layout>
+            <url>https://repository.mulesoft.org/nexus/content/repositories/ci-snapshots/</url>
+        </repository>
+        <repository>
+            <id>nexus.repository</id>
+            <name>Nexus Repository</name>
+            <layout>default</layout>
+            <url>https://repository.mulesoft.org/nexus/content/repositories/releases/</url>
+        </repository>
+        <repository>
+            <id>mulece.snapshots</id>
+            <name>MuleCE Snapshots Repository</name>
+            <url>http://snapshots.dist.codehaus.org/mule/</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+        </repository>
+        <repository>
+            <id>mulesoft-releases</id>
+            <name>MuleSoft Releases Repository</name>
+            <url>https://repository-master.mulesoft.org/releases/</url>
+        </repository>
+    </repositories>
+
+</project>

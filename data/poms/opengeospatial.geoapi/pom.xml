@@ -1,0 +1,558 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- =============================================================================================
+         Maven project configuration file
+         http://maven.apache.org/
+
+         Build specification only:      mvn pre-site -N
+         Build development snapshot:    mvn clean install
+         Build also Python wheel:       mvn install -Ppython
+         Build with Python tests:       mvn install -DskipNativeLibraryTests=false
+         Publish a release:             mvn clean install deploy -Pgeoapi-release
+     ============================================================================================= -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+
+
+  <!-- ===========================================================================================
+           Project description (license, mailing lists, issues management, etc).
+       =========================================================================================== -->
+  <groupId>org.opengis</groupId>
+  <artifactId>geoapi-parent</artifactId>
+  <packaging>pom</packaging>
+  <version>4.0-SNAPSHOT</version>
+  <name>GeoAPI</name>
+  <url>http://www.geoapi.org/</url>
+  <description>
+    GeoAPI provides a set of programming language interfaces for geospatial applications.
+    The project aims to reduce duplication and increase interoperability by providing neutral,
+    interface-only APIs derived from OGC/ISO Standards.
+  </description>
+
+  <organization>
+    <name>Open Geospatial Consortium</name>
+    <url>http://www.opengeospatial.org/</url>
+  </organization>
+  <inceptionYear>1994</inceptionYear>
+
+  <licenses>
+    <license>
+      <name>Apache 2</name>
+      <url>https://www.ogc.org/about/policies/software-licenses/</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <scm>
+    <connection>scm:git:https://github.com/opengeospatial/geoapi</connection>
+    <url>https://github.com/opengeospatial/geoapi</url>
+  </scm>
+
+  <issueManagement>
+    <system>GitHub</system>
+    <url>https://github.com/opengeospatial/geoapi/issues</url>
+  </issueManagement>
+
+  <mailingLists>
+    <mailingList>
+      <name>GeoAPI Standard Working Group (OGC)</name>
+      <subscribe>https://lists.opengeospatial.org/mailman/listinfo/geoapi.swg</subscribe>
+      <unsubscribe>https://lists.opengeospatial.org/mailman/listinfo/geoapi.swg</unsubscribe>
+      <post>geoapi.swg@lists.opengeospatial.org</post>
+      <archive>https://lists.opengeospatial.org/mailman/listinfo/geoapi.swg</archive>
+    </mailingList>
+  </mailingLists>
+
+  <developers>
+    <developer>
+      <name>GeoAPI contributors</name>
+      <organizationUrl>http://www.geoapi.org/</organizationUrl>
+      <roles>
+        <role>Java developers</role>
+      </roles>
+    </developer>
+    <developer>
+      <name>GeoAPI Standard Working Group</name>
+      <organization>Open Geospatial Consortium</organization>
+      <organizationUrl>http://www.opengeospatial.org/</organizationUrl>
+      <roles>
+        <role>Specification editors</role>
+      </roles>
+    </developer>
+  </developers>
+
+
+
+  <!-- ===========================================================================================
+           Profiles and properties controlling the build.
+
+           The default configuration is used for building snapshots, in order to test
+           GeoAPI development by implementaters. For final releases by OGC staff, the
+           "geoapi-release" profile shall be activated like below:
+
+               mvn clean install deploy -Pgeoapi-release
+
+           Optionally, if the Python native libraries are installed on the local machine,
+           then GeoAPI can be built with the "-DskipNativeLibraryTests=false" option.
+       =========================================================================================== -->
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <website.encoding>UTF-8</website.encoding>
+    <skipNativeLibraryTests>true</skipNativeLibraryTests>
+    <maven.compiler.release>11</maven.compiler.release>
+  </properties>
+  <profiles>
+    <!--
+      Create Python wheel package in target/dist/geoapi-*.tar.gz
+    -->
+    <profile>
+      <id>python</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <inherited>false</inherited>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <phase>package</phase>
+              </execution>
+            </executions>
+            <configuration>
+              <executable>python3</executable>
+              <arguments>
+                <argument>src/main/python/build.py</argument>
+                <argument>sdist</argument>
+              </arguments>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!--
+      Official release: require signing the JAR files.
+    -->
+    <profile>
+      <id>sign-artifacts</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <configuration>
+              <nonavbar>true</nonavbar>         <!-- Navigation bar not used when Javadoc is browsed from IDE. -->
+              <doclint>-reference</doclint>     <!-- Cross-modules references are valid only in aggregated javadoc. -->
+            </configuration>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+      <distributionManagement>
+        <repository>
+          <id>sonatype-nexus-staging</id>
+          <name>Open Source Software Repository Hosting</name>
+          <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+      </distributionManagement>
+    </profile>
+  </profiles>
+
+
+
+  <!-- ===========================================================================================
+           External dependencies used by GeoAPI or to be inherited by external projects
+           using GeoAPI.   The <dependencyManagement> section declares version numbers.
+           It is followed by a <dependencies> section listing the dependencies actually
+           required by the core of GeoAPI library; other dependencies are used only for
+           tests or examples.  External projects can inherit those version numbers with
+           the following fragment in their pom.xml file:
+
+                <dependencyManagement>
+                  <dependencies>
+                    <dependency>
+                      <groupId>org.opengis</groupId>
+                      <artifactId>geoapi-parent</artifactId>
+                      <version>${geoapi.version}</version>
+                      <type>pom</type>
+                      <scope>import</scope>
+                    </dependency>
+                    ...
+       =========================================================================================== -->
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>javax.measure</groupId>
+        <artifactId>unit-api</artifactId>
+        <version>2.1.3</version>
+      </dependency>
+
+      <!-- Test dependencies.
+
+        NOTE: the JUnit version number may appear also in documentation, scripts or reports.
+              If JUnit is updated, please search for the version number in the whole project.
+      -->
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-api</artifactId>
+        <version>5.9.3</version>
+      </dependency>
+      <dependency>
+        <groupId>org.junit.vintage</groupId>
+        <artifactId>junit-vintage-engine</artifactId>
+        <version>5.9.3</version>
+      </dependency>
+      <dependency>
+        <groupId>tech.uom</groupId>
+        <artifactId>seshat</artifactId>
+        <version>1.3</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>javax.vecmath</groupId>
+        <artifactId>vecmath</artifactId>
+        <version>1.5.2</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <!-- All dependencies required by the core of GeoAPI interfaces. -->
+  <dependencies>
+    <dependency>
+      <groupId>javax.measure</groupId>
+      <artifactId>unit-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.vintage</groupId>
+      <artifactId>junit-vintage-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+
+
+  <!-- ===========================================================================================
+           The plugin management section declares the version numbers of all plugins
+           needed for building GeoAPI and associated documentation. Configuration for
+           each plugin appear after <pluginManagement> section.
+       =========================================================================================== -->
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>3.3.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.11.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>3.3.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.1.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-antrun-plugin</artifactId>
+          <version>3.1.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <version>3.2.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-gpg-plugin</artifactId>
+          <version>3.1.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <version>3.1.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>build-helper-maven-plugin</artifactId>
+          <version>3.3.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>exec-maven-plugin</artifactId>
+          <version>3.1.0</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+
+
+
+    <!-- =========================================================================================
+             Configuration check before compilation
+         ========================================================================================= -->
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>enforce</id>
+            <configuration>
+              <rules>
+                <requireJavaVersion>
+                  <version>18</version>
+                </requireJavaVersion>
+                <dependencyConvergence/>
+              </rules>
+            </configuration>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+
+
+      <!-- =========================================================================================
+               Compilation
+           ========================================================================================= -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <release>${maven.compiler.release}</release>
+          <debug>false</debug>                                          <!-- Whether to include debugging information.  -->
+          <encoding>${project.build.sourceEncoding}</encoding>
+          <useIncrementalCompilation>false</useIncrementalCompilation>  <!-- https://issues.apache.org/jira/browse/MCOMPILER-209 -->
+          <showWarnings>true</showWarnings>
+          <showDeprecation>true</showDeprecation>
+          <compilerArgs>
+            <arg>-Xlint:all</arg>
+            <arg>-Xdoclint:all,-reference</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+
+
+
+    <!-- =========================================================================================
+             Tests
+         ========================================================================================= -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <maven.source.directory>${project.build.sourceDirectory}</maven.source.directory>
+          </systemPropertyVariables>
+          <printSummary>false</printSummary>
+        </configuration>
+      </plugin>
+
+
+
+      <!-- =========================================================================================
+               JAR packaging
+           ========================================================================================= -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifest>
+              <addClasspath>true</addClasspath>
+            </manifest>
+            <manifestEntries>
+              <Specification-Title>GeoAPI</Specification-Title>
+              <Specification-Version>${project.version}</Specification-Version>
+              <Specification-Vendor>${project.organization.name}</Specification-Vendor>
+              <Implementation-Vendor>The GeoAPI project</Implementation-Vendor>
+              <Implementation-URL>http://www.geoapi.org/</Implementation-URL>
+            </manifestEntries>
+          </archive>
+          <skipIfEmpty>true</skipIfEmpty>
+        </configuration>
+      </plugin>
+
+
+      <!-- ============================================================================================
+               Remove previous snapshots from local repository
+           ============================================================================================ -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>remove-old-artifacts</id>
+            <goals>
+              <goal>remove-project-artifact</goal>
+            </goals>
+            <configuration>
+              <removeAll>false</removeAll>      <!-- Remove only snapshots of this project version. -->
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+
+      <!-- ============================================================================================
+               Javadoc generation
+           ============================================================================================ -->
+      <plugin>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>3.5.0</version>
+        <configuration>
+          <top>
+            <!-- Remove this notice for the final GeoAPI release! -->
+            &lt;div class="snapshot-warning"&gt;&lt;b&gt;This specification is not final and is subject to change.&lt;/b&gt;&lt;br/&gt;
+                For OGC standard, see &lt;a href="http://www.geoapi.org/3.0/javadoc/index.html"&gt;GeoAPI 3.0.2&lt;/a&gt;.
+            &lt;/div&gt;
+          </top>
+          <encoding>${project.build.sourceEncoding}</encoding>
+          <docencoding>${website.encoding}</docencoding>
+          <charset>${website.encoding}</charset>
+          <release>17</release>
+          <author>false</author>          <!-- Specifies whether or not the author text is included.              -->
+          <version>false</version>        <!-- Includes or not the version text in the generated docs.            -->
+          <noqualifier>all</noqualifier>  <!-- Omits qualifying package name from ahead of class names in output. -->
+          <quiet>true</quiet>             <!-- Shuts off non-error and non-warning messages.                      -->
+          <locale>en</locale>             <!-- The locale that javadoc uses when generating documentation.        -->
+          <keywords>true</keywords>       <!-- Adds HTML meta keyword tags to the generated file for each class.  -->
+          <breakiterator>true</breakiterator>
+          <additionalOptions>
+            -html5 -Xdoclint:syntax --add-stylesheet "${basedir}/src/main/javadoc/geoapi.css"
+          </additionalOptions>
+          <additionalDependencies>
+            <additionalDependency>
+              <groupId>org.opengis</groupId>
+              <artifactId>geoapi-pending</artifactId>
+              <version>${project.version}</version>
+            </additionalDependency>
+          </additionalDependencies>
+
+          <!-- Do not add the "API" word in document title, because it is already included in the "GeoAPI name. -->
+          <doctitle>${project.name} ${project.version}</doctitle>
+          <windowtitle>${project.name} ${project.version}</windowtitle>
+
+          <!-- Doclet for special processing of departure tables. -->
+          <doclet>org.opengis.tools.doclet.FlushableDoclet</doclet>
+          <docletArtifact>
+            <groupId>org.opengis</groupId>
+            <artifactId>tools</artifactId>
+            <version>${project.version}</version>
+          </docletArtifact>
+
+          <!-- Custom taglets implemented in Java. -->
+          <taglets>
+            <taglet>
+              <tagletClass>org.opengis.tools.doclet.Departure</tagletClass>
+            </taglet>
+          </taglets>
+          <tagletArtifact>
+            <groupId>org.opengis</groupId>
+            <artifactId>tools</artifactId>
+            <version>${project.version}</version>
+          </tagletArtifact>
+
+          <!-- Enables the Javadoc tool to interpret a simple, one-argument
+               custom block tag tagname in doc comments. Note: <placement/>
+               should be a combination of the "Xaoptcmf" letters. -->
+          <tags>
+            <tag><placement>X</placement>    <name>category</name>  <head>Category:</head></tag>
+            <tag><placement>tfmc</placement> <name>condition</name> <head>Condition:</head></tag>
+            <tag><placement>tfmc</placement> <name>todo</name>      <head>TODO:</head></tag>
+            <tag><placement>X</placement>    <name>issue</name>     <head>JIRA:</head></tag>
+            <tag><placement>fm</placement>   <name>unitof</name>    <head>Unit:</head></tag>
+          </tags>
+
+          <!-- Creates links to existing javadoc-generated
+               documentation of external referenced classes. -->
+          <detectJavaApiLink>false</detectJavaApiLink>
+          <links>
+            <link>https://docs.oracle.com/en/java/javase/11/docs/api/</link>
+            <link>https://download.java.net/media/java3d/javadoc/1.5.2/</link>
+            <link>https://download.java.net/media/jai/javadoc/1.1.3/jai-apidocs/</link>
+            <link>https://junit.org/junit5/docs/current/api/</link>
+            <link>https://iogp-gigs.github.io/GIGSGeoAPI/</link>
+          </links>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+
+
+  <!-- ===========================================================================================
+           Deployment to public servers
+       =========================================================================================== -->
+  <distributionManagement>
+    <repository>
+      <id>geoapi.snapshots</id>           <!-- For snapshots and milestones only -->
+      <name>GeoAPI snapshots</name>
+      <url>${distMgmtSnapshotsUrl}</url>
+    </repository>
+  </distributionManagement>
+
+
+
+  <!-- =========================================================================================
+           All GeoAPI modules included in the build
+       ========================================================================================= -->
+  <modules>
+    <module>geoapi</module>
+    <module>geoapi-pending</module>
+    <module>geoapi-conformance</module>
+    <module>geoapi-examples</module>
+    <!-- module>geoapi-java-python</module -->
+    <module>tools</module>
+  </modules>
+</project>

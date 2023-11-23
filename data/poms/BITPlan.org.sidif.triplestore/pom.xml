@@ -1,0 +1,224 @@
+<!-- Copyright (c) 2015-2018 BITPlan GmbH Project details and license at: 
+	https://github.com/BITPlan/org.sidif.triplestore -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>com.bitplan.pom</groupId>
+		<artifactId>com.bitplan.pom</artifactId>
+		<version>0.0.34</version>
+		<relativePath>../com.bitplan.pom/pom.xml</relativePath>
+	</parent>
+	<groupId>com.bitplan</groupId>
+	<artifactId>org.sidif.triplestore</artifactId>
+	<packaging>jar</packaging>
+	<name>org.sidif.triplestore</name>
+	<version>0.0.10</version>
+	<description>Simple Data Interchange Format (SiDIF) and Triplestore see http://www.sidif.org</description>
+	<properties>
+		<!-- for parent pom to work -->
+		<github.project>org.sidif.triplestore</github.project>
+		<!-- for README.md generation -->
+		<documentation.wiki>http://wiki.bitplan.com/index.php/SiDIF-TripleStore</documentation.wiki>
+		<!-- Dependency versions -->
+		<junit4.version>4.12</junit4.version>
+		<args4j.version>2.0.29</args4j.version>
+		<antlr.version>4.7.1</antlr.version>
+	</properties>
+	<dependencies>
+		<!-- JUnit testing -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<artifactId>hamcrest-core</artifactId>
+					<groupId>org.hamcrest</groupId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.hamcrest/hamcrest-all -->
+		<dependency>
+			<groupId>org.hamcrest</groupId>
+			<artifactId>hamcrest-all</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- antlr runtime and tools -->
+		<dependency>
+			<groupId>org.antlr</groupId>
+			<artifactId>antlr4</artifactId>
+			<version>${antlr.version}</version>
+		</dependency>
+		<!-- BITPlan antlr library -->
+		<dependency>
+			<groupId>com.bitplan.antlr</groupId>
+			<artifactId>com.bitplan.antlr</artifactId>
+			<version>0.0.8</version>
+		</dependency>
+		<dependency>
+			<groupId>com.bitplan.antlr</groupId>
+			<artifactId>com.bitplan.antlr</artifactId>
+			<version>0.0.8</version>
+			<type>test-jar</type>
+			<scope>test</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+		</dependency>
+		<!-- args4j command line utility -->
+		<dependency>
+			<groupId>args4j</groupId>
+			<artifactId>args4j</artifactId>
+		</dependency>
+	</dependencies>
+	<build>
+
+		<plugins>
+			<!-- jar creation -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>${maven-jar-plugin.version}</version>
+				<!-- build a test jar -->
+				<executions>
+					<execution>
+						<goals>
+							<goal>test-jar</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<archive>
+						<manifest>
+							<addClasspath>true</addClasspath>
+							<mainClass>org.sidif.triplestore.util.TripleStoreBuilder</mainClass>
+						</manifest>
+					</archive>
+				</configuration>
+			</plugin>
+			<!-- automate antlr grammar handling -->
+			<plugin>
+				<groupId>org.antlr</groupId>
+				<artifactId>antlr4-maven-plugin</artifactId>
+				<version>4.7.1</version>
+				<configuration>
+					<!-- basically this is the default setting -->
+					<sourceDirectory>src/main/antlr4</sourceDirectory>
+					<libDirectory>target/generated-sources/antlr4</libDirectory>
+				</configuration>
+				<executions>
+					<execution>
+						<id>antlr</id>
+						<goals>
+							<goal>antlr4</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- http://stackoverflow.com/questions/1192596/how-do-i-get-eclipse-to-resolve-classes-generated-with-maven-2 -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<version>1.10</version>
+				<executions>
+					<execution>
+						<id>add-source</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>add-source</goal>
+						</goals>
+						<configuration>
+							<sources>
+								<source>${basedir}/target/generated-sources/antlr4</source>
+							</sources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- executable jar with dependencies see http://stackoverflow.com/questions/574594/how-can-i-create-an-executable-jar-with-dependencies-using-maven 
+				run with mvn clean compile assembly:single -->
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<configuration>
+					<archive>
+						<manifest>
+							<mainClass>org.sidif.triplestore.util.TripleStoreBuilder</mainClass>
+						</manifest>
+					</archive>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>javacc-maven-plugin</artifactId>
+				<version>2.6</version>
+				<configuration>
+					<sourceDirectory>${basedir}/src/main/java</sourceDirectory>
+					<interimDirectory>${basedir}/src/main/java</interimDirectory>
+					<outputDirectory>${basedir}/src/main/java</outputDirectory>
+					<javadocFriendlyComments>true</javadocFriendlyComments>
+					<packageName>org.sidif.parser.jjtree</packageName>
+					<visitor>true</visitor>
+					<visitorDataType>org.sidif.triple.ObjectHolder</visitorDataType>
+					<nodePackage>org.sidif.parser.node</nodePackage>
+					<lookAhead>3</lookAhead>
+				</configuration>
+				<executions>
+					<!-- http://stackoverflow.com/questions/6352208/how-to-solve-plugin-execution-not-covered-by-lifecycle-configuration-for-sprin 
+						https://www.eclipse.org/m2e/documentation/m2e-execution-not-covered.html 
+						https://github.com/objectledge/maven-extensions/blob/master/connectors/modules/javacc/plugin/lifecycle-mapping-metadata.xml 
+						http://mojo.codehaus.org/javacc-maven-plugin/jjtree-javacc-mojo.html -->
+					<execution>
+						<id>generate-jjtree</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>jjtree-javacc</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+		<pluginManagement>
+			<plugins>
+				<!--This plugin's configuration is used to store Eclipse m2e settings 
+					only. It has no influence on the Maven build itself. -->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>
+											org.codehaus.mojo
+										</groupId>
+										<artifactId>
+											javacc-maven-plugin
+										</artifactId>
+										<versionRange>
+											[2.6,)
+										</versionRange>
+										<goals>
+											<goal>jjtree-javacc</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore></ignore>
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+</project>

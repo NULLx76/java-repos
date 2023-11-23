@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <parent>
+        <groupId>oracle.acs.platform</groupId>
+        <artifactId>root</artifactId>
+        <version>all</version>
+    </parent>
+   <modelVersion>4.0.0</modelVersion>
+   <artifactId>gateway-webclient</artifactId>
+   <packaging>war</packaging>
+   <name>webclient</name>
+   <version>${acs.version}</version>
+ 
+   <dependencies>
+
+      <!-- Common to JEE and Servlet containers -->
+     <dependency>
+        <groupId>javax</groupId>
+        <artifactId>javaee-web-api</artifactId>
+        <version>6.0</version>
+        <scope>provided</scope>
+     </dependency>
+
+
+    <dependency>
+        <groupId>org.glassfish.jersey.containers</groupId>
+        <!-- if your container implements Servlet API older than 3.0, use "jersey-container-servlet-core"  -->
+        <artifactId>jersey-container-servlet</artifactId>
+        <version>2.5.1</version>
+        <scope>provided</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.glassfish.jersey.media</groupId>
+        <artifactId>jersey-media-json-jackson</artifactId>
+        <version>2.5.1</version>
+        <scope>provided</scope>
+    </dependency>
+
+   </dependencies>
+
+   <build>
+      <finalName>webclient</finalName>
+      <plugins>
+
+          <!-- copy the /js/lib folder to the target output, because we excluded that in rjs.build.js config  -->
+          <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-antrun-plugin</artifactId>
+              <executions>
+                  <execution>
+                      <id>copy-lib-js</id>
+                      <phase>process-classes</phase>
+                      <goals>
+                          <goal>run</goal>
+                      </goals>
+                      <configuration>
+                          <tasks>
+                              <copy todir="${project.build.directory}/webclient/js/lib/bootstrap" overwrite="true">
+                                  <fileset dir="${basedir}/src/main/webapp/js/lib/bootstrap" includes="**"/>
+                              </copy>
+                              <copy todir="${project.build.directory}/webclient/js/lib/jquery" overwrite="true">
+                                  <fileset dir="${basedir}/src/main/webapp/js/lib/jquery" includes="**"/>
+                              </copy>
+                              <copy todir="${project.build.directory}/webclient/js/lib/knockout" overwrite="true">
+                                  <fileset dir="${basedir}/src/main/webapp/js/lib/knockout" includes="**"/>
+                              </copy>
+                              <copy todir="${project.build.directory}/webclient/js/lib/moment" overwrite="true">
+                                  <fileset dir="${basedir}/src/main/webapp/js/lib/moment" includes="**"/>
+                              </copy>
+                              <copy todir="${project.build.directory}/webclient/js/lib/oj" overwrite="true">
+                                  <fileset dir="${basedir}/src/main/webapp/js/lib/oj" includes="**"/>
+                              </copy>
+                              <copy todir="${project.build.directory}/webclient/js/lib/prettify" overwrite="true">
+                                  <fileset dir="${basedir}/src/main/webapp/js/lib/prettify" includes="**"/>
+                              </copy>
+                              <copy todir="${project.build.directory}/webclient/js/lib/require" overwrite="true">
+                                  <fileset dir="${basedir}/src/main/webapp/js/lib/require" includes="**"/>
+                              </copy>
+                              <copy todir="${project.build.directory}/webclient/js/lib/retina" overwrite="true">
+                                  <fileset dir="${basedir}/src/main/webapp/js/lib/retina" includes="**"/>
+                              </copy>
+                              <copy todir="${project.build.directory}/webclient/js/lib/sammy" overwrite="true">
+                                  <fileset dir="${basedir}/src/main/webapp/js/lib/sammy" includes="**"/>
+                              </copy>
+                          </tasks>
+                      </configuration>
+                  </execution>
+              </executions>
+          </plugin>
+
+         <plugin>
+              <groupId>com.github.bringking</groupId>
+              <artifactId>requirejs-maven-plugin</artifactId>
+              <version>2.0.4</version>
+              <executions>
+                <execution>
+                    <goals>
+                      <goal>
+                        optimize
+                      </goal>
+                    </goals>
+                </execution>
+              </executions>
+              <configuration>
+                <configFile>src/main/webapp/js/rjs.build.js</configFile>
+                <!-- whether or not to process config with maven filters -->
+                <filterConfig>true</filterConfig>
+                <!-- Skip requirejs optimization if true -->
+                <skip>false</skip>
+              </configuration>
+         </plugin>
+
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-war-plugin</artifactId>
+            <configuration>
+                <!-- since the rjs plugin will write the optimized .js files into the target
+                     so we will not write these .js file again here, otherwise it will overwrite -->
+                <warSourceExcludes>js/*.js, js/modules/**/*, js/lib/**/*,css/master.css</warSourceExcludes>
+            </configuration> 
+          </plugin>
+
+
+          <plugin>
+              <groupId>org.zeroturnaround</groupId>
+              <artifactId>jrebel-maven-plugin</artifactId>
+              <executions>
+                  <execution>
+                      <id>generate-rebel-xml</id>
+                      <phase>process-resources</phase>
+                      <goals>
+                          <goal>generate</goal>
+                      </goals>
+                  </execution>
+              </executions>
+              <configuration>
+                  <packaging>war</packaging>
+                  <classpath>
+                      <fallback>default</fallback>
+                  </classpath>
+                  <addResourcesDirToRebelXml>false</addResourcesDirToRebelXml>
+                  <alwaysGenerate>true</alwaysGenerate>
+              </configuration>
+          </plugin>
+
+          <plugin>
+            <groupId>com.github.eirslett</groupId>
+            <artifactId>frontend-maven-plugin</artifactId>
+            <version>0.0.15</version>
+
+            <executions>
+              <execution>
+                <id>install node and npm</id>
+                <goals>
+                  <goal>install-node-and-npm</goal>
+                </goals>
+                <configuration>
+                  <nodeVersion>v0.10.28</nodeVersion>
+                  <npmVersion>1.4.9</npmVersion>
+                </configuration>
+              </execution>
+              <execution>
+                <id>npm install</id>
+                <goals>
+                  <goal>npm</goal>
+                </goals>
+                <configuration>
+                  <arguments>install</arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <id>gulp css-minify-and-url-versioning</id>
+                <goals>
+                  <goal>gulp</goal>
+                </goals>
+                <configuration>
+                  <arguments>css-minify-and-url-versioning</arguments>
+                </configuration>
+                <phase>generate-resources</phase>
+              </execution>
+              <execution>
+                <id>gulp jshint</id>
+                <goals>
+                  <goal>gulp</goal>
+                </goals>
+                <configuration>
+                  <arguments>lint</arguments>
+                </configuration>
+                <phase>generate-resources</phase>
+              </execution>
+            </executions>
+          </plugin>
+      </plugins>
+   </build>
+    <repositories>
+        <repository>
+            <id>itsp.project.dev.rel.repo</id>
+            <name>ITSP Platform Development Releases Repository</name>
+            <url>http://se-maven.central.sun.com/content/groups/project-releases</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <id>central</id>
+            <name>Maven Repository Switchboard</name>
+            <url>http://repo1.maven.org/maven2</url>
+        </repository>
+    </repositories>
+</project>

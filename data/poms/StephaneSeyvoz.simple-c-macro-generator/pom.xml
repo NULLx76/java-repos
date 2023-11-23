@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>org.ow2.mind</groupId>
+		<artifactId>mind-compiler</artifactId>
+		<version>2.2-SNAPSHOT</version>
+	</parent>
+
+	<artifactId>simple-c-macro-generator</artifactId>
+
+	<properties>
+		<mind.test.cflags>-g -Wall -Werror -Wredundant-decls
+			-Wunreachable-code
+			-Wstrict-prototypes -Wwrite-strings</mind.test.cflags>
+		<mind.test.compiler>gcc</mind.test.compiler>
+		<mind.test.compiler.gcc4>gcc4</mind.test.compiler.gcc4>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>mindc</artifactId>
+			<!--scope>test</scope-->
+		</dependency>
+		<dependency>
+			<groupId>org.testng</groupId>
+			<artifactId>testng</artifactId>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.5</version>
+				<configuration>
+					<groups>simpleGeneration</groups>
+					<systemPropertyVariables>
+						<default.file.level>FINEST</default.file.level>
+						<loggers.outfile>${project.build.testOutputDirectory}/test-log.txt</loggers.outfile>
+						<mind.test.cflags>${mind.test.cflags}</mind.test.cflags>
+						<mind.test.compiler>${mind.test.compiler}</mind.test.compiler>
+					</systemPropertyVariables>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.4</version>
+				<executions>
+					<!-- Generates binary assemblies at package phase. -->
+					<execution>
+						<id>bin-packages</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+						<configuration>
+							<descriptors>
+								<descriptor>src/assemble/bin-release.xml</descriptor>
+							</descriptors>
+							<appendAssemblyId>true</appendAssemblyId>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<artifactId>maven-jar-plugin</artifactId>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>test-jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- User documentation generation -->
+			<plugin>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>2.5</version>
+				<inherited>false</inherited>
+				<executions>
+					<execution>
+						<id>copy-docbook-resources</id>
+						<!-- here the phase you need -->
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>copy-resources</goal>
+						</goals>
+						<inherited>false</inherited>
+						<configuration>
+							<outputDirectory>${project.build.directory}/site/images</outputDirectory>
+							<resources>
+								<resource>
+									<directory>${basedir}/src/docbkx/images</directory>
+								</resource>
+							</resources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>com.agilejava.docbkx</groupId>
+				<artifactId>docbkx-maven-plugin</artifactId>
+				<inherited>false</inherited>
+				<executions>
+					<!-- User Guide PDF execution -->
+					<execution>
+						<id>pdf</id>
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>generate-pdf</goal>
+						</goals>
+						<inherited>false</inherited>
+						<configuration>
+							<targetDirectory>${project.build.directory}/site</targetDirectory>
+							<foCustomization>${project.build.directory}/site/xsl/minddoc-fo.xsl</foCustomization>
+							<draftWatermarkImage>${project.build.directory}/site/images/draft.png</draftWatermarkImage>
+						</configuration>
+					</execution>
+					<!-- User Guide HTML executions -->
+					<execution>
+						<id>html-printable</id>
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>generate-html</goal>
+						</goals>
+						<inherited>false</inherited>
+						<configuration>
+							<targetDirectory>${project.build.directory}/site/printable</targetDirectory>
+							<imgSrcPath>../</imgSrcPath>
+							<htmlCustomization>${project.build.directory}/site/xsl/minddoc-html-printable.xsl</htmlCustomization>
+							<htmlStylesheet>../css/docbook-printable.css</htmlStylesheet>
+						</configuration>
+					</execution>
+					<execution>
+						<id>userguide-html</id>
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>generate-html</goal>
+						</goals>
+						<inherited>false</inherited>
+						<configuration>
+							<includes>c-macro-generator.xml</includes>
+							<targetDirectory>${project.build.directory}/site</targetDirectory>
+							<htmlCustomization>${project.build.directory}/site/xsl/minddoc-html.xsl</htmlCustomization>
+							<htmlStylesheet>css/docbook.css</htmlStylesheet>
+							<customizationParameters>
+								<parameter>
+									<name>root.path</name>
+									<value>.</value>
+								</parameter>
+								<parameter>
+									<name>pdf.link</name>
+									<value>c-macro-generator.pdf</value>
+								</parameter>
+								<parameter>
+									<name>chunked.link</name>
+									<value>userGuide/c-macro-generator.html</value>
+								</parameter>
+								<parameter>
+									<name>printable.link</name>
+									<value>printable/c-macro-generator.html</value>
+								</parameter>
+							</customizationParameters>
+						</configuration>
+					</execution>
+					<execution>
+						<id>userguide-html-chunked</id>
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>generate-html</goal>
+						</goals>
+						<inherited>false</inherited>
+						<configuration>
+							<includes>c-macro-generator.xml</includes>
+							<chunkedOutput>true</chunkedOutput>
+							<targetDirectory>${project.build.directory}/site/userGuide</targetDirectory>
+							<imgSrcPath>../</imgSrcPath>
+							<htmlCustomization>${project.build.directory}/site/xsl/minddoc-chunk.xsl</htmlCustomization>
+							<htmlStylesheet>../css/docbook-chunk.css</htmlStylesheet>
+							<customizationParameters>
+								<parameter>
+									<name>root.path</name>
+									<value>..</value>
+								</parameter>
+								<parameter>
+									<name>pdf.link</name>
+									<value>../c-macro-generator.pdf</value>
+								</parameter>
+								<parameter>
+									<name>single.link</name>
+									<value>../c-macro-generator.html</value>
+								</parameter>
+								<parameter>
+									<name>printable.link</name>
+									<value>../printable/c-macro-generator.html</value>
+								</parameter>
+							</customizationParameters>
+						</configuration>
+					</execution>
+				</executions>
+				<configuration>
+					<sourceDirectory>${basedir}/src/docbkx</sourceDirectory>
+					<targetDirectory>${project.build.directory}/site</targetDirectory>
+				</configuration>
+			</plugin>
+
+		</plugins>
+
+	</build>
+
+	<profiles>
+
+		<profile>
+			<id>stdc89</id>
+
+			<activation>
+				<property>
+					<name>allTests</name>
+					<value>true</value>
+				</property>
+			</activation>
+
+			<build>
+				<plugins>
+					<plugin>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>stdc89</id>
+								<phase>test</phase>
+								<goals>
+									<goal>test</goal>
+								</goals>
+								<configuration>
+									<reportsDirectory>${project.build.directory}/surefire-reports-stdc89</reportsDirectory>
+									<groups>${test.groups}, simpleGeneration</groups>
+									<systemPropertyVariables>
+										<default.file.level>FINEST</default.file.level>
+										<loggers.outfile>${project.build.testOutputDirectory}/test-log-stdc89.txt</loggers.outfile>
+										<mind.test.cflags>-std=c89 -D__MIND_NO_INLINE
+											${mind.test.cflags}</mind.test.cflags>
+										<mind.test.compiler>${mind.test.compiler}</mind.test.compiler>
+									</systemPropertyVariables>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+		<profile>
+			<id>gcc4</id>
+
+			<activation>
+				<property>
+					<name>allTests</name>
+					<value>true</value>
+				</property>
+			</activation>
+
+			<build>
+				<plugins>
+					<plugin>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>gcc4</id>
+								<phase>test</phase>
+								<goals>
+									<goal>test</goal>
+								</goals>
+								<configuration>
+									<reportsDirectory>${project.build.directory}/surefire-reports-gcc4</reportsDirectory>
+									<groups>${test.groups}, simpleGeneration</groups>
+									<systemPropertyVariables>
+										<default.file.level>FINEST</default.file.level>
+										<loggers.outfile>${project.build.testOutputDirectory}/test-log-gcc4.txt</loggers.outfile>
+										<mind.test.cflags>${mind.test.cflags}</mind.test.cflags>
+										<mind.test.compiler>${mind.test.compiler.gcc4}</mind.test.compiler>
+									</systemPropertyVariables>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+
+		</profile>
+
+	</profiles>
+
+</project>

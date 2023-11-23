@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.sri.vt.majic</groupId>
+  <artifactId>majic</artifactId>
+  <version>0.2.1-SNAPSHOT</version>
+  <packaging>pom</packaging>
+  <name>Majic</name>
+  <description>
+    Majic is the code name for the VT software build process using cmake, maven, jenkins, and artifactory.
+    It stands for Maven, Artifactory, Jenkins, Integrated with CMake.
+  </description>
+  <inceptionYear>2013</inceptionYear>
+
+  <distributionManagement>
+    <site>
+      <id>majic.website</id>
+      <name>Majic</name>
+      <url>http://build-open.sarnoff.internal/job/vt-majic</url>
+    </site>
+  </distributionManagement>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- reporting doesn't honor pluginManagement, so we use a property for these -->
+    <maven.javadoc.plugin.version>2.9.1</maven.javadoc.plugin.version>
+    <maven.plugin.plugin.version>3.3</maven.plugin.plugin.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.testng</groupId>
+        <artifactId>testng</artifactId>
+        <version>6.8.8</version>
+        <scope>test</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.1</version>
+          <configuration>
+            <source>1.7</source>
+            <target>1.7</target>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-project-info-reports-plugin</artifactId>
+          <version>2.7</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <version>${maven.javadoc.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-plugin-plugin</artifactId>
+          <version>${maven.plugin.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <!-- add support for ssh/scp -->
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-site-plugin</artifactId>
+          <version>3.3</version>
+          <dependencies>
+            <dependency>
+              <groupId>org.apache.maven.wagon</groupId>
+              <artifactId>wagon-ssh</artifactId>
+              <version>2.5</version>
+            </dependency>
+            <dependency>
+              <groupId>org.apache.maven.wagon</groupId>
+              <artifactId>wagon-ssh-external</artifactId>
+              <version>1.0</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+  <issueManagement>
+    <system>JIRA</system>
+    <url>http://jira.sarnoff.internal:8080/secure/Dashboard.jspa?selectPageId=11000</url>
+  </issueManagement>
+
+  <url>http://build-open/job/vt-majic/</url>
+
+  <organization>
+    <name>SRI Vision Technologies Lab</name>
+    <url>https://wiki.sri.com/display/VT/Home</url>
+  </organization>
+
+  <ciManagement>
+    <system>Jenkins</system>
+    <url>http://build-open/job/vt-majic/</url>
+  </ciManagement>
+
+  <scm>
+    <connection>scm:git:ssh://stash-vt.sarnoff.internal:2222/common/majic.git</connection>
+    <url>https://stash-vt.sarnoff.internal/projects/COMMON/repos/majic/browse</url>
+  </scm>
+
+  <modules>
+    <module>majic-documentation</module>
+    <module>build-helper-maven-plugin</module>
+  </modules>
+
+  <profiles>
+    <profile>
+      <id>run-its</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-invoker-plugin</artifactId>
+            <version>1.8</version>
+            <configuration>
+              <debug>true</debug>
+              <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
+              <pomIncludes>
+                <pomInclude>*/pom.xml</pomInclude>
+              </pomIncludes>
+              <postBuildHookScript>verify</postBuildHookScript>
+              <localRepositoryPath>${project.build.directory}/local-repo</localRepositoryPath>
+              <settingsFile>src/it/settings.xml</settingsFile>
+              <goals>
+                <goal>clean</goal>
+                <goal>test-compile</goal>
+              </goals>
+            </configuration>
+            <executions>
+              <execution>
+                <id>integration-test</id>
+                <goals>
+                  <goal>install</goal>
+                  <goal>integration-test</goal>
+                  <goal>verify</goal>
+                </goals>
+                <configuration>
+                  <profiles>
+                    <!--
+                    set the default compiler to gcc. Because of the ordering of profiles in the parent pom,
+                    a different compiler (e.g. vc2010) will override this if found. We intentionally do not
+                    set a default compiler in the parent pom so that failures to detect the compiler (and
+                    therefore the dependencies to resolve are more obvious, but doing so here allows the relatively
+                    limited tests we have here to work on most operating systems.
+                    -->
+                    <profile>detected-compiler-gcc</profile>
+                  </profiles>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

@@ -1,0 +1,230 @@
+<?xml version="1.0" ?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.r2pmml</groupId>
+	<artifactId>r2pmml</artifactId>
+	<version>1.0-SNAPSHOT</version>
+
+	<licenses>
+		<license>
+			<name>GNU Affero General Public License (AGPL) version 3.0</name>
+			<url>http://www.gnu.org/licenses/agpl-3.0.html</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<id>villu.ruusmann</id>
+			<name>Villu Ruusmann</name>
+		</developer>
+	</developers>
+
+	<scm>
+		<connection>scm:git:git@github.com:jpmml/r2pmml.git</connection>
+		<developerConnection>scm:git:git@github.com:jpmml/r2pmml.git</developerConnection>
+		<url>git://github.com/jpmml/r2pmml.git</url>
+		<tag>HEAD</tag>
+	</scm>
+	<issueManagement>
+		<system>GitHub</system>
+		<url>https://github.com/jpmml/r2pmml/issues</url>
+	</issueManagement>
+
+	<properties>
+		<jpmml-r.version>1.5.2</jpmml-r.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.jpmml</groupId>
+			<artifactId>pmml-rexp</artifactId>
+			<version>${jpmml-r.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.jpmml</groupId>
+					<artifactId>pmml-converter-testing</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.jpmml</groupId>
+			<artifactId>pmml-rexp-xgboost</artifactId>
+			<version>${jpmml-r.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.jpmml</groupId>
+					<artifactId>pmml-converter-testing</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<dependency>
+			<groupId>com.beust</groupId>
+			<artifactId>jcommander</artifactId>
+			<version>1.72</version>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>3.1.0</version>
+				<executions>
+					<execution>
+						<id>modify-libraries</id>
+						<phase>package</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<target>
+								<property
+									name="guava.version"
+									value="21.0"
+								/>
+								<jar 
+									destfile="${project.basedir}/inst/java/guava-${guava.version}-minified.jar"
+								>
+									<zipfileset
+										src="${project.basedir}/inst/java/guava-${guava.version}.jar"
+									>
+										<exclude name="com/google/common/cache/**"/>
+										<exclude name="com/google/common/escape/**"/>
+										<exclude name="com/google/common/eventbus/**"/>
+										<exclude name="com/google/common/graph/**"/>
+										<exclude name="com/google/common/hash/**"/>
+										<exclude name="com/google/common/html/**"/>
+										<exclude name="com/google/common/net/**"/>
+										<exclude name="com/google/common/reflect/**"/>
+										<exclude name="com/google/common/util/concurrent/**"/>
+										<exclude name="com/google/common/xml/**"/>
+									</zipfileset>
+								</jar>
+								<delete file="${project.basedir}/inst/java/guava-${guava.version}.jar"/>
+							</target>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-clean-plugin</artifactId>
+				<version>3.2.0</version>
+				<configuration>
+					<filesets>
+						<fileset>
+							<directory>${project.basedir}/java</directory>
+							<includes>
+								<include>*.jar</include>
+							</includes>
+						</fileset>
+						<fileset>
+							<directory>${project.basedir}/inst/java</directory>
+							<includes>
+								<include>*.jar</include>
+							</includes>
+						</fileset>
+					</filesets>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.11.0</version>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<version>3.5.0</version>
+				<executions>
+					<execution>
+						<id>copy-library-sources</id>
+						<goals>
+							<goal>copy-dependencies</goal>
+						</goals>
+						<configuration>
+							<classifier>sources</classifier>
+							<excludeArtifactIds>pmml-model,pmml-model-metro</excludeArtifactIds>
+							<includeGroupIds>org.jpmml</includeGroupIds>
+							<outputDirectory>${project.basedir}/java</outputDirectory>
+						</configuration>
+					</execution>
+					<execution>
+						<id>copy-libraries</id>
+						<goals>
+							<goal>copy-dependencies</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${project.basedir}/inst/java</outputDirectory>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>3.3.0</version>
+				<configuration>
+					<archive>
+						<manifestEntries>
+							<Implementation-Title>R2PMML package</Implementation-Title>
+							<Implementation-Version>${DESCRIPTION.Version}</Implementation-Version>
+						</manifestEntries>
+					</archive>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>3.3.1</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>copy-resources</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${project.basedir}/inst/java</outputDirectory>
+							<resources>
+								<resource>
+									<directory>${project.basedir}/target</directory>
+									<includes>
+										<include>${project.build.finalName}.jar</include>
+									</includes>
+									<filtering>false</filtering>
+								</resource>
+							</resources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>properties-maven-plugin</artifactId>
+				<version>1.1.0</version>
+				<executions>
+					<execution>
+						<phase>initialize</phase>
+						<goals>
+							<goal>read-project-properties</goal>
+						</goals>
+						<configuration>
+							<files>
+								<file>DESCRIPTION</file>
+							</files>
+							<keyPrefix>DESCRIPTION.</keyPrefix>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+</project>

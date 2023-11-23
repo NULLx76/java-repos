@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <parent>
+        <groupId>de.ingrid</groupId>
+        <artifactId>ingrid-base-pom</artifactId>
+        <version>5.0.0</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>ingrid-webmap-client</artifactId>
+    <version>6.3.0</version>
+    <packaging>war</packaging>
+    <name>InGrid Map Client</name>
+    <scm>
+        <connection>scm:git:git@github.com:informationgrid/ingrid-webmap-client.git</connection> 
+        <developerConnection>scm:git:git@github.com:informationgrid/ingrid-webmap-client.git</developerConnection> 
+        <tag>HEAD</tag>
+    </scm>
+    <properties>
+        <spring.version>5.3.24</spring.version>
+        <jersey.version>2.37</jersey.version>
+        <utils-geo.version>6.3.0</utils-geo.version>
+        <maven.compiler.release>17</maven.compiler.release>
+    </properties>
+    
+    <profiles>
+      <profile>
+        <id>windows</id>
+        <activation>
+          <os>
+            <family>windows</family>
+          </os>
+        </activation>
+        <properties>
+          <script.extension>.bat</script.extension>
+        </properties>
+      </profile>
+      <profile>
+        <id>unix</id>
+        <activation>
+          <os>
+            <family>unix</family>
+          </os>
+        </activation>
+        <properties>
+          <script.extension>.sh</script.extension>
+        </properties>
+      </profile>
+      <profile>
+        <id>rebuild</id>
+        <properties>
+          <script.extension>.rebuild.bat</script.extension>
+        </properties>
+      </profile>
+      <profile>
+        <id>admin</id>
+        <properties>
+          <script.extension>.admin.bat</script.extension>
+        </properties>
+      </profile>
+      <profile>
+        <id>frontend</id>
+        <properties>
+          <script.extension>.frontend.bat</script.extension>
+        </properties>
+      </profile>
+    </profiles>
+    <build>
+        <finalName>${project.artifactId}</finalName>
+        
+        <!-- ==================== PLUGINS ==================== -->
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <configuration>
+                    <!-- add class files to WEB-INF/classes also config files ->CONFIG-FILES 
+                        needed at runtime in classes-path -->
+                    <packagingExcludes>**/frontend/ingrid/</packagingExcludes>
+                    <archiveClasses>false</archiveClasses>
+                    <archive>
+                        <manifestEntries>
+                            <ingridComponentType>WEBMAP_CLIENT</ingridComponentType>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>**/*.properties</exclude>
+                        <exclude>**/*.json</exclude>
+                        <exclude>**/*.sql</exclude>
+                        <exclude>**/*.xml</exclude>
+                        <exclude>**/*.js</exclude>
+                        <exclude>**/*.jsp</exclude>
+                        <exclude>**/*.html</exclude>
+                        <exclude>**/*.less</exclude>
+                        <exclude>**/*.yaml</exclude>
+                        <exclude>**/mf-geoadmin3/*</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-eclipse-plugin</artifactId>
+                <version>2.9</version>
+                <inherited>true</inherited>
+                <configuration>
+                    <wtpversion>1.5</wtpversion>
+                    <downloadSources>1.5</downloadSources>
+                </configuration>
+            </plugin>
+            <plugin>
+              <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.2.1</version>
+                <executions>
+                    <execution>
+                        <id>compile-jni</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>${project.basedir}/tools/compile${script.extension}</executable>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>compile</phase>
+                        <configuration>
+                            <tasks>
+                                <echo>Copy mf-geoadmin 'src/components'</echo>
+                                <copy todir="${project.build.directory}/${project.build.finalName}/frontend/src/components">
+                                    <fileset dir="${project.basedir}/mf-geoadmin3/src/components/" />
+                                </copy>
+                                <echo>Copy mf-geoadmin 'src/img'</echo>
+                                <copy todir="${project.build.directory}/${project.build.finalName}/frontend/src/img">
+                                    <fileset dir="${project.basedir}/mf-geoadmin3/src/img/" />
+                                </copy>
+                                <echo>Copy mf-geoadmin 'src/js'</echo>
+                                <copy todir="${project.build.directory}/${project.build.finalName}/frontend/src/js">
+                                    <fileset dir="${project.basedir}/mf-geoadmin3/src/js/" />
+                                </copy>
+                                <echo>Copy mf-geoadmin 'src/lib'</echo>
+                                <copy todir="${project.build.directory}/${project.build.finalName}/frontend/src/lib">
+                                    <fileset dir="${project.basedir}/mf-geoadmin3/src/lib/" />
+                                </copy>
+                                <echo>Copy mf-geoadmin 'src/style'</echo>
+                                <copy todir="${project.build.directory}/${project.build.finalName}/frontend/src/style">
+                                    <fileset dir="${project.basedir}/mf-geoadmin3/src/style/" />
+                                </copy>
+                                <echo>Copy mf-geoadmin 'src/'</echo>
+                                <copy todir="${project.build.directory}/${project.build.finalName}/frontend/src">
+                                    <fileset dir="${project.basedir}/mf-geoadmin3/src/" />
+                                </copy>
+                                <echo>Copy mf-geoadmin 'prd/'</echo>
+                                <copy todir="${project.build.directory}/${project.build.finalName}/frontend/prd">
+                                    <fileset dir="${project.basedir}/mf-geoadmin3/prd/" />
+                                </copy>
+                                <echo>Copy 'admin'</echo>
+                                <copy todir="${project.build.directory}/${project.build.finalName}/admin">
+                                    <fileset dir="${project.basedir}/admin/dist" />
+                                </copy>
+                                <echo>Copy settings 'config/'</echo>
+                                <copy todir="${project.build.directory}/${project.build.finalName}/frontend/config">
+                                    <fileset dir="${project.basedir}/frontend/config/" />
+                                </copy>
+                                <echo>Copy msettings 'data/'</echo>
+                                <copy todir="${project.build.directory}/${project.build.finalName}/frontend/data">
+                                    <fileset dir="${project.basedir}/frontend/data/" />
+                                </copy>
+                                <echo>Copy settings 'help/'</echo>
+                                <copy todir="${project.build.directory}/${project.build.finalName}/frontend/help">
+                                    <fileset dir="${project.basedir}/frontend/help/" />
+                                </copy>
+                                <echo>Copy settings 'css/'</echo>
+                                <copy todir="${project.build.directory}/${project.build.finalName}/frontend/css">
+                                    <fileset dir="${project.basedir}/frontend/css/" />
+                                </copy>
+                                <echo>Copy override 'locales'</echo>
+                                <copy todir="${project.build.directory}/${project.build.finalName}/frontend/locales">
+                                    <fileset dir="${project.basedir}/frontend/locales/" />
+                                </copy>
+                                <echo>Copy override 'login'</echo>
+                                <copy todir="${project.build.directory}/${project.build.finalName}/login">
+                                    <fileset dir="${project.basedir}/login/" />
+                                </copy>
+                            </tasks>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>external.atlassian.jgitflow</groupId>
+                <artifactId>jgitflow-maven-plugin</artifactId>
+                <version>1.0-m5.1</version>
+                <configuration>
+                  <defaultOriginUrl>https://github.com/informationgrid/ingrid-webmap-client</defaultOriginUrl>
+                  <noDeploy>true</noDeploy>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+    <!-- ==================== DEPENDENCY MANAGEMENT ==================== -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.glassfish.jersey</groupId>
+                <artifactId>jersey-bom</artifactId>
+                <version>${jersey.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>2.14.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.dataformat</groupId>
+                <artifactId>jackson-dataformat-xml</artifactId>
+                <version>2.14.1</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+    <!-- ==================== DEPENDENCIES ==================== -->
+    <dependencies>
+        <dependency>
+            <groupId>de.ingrid</groupId>
+            <artifactId>ingrid-utils-geo</artifactId>
+            <version>${utils-geo.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>de.ingrid</groupId>
+            <artifactId>ingrid-utils</artifactId>
+            <version>6.0.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>commons-codec</groupId>
+                    <artifactId>commons-codec</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.springframework</groupId>
+                    <artifactId>spring-beans</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.springframework</groupId>
+                    <artifactId>spring-core</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.6</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-beans</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-core</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
+            <version>2.4</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.thoughtworks.xstream</groupId>
+            <artifactId>xstream</artifactId>
+            <version>1.4.19</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.glassfish.jersey.core</groupId>
+            <artifactId>jersey-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.core</groupId>
+            <artifactId>jersey-server</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.containers</groupId>
+            <artifactId>jersey-container-servlet</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.media</groupId>
+            <artifactId>jersey-media-multipart</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.inject</groupId>
+            <artifactId>jersey-hk2</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.media</groupId>
+            <artifactId>jersey-media-json-jackson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-runtime</artifactId>
+            <version>2.3.7</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-xml</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.16</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mapfish.print</groupId>
+            <artifactId>print-lib</artifactId>
+            <version>2.1.5</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.geotools</groupId>
+                    <artifactId>gt-epsg-hsql</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>it.sauronsoftware.cron4j</groupId>
+            <artifactId>cron4j</artifactId>
+             <version>2.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.mail</groupId>
+            <artifactId>mail</artifactId>
+            <version>1.3.3</version>
+        </dependency>
+        <!-- JENA libs for RDF support -->
+        <dependency>
+            <groupId>org.apache.jena</groupId>
+            <artifactId>jena-arq</artifactId>
+            <version>2.9.3</version>
+        </dependency>
+        <dependency>
+            <groupId>xml-apis</groupId>
+            <artifactId>xml-apis</artifactId>
+            <version>1.4.01</version>
+        </dependency>
+        <dependency>
+            <groupId>xerces</groupId>
+            <artifactId>xercesImpl</artifactId>
+            <version>2.12.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>3.2.1</version>
+        </dependency>
+    </dependencies>
+    <!-- ==================== REPOSITORIES ==================== -->
+    <repositories>
+        <repository>
+          <id>nexus</id>
+          <name>Nexus Repo</name>
+          <url>https://nexus.informationgrid.eu/repository/maven-public</url>
+        </repository>
+        <!-- next repository needed for old opengis libs -->
+        <repository>
+          <id>geotoolkit</id>
+          <name>Geotoolkit.org project</name>
+          <url>http://download.osgeo.org/webdav/geotools/</url>
+        </repository>
+    </repositories>
+    <!-- LEADS TO ERRORS due to malformed files from repo ! <pluginRepositories><pluginRepository><name>oss.sonatype.org</name><id>oss.sonatype.org</id><url>http://oss.sonatype.org/content/groups/public</url></pluginRepository></pluginRepositories> -->
+</project>

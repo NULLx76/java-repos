@@ -1,0 +1,365 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>eu.musesproject</groupId>
+	<artifactId>windowsclient</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>windows_client</name>
+	<description>Muses Windows Client</description>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<javafx.version>2.2</javafx.version>
+		<exec.mainClass>eu.musesproject.windowsclient.view.LoginMain</exec.mainClass>
+	</properties>
+
+
+	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<configuration>
+						<source>1.7</source>
+						<target>1.7</target>
+						<encoding>ISO-8859-1</encoding>
+					</configuration>
+				</plugin>
+				<plugin>
+					<!-- copy all dependencies of your app to target folder -->
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-dependency-plugin</artifactId>
+					<version>2.3</version>
+					<executions>
+						<execution>
+							<id>copy-dependencies</id>
+							<phase>package</phase>
+							<configuration>
+								<overWriteReleases>false</overWriteReleases>
+								<overWriteSnapshots>false</overWriteSnapshots>
+								<overWriteIfNewer>true</overWriteIfNewer>
+								<outputDirectory>${project.build.directory}</outputDirectory>
+							</configuration>
+							<goals>
+								<goal>copy-dependencies</goal>
+							</goals>
+						</execution>
+					</executions>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-surefire-plugin</artifactId>
+					<configuration>
+						<testFailureIgnore>true</testFailureIgnore>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.codehaus.mojo</groupId>
+					<artifactId>properties-maven-plugin</artifactId>
+					<version>1.0-alpha-2</version>
+					<configuration>
+						<files>
+							<file>${basedir}/dev.properties</file>
+						</files>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-jar-plugin</artifactId>
+					<configuration>
+						<archive>
+							<manifestEntries>
+								<JavaFX-Version>${javafx.version}+</JavaFX-Version>
+								<Main-Class>eu.musesproject.windowsclient.view.LoginMain</Main-Class>
+								<implementation-version>1.0</implementation-version>
+								<JavaFX-Application-Class>eu.musesproject.windowsclient.view.LoginMain</JavaFX-Application-Class>
+								<JavaFX-Class-Path>${java.home}/lib/jfxrt.jar</JavaFX-Class-Path>
+								<!-- The artifactId (name) of the jfxrt.jar ... see dependency system 
+									scope -->
+								<Class-Path>javafx-${javafx.version}.jar</Class-Path>
+							</manifestEntries>
+							<manifest>
+								<addClasspath>true</addClasspath>
+							</manifest>
+						</archive>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-shade-plugin</artifactId>
+					<version>1.4</version>
+					<executions>
+						<execution>
+							<phase>package</phase>
+							<goals>
+								<goal>shade</goal>
+							</goals>
+						</execution>
+					</executions>
+					<configuration>
+						<shadedArtifactAttached>true</shadedArtifactAttached>
+						<shadedClassifierName>shaded</shadedClassifierName>
+					</configuration>
+				</plugin>
+
+				<plugin>
+					<groupId>org.bluestemsoftware.open.maven.plugin</groupId>
+					<artifactId>launch4j-plugin</artifactId>
+					<version>1.5.0.0</version>
+					<executions>
+						<!-- Command-line exe -->
+						<execution>
+							<id>l4j-cli</id>
+							<phase>package</phase>
+							<goals>
+								<goal>launch4j</goal>
+							</goals>
+							<configuration>
+								<headerType>console</headerType>
+								<outfile>target/win_muses.exe</outfile>
+								<jar>target/${artifactId}-${version}-shaded.jar</jar>
+								<errTitle>App Err</errTitle>
+								<classPath>
+									<mainClass>eu.musesproject.windowsclient.view.LoginMain</mainClass>
+								</classPath>
+								<jre>
+									<minVersion>1.6.0</minVersion>
+									<maxVersion>1.8.0</maxVersion>
+									<initialHeapSize>128</initialHeapSize>
+									<maxHeapSize>1024</maxHeapSize>
+								</jre>
+							</configuration>
+						</execution>
+					</executions>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-antrun-plugin</artifactId>
+					<version>1.6</version>
+					<executions>
+						<execution>
+							<phase>package</phase>
+							<configuration>
+								<target>
+									<!-- define the deploy ANT task -->
+									<taskdef name="jfxdeploy" classname="com.sun.javafx.tools.ant.DeployFXTask"
+										classpathref="maven.plugin.classpath" />
+									<!-- define the JarSing ANT task -->
+									<taskdef name="jfxsignjar" classname="com.sun.javafx.tools.ant.FXSignJarTask"
+										classpathref="maven.plugin.classpath" />
+									<jfxdeploy width="1024" height="768"
+										outdir="${project.build.directory}/deploy" outfile="${build.finalName}"
+										nativeBundles="all">
+										<info title="${project.name}" />
+										<!-- set the main class of your applcation; I had to create a Main.class 
+											(class Main extends MyMain) otherwise it will return an error on start -->
+										<application name="${project.name}" mainClass="com.javafx.main.Main" />
+										<resources>
+											<fileset dir="${project.build.directory}" includes="*.jar" />
+											<fileset dir="${project.build.directory}/dependency"
+												includes="*.jar" />
+										</resources>
+										<!-- set your jvm args -->
+										<platform javafx="${javafx.version}+">
+											<jvmarg value="-Xms512m" />
+											<jvmarg value="-Xmx1024m" />
+										</platform>
+									</jfxdeploy>
+									<!-- you need to generate a key yourself -->
+									<jfxsignjar destdir="${project.build.directory}/deploy"
+										keyStore="path/to/your/keystore" storePass="yourPass" alias="yourAlias"
+										keyPass="keyPass">
+										<fileset dir="${project.build.directory}/deploy"
+											includes="*.jar" />
+									</jfxsignjar>
+								</target>
+							</configuration>
+							<goals>
+								<goal>run</goal>
+							</goals>
+						</execution>
+					</executions>
+					<dependencies>
+						<dependency>
+							<groupId>com.oracle</groupId>
+							<artifactId>ant-javafx</artifactId>
+							<version>${javafx.version}</version>
+							<systemPath>${java.home}/../lib/ant-javafx.jar</systemPath>
+							<scope>system</scope>
+						</dependency>
+						<dependency>
+							<groupId>com.oracle</groupId>
+							<artifactId>javafx</artifactId>
+							<version>${javafx.version}</version>
+							<systemPath>${java.home}/lib/jfxrt.jar</systemPath>
+							<scope>system</scope>
+						</dependency>
+					</dependencies>
+				</plugin>
+				<!-- Use this plugin when you need to apply MUSES license headers to 
+					java source files -->
+				<plugin>
+					<groupId>org.codehaus.mojo</groupId>
+					<artifactId>license-maven-plugin</artifactId>
+					<version>1.6</version>
+					<configuration>
+						<licenseName>${license.licenseName}</licenseName>
+						<inceptionYear>2013</inceptionYear>
+						<organizationName>${license.organizationName}</organizationName>
+						<verbose>false</verbose>
+						<addSvnKeyWords>false</addSvnKeyWords>
+						<roots>
+							<root>${license.root1}</root>
+							<root>${license.root2}</root>
+						</roots>
+					</configuration>
+					<executions>
+						<execution>
+							<id>first</id>
+							<goals>
+								<goal>update-file-header</goal>
+							</goals>
+							<phase>process-sources</phase>
+							<configuration>
+							</configuration>
+						</execution>
+					</executions>
+				</plugin>
+				<plugin>
+					<artifactId>maven-assembly-plugin</artifactId>
+					<configuration>
+						<archive>
+							<manifest>
+								<mainClass>eu.musesproject.windowsclient.view.LoginMain</mainClass>
+							</manifest>
+						</archive>
+						<descriptorRefs>
+							<descriptorRef>jar-with-dependencies</descriptorRef>
+						</descriptorRefs>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>eu.musesproject</groupId>
+			<artifactId>common</artifactId>
+			<version>${project.version}</version>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
+			<version>2.3.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>4.4.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20141113</version>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.8.1</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>commons-cli</groupId>
+			<artifactId>commons-cli</artifactId>
+			<version>1.2</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-codec</groupId>
+			<artifactId>commons-codec</artifactId>
+			<version>1.9</version>
+		</dependency>
+
+
+
+		<!-- hibernate -->
+
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.17</version>
+		</dependency>
+
+
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-core</artifactId>
+			<version>4.3.5.Final</version>
+		</dependency>
+		<dependency>
+			<groupId>com.intellij</groupId>
+			<artifactId>forms_rt</artifactId>
+			<version>7.0.3</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-entitymanager</artifactId>
+			<version>4.3.5.Final</version>
+		</dependency>
+		<dependency>
+			<groupId>org.hibernate.javax.persistence</groupId>
+			<artifactId>hibernate-jpa-2.1-api</artifactId>
+			<version>1.0.0.Final</version>
+		</dependency>
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-c3p0</artifactId>
+			<version>4.3.8.Final</version>
+		</dependency>
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+			<version>5.1.19</version>
+		</dependency>
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<version>1.4.187</version>
+		</dependency>
+		<dependency>
+			<groupId>com.oracle</groupId>
+			<artifactId>javafx</artifactId>
+			<version>${javafx.version}</version>
+			<systemPath>${java.home}/lib/jfxrt.jar</systemPath>
+			<scope>system</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.controlsfx</groupId>
+			<artifactId>controlsfx</artifactId>
+			<version>8.20.8</version>
+		</dependency>
+		<dependency>
+			<groupId>org.quartz-scheduler</groupId>
+			<artifactId>quartz</artifactId>
+			<version>2.2.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20140107</version>
+		</dependency>
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna</artifactId>
+            <version>4.2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna-platform</artifactId>
+            <version>4.0.0</version>
+        </dependency>
+	</dependencies>
+</project>

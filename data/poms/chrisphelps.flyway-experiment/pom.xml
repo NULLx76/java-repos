@@ -1,0 +1,168 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.sutemi</groupId>
+  <artifactId>flyway-experiment</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>flyway-experiment</name>
+  <url>http://maven.apache.org</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+
+    <postgresql-jdbc.version>9.2-1003-jdbc4</postgresql-jdbc.version>
+    <jdbc.driver>org.postgresql.Driver</jdbc.driver>
+    <jdbc.host>localhost</jdbc.host>
+    <jdbc.port>5432</jdbc.port>
+    <jdbc.user>postgres</jdbc.user>
+    <jdbc.password>super</jdbc.password>
+    <jdbc.database>test_${timestamp}</jdbc.database>
+    <jdbc.url>jdbc:postgresql://${jdbc.host}:${jdbc.port}/${jdbc.database}</jdbc.url>
+
+
+    <keepDb>true</keepDb>
+    <dbBootstrap.url>jdbc:postgresql://${jdbc.host}:${jdbc.port}/postgres</dbBootstrap.url>
+
+  </properties>
+
+
+  <build>
+    <plugins>
+
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>buildnumber-maven-plugin</artifactId>
+        <version>1.0</version>
+        <executions>
+          <execution>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>create-timestamp</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <timestampFormat>yyyy_MM_dd_HHmmss</timestampFormat>
+          <timestampPropertyName>timestamp</timestampPropertyName>
+        </configuration>
+      </plugin>
+
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>sql-maven-plugin</artifactId>
+        <version>1.5</version>
+
+        <dependencies>
+          <!-- specify the dependent jdbc driver here -->
+          <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgresql-jdbc.version}</version>
+          </dependency>
+        </dependencies>
+
+        <!-- common configuration shared by all executions -->
+        <configuration>
+          <driver>org.postgresql.Driver</driver>
+          <url>${dbBootstrap.url}</url>
+          <username>${jdbc.user}</username>
+          <password>${jdbc.password}</password>
+          <!--all executions are ignored if -DskipTests=true-->
+          <skip>${skipTests}</skip>
+        </configuration>
+
+        <executions>
+          <execution>
+            <id>create-db</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>execute</goal>
+            </goals>
+            <configuration>
+              <autocommit>true</autocommit>
+              <sqlCommand>CREATE DATABASE ${jdbc.database}</sqlCommand>
+              <onError>continue</onError>
+            </configuration>
+          </execution>
+
+          <!-- drop db after tests by default unless -DkeepDb=true-->
+          <execution>
+            <id>drop-db-after-tests</id>
+            <phase>post-integration-test</phase>
+            <goals>
+              <goal>execute</goal>
+            </goals>
+            <configuration>
+              <autocommit>true</autocommit>
+              <sqlCommand>DROP DATABASE IF EXISTS ${jdbc.database}</sqlCommand>
+              <onError>continue</onError>
+              <skip>${keepDb}</skip>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+
+      <plugin>
+        <groupId>org.flywaydb</groupId>
+        <artifactId>flyway-maven-plugin</artifactId>
+        <version>3.2.1</version>
+
+        <executions>
+          <execution>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>migrate</goal>
+            </goals>
+          </execution>
+        </executions>
+
+        <configuration>
+
+          <user>${jdbc.user}</user>
+          <password>${jdbc.password}</password>
+          <url>${jdbc.url}</url>
+          <initOnMigrate>true</initOnMigrate>   <!-- deprecated -->
+          <skip>${skipTests}</skip>
+          <validateOnMigrate>false</validateOnMigrate>
+          <resolvers>
+            <resolver>db.migration.V4__ConcurrentUniqueIndexMigrationResolver</resolver>
+          </resolvers>
+
+
+        </configuration>
+
+      </plugin>
+    </plugins>
+  </build>
+
+
+  <dependencies>
+
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>${postgresql-jdbc.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-core</artifactId>
+      <version>3.2.1</version>
+    </dependency>
+
+
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>3.8.1</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>

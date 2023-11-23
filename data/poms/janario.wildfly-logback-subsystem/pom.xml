@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>me.janario</groupId>
+    <artifactId>wildfly-logback-subsystem</artifactId>
+    <version>3.0.0-SNAPSHOT</version>
+
+    <name>WildFly: Logback Subsystem Artifact</name>
+
+    <packaging>jar</packaging>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <wildfly.version>10.0.0.Final</wildfly.version>
+        <module.name>me.janario.logback</module.name>
+
+        <!--<logback.version>1.1.3</logback.version>-->
+        <!--https://github.com/qos-ch/logback/pull/260-->
+        <logback.version>1.1.3-TS-2</logback.version>
+
+        <!--Same version of WildFly module-->
+        <slf4j.version>1.7.7</slf4j.version>
+        <jboss-logging.version>3.3.0.Final</jboss-logging.version>
+        <janino.version>2.7.8</janino.version>
+        <wildfly-core.version>2.0.10.Final</wildfly-core.version>
+    </properties>
+
+    <developers>
+        <developer>
+            <id>janario.oliveira</id>
+            <name>Janario Oliveira</name>
+            <email>janarioliver@gmail.com</email>
+        </developer>
+    </developers>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+
+        <plugins>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.3</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                    <showDeprecation>true</showDeprecation>
+                    <compilerArgs>
+                        <compilerArg>-Xlint:all,-serial</compilerArg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>2.4</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.18.1</version>
+                <configuration>
+                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                    <enableAssertions>true</enableAssertions>
+                    <argLine>-Xmx512m</argLine>
+                    <systemProperties>
+                        <property>
+                            <name>jboss.home</name>
+                            <value>${jboss.home}</value>
+                        </property>
+                        <property>
+                            <name>logback.ContextSelector</name>
+                            <value>me.janario.logback.deployment.LogbackContextSelector</value>
+                        </property>
+                    </systemProperties>
+                    <includes>
+                        <include>**/*TestCase.java</include>
+                    </includes>
+                    <forkMode>once</forkMode>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.5.3</version>
+                <configuration>
+                    <filters>
+                        <filter>src/assemble/filter.properties</filter>
+                    </filters>
+                    <descriptors>
+                        <descriptor>src/assemble/distribution.xml</descriptor>
+                    </descriptors>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <inherited>false</inherited>
+                <version>1.8</version>
+                <executions>
+                    <execution>
+                        <id>build-dist</id>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <phase>package</phase>
+                        <configuration>
+                            <target>
+                                <delete dir="target/modules" />
+                                <property name="modules.dir" value="target/modules" />
+                                <property name="lib.dir" value="${settings.localRepository}" />
+                                <property name="layer.dir" value="${modules.dir}/system/layers/logback" />
+
+                                <copydir src="target/classes/modules" dest="${modules.dir}" />
+
+                                <copy file="target/${project.artifactId}-${project.version}.jar" todir="${layer.dir}/me/janario/logback/main/" />
+
+                                <!--Logback-->
+                                <copy file="${lib.dir}/ch/qos/logback/logback-classic/${logback.version}/logback-classic-${logback.version}.jar" todir="${layer.dir}/ch/qos/logback/main" />
+                                <copy file="${lib.dir}/ch/qos/logback/logback-core/${logback.version}/logback-core-${logback.version}.jar" todir="${layer.dir}/ch/qos/logback/main" />
+
+                                <!--Janino-->
+                                <copy file="${lib.dir}/org/codehaus/janino/janino/${janino.version}/janino-${janino.version}.jar" todir="${layer.dir}/org/codehaus/janino/main" />
+                                <copy file="${lib.dir}/org/codehaus/janino/commons-compiler/${janino.version}/commons-compiler-${janino.version}.jar" todir="${layer.dir}/org/codehaus/janino/main" />
+
+                                <!--Slf4j bridges-->
+                                <copy file="${lib.dir}/org/slf4j/log4j-over-slf4j/${slf4j.version}/log4j-over-slf4j-${slf4j.version}.jar" todir="${layer.dir}/org/jboss/log4j/logmanager/main" />
+                                <copy file="${lib.dir}/org/slf4j/jul-to-slf4j/${slf4j.version}/jul-to-slf4j-${slf4j.version}.jar" todir="${layer.dir}/org/jboss/logging/jul-to-slf4j-stub/main" />
+
+                                <!--wildfly-logging-->
+                                <copy file="${lib.dir}/org/jboss/logging/jboss-logging/${jboss-logging.version}/jboss-logging-${jboss-logging.version}.jar" todir="${layer.dir}/org/jboss/logging/main" />
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.wildfly.core</groupId>
+                <artifactId>wildfly-controller</artifactId>
+                <version>${wildfly-core.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wildfly.core</groupId>
+                <artifactId>wildfly-server</artifactId>
+                <version>${wildfly-core.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>jul-to-slf4j</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
+            </dependency>
+
+            <!--Test dependencies-->
+            <dependency>
+                <groupId>org.wildfly.core</groupId>
+                <artifactId>wildfly-subsystem-test</artifactId>
+                <type>pom</type>
+                <scope>test</scope>
+                <version>${wildfly-core.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <scope>test</scope>
+                <version>4.12</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.wildfly.core</groupId>
+            <artifactId>wildfly-controller</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wildfly.core</groupId>
+            <artifactId>wildfly-server</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jul-to-slf4j</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+        </dependency>
+
+        <!--Test dependencies-->
+        <dependency>
+            <groupId>org.wildfly.core</groupId>
+            <artifactId>wildfly-subsystem-test</artifactId>
+            <type>pom</type>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+        </dependency>
+
+        <!--Just for ensure download to .m2 to go into dist package-->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>log4j-over-slf4j</artifactId>
+            <version>${slf4j.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.janino</groupId>
+            <artifactId>janino</artifactId>
+            <version>${janino.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.janino</groupId>
+            <artifactId>commons-compiler</artifactId>
+            <version>${janino.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+</project>

@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="
+          http://maven.apache.org/POM/4.0.0
+          http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>fr.stepinfo.tomeedemo</groupId>
+    <artifactId>cdi-tomee-demo</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>war</packaging>
+    <name>${project.artifactId}</name>
+
+    <prerequisites>
+        <maven>3.2.1</maven>
+    </prerequisites>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <java.version>1.8</java.version>
+
+        <tomcat.version>8.0.20</tomcat.version>
+        <javaee-api.version>7.0-SNAPSHOT</javaee-api.version>
+        <tomee.version>2.0.0-SNAPSHOT</tomee.version>
+        <openejb.version>5.0.0-SNAPSHOT</openejb.version>
+        <commons-lang.version>2.4</commons-lang.version>
+        <junit.version>4.12</junit.version>
+
+        <mysql.version>5.1.6</mysql.version>
+
+        <open-jpa.plugin>2.3.0</open-jpa.plugin>
+        <compiler.plugin>3.2</compiler.plugin>
+        <surefire.plugin>2.18</surefire.plugin>
+        <war.plugin>2.5</war.plugin>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.openejb</groupId>
+            <artifactId>javaee-api</artifactId>
+            <version>${javaee-api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>${commons-lang.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- TEST -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.openejb</groupId>
+            <artifactId>tomee-embedded</artifactId>
+            <version>${tomee.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire.plugin}</version>
+                <configuration>
+                    <!-- pour windows -->
+                    <argLine>-Dfile.encoding=${project.build.sourceEncoding}</argLine>
+
+                    <!-- for debug purpose -->
+                    <systemPropertyVariables>
+                        <openejb.jdbc.log>true</openejb.jdbc.log>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${compiler.plugin}</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>${war.plugin}</version>
+                <configuration>
+                    <failOnMissingWebXml>false</failOnMissingWebXml>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.openjpa</groupId>
+                <artifactId>openjpa-maven-plugin</artifactId>
+                <version>${open-jpa.plugin}</version>
+                <executions>
+                    <execution>
+                        <id>enhancer</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>enhance</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <includes>fr/stepinfo/tomee/jpa/model/*.class</includes>
+                    <addDefaultConstructor>true</addDefaultConstructor>
+                    <persistenceXmlFile>${project.basedir}/src/main/webapp/WEB-INF/persistence.xml</persistenceXmlFile>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.openejb.patch</groupId>
+                        <artifactId>openjpa</artifactId>
+                        <version>2.4.0-nonfinal-1598334</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.openejb.maven</groupId>
+                <artifactId>tomee-embedded-maven-plugin</artifactId>
+                <version>${tomee.version}</version>
+                <configuration>
+                    <classpathAsWar>true</classpathAsWar>
+                    <context>/</context>
+                    <users>
+                        <dev>pass</dev>
+                    </users>
+                    <inlinedTomEEXml>
+                        <tomee>
+                            <Resource id="tomeeDatabase" type="DataSource">
+                                JdbcDriver = com.mysql.jdbc.Driver
+                                JdbcUrl = jdbc:mysql://localhost:3306/tomeedemo?createDatabaseIfNotExist=true
+                                Username=root
+                                Password=
+                                JtaManaged = false
+                            </Resource>
+
+                        </tomee>
+                    </inlinedTomEEXml>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>mysql</groupId>
+                        <artifactId>mysql-connector-java</artifactId>
+                        <version>${mysql.version}</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+
+        </plugins>
+    </build>
+
+    <!-- http://tomee.apache.org/examples-trunk/index.html -->
+    <pluginRepositories>
+        <pluginRepository>
+            <id>repository.apache.org</id>
+            <url>https://repository.apache.org/content/groups/snapshots/</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+
+    <repositories>
+        <repository>
+            <id>apache</id>
+            <url>https://repository.apache.org/content/groups/snapshots/</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+</project>

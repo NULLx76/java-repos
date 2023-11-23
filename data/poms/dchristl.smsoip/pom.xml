@@ -1,0 +1,350 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="http://maven.apache.org/POM/4.0.0"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>de.christl</groupId>
+    <artifactId>SMSoIP</artifactId>
+
+    <version>3.0.1</version>
+    <packaging>pom</packaging>
+    <name>SMSoIP</name>
+
+    <modules>
+        <module>core</module>
+        <module>supplier-lib</module>
+        <module>supplier</module>
+        <module>adfree</module>
+    </modules>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+    <profiles>
+        <profile>
+            <id>PLAY</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+        </profile>
+        <profile>
+            <id>ANDROIDPIT</id>
+            <properties>
+                <overlay.directory>${project.basedir}/androidpit</overlay.directory>
+            </properties>
+        </profile>
+    </profiles>
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>2.7.2</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-clean-plugin</artifactId>
+                    <version>2.5</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jarsigner-plugin</artifactId>
+                <version>1.2</version>
+                <executions>
+                    <execution>
+                        <id>SIGNING</id>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                        <phase>package</phase>
+                        <inherited>true</inherited>
+                        <configuration>
+                            <arguments>
+                                <argument>-sigalg</argument>
+                                <argument>SHA1withRSA</argument>
+                                <argument>-digestalg</argument>
+                                <argument>SHA1</argument>
+                            </arguments>
+                            <archiveDirectory />
+                            <includes>
+                                <include>target/*-aligned.apk</include>
+                            </includes>
+                            <keystore>${certificate.store}</keystore>
+                            <storepass>${certificate.pass}</storepass>
+                            <keypass>${certificate.pass}</keypass>
+                            <alias>main_key</alias>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.jayway.maven.plugins.android.generation2</groupId>
+                <artifactId>android-maven-plugin</artifactId>
+                <version>3.8.2</version>
+                <executions>
+                    <execution>
+                        <id>ALIGN APK</id>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>zipalign</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>UPDATE MANIFEST</id>
+                        <goals>
+                            <goal>manifest-update</goal>
+                        </goals>
+                        <configuration>
+                            <manifest>
+                                <versionName>${project.version}</versionName>
+                            </manifest>
+                        </configuration>
+                    </execution>
+                </executions>
+                <configuration>
+                    <release>true</release>
+                    <resourceOverlayDirectory>${overlay.directory}</resourceOverlayDirectory>
+                    <sign>
+                        <debug>false</debug>
+                    </sign>
+                    <zipalign>
+                        <skip>false</skip>
+                    </zipalign>
+                    <proguard>
+                        <skip>false</skip>
+                        <config>/home/danny/projects/smsoip/proguard.cfg</config>
+                    </proguard>
+                    <sdk>
+                        <platform>19</platform>
+                    </sdk>
+                    <undeployBeforeDeploy>true</undeployBeforeDeploy>
+                </configuration>
+                <extensions>true</extensions>
+
+            </plugin>
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.3</version>
+                <executions>
+                    <execution>
+                        <id>COPY RELEASE TO OUTPUT FOLDER</id>
+                        <phase>install</phase>
+                        <configuration>
+                            <tasks>
+                                <copy flatten="true" overwrite="true" todir="${output.folder}">
+                                    <fileset dir="${project.basedir}">
+                                        <include name="**/*aligned.apk" />
+                                    </fileset>
+                                </copy>
+                            </tasks>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.gmaven</groupId>
+                <artifactId>groovy-maven-plugin</artifactId>
+                <version>2.0</version>
+                <executions>
+                    <execution>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <id>CONCATENATE STRINGS</id>
+                        <configuration>
+                            <source><![CDATA[
+                                if (project.packaging == 'apk' || project.packaging == 'apklib') {
+                                    def outputFolder = project.properties.getProperty('strings.output.folder') + '/'
+                                    if (project.name == 'SMSoIP-core') {
+                                        outputFolder += '/res';
+                                    } else {
+                                        outputFolder += project.name + '/res';
+                                    }
+                                    def outputDir = new File(outputFolder);
+                                    println outputDir
+                                    outputDir.deleteDir();
+                                    outputDir.mkdirs();   // create folder if does not exist
+                                    File resourceDir = new File(project.basedir.canonicalPath + '/res')
+                                    println resourceDir.canonicalPath
+                                    //find all value folders
+                                    List<File> valuesFolders = resourceDir.listFiles().findAll {
+                                        it.canonicalPath.contains('values')
+                                    }
+                                    valuesFolders.each {
+                                        def folderName = it.getName()
+                                        //here you have values[-langCode]
+                                        def concatenatedStringsFolder = new File(outputDir.canonicalPath + '/' + folderName)
+                                        concatenatedStringsFolder.mkdirs();
+                                        it.listFiles().each {
+                                            if (it.getName().equalsIgnoreCase('strings.xml')) {
+                                                println 'Copying ' + it + ' to resource folder:' + concatenatedStringsFolder
+                                                it.withInputStream { is ->
+                                                    new File(concatenatedStringsFolder.canonicalPath + '/strings.xml') << is
+                                                }
+                                            }
+                                        }
+                                    }
+//                                    copy the icon to the folder
+                                    List<File> drawableFolder = resourceDir.listFiles().findAll {
+                                        it.canonicalPath.endsWith('drawable')
+                                    }
+                                    drawableFolder.each {
+                                        it.listFiles().each {
+                                            if (it.getName().equals('icon.png')) {
+                                                def iconFolder = new File(outputDir.canonicalPath + '/../')
+                                                println 'Copying ' + it + ' to resource folder:' + iconFolder
+                                                File iconFile = new File(iconFolder.canonicalPath + '/smsoip.png')
+                                                iconFile.delete()
+                                                it.withInputStream { is ->
+                                                    iconFile << is
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                ]]>
+                            </source>
+                        </configuration>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.codehaus.groovy</groupId>
+                        <artifactId>groovy-all</artifactId>
+                        <version>2.0.6</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>versions-maven-plugin</artifactId>
+                <version>1.3.1</version>
+                <configuration>
+                    <newVersion>3.0.1</newVersion>
+                    <generateBackupPoms>false</generateBackupPoms>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+    <dependencies>
+        <dependency>
+            <groupId>com.google.android</groupId>
+            <artifactId>android</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.android</groupId>
+            <artifactId>annotations</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.powermock</groupId>
+            <artifactId>powermock-module-junit4</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.powermock</groupId>
+            <artifactId>powermock-api-mockito</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.google.android</groupId>
+                <artifactId>android</artifactId>
+                <version>4.4.0</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.google.android</groupId>
+                <artifactId>annotations</artifactId>
+                <version>4.1.1.4</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>4.12</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-core</artifactId>
+                <version>1.9.5</version>
+            </dependency>
+            <dependency>
+                <groupId>org.powermock</groupId>
+                <artifactId>powermock-module-junit4</artifactId>
+                <version>1.6.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.powermock</groupId>
+                <artifactId>powermock-api-mockito</artifactId>
+                <version>1.6.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jsoup</groupId>
+                <artifactId>jsoup</artifactId>
+                <version>1.8.2</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.ads</groupId>
+                <artifactId>admob</artifactId>
+                <version>6.4.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google</groupId>
+                <artifactId>analytics</artifactId>
+                <version>3.0.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.actionbarsherlock</groupId>
+                <artifactId>actionbarsherlock</artifactId>
+                <version>4.4.0</version>
+                <type>apklib</type>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.google.android</groupId>
+                        <artifactId>android</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>ch.acra</groupId>
+                <artifactId>acra</artifactId>
+                <version>4.6.2</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+</project>

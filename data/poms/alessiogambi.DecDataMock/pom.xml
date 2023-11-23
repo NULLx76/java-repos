@@ -1,0 +1,325 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+        <groupId>at.ac.tuwien.infosys</groupId>
+	<artifactId>icse-2015</artifactId>
+	<packaging>jar</packaging>
+	<name>Brooklyn AutoScaler Policy Testing for ICSE 2015</name>
+        <version>0.1</version> 
+
+	<description>
+		Case study for the ICSE 2015 paper
+	</description>
+
+	<properties>
+		<surefire.version>2.13</surefire.version>
+		<brooklyn.version>0.7.0-M1</brooklyn.version>
+		<brooklyn-policy.version>0.7.0-M1</brooklyn-policy.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>io.brooklyn</groupId>
+			<artifactId>brooklyn-policy</artifactId>
+			<version>${brooklyn-policy.version}</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>io.brooklyn</groupId>
+			<artifactId>brooklyn-policy</artifactId>
+			<version>${brooklyn.version}</version>
+			<classifier>tests</classifier>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Basic Dependencies -->
+
+		<dependency>
+			<groupId>io.brooklyn</groupId>
+			<artifactId>brooklyn-api</artifactId>
+			<version>${brooklyn.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>io.brooklyn</groupId>
+			<artifactId>brooklyn-locations-jclouds</artifactId>
+			<version>${brooklyn.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.brooklyn</groupId>
+			<artifactId>brooklyn-test-support</artifactId>
+			<version>${brooklyn.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.brooklyn</groupId>
+			<artifactId>brooklyn-core</artifactId>
+			<version>${brooklyn.version}</version>
+			<classifier>tests</classifier>
+			<scope>test</scope>
+		</dependency>
+
+
+		<!-- Local Libs -->
+		<!-- Declarative Mocking -->
+		<dependency>
+			<groupId>pbnj</groupId>
+			<artifactId>kodkod</artifactId>
+			<version>0.1</version>
+			<scope>system</scope>
+			<systemPath>${basedir}/lib/kodkod.jar</systemPath>
+		</dependency>
+		<dependency>
+			<groupId>pbnj</groupId>
+			<artifactId>pbnj</artifactId>
+			<version>0.1</version>
+			<scope>system</scope>
+			<systemPath>${basedir}/lib/pbnj.jar</systemPath>
+		</dependency>
+		<dependency>
+			<groupId>pbnj</groupId>
+			<artifactId>pbnj-examples</artifactId>
+			<version>0.1</version>
+			<scope>system</scope>
+			<systemPath>${basedir}/lib/pbnj-examples.jar</systemPath>
+		</dependency>
+
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.1</version>
+				<configuration>
+					<source>1.7</source>
+					<target>1.7</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>1.1</version>
+				<executions>
+					<execution>
+						<phase>validate</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<tasks>
+								<echo>Displaying value of properties</echo>
+								<echo>[pbnj.solver] ${pbnj.solver}</echo>
+								<echo>[os.name] ${os.name}</echo>
+								<echo>[os.arch] ${os.arch}</echo>    
+								<echo>[os.version] ${os.version}</echo>
+								<echo>[brooklyn-policy.version] ${brooklyn-policy.version}</echo>
+							</tasks>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+		</plugins>
+	</build>
+
+	<profiles>
+		<!-- NOTE that linux check must come BEFORE mac check, otherwise Maven will use linux -->
+		<profile>
+                        <id>platform-linux</id>
+                        <activation>
+                                <os>
+                                        <family>unix</family>
+                                </os>
+                        </activation>
+                        <properties>
+                                <pbnj.solver>x86_64-linux</pbnj.solver>
+                        </properties>
+                </profile>
+		<profile>
+			<id>platform-mac</id>
+			<activation>
+				<os>
+					<family>mac</family>
+				</os>
+			</activation>
+			<properties>
+				<pbnj.solver>x86_64-mac</pbnj.solver>
+			</properties>
+		</profile>
+		<profile>
+			<id>default-brooklyn-policy</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<properties>
+				<brooklyn-policy.version>0.7.0-M1</brooklyn-policy.version>
+			</properties>
+		</profile>
+
+		<profile>
+			<id>pbnj</id>
+			<activation>
+				<!-- This force the profile to be active unless it is not explicitly 
+					disabled -->
+				<!-- Use: -DskipPbnj or with -P!pbnj -->
+				<property>
+					<name>!pbnj</name>
+				</property>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<version>${surefire.version}</version>
+						<configuration>
+							<argLine>-Djava.library.path=${basedir}/solver/${pbnj.solver}</argLine>
+							<suiteXmlFiles>
+								<suiteXmlFile>${suiteFile}</suiteXmlFile>
+							</suiteXmlFiles>
+						</configuration>
+					</plugin>
+					<!-- This is to force to compile the spec objects into java code with 
+						PBNJ using maven -->
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>exec-maven-plugin</artifactId>
+						<version>1.2.1</version>
+						<executions>
+							<execution>
+								<id>compile-pbnj</id>
+								<phase>compile</phase>
+								<goals>
+									<goal>exec</goal>
+								</goals>
+								<configuration>
+									<executable>${basedir}/tool/pbnj/examples/pbnjc</executable>
+									<commandlineArgs>./src/test/resources</commandlineArgs>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<!-- Clean the Test Output Folder created by the test plugin under Eclipse -->
+		<profile>
+			<id>Clean Test Output Folder</id>
+			<activation>
+				<file>
+					<exists>${basedir}/test-output</exists>
+				</file>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-clean-plugin</artifactId>
+						<version>2.5</version>
+						<configuration>
+							<filesets combine.children="append">
+								<fileset combine.children="append">
+									<directory>test-output</directory>
+								</fileset>
+							</filesets>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<!-- Evaluation 1. Run the evaluation 1 suite file with the original code 
+			of the brooklyn-policy. -->
+		<profile>
+			<id>Evaluation1</id>
+			<activation>
+				<property>
+					<name>evaluation1</name>
+				</property>
+			</activation>
+			<properties>
+				<brooklyn-policy.version>0.7.0-M1</brooklyn-policy.version>
+			</properties>
+		</profile>
+		<profile>
+			<!-- Evaluation 2. Run the evaluation 2 suite files with the patched version 
+				of the brooklyn-policy for the 2 parameters assignment -->
+			<id>Evaluation2</id>
+			<activation>
+				<property>
+					<name>evaluation2</name>
+				</property>
+			</activation>
+			<properties>
+				<brooklyn-policy.version>0.7.0-M1-patch</brooklyn-policy.version>
+			</properties>
+
+		</profile>
+
+		<profile>
+			<!-- Evaluation 3. Run the evaluation 3 suite files with the patched version 
+				of the brooklyn-policy without computing the coverage metrics -->
+			<id>Evaluation3</id>
+			<activation>
+				<property>
+					<name>evaluation3</name>
+				</property>
+			</activation>
+			<properties>
+				<brooklyn-policy.version>0.7.0-M1-patch</brooklyn-policy.version>
+			</properties>
+		</profile>
+
+		<profile>
+			<id>InstallPatch</id>
+			<activation>
+				<property>
+					<name>installpatch</name>
+				</property>
+			</activation>
+                        <build>
+                                <plugins>
+            				<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-install-plugin</artifactId>
+						<version>2.5.1</version>
+						<executions>
+                					<execution>
+								<id>Install_Patch</id>
+								<phase>initialize</phase>
+								<goals>
+									<goal>install-file</goal>
+								</goals>
+								<configuration>
+									<groupId>io.brooklyn</groupId>
+									<artifactId>brooklyn-policy</artifactId>
+									<file>./patch/brooklyn-policy-0.7.0-M1-patch.jar</file>
+									<version>0.7.0-M1-patch</version>
+									<pomFile>./patch/brooklyn-policy-0.7.0-M1-patch.pom</pomFile>
+									<packaging>jar</packaging>
+								</configuration>
+							</execution>
+							<execution>
+								<id>Install_Patch_2</id>
+								<phase>initialize</phase>
+								<goals>
+									<goal>install-file</goal>
+								</goals>
+								<configuration>
+									<groupId>io.brooklyn</groupId>
+									<artifactId>brooklyn-policy</artifactId>
+									<file>./patch/brooklyn-policy-0.7.0-M1-patch2.jar</file>
+									<version>0.7.0-M1-patch2</version>
+									<pomFile>./patch/brooklyn-policy-0.7.0-M1-patch2.pom</pomFile>
+									<packaging>jar</packaging>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+</project>

@@ -1,0 +1,427 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.shiftedit</groupId>
+    <artifactId>shift</artifactId>
+    <name>Shift</name>
+
+    <properties>
+        <slf4j.version>1.6.1</slf4j.version>
+        <versionCode>3</versionCode>
+        <versionName>${project.version}</versionName>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <timestamp>${maven.build.timestamp}</timestamp>
+        <buildNumber>${env.BUILD_NUMBER}</buildNumber>
+        <channel>snapshots</channel>
+<!--        <channel>releases</channel>-->
+        <maven.build.timestamp.format>yyyyMMddHHmmss</maven.build.timestamp.format>
+    </properties>
+   
+    <packaging>jar</packaging>
+    <version>0.1.2</version>
+    
+    <organization>
+        <!-- Used as the 'Vendor' for JNLP generation -->
+        <name>Shift</name>
+    </organization>
+    <inceptionYear>2013</inceptionYear>
+    
+    <repositories>
+        <repository>
+            <id>groovytools</id>
+            <name>groovytools</name>
+            <url>http://repository-groovytools.forge.cloudbees.com/release/</url>
+        </repository>
+    </repositories>
+    
+    <pluginRepositories>
+        <pluginRepository>
+            <id>sonatype.snapshots</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+            <releases>
+                <updatePolicy>daily</updatePolicy>
+            </releases>
+            <snapshots>
+                <updatePolicy>daily</updatePolicy>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+
+    <build>
+        <finalName>${project.name}</finalName>
+        
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+    
+        <plugins>
+            
+            <plugin>
+                <groupId>com.zenjava</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>2.0</version>
+                <configuration>
+                    <mainClass>org.shiftedit.MainApp</mainClass>
+                    <allPermissions>true</allPermissions>
+                    <nativeReleaseVersion>${versionName}</nativeReleaseVersion>
+                    <silentJfxFix>true</silentJfxFix>
+                    <identifier>Shift</identifier>
+                    <jvmArgs>-Xms768m -Xmx2048m</jvmArgs>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.twdata.maven</groupId>
+                        <artifactId>mojo-executor</artifactId>
+                            <version>2.1.0</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+           
+            
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>1.4</version>
+                <configuration>
+                    <descriptionTemplate>${basedir}/src/license/descriptionTemplate.ftl</descriptionTemplate>
+                    <verbose>false</verbose>
+                    <licenseName>mit</licenseName>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>first</id>
+                        <goals>
+                            <goal>update-file-header</goal>
+                        </goals>
+                        <phase>compile</phase>
+                        <configuration>
+                            <roots>
+                                <root>src/main/java</root>
+                                <root>src/test</root>
+                            </roots>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                </configuration>
+            </plugin>
+            
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.4.3</version>
+                <configuration>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                </configuration>
+            </plugin>
+            
+            
+            <plugin>
+                <groupId>org.codehaus.gmaven</groupId>
+                <artifactId>gmaven-plugin</artifactId>
+                <version>1.4</version>
+                <configuration>
+                    <providerSelection>2.0</providerSelection>
+                    <source>
+                                
+                        /* Move file to a given dir */
+                        def moveFile = {file, destDir ->
+                        file.renameTo(new File(destDir, file.getName()));
+                        }
+                                
+                        /* Get build info */
+                        def outPath = project.basedir.getAbsolutePath() + File.separator + 'target' + File.separator + 'upload'
+                        def opSys = System.getProperty("os.name").toLowerCase().split(" ").first()
+                        def architecture = System.getProperty("os.arch").toLowerCase()
+                        def chan = project.properties['channel']
+                        def bn = project.properties['buildNumber'] ?: '0'
+                        def timestamp = project.properties['timestamp']
+                                
+                        /* Get bundles dir */
+                        def bundlesDir = new File(project.basedir, 'target' + File.separator + 'jfx' + File.separator + 'native' + File.separator + 'bundles')
+                        if (!bundlesDir.exists()) {
+                        println "Cannot prepare output because bundles directory is missing : make sure jfx:native was run first"
+                        return
+                        }
+                        
+                                
+                        /* Create target dir */
+                        def targetDir = new File(outPath, timestamp)
+                        targetDir.mkdirs()
+                        
+                        /* Rename package files */
+                        bundlesDir.eachFile {
+                        if (it.file) {
+                        if (it.name.contains('.')) {
+                        def format = it.name.split('\\.').last()
+                        def newName = null
+                        switch(format) {
+                        case 'rpm':
+                        newName = it.name.toLowerCase()
+                        break
+                        case 'deb':
+                        newName = it.name.toLowerCase().replaceAll('\\.deb', '.' + architecture + '.deb')
+                        break
+                        case 'msi':
+                        newName = it.name.replaceAll('\\.msi', '.' + architecture + '.msi')
+                        break
+                        case 'dmg':
+                        newName = it.name.replaceAll('\\.dmg', '-' + project.version + '.dmg')
+                        break
+                        }
+                        
+                        /* Append build number to version for snapshots */
+                        if (chan == 'snapshots') {
+                        newName = newName.replaceAll(project.version, project.version + "b$bn")
+                        }
+                        
+                        if (newName) {
+                        it.renameTo(new File(bundlesDir, newName))
+                        }
+                        }
+                        }
+                        }
+                        
+                        /* Gather packages info */
+                        def pkgs = []
+                        bundlesDir.eachFile {
+                        if (it.file) {
+                        if (it.name.contains('.')) {
+                        def n = it.name
+                        def f = it.name.split('\\.').last()
+                        def s = it.size()
+                        
+                        pkgs.add({
+                        name n
+                        format f
+                        size s
+                        })
+                        }
+                        }
+                        }
+                                
+                        /* Write info.json */
+                        def jsonBuilder = new groovy.json.JsonBuilder()
+                        jsonBuilder {
+                        buildNumber bn
+                        os System.getProperty("os.name").toLowerCase().split(" ").first()
+                        arch System.getProperty("os.arch").toLowerCase()
+                        channel chan
+                        version project.version
+                        packages pkgs
+                        }
+                        new File(targetDir, 'info.json').withWriter{ it <![CDATA[<<]]> jsonBuilder.toString()}
+                        
+                        /* Move packages to output dir */
+                        bundlesDir.eachFile {
+                        // Copy files with extension only
+                        if (it.file) {
+                        if (it.name.contains('.')) {
+                        moveFile(it, targetDir)
+                        }
+                        }
+                        }
+                                
+                    </source>
+                </configuration>
+                <executions>
+                    <!-- Compile -->
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>testCompile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.codehaus.gmaven.runtime</groupId>
+                        <artifactId>gmaven-runtime-2.0</artifactId>
+                        <version>1.4</version>
+                        <exclusions>
+                            <exclusion>
+                                <groupId>org.codehaus.groovy</groupId>
+                                <artifactId>groovy-all</artifactId>
+                            </exclusion>
+                        </exclusions>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.codehaus.groovy</groupId>
+                        <artifactId>groovy-all</artifactId>
+                        <version>2.1.5</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.6</version>
+                <configuration>
+                    <useFile>false</useFile>
+                    <includes>
+                        <include>**/*Spec.java</include>
+                    </includes>
+                </configuration>
+            </plugin>
+      
+        </plugins>
+    </build>
+
+
+    <dependencies>
+       
+        <!-- MigLayout -->
+
+        <dependency>
+            <groupId>com.miglayout</groupId>
+            <artifactId>miglayout-javafx</artifactId>
+            <version>4.2</version>
+        </dependency>
+        
+        <!-- ControlFX -->
+        
+        <dependency>
+            <groupId>org.controlsfx</groupId>
+            <artifactId>controlsfx</artifactId>
+            <version>8.0.5</version>
+        </dependency>
+
+        <!-- Apache Commons -->
+
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.6</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>1.0</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>commons-configuration</groupId>
+            <artifactId>commons-configuration</artifactId>
+            <version>1.9</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>commons-httpclient</groupId>
+            <artifactId>commons-httpclient</artifactId>
+            <version>3.1</version>
+        </dependency>
+        
+        <!-- Ant unzipper -->
+        <dependency>
+            <groupId>org.apache.ant</groupId>
+            <artifactId>ant-compress</artifactId>
+            <version>1.3</version>
+        </dependency>
+        
+        <!-- Jackson -->
+        
+        <dependency>
+            <groupId>org.codehaus.jackson</groupId>
+            <artifactId>jackson-core-asl</artifactId>
+            <version>1.9.12</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.codehaus.jackson</groupId>
+            <artifactId>jackson-mapper-asl</artifactId>
+            <version>1.9.12</version>
+        </dependency>
+
+        <!-- Logging  -->
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jcl-over-slf4j</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.16</version>
+        </dependency>
+        
+        <!-- Groovy -->
+        
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-all</artifactId>
+            <version>2.1.3</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>groovytools.builder</groupId>
+            <artifactId>metabuilder</artifactId>
+            <version>2.0.0</version>
+        </dependency>
+        
+        <!-- Jetty -->
+        
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-webapp</artifactId>
+            <version>9.0.3.v20130506</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty.websocket</groupId>
+            <artifactId>websocket-server</artifactId>
+            <version>9.0.3.v20130506</version>
+        </dependency>
+        
+        <!-- Test -->
+        
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.10</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.spockframework</groupId>
+            <artifactId>spock-core</artifactId>
+            <version>0.7-groovy-2.0</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>com.github.goldin</groupId>
+            <artifactId>spock-extensions</artifactId>
+            <version>0.1.4</version>
+            <scope>test</scope>
+        </dependency>
+    
+    </dependencies>
+   
+
+</project>

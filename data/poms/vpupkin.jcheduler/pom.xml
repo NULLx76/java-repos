@@ -1,0 +1,526 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>net.sf.jcrontab</groupId>
+	<artifactId>jcrontab</artifactId>
+	<name>jcrontab</name>
+	<!-- https://docs.sonatype.org/display/Repository/Sonatype+OSS+Maven+Repository+Usage+Guide -->
+ 
+	<packaging>war</packaging>
+	<version>2.0.6-SNAPSHOT</version>
+	<properties>
+		<tomcat-jasper.version>7.0.30</tomcat-jasper.version>
+		<slf4j.version>1.5.8</slf4j.version>
+		<!-- This is just for "eclipse:eclipse" goal to always attempt downloading 
+			sources -->
+		<downloadSources>true</downloadSources>
+		<!-- Specify AppEngine version for your project. It should match SDK version 
+			pointed to by ${gae.home} property (Typically, one used by your Eclipse plug-in) -->
+		<gae.version>1.3.4</gae.version>
+		<!-- GWT version -->
+		<gwt.version>1.7.1</gwt.version>
+		<!-- Upload to http://0.latest.<applicationName>.appspot.com by default -->
+		<gae.application.version>0</gae.application.version>
+		<!-- port defaults to 8080 -->
+		<gae.port>8888</gae.port>
+		<!-- Produce detailed JS during GWT compilation for development environment -->
+		<gwt.style>DETAILED</gwt.style>
+	</properties>
+
+	<profiles>
+
+		<profile>
+			<id>TOMCAT_DEPLOY_V_7_xxx</id>
+			<activation>
+				<activeByDefault>false</activeByDefault>
+				<property>
+					<name>TOMCAT7</name>
+				</property>
+			</activation>
+			<properties>
+				<gae.api.scope>provided</gae.api.scope>
+				<gae.application.version>xxx</gae.application.version>
+			</properties>
+ 			<build> 
+					<plugins>
+						<plugin>
+							<groupId>org.codehaus.mojo.jspc</groupId>
+							<artifactId>jspc-maven-plugin</artifactId>
+							<executions>
+								<execution>
+									<id>jspc</id>
+									<phase>compile</phase>
+									<goals>
+										<goal>compile</goal>
+									</goals>
+								</execution>
+							</executions>
+							<configuration>
+								<packageName>org.apache.jsp</packageName>
+								<source>1.5</source>
+								<target>1.5</target>
+								<!-- webXml>${basedir}/target/jspCweb.xml</webXml> -->
+								<injectString>
+									&lt;!-- [INSERT FRAGMENT HERE] --&gt; </injectString>
+								<trimSpaces>false</trimSpaces>
+							</configuration>
+							<dependencies>
+								<!-- Hack the jspc plugin, which only supports Tomcat 6, to work for 
+									Tomcat 7. See: http://hasini-gunasinghe.blogspot.com/2011/09/how-to-use-pre-compiled-jsps-in-webapp.html -->
+								<dependency>
+									<groupId>org.codehaus.mojo.jspc</groupId>
+									<artifactId>jspc-compiler-tomcat6</artifactId>
+									<version>2.0-alpha-3</version>
+		
+									<exclusions>
+										<exclusion>
+											<groupId>org.apache.tomcat</groupId>
+											<artifactId>jasper</artifactId>
+										</exclusion>
+										<exclusion>
+											<groupId>org.apache.tomcat</groupId>
+											<artifactId>jasper-el</artifactId>
+										</exclusion>
+										<exclusion>
+											<groupId>org.apache.tomcat</groupId>
+											<artifactId>jasper-jdt</artifactId>
+										</exclusion>
+										<exclusion>
+											<groupId>org.apache.tomcat</groupId>
+											<artifactId>servlet-api</artifactId>
+										</exclusion>
+										<exclusion>
+											<groupId>org.apache.tomcat</groupId>
+											<artifactId>jsp-api</artifactId>
+										</exclusion>
+										<exclusion>
+											<groupId>org.apache.tomcat</groupId>
+											<artifactId>el-api</artifactId>
+										</exclusion>
+										<exclusion>
+											<groupId>org.apache.tomcat</groupId>
+											<artifactId>annotations-api</artifactId>
+										</exclusion>
+									</exclusions>
+								</dependency>
+		
+								<dependency>
+									<groupId>org.apache.tomcat</groupId>
+									<artifactId>tomcat-jasper</artifactId>
+									<version>${tomcat-jasper.version}</version>
+								</dependency>
+		
+								<dependency>
+									<groupId>org.eclipse.jdt.core.compiler</groupId>
+									<artifactId>ecj</artifactId>
+									<version>3.5.1</version>
+								</dependency>
+							</dependencies>
+						</plugin>
+					</plugins> 
+			</build>
+		</profile>
+
+		<profile>
+			<id>profile-FILECACHE</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+				<property>
+					<name>cccache</name>
+				</property>
+			</activation>
+			<properties>
+				<gae.application.version>xxx</gae.application.version>
+			</properties>
+			<build>
+				<resources>
+					<resource>
+						<directory>src/main/resources</directory>
+
+						<includes>
+							<include>**/*</include>
+						</includes>
+					</resource>
+					<resource>
+						<filtering>true</filtering>
+						<directory>
+							${basedir}/src/main/profiles
+						</directory>
+						<includes>
+							<include>
+								net.sf.jsr107cache.CacheFactory
+							</include>
+						</includes>
+						<targetPath>META-INF/services</targetPath>
+					</resource>
+				</resources>
+			</build>
+		</profile>
+	</profiles>
+
+
+	<distributionManagement>
+		<site>
+			<id>z-os.svn.server</id>
+			<url>
+				scm:svn:https://z-os.googlecode.com/svn/site/${pom.groupId}/${pom.artifactId}
+			</url>
+		</site>
+		<repository>
+			<id>z-os.svn-hosted.server</id>
+			<name>Z-OS-workaround</name>
+			<url>dav:https://z-os.googlecode.com/svn/release-repository</url>
+		</repository>
+	</distributionManagement>
+
+	<!-- If you have access to scm then you can place actual url's. Otherwise 
+		with <revisionOnScmFailure /> you can give some fake URLs as follows. -->
+<scm>
+<!-- <connection>scm:hg:${scm.base}/${pom.artifactId}</connection> -->
+<connection>
+scm:git:git://github.com/vpupkin/jcheduler.git
+</connection>
+<developerConnection>
+scm:git:git://github.com/vpupkin/jcheduler.git
+</developerConnection>
+<url>${l.base}/JSPWiki/Wiki.jsp?page=${pom.artifactId}</url>
+</scm>
+
+	<!-- AVOID RELEASE REPOSITORY/PLUGINREPOSITORY: <repositories></repositories> 
+		<pluginRepositories></pluginRepositories> -->
+
+	<!-- http://jcrontab.sourceforge.net/developers.shtml -->
+	<developers>
+		<developer>
+			<roles>
+				<role>designer</role>
+				<role>Main developer</role>
+			</roles>
+			<email>iolalla@users.sourceforge.net</email>
+		</developer>
+		<developer>
+			<id>vipup</id>
+			<organization>Monster AG</organization>
+			<email>vipup@sf.net</email>
+			<url>https://sourceforge.net/users/vipup</url>
+		</developer>
+		<developer>
+			<name>Hilary Catherall</name>
+			<url>http://www.cythrawl.org/professional</url>
+		</developer>
+
+	</developers>
+
+	<build>
+		<extensions>
+			<!-- http://code.google.com/p/maven-googlecode-plugin/wiki/MavenSiteDeployOnSVN -->
+			<extension>
+				<groupId>org.apache.maven.wagon</groupId>
+				<artifactId>wagon-webdav</artifactId>
+				<version>1.0-beta-2</version>
+			</extension>
+			<extension>
+				<groupId>org.jvnet.wagon-svn</groupId>
+				<artifactId>wagon-svn</artifactId>
+				<version>1.8</version>
+			</extension>
+		</extensions>
+		<plugins>
+
+			<plugin>
+				<groupId>com.github.github</groupId>
+				<artifactId>downloads-maven-plugin</artifactId>
+				<version>0.6</version>
+				<configuration>
+					<description>Official ${project.name} build of the
+						${project.version} release</description>
+					<override>true</override>
+					<includeAttached>true</includeAttached>
+					<server>github</server>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>upload</goal>
+						</goals>
+						<phase>install</phase>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>com.github.github</groupId>
+				<artifactId>site-maven-plugin</artifactId>
+				<version>0.7</version>
+				<configuration>
+					<message>Building site for ${project.version}</message>
+					<server>github</server>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>site</goal>
+						</goals>
+						<phase>site</phase>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>buildnumber-maven-plugin</artifactId>
+				<version>1.1</version>
+				<executions>
+					<execution>
+						<phase>validate</phase>
+						<goals>
+							<goal>create</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<doCheck>true</doCheck>
+					<doUpdate>false</doUpdate>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-gpg-plugin</artifactId>
+				<version>1.1</version>
+				<executions>
+					<execution>
+						<id>sign-artifacts</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>sign</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<passphrase>${pgp.passphrase}</passphrase>
+				</configuration>
+			</plugin>
+			<!-- TODO enable to start it from comman-line org.jcrontab.Jcrontab -->
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<configuration>
+					<archive>
+						<manifest>
+							<mainClass>org.jcrontab.Jcrontab</mainClass>
+						</manifest>
+					</archive>
+					<descriptorRefs>
+						<descriptorRef>
+							jar-with-dependencies
+						</descriptorRef>
+					</descriptorRefs>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>tomcat-maven-plugin</artifactId>
+				<version>1.0</version>
+				<configuration>
+					<server>${tomcat.principal}</server>
+					<url>${tomcat.deploy.url}</url>
+				</configuration>
+			</plugin>
+
+			<!-- Java compiler version -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>2.0</version>
+				<configuration>
+					<source>1.6</source>
+					<target>1.6</target>
+				</configuration>
+			</plugin>
+
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<configuration>
+					<!-- precompiled JSPs <webXml>${basedir}/target/jspweb.xml</webXml> -->
+					<webResources>
+						<resource>
+							<!-- <directory>${basedir}/target/</directory> <directory>${basedir}/target/${pom.artifactId}-${pom.version}/WEB-INF</directory> -->
+							<directory>${basedir}/src/main/webapp/WEB-INF</directory>
+							<filtering>true</filtering>
+							<targetPath>WEB-INF/</targetPath>
+							<includes>
+								<include>web.xml</include>
+							</includes>
+						</resource>
+					</webResources>
+					<archive>
+						<manifest>
+							<addDefaultImplementationEntries>
+								true
+							</addDefaultImplementationEntries>
+						</manifest>
+						<manifestEntries>
+							<Build-Number>${buildNumber}</Build-Number>
+							<Implementation-Build>
+								${buildNumber}
+							</Implementation-Build>
+							<pomVersion>${pom.version}</pomVersion>
+							<artifactId>${pom.artifactId}</artifactId>
+							<groupId>${pom.groupId}</groupId>
+							<!-- <basedir>${basedir}</basedir> -->
+						</manifestEntries>
+					</archive>
+				</configuration>
+			</plugin>
+
+		</plugins>
+
+		<pluginManagement>
+			<plugins>
+				<!--This plugin's configuration is used to store Eclipse m2e settings 
+					only. It has no influence on the Maven build itself. -->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>
+											org.codehaus.mojo
+										</groupId>
+										<artifactId>
+											jspc-maven-plugin
+										</artifactId>
+										<versionRange>
+											[1.4.6,)
+										</versionRange>
+										<goals>
+											<goal>compile</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore></ignore>
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+
+
+	</build>
+	<dependencies>
+		<!-- httpclient -->
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>4.0.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpcore</artifactId>
+			<version>4.0.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpmime</artifactId>
+			<version>4.0.1</version>
+		</dependency>
+		<dependency>
+			<groupId>gaehttp</groupId>
+			<artifactId>gaehttp</artifactId>
+			<version>4.0.1</version>
+		</dependency>
+
+		<!-- cache -->
+		<dependency>
+			<groupId>cc.co.llabor</groupId>
+			<artifactId>cachefs</artifactId>
+			<version>0.0.15</version>
+		</dependency>
+
+		<!-- logging -->
+		<dependency>
+			<groupId>javassist</groupId>
+			<artifactId>javassist</artifactId>
+			<version>3.12.1.GA</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>${slf4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>${slf4j.version}</version>
+		</dependency>
+		<!-- <dependency> <groupId>org.slf4j</groupId> <artifactId>jcl-over-slf4j</artifactId> 
+			<version>${slf4j.version}</version> </dependency> -->
+
+		<!-- <dependency> <groupId>org.slf4j</groupId> <artifactId>slf4j-jdk14</artifactId> 
+			<version>1.6.1</version> </dependency> -->
+		<dependency>
+			<groupId>org.yaml</groupId>
+			<artifactId>snakeyaml</artifactId>
+			<version>1.7</version>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>3.8.1</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>commons-configuration</groupId>
+			<artifactId>commons-configuration</artifactId>
+			<version>20030620.073343</version>
+		</dependency>
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.16</version>
+
+		</dependency>
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>servlet-api</artifactId>
+			<version>2.4</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>net.sf.webdav-servlet</groupId>
+			<artifactId>webdav-servlet</artifactId>
+			<version>2.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.geronimo.javamail</groupId>
+			<artifactId>geronimo-javamail_1.4_mail</artifactId>
+			<version>1.8.1</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+
+			<groupId>javax.ejb</groupId>
+			<artifactId>ejb-api</artifactId>
+			<version>3.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- <dependency> <groupId>turbine</groupId> <artifactId>turbine</artifactId> 
+			<version>2.3.3</version> </dependency> -->
+	</dependencies>
+	<issueManagement>
+		<system>trac</system>
+		<url>http://sourceforge.net/apps/trac/jcrontab/report</url>
+
+	</issueManagement>
+
+</project>

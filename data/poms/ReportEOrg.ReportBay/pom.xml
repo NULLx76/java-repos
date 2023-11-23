@@ -1,0 +1,219 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>reportbay</groupId>
+	<artifactId>reportbay</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+	<name>Report Bay Project</name>
+
+	<modules>
+		<module>report-common</module>
+		<module>report-features</module>
+		<module>report-ear</module>
+		<module>report-rest</module>
+		<!-- keep log4j2 application level configuration -->
+		<module>log4j2-config</module>
+	</modules>
+	
+	<properties>
+		<jdk.version>1.8</jdk.version>
+		<owb.version>1.2.6</owb.version>
+	</properties>
+
+	<dependencies>
+		<!-- CDI -->
+		<dependency>
+			<groupId>javax.enterprise</groupId>
+			<artifactId>cdi-api</artifactId>
+			<version>1.2</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- EJB -->
+		<dependency>
+			<groupId>javax</groupId>
+			<artifactId>javaee-api</artifactId>
+			<version>7.0</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Apache Commons -->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>3.3.2</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>commons-collections</groupId>
+			<artifactId>commons-collections</artifactId>
+			<version>3.2.1</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Slf4j to log4j2 Bridge -->
+ 		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-slf4j-impl</artifactId>
+			<scope>provided</scope>
+		</dependency>
+	</dependencies>
+
+	<!-- Bill of material -->
+ 	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.apache.logging.log4j</groupId>
+				<artifactId>log4j-bom</artifactId>
+				<version>2.2</version>
+				<scope>import</scope>
+				<type>pom</type>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>2.5.1</version>
+				<configuration>
+					<source>${jdk.version}</source>
+					<target>${jdk.version}</target>
+				</configuration>
+			</plugin>
+		</plugins>
+		
+		<pluginManagement>
+			<plugins>
+				<!-- Git repo is checked out into /var/lib/openshift/54895edffcf933029d000179/app-root/runtime/repo 
+					and Maven is started in this directory. Deployable artifacts, mainly ROOT.war, 
+					must be copiend into /var/lib/openshift/54895edffcf933029d000179/app-root/runtime/repo/webapps/ROOT.war 
+					Because web-app is module in subdirectory and I would expect <outputDirectory>../webapps</outputDirectory> 
+					value but interestingly it is not true and it must be <outputDirectory>webapps</outputDirectory> -->
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-ear-plugin</artifactId>
+					<version>2.10</version>
+					<!-- configuring the ear plugin -->
+					<configuration>
+						<finalName>reportbay</finalName>
+						<defaultLibBundleDir>lib</defaultLibBundleDir>
+						<skinnyWars>false</skinnyWars>
+						<outputDirectory>deployments</outputDirectory>
+						<modules>
+							<ejbModule>
+								<groupId>reportbay</groupId>
+								<artifactId>report-datasource</artifactId>
+							</ejbModule>
+							<ejbModule>
+								<groupId>reportbay</groupId>
+								<artifactId>report-model</artifactId>
+							</ejbModule>
+							<ejbModule>
+								<groupId>reportbay</groupId>
+								<artifactId>report-template</artifactId>
+							</ejbModule>
+							<ejbModule>
+								<groupId>reportbay</groupId>
+								<artifactId>report-gen</artifactId>
+							</ejbModule>
+							<ejbModule>
+								<groupId>reportbay</groupId>
+								<artifactId>report-snapshot</artifactId>
+							</ejbModule>
+							<ejbModule>
+								<groupId>reportbay</groupId>
+								<artifactId>report-schedule</artifactId>
+							</ejbModule>
+							<jarModule>
+								<groupId>reportbay</groupId>
+								<artifactId>report-common</artifactId>
+							</jarModule>
+							<jarModule>
+								<groupId>reportbay</groupId>
+								<artifactId>log4j2-config</artifactId>
+							</jarModule>
+							<jarModule>
+								<groupId>reportbay</groupId>
+								<artifactId>report-publish</artifactId>
+							</jarModule>
+							<webModule>
+								<groupId>reportbay</groupId>
+								<artifactId>report-rest</artifactId>
+								<contextRoot>reportbay-rest</contextRoot>
+							</webModule> 
+						</modules>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-ejb-plugin</artifactId>
+					<version>2.5</version>
+					<configuration>
+						<ejbVersion>3.2</ejbVersion>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-enforcer-plugin</artifactId>
+					<configuration>
+						<skip>true</skip>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+			
+	</build>
+
+	<profiles>
+		<profile>
+			<id>centuryLinkEnv</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			
+			<properties>
+				<nexus.url>http://code.it.savvis.net/nexus/content</nexus.url>
+			</properties>
+			
+			<repositories>
+				<repository>
+					<id>savvis-cto-metagroup</id>
+					<url>${nexus.url}/groups/savvis-cto-metagroup</url>
+					<snapshots>
+						<enabled>false</enabled>
+					</snapshots>
+				</repository>
+			</repositories>
+
+			<!-- Centurylink internal repo for plugin -->
+			<pluginRepositories>
+				<pluginRepository>
+					<id>central</id>
+					<url>${nexus.url}/groups/public</url>
+					<snapshots>
+						<enabled>false</enabled>
+					</snapshots>
+				</pluginRepository>
+				<pluginRepository>
+					<id>snapshots</id>
+					<url>${nexus.url}/groups/public-snapshots</url>
+					<releases>
+						<enabled>false</enabled>
+					</releases>
+				</pluginRepository>
+			</pluginRepositories>
+		</profile>
+
+		<!-- openshift jenkins build profile -->
+		<profile>
+			<id>openshift</id>
+			<!-- <activation>
+				<activeByDefault>true</activeByDefault>
+			</activation> -->
+		</profile>
+	</profiles>
+</project>

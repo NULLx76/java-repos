@@ -1,0 +1,219 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.cloudsoft</groupId>
+    <artifactId>amp-basho</artifactId>
+    <version>0.3-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>AMP Basho</name>
+    <description>
+        This project provides AMP / Brooklyn support for Basho Enterprise
+    </description>
+
+    <parent>
+        <groupId>org.apache.brooklyn</groupId>
+        <artifactId>brooklyn-downstream-parent</artifactId>
+        <version>0.9.0-SNAPSHOT</version>  <!-- BROOKLYN_VERSION -->
+    </parent>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <amp.version>3.1.0-20160221.1833</amp.version>   <!-- AMP_VERSION -->
+        <amp.brooklyn.version>0.9.0-20160221.1833</amp.brooklyn.version>  <!-- BROOKLYN_VERSION -->
+    </properties>
+
+  <repositories>
+    <repository>
+        <id>apache-nexus-snapshots</id>
+        <name>Apache Nexus Snapshots</name>
+        <url>https://repository.apache.org/content/repositories/snapshots</url>
+        <releases> <enabled>false</enabled> </releases>
+        <snapshots> <enabled>true</enabled> </snapshots>
+    </repository>
+  </repositories>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.brooklyn</groupId>
+            <artifactId>brooklyn-test-support</artifactId>
+            <version>${brooklyn.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.brooklyn</groupId>
+            <artifactId>brooklyn-core</artifactId>
+            <version>${brooklyn.version}</version>
+            <scope>test</scope>
+            <classifier>tests</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.brooklyn</groupId>
+            <artifactId>brooklyn-locations-jclouds</artifactId>
+            <version>${brooklyn.version}</version>
+            <scope>test</scope>
+            <classifier>tests</classifier>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.brooklyn</groupId>
+            <artifactId>brooklyn-logback-xml</artifactId>
+            <version>${brooklyn.version}</version>
+            <optional>true</optional>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.7</source>
+                    <target>1.7</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <descriptors>
+                        <descriptor>src/main/assembly/assembly.xml</descriptor>
+                    </descriptors>
+                    <finalName>amp-basho-${project.version}</finalName>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>build-distribution-archive</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <extensions>true</extensions>
+                <executions>
+                    <execution>
+                        <id>bundle-manifest</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>manifest</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <supportedProjectTypes>
+                        <supportedProjectType>jar</supportedProjectType>
+                    </supportedProjectTypes>
+                    <instructions>
+                        <!-- OSGi specific instruction -->
+                    </instructions>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                        </manifest>
+                        <manifestFile>
+                            ${project.build.outputDirectory}/META-INF/MANIFEST.MF
+                        </manifestFile>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+  <profiles>
+    <profile>
+      <!-- amp profile builds with Cloudsoft AMP instead of Apache Brooklyn.
+           requires assumes AMP is available in repo configured locally. -->
+      <id>amp</id>
+
+      <properties>
+        <brooklyn.version>${amp.brooklyn.version}</brooklyn.version>
+      </properties>
+
+      <dependencies>
+        <dependency>
+          <groupId>io.cloudsoft.amp</groupId>
+          <artifactId>amp-all</artifactId>
+          <version>${amp.version}</version>
+          <exclusions>
+            <exclusion>
+              <groupId>org.apache.brooklyn</groupId>
+              <artifactId>brooklyn-launcher</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>io.cloudsoft.amp</groupId>
+              <artifactId>amp-cloud-trial</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+    
+        <dependency>
+          <groupId>org.apache.brooklyn</groupId>
+          <artifactId>brooklyn-launcher</artifactId>
+          <classifier>no-jsgui</classifier>
+          <version>${brooklyn.version}</version>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <!-- copy WAR file so we can embed and access it;
+                         previously (in git history) we *replaced* brooklyn.war,
+                         while that's cool, it seems unfortunate to have to do that -->
+                    <execution>
+                        <id>copy</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>io.cloudsoft.amp</groupId>
+                                    <artifactId>amp-jsgui</artifactId>
+                                    <version>${amp.version}</version>
+                                    <type>war</type>
+                                    <outputDirectory>target/classes</outputDirectory>
+                                    <destFileName>brooklyn.war</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+      </build>
+    </profile>
+    
+    <profile>
+      <!-- brooklyn profile builds with Apache Brooklyn (not Cloudsoft AMP) -->
+      <id>brooklyn</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <dependencies>
+        <dependency>
+            <groupId>org.apache.brooklyn</groupId>
+            <artifactId>brooklyn-all</artifactId>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
+
+</project>
+

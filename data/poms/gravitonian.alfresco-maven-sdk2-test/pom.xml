@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.mycompany.alfresco</groupId>
+    <artifactId>alfresco-maven-test</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <name>Alfresco Maven Test Parent</name>
+    <description>This is a test project to play around with Alfresco Maven SDK Version 2.0</description>
+    <packaging>pom</packaging>
+
+    <developers>
+        <developer>
+            <id>gravitonian</id>
+            <name>Martin Bergljung</name>
+            <email>martin.bergljung@marversolutions.com</email>
+            <url>http://www.marversolutions.com</url>
+            <organization>Marver Solutions Ltd</organization>
+            <organizationUrl>http://www.marversolutions.com</organizationUrl>
+            <timezone>+0</timezone>
+            <roles>
+                <role>Developer</role>
+            </roles>
+        </developer>
+    </developers>
+
+    <!-- Bring in the Alfresco Maven SDK -->
+    <parent>
+        <groupId>org.alfresco.maven</groupId>
+        <artifactId>alfresco-sdk-parent</artifactId>
+        <version>2.0.0</version>
+    </parent>
+
+    <!-- Bring in all sub-projects that make up our Alfresco extensions, including the projects that build the WARs
+         and the Tomcat runner -->
+    <modules>
+        <module>component-a-repo-jar</module>
+        <module>component-a-share-jar</module>
+        <module>alfresco-war</module>
+        <module>share-war</module>
+        <module>solr-config</module>
+        <module>tomcat-runner</module>
+        <module>integration-test-runner</module>
+    </modules>
+
+    <!-- Overriding some of the Alfresco SDK property defaults from the SDK parent -->
+    <properties>
+        <alfresco.groupId>org.alfresco</alfresco.groupId>
+        <alfresco.version>5.0.c</alfresco.version>
+        <app.log.root.level>WARN</app.log.root.level>
+        <alfresco.data.location>alf_data_dev</alfresco.data.location>
+        <env>local</env>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Setup what versions of the different Alfresco artifacts that will be used (depends on alfresco.version),
+                 so we don't have to specify version in any of the sub-projects -->
+            <dependency>
+                <groupId>${alfresco.groupId}</groupId>
+                <artifactId>alfresco-platform-distribution</artifactId>
+                <version>${alfresco.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <profiles>
+        <profile>
+            <id>clear-caches-refresh-webscripts</id>
+            <dependencies>
+                <dependency>
+                    <groupId>org.codehaus.groovy.modules.http-builder</groupId>
+                    <artifactId>http-builder</artifactId>
+                    <version>0.7.1</version>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.groovy.maven</groupId>
+                        <artifactId>gmaven-plugin</artifactId>
+                        <version>1.0</version>
+                        <executions>
+                            <execution>
+                                <phase>generate-resources</phase>
+                                <goals>
+                                    <goal>execute</goal>
+                                </goals>
+                                <configuration>
+                                    <source>
+                                        <![CDATA[
+                                        import groovyx.net.http.RESTClient
+                                        import groovyx.net.http.HttpResponseException
+                                        import static groovyx.net.http.ContentType.*
+
+                                        try {
+                                            def share = new RESTClient( 'http://localhost:8080/share/' )
+
+                                            // Clear Alfresco Share Dependency Caches for JS, CSS, Templates
+                                            def clearDependencyCachesPath = 'page/caches/dependency/clear'
+                                            share.auth.basic 'admin', 'admin'
+                                            def resp = share.post( path : clearDependencyCachesPath )
+                                            log.info "\nRequest: Alfresco Clear Dependency Caches. Response status: ${resp.status}"
+
+                                            // Refresh Web Scripts
+                                            def refreshWebScriptsPath = 'page/index'
+                                            share.auth.basic 'admin', 'admin'
+                                            resp = share.post( path : refreshWebScriptsPath, body : [ reset : 'on' ], requestContentType : URLENC)
+                                            log.info "\nRequest: Alfresco Refresh Web Scripts. Response status: ${resp.status}"
+                                        } catch ( HttpResponseException ex ) {
+                                            println "Unexpected response error: ${ex.statusCode}"
+                                        }
+                                        ]]>
+                                    </source>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+</project>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

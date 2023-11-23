@@ -1,0 +1,587 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright (c) 2007-2010, Kaazing Corporation. All rights reserved.
+
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.kaazing.gateway.core</groupId>
+        <artifactId>com.kaazing.gateway.core.common</artifactId>
+        <version>1.0.0.54-SNAPSHOT</version>
+    </parent>
+
+    <groupId>html5.itests</groupId>
+    <artifactId>html5.itests.gateway</artifactId>
+    <name>Kaazing WebSocket Gateway - HTML5 Integration Tests - Gateway</name>
+    <version>4.0.2.0-SNAPSHOT</version>
+
+    <url>https://github.com/kaazing-private/html5.itests.gateway.git</url>
+    <scm>
+        <connection>scm:git:${project.scm.url}</connection>
+        <developerConnection>scm:git:${project.scm.url}</developerConnection>
+        <url>git@github.com:kaazing-private/html5.itests.gateway.git</url>
+    </scm>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.kaazing.gateway</groupId>
+            <artifactId>com.kaazing.gateway.assembly.full</artifactId>
+            <!-- This is parameterized to enable the Commander's version selection feature -->
+            <!-- Please update the parameter's value instead -->
+            <version>${gateway.version}</version>
+            <type>${os.filetype}</type>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.kaazing.gateway</groupId>
+            <artifactId>com.kaazing.gateway.truststore.tests</artifactId>
+            <version>[1.0.0.0,1.1.0.0)</version>
+            <type>jar</type>
+            <classifier>keystore</classifier>
+        </dependency>
+	<dependency>
+	    <groupId>com.kaazing.gateway</groupId>
+	    <artifactId>com.kaazing.gateway.itests.authentication.modules</artifactId>
+	    <version>[4.0.0.0,4.1.0.0)</version>
+	    <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.6.4</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>com.kaazing.gateway.core</groupId>
+            <artifactId>com.kaazing.gateway.core.server.spi</artifactId>
+            <version>[3.3.0.0,3.6.0.0)</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>com.kaazing.gateway.jms</groupId>
+            <artifactId>com.kaazing.gateway.jms.server.spi</artifactId>
+            <version>[3.5.0.0,3.6.0.0)</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.groovy.modules.http-builder</groupId>
+            <artifactId>http-builder</artifactId>
+            <version>0.7.1</version>
+        </dependency>
+    </dependencies>
+    <profiles>
+        <profile>
+            <id>windows</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <operating.system>windows</operating.system>
+                <os.filetype>zip</os.filetype>
+            </properties>
+        </profile>
+        <profile>
+            <id>unix</id>
+            <activation>
+                <os>
+                    <family>unix</family>
+                </os>
+            </activation>
+            <properties>
+                <operating.system>unix</operating.system>
+                <os.filetype>tar.gz</os.filetype>
+            </properties>
+        </profile>
+        <profile>
+            <id>mac</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                </os>
+            </activation>
+            <properties>
+                <operating.system>unix</operating.system>
+                <os.filetype>tar.gz</os.filetype>
+            </properties>
+        </profile>
+        <profile>
+            <id>cluster</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.kaazing.maven.plugins</groupId>
+                        <artifactId>maven-gateway-launcher-plugin</artifactId>
+                        <version>${gateway.launcher.version}</version>
+                        <executions>
+                            <execution>
+                                <id>gateway-start-node</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>launch</goal>
+                                </goals>
+                                <configuration>
+                                    <config>${config.file}</config>
+                                    <pidfile>${node.pidfile}</pidfile>
+                                    <vmargs>
+                                        <vmarg>${gateway.vmargs}</vmarg>
+                                        <!-- not atomic, but our framework is built on it all over the place :(. can't change it -->
+                                        <!-- note: if we don't set this in the command line, it will be whatever in settings.xml, else localhost -->
+                                        <!-- If we want to launch multiple gateways, we should name this gateway.kaazing.me to leverage on our *.kaazig.me
+                                             wildcard certificate. In this case vmarg.gateway.hostname will correspond to the target url of the cluster as whole -->
+                                        <vmarg>-Dgateway.hostname=${cluster.hostname.prop}</vmarg>
+                                        <vmarg>${vmarg.gateway.threading_strategy}</vmarg>
+                                        <vmarg>-Djava.library.path=${project.basedir}/${html5.gateway.directory}/lib/sigar</vmarg>
+                                        <vmarg>-Dnode.ip=${node.ip.prop}</vmarg>
+                                        <vmarg>-Dnode.jmxport=${node.jmxport.prop}</vmarg>
+                                        <vmarg>-Dnode.hostname=${node.hostname.prop}</vmarg>
+                                        <vmarg>-Dnode.cluster.accept=${node.cluster.accept.prop}</vmarg>
+                                        <vmarg>-Dnode.cluster.connect=${node.cluster.connect.prop}</vmarg>
+                                    </vmargs>
+                                    <sleepAfterLaunch>60</sleepAfterLaunch>
+                                    <checkStatus>
+                                        <!-- if we don't set <hostname>, status checker will analyze vmarg.gateway.hostname property -->
+                                        <port>${node.jmxport.prop}</port>
+                                        <intervalInSeconds>5</intervalInSeconds>
+                                        <timeoutInSeconds>60</timeoutInSeconds>
+                                    </checkStatus>
+                                </configuration>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <runWindowsBatch>true</runWindowsBatch>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.gmaven</groupId>
+                        <artifactId>gmaven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>bamboo-plans-backward-compatibility-and-cluster-validation</id>
+                                <!-- JSTestDriver framework files are in directory -->
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>execute</goal>
+                                </goals>
+                                <configuration>
+                                    <source>
+                                        import java.net.*;
+                                        import java.io.*;
+
+                                        //------- bamboo plans backward compatibility. Making use of vmarg.gateway.hostname when possible -----
+                                        def clusterHostname = project.properties.getProperty("vmarg.gateway.hostname")
+
+                                        .substring(project.properties.getProperty("vmarg.gateway.hostname").lastIndexOf("=") + 1);
+
+                                        //This will take effect only if cluster.hostname.prop is not set externally. Else, external setting takes precedence.
+                                        project.properties.setProperty("cluster.hostname.prop", clusterHostname);
+                                        project.properties.setProperty("node.ip.prop", "127.0.0.1");
+                                        //-----------------------------------------------------------------------------------------------------
+
+                                        //------ cluster validation ---------------------------------------------------------------------------
+                                        if(project.properties.getProperty("ignoreClusterValidation").equals("true")) {
+                                        return;
+                                        }
+
+                                        if(project.properties.getProperty("cluster.hostname.prop").equals(project.properties.getProperty("node.hostname.prop"))) {
+                                        throw new Exception("By having cluster (balancer) accept URLs identical to balanced services URLs," +
+                                        "you are creating a risk of an infinite redirect between balancer and client. Please use distinct hostname for each of node and cluster");
+                                        }
+
+                                        if(project.properties.getProperty("cluster.hostname.prop").equals("localhost") || project.properties.getProperty("node.hostname.prop").equals("localhost")) {
+
+                                        //that means we didn't set this property externally, nor vmarg.gw.hostname value is set to other than localhost
+                                        throw new Exception("We do not have a single wildcard certificate matching both " + project.properties.getProperty("cluster.hostname.prop") + " and " + project.properties.getProperty("node.hostname.prop") +
+                                        ". Gateway will surely fail to start");
+                                        }
+
+                                        try {
+                                        InetAddress.getByName(project.properties.getProperty("cluster.hostname.prop"));
+                                        } catch(UnknownHostException e) {
+
+                                        throw new Exception("Could not resolve " + project.properties.getProperty("cluster.hostname.prop") + ". Are you missing a hosts entry for it?");
+                                        }
+
+                                        try {
+                                        InetAddress address = InetAddress.getByName(project.properties.getProperty("node.hostname.prop"));
+                                        project.properties.setProperty("node.ip.prop", address.getHostAddress());
+                                        } catch(UnknownHostException e) {
+
+                                        throw new Exception("Could not resolve " + project.properties.getProperty("node.hostname.prop") + ". Are you missing a hosts entry for it?");
+
+                                        }
+
+
+                                        ServerSocket bindTest;
+                                        try {
+                                        bindTest = new ServerSocket();
+                                        bindTest.bind(new InetSocketAddress(project.properties.getProperty("node.ip.prop"), 8000));
+                                        } catch(BindException e) {
+
+                                        throw new Exception("Can't bind to " + new String("node.ip.prop") + ": " + project.properties.getProperty("node.ip.prop") +
+                                        " which is the resolution to " + new String("node.hostname.prop") + ": " + project.properties.getProperty("node.hostname.prop") + ". " +
+                                        "Gateway will surely fail to start. You may want to modify hosts file. Or if you know what you are doing, " +
+                                        "override " + new String("node.ip.prop") + " using -D");
+
+                                        } finally {
+
+                                        try { bindTest.close(); } catch(Exception e) {}
+
+                                        }
+
+                                        //-----------------------------------------------------------------------------------------------------
+                                    </source>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+
+            <properties>
+                <node.config.file>gateway-config-cluster-itests-node.xml</node.config.file>
+                <config.file>${node.config.file}</config.file> <!-- added for backward compatibility -->
+                <skip.default.gateway.launcher>true</skip.default.gateway.launcher>
+            </properties>
+        </profile>
+    </profiles>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.gmaven</groupId>
+                <artifactId>gmaven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>netstat-get</id>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <source>
+                                // Get netstat.groovy from github and write to ./target
+                                import groovyx.net.http.*
+                                def http = new HTTPBuilder( 'https://raw.githubusercontent.com' ).request( Method.GET, ContentType.TEXT ) {
+                                uri.path = '/kaazing-private/tools.build/develop/itests/src/main/groovy/netstat.groovy'
+                                headers.'Authorization' = 'token 4b43de0da2bbe1039f4244b8ec463445cba5a9dc'
+                                headers.'Accept' = 'application/vnd.github.v3.raw'
+                                response.success = { resp, reader -> new File("target/netstat.groovy").createNewFile();
+                                new File("target/netstat.groovy").write(reader.text) } }
+                            </source>
+                        </configuration>
+                    </execution>
+                    <execution>                                                              
+                        <id>netstat-run</id>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <source>./target/netstat.groovy</source>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>certification-stamp</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <source>
+                                project.dependencyArtifacts.each() {
+                                if (it.artifactId.contains("com.kaazing.gateway.assembly.full")) {
+                                log.info "[CERTIFICATION] gateway.artifact: gateway:${it.version}"
+                                }
+                                }
+                            </source>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>set-html5-gateway-directory</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <source>
+                                def gwFinalDirs = new File("target/gateway/${operating.system}").listFiles();
+
+                                for(def gwFinalDir : gwFinalDirs) {
+                                if(gwFinalDir.getName().startsWith("kaazing")) {
+                                //note: gwFinalDir.getName() gives the last directory only (e.g. kaazing-websocket-gateway-jms-4.0.0)
+                                project.properties.setProperty("html5.gateway.directory", gwFinalDir.getPath())
+                                return
+                                }
+                                }
+
+                                throw new Exception("Gateway Directory Not Found. Expecting To Find ./target/gateway/[windows|unix]/[kaazing*]")
+                            </source>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-resources</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${html5.gateway.directory}</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>src/main/resources</directory>
+                                    <filtering>false</filtering>
+                                </resource>
+                            </resources>
+                            <overwrite>true</overwrite>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>copy-truststore-resources</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${html5.gateway.directory}/conf/</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>target/truststore</directory>
+                                </resource>
+                            </resources>
+                            <overwrite>true</overwrite>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>generate-resources</phase>
+                        <id>unpack-truststore</id>
+                        <goals>
+                            <goal>unpack-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <includeArtifactIds>com.kaazing.gateway.truststore.tests</includeArtifactIds>
+                            <outputDirectory>${basedir}/target/truststore</outputDirectory>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <phase>generate-resources</phase>
+                        <id>explode-assemblies2</id>
+                        <goals>
+                            <goal>unpack-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <excludeTransitive>true</excludeTransitive>
+                            <includesArtifactIds>com.kaazing.gateway.assembly.full</includesArtifactIds>
+                            <excludeArtifcatIds>com.kaazing.gateway.truststore.tests</excludeArtifcatIds>
+                            <includesTypes>jar</includesTypes>
+                            <outputDirectory>target/gateway/${operating.system}</outputDirectory>
+                        </configuration>
+                    </execution>
+                    <execution>
+			<id>copy-login-module-library</id>
+			<phase>package</phase>
+			<goals>
+			    <goal>copy-dependencies</goal>
+			</goals>
+			<configuration>
+			    <stripVersion>true</stripVersion>
+			    <includeGroupIds>com.kaazing.gateway</includeGroupIds>
+			    <includeArtifactIds>com.kaazing.gateway.itests.authentication.modules</includeArtifactIds>
+			    <includeTypes>jar</includeTypes>
+			    <overWrite>true</overWrite>
+			    <outputDirectory>${html5.gateway.directory}/lib/</outputDirectory>
+			</configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>enforce-tools</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireJavaVersion>
+                                    <!-- Enforce java 1.7 as minimum for compiling -->
+                                    <!-- This is needed because of java.util.zip.Deflater and NIO UDP multicast-->
+                                    <version>[1.7.0,21)</version>
+                                </requireJavaVersion>
+                                <requireMavenVersion>
+                                    <version>[3.0.4,)</version>
+                                </requireMavenVersion>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>com.kaazing.maven.plugins</groupId>
+                <artifactId>maven.status.checker.plugin</artifactId>
+                <version>${status.checker.version}</version>
+                <configuration>
+                    <skipTests>${skip.status.checker}</skipTests>
+                    <port>2020</port>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>generate-test-resources</phase>
+                        <id>CHECK-NO-GATEWAY-RUNNING-IN-BACKGROUND</id>
+                        <goals>
+                            <goal>check-port-free</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>com.kaazing.maven.plugins</groupId>
+                <artifactId>maven-gateway-launcher-plugin</artifactId>
+                <version>${gateway.launcher.version}</version>
+                <executions>
+                    <execution>
+                        <id>gateway-start</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>launch</goal>
+                        </goals>
+                        <configuration>
+                            <config>${config.file}</config>
+                            <pidfile>${node.pidfile}</pidfile>
+                            <skipTests>${skip.default.gateway.launcher}</skipTests>
+                            <vmargs>
+                                <vmarg>${gateway.vmargs}</vmarg>
+                                <!-- not atomic, but our framework is built on it all over the place :(. can't change it -->
+                                <!-- note: if we don't set this in the command line, it will be whatever in settings.xml, else localhost -->
+                                <vmarg>${vmarg.gateway.hostname}</vmarg>
+                                <vmarg>${vmarg.gateway.threading_strategy}</vmarg>
+                                <vmarg>-Djava.library.path=${project.basedir}/${html5.gateway.directory}/lib/sigar</vmarg>
+                            </vmargs>
+                            <sleepAfterLaunch>60</sleepAfterLaunch>
+                            <checkStatus>
+                                <!-- if we don't set <hostname>, status checker will analyze vmarg.gateway.hostname property -->
+                                <port>2020</port>
+                                <intervalInSeconds>5</intervalInSeconds>
+                                <timeoutInSeconds>60</timeoutInSeconds>
+                            </checkStatus>
+                        </configuration>
+                    </execution>
+
+                </executions>
+                <configuration>
+                    <runWindowsBatch>true</runWindowsBatch>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>com.kaazing.maven.plugins</groupId>
+                <artifactId>maven-gateway-launcher-plugin</artifactId>
+                <version>${gateway.launcher.version}</version>
+                <executions>
+                    <execution>
+                        <id>gateway-stop-all</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <runWindowsBatch>true</runWindowsBatch>
+                    <pidfiles>
+                        <pidfile>${node.pidfile}</pidfile>
+                    </pidfiles>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>**/*</exclude>
+                    </excludes>
+                    <skipTests>true</skipTests>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>cobertura-maven-plugin</artifactId>
+            </plugin>
+
+
+            <!-- Resolve dotnet types -->
+            <plugin>
+                <groupId>org.apache.npanday.plugins</groupId>
+                <artifactId>maven-compile-plugin</artifactId>
+                <version>${npanday.version}</version>
+                <extensions>true</extensions>
+            </plugin>
+
+            <plugin>
+                <groupId>com.kaazing.maven.plugins</groupId>
+                <artifactId>maven-versions-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>version</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <properties>
+        <gateway.version>[4.0.2.34,4.1.0.0)</gateway.version>
+        <config.file>gateway-config-client-itests.xml</config.file>
+
+        <skip.default.gateway.launcher>false</skip.default.gateway.launcher>
+
+        <node.jmxport.prop>2020</node.jmxport.prop>
+        <node.pidfile>gateway.pid</node.pidfile>
+
+        <!-- if we launch multiple gateways, we can rely on our wildcard certificate and use
+             e.g. node1.kaazing.test here -->
+        <node.hostname.prop>node.kaazing.test</node.hostname.prop>
+
+        <!-- this is the default, but it can be overridden via -D or in settings.xml -->
+        <vmarg.gateway.hostname>-Dgateway.hostname=localhost</vmarg.gateway.hostname>
+
+        <node.cluster.accept.prop>tcp://127.0.0.1:5351</node.cluster.accept.prop>
+        <node.cluster.connect.prop>udp://127.0.0.1:59595</node.cluster.connect.prop>
+
+        <gateway.launcher.version>1.0.0.53</gateway.launcher.version>
+
+        <status.checker.version>3.0</status.checker.version>
+        <skip.status.checker>false</skip.status.checker>
+
+        <npanday.version>1.4.1-incubating-SNAPSHOT</npanday.version>
+        <!--
+            <npanday.version>1.4.1-incubating-20110827.060441-22</npanday.version>
+        -->
+        <release.level>production</release.level>
+
+        <jgitflow.masterBranchName>master-4.0</jgitflow.masterBranchName>
+        <jgitflow.developBranchName>support-4.0</jgitflow.developBranchName>
+    </properties>
+
+</project>

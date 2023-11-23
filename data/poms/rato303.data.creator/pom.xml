@@ -1,0 +1,217 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>rato</groupId>
+	<artifactId>data.creator</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+	<description>ビルドコマンド
+mvn clean:clean package appassembler:assemble assembly:assembly -DdescriptorId=bin
+
+eclipseでデバッグする場合は「実行の構成」の「引数」タブで「作業ディレクトリ」を「その他」に設定し値を「${workspace_loc:data.creator/bin}」とする事。</description>
+
+	<name>data.creator</name>
+	<url>http://maven.apache.org</url>
+
+	<repositories>
+		<repository>
+			<id>maven.seasar.org</id>
+			<name>The Seasar Foundation Maven2 Repository</name>
+			<url>http://maven.seasar.org/maven2</url>
+		</repository>
+		<repository>
+			<id>maven.snapshot.seasar.org</id>
+			<name>The Seasar Foundation Maven2 Repository(snapshot)</name>
+			<url>http://maven.seasar.org/maven2-snapshot</url>
+		</repository>
+	</repositories>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<jdk.version>1.7</jdk.version>
+	</properties>
+
+	<profiles>
+		<profile>
+			<id>local</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<properties>
+				<src.main.resources>${basedir}/src/main/resources</src.main.resources>
+			</properties>
+		</profile>
+		<profile>
+			<id>release</id>
+			<properties>
+				<src.main.resources>${basedir}/profiles/release/src/main/resources</src.main.resources>
+			</properties>
+		</profile>
+	</profiles>
+
+	<pluginRepositories>
+		<pluginRepository>
+			<id>Codehaus repository</id>
+			<url>http://repository.codehaus.org/</url>
+		</pluginRepository>
+	</pluginRepositories>
+
+	<build>
+		<sourceDirectory>src/main/java</sourceDirectory>
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<includes>
+					<include>**/*</include>
+				</includes>
+				<excludes>
+					<exclude>logback.xml</exclude>
+				</excludes>
+			</resource>
+
+			<resource>
+				<directory>${src.main.resources}</directory>
+				<includes>
+					<include>logback.xml</include>
+				</includes>
+			</resource>
+		</resources>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>3.1</version>
+					<configuration>
+						<source>${jdk.version}</source>
+						<target>${jdk.version}</target>
+						<compilerArgument>-proc:none</compilerArgument>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.codehaus.mojo</groupId>
+					<artifactId>appassembler-maven-plugin</artifactId>
+					<version>1.8</version>
+					<configuration>
+						<repositoryLayout>flat</repositoryLayout>
+						<repositoryName>lib</repositoryName>
+						<configurationDirectory>config</configurationDirectory>
+						<installArtifacts>false</installArtifacts>
+						<extraJvmArguments>-Xmx16m</extraJvmArguments>
+						<generateRepository>false</generateRepository>
+						<programs>
+							<program>
+								<mainClass>rato.data.creator.App</mainClass>
+								<name>run</name>
+							</program>
+						</programs>
+					</configuration>
+					<executions>
+						<execution>
+							<phase>package</phase>
+							<goals>
+								<goal>assemble</goal>
+							</goals>
+						</execution>
+					</executions>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-assembly-plugin</artifactId>
+					<version>2.4</version>
+					<configuration>
+						<descriptors>
+							<descriptor>src/main/assembly/descriptor-bin.xml</descriptor>
+						</descriptors>
+						<descriptorRefs>
+							<descriptorRefs>jar-with-dependencies</descriptorRefs>
+						</descriptorRefs>
+						<archive>
+							<manifest>
+								<mainClass>rato.data.creator.App</mainClass>
+							</manifest>
+							<manifestEntries>
+								<Class-Path>config/</Class-Path>
+							</manifestEntries>
+						</archive>
+					</configuration>
+					<executions>
+						<execution>
+							<id>make-assembly</id>
+							<phase>package</phase>
+							<goals>
+								<goal>single</goal>
+							</goals>
+						</execution>
+					</executions>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+		<plugins>
+			<plugin>
+				<groupId>org.bsc.maven</groupId>
+				<artifactId>maven-processor-plugin</artifactId>
+				<version>2.0.5</version>
+				<executions>
+					<execution>
+						<id>process</id>
+						<goals>
+							<goal>process</goal>
+						</goals>
+						<phase>process-resources</phase>
+						<configuration>
+							<sourceDirectory>src/main/java</sourceDirectory>
+							<outputDirectory>${project.build.directory}/apt_generated</outputDirectory>
+							<compilerArguments>-encoding ${project.build.sourceEncoding} -Adao.subpackage=impl -Adao.suffix=Impl</compilerArguments>
+							<failOnError>false</failOnError>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>3.3.2</version>
+		</dependency>
+		<dependency>
+			<groupId>org.seasar.doma</groupId>
+			<artifactId>doma</artifactId>
+			<version>1.35.0</version>
+			<type>jar</type>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.7.7</version>
+		</dependency>
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>1.1.2</version>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.11</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.hamcrest</groupId>
+			<artifactId>hamcrest-library</artifactId>
+			<version>1.3</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>ojdbc</groupId>
+			<artifactId>ojdbc</artifactId>
+			<version>6</version>
+			<scope>runtime</scope>
+		</dependency>
+	</dependencies>
+
+</project>

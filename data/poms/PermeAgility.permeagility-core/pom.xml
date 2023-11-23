@@ -1,0 +1,273 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.permeagility</groupId>
+    <artifactId>permeagility</artifactId>
+    <version>0.8.3-SNAPSHOT</version>
+
+    <packaging>jar</packaging>
+    <name>Permeagility Core</name>
+    <description>The dynamic adaptive data management platform</description>
+    <url>http://www.permeagility.com</url>
+
+    <properties>
+      <mainClass>permeagility.web.Server</mainClass>
+      <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+      <maven.compiler.source>1.8</maven.compiler.source>
+      <maven.compiler.target>1.8</maven.compiler.target>
+    </properties>
+
+
+    <licenses>
+      <license>
+        <name>The Apache License, Version 2.0</name>
+        <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      </license>
+    </licenses>
+
+    <developers>
+      <developer>
+        <name>Glenn Irwin</name>
+        <email>glenn@irwinideas.com</email>
+        <organization>PermeAgility</organization>
+        <organizationUrl>http://www.permeagility.com</organizationUrl>
+      </developer>
+    </developers>
+
+
+    <scm>
+      <connection>scm:git:https://github.com/PermeAgility/permeagility-core.git</connection>
+      <developerConnection>scm:git:https://github.com/PermeAgility/permeagility-core.git</developerConnection>
+      <url>git@github.com:PermeAgility/permeagility-core.git</url>
+      <tag>v0.8.2</tag>
+    </scm>
+
+
+    <distributionManagement>
+      <snapshotRepository>
+        <id>ossrh</id>
+        <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+      </snapshotRepository>
+      <repository>
+        <id>ossrh</id>
+        <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+      </repository>
+    </distributionManagement>
+
+  <build>
+    <defaultGoal>exec:exec</defaultGoal>  <!-- type: mvn      to run the server for testing -->
+
+    <sourceDirectory>src</sourceDirectory>
+    <resources>
+        <!-- The web site directory for images/javascript/etc... -->
+        <resource>
+            <directory>www</directory>
+        </resource>
+        <!-- include any JSON data file with the source -->
+        <resource>
+            <directory>src</directory>
+            <includes>
+                <include>**/*.json</include>
+            </includes>
+        </resource>
+    </resources>
+
+    <plugins>
+
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.7.0</version>
+        <configuration>
+            <compilerArgument>-Xlint:unchecked</compilerArgument>
+            <showDeprecation>true</showDeprecation>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.8</version>
+        <executions>
+          <execution>
+              <id>defaultrun</id>
+              <phase>run</phase>
+            <configuration>
+              <target>
+                <java fork="true" classname="${mainClass}" classpathref="maven.test.classpath">
+                  <arg value="" />
+                </java>
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+          <execution>
+              <id>testrun</id>
+              <phase>test</phase>
+            <configuration>
+              <target>
+                <java fork="true" classname="${mainClass}" classpathref="maven.test.classpath">
+                  <arg value="1998" />
+                  <arg value="plocal:testdb" />
+                  <arg value="selftest" />
+                  </java>
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+          </executions>
+      </plugin>
+
+      <plugin>
+	    <!-- Build an executable JAR -->
+        <groupId>org.apache.maven.plugins</groupId>
+	    <artifactId>maven-assembly-plugin</artifactId>
+	    <configuration>
+	      <archive>
+	        <manifest>
+	          <mainClass>permeagility.web.Server</mainClass>
+	          <addClasspath>true</addClasspath>
+	          <classpathPrefix>lib/</classpathPrefix>
+	        </manifest>
+	      </archive>
+	      <descriptorRefs><descriptorRef>jar-with-dependencies</descriptorRef></descriptorRefs>
+	    </configuration>
+	    <executions>
+	      <execution>
+	        <phase>package</phase>
+	        <goals><goal>single</goal></goals>
+	      </execution>
+	    </executions>
+     </plugin>
+
+     <plugin>  <!-- This allows running server in place with mvn command -->
+           <groupId>org.codehaus.mojo</groupId>
+           <artifactId>exec-maven-plugin</artifactId>
+           <version>1.6.0</version>
+           <configuration>
+               <executable>java</executable>
+               <arguments>
+                <argument>-XX:MaxDirectMemorySize=2G</argument>
+                <argument>-jar</argument>
+                   <argument>${project.build.directory}/permeagility-${project.version}-jar-with-dependencies.jar</argument>
+               </arguments>
+               <workingDirectory>${basedir}</workingDirectory>
+           </configuration>
+       </plugin>
+
+       <!-- This will activate the release profile -->
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-release-plugin</artifactId>
+            <version>2.5.3</version>
+            <configuration>
+              <tagNameFormat>v@{project.version}</tagNameFormat>
+              <autoVersionSubmodules>true</autoVersionSubmodules>
+              <useReleaseProfile>false</useReleaseProfile>
+              <releaseProfiles>release</releaseProfiles>
+              <arguments>-Prelease</arguments>
+              <goals>deploy</goals>
+            </configuration>
+        </plugin>
+
+     </plugins>
+
+    </build>
+
+  <dependencies>
+
+    <!--  OrientDB core -->
+    <dependency>
+      <groupId>com.orientechnologies</groupId>
+      <artifactId>orientdb-core</artifactId>
+      <version>2.2.37</version>
+    </dependency>
+
+    <!-- XNIO for fast connections -->
+    <dependency>
+        <groupId>org.jboss.xnio</groupId>
+        <artifactId>xnio-api</artifactId>
+        <version>3.8.4.Final</version>
+      <type>jar</type>
+    </dependency>
+   <dependency>
+        <groupId>org.jboss.xnio</groupId>
+        <artifactId>xnio-nio</artifactId>
+        <version>3.8.4.Final</version>
+    </dependency>
+
+  </dependencies>
+
+ <profiles>
+     <profile>
+         <id>release</id>
+         <build>
+         <plugins>
+
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-source-plugin</artifactId>
+              <version>3.0.1</version>
+              <executions>
+                <execution>
+                  <id>attach-sources</id>
+                  <goals>
+                    <goal>jar-no-fork</goal>
+                  </goals>
+                </execution>
+              </executions>
+            </plugin>
+
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-javadoc-plugin</artifactId>
+              <version>3.0.0</version>
+              <executions>
+                <execution>
+                  <id>attach-javadocs</id>
+                  <goals>
+                    <goal>jar</goal>
+                  </goals>
+                    <configuration>
+                         <failOnError>false</failOnError>
+                         <additionalparam>-quiet</additionalparam>
+                         <additionalparam>-Xdoclint:none</additionalparam>
+                    </configuration>
+                </execution>
+              </executions>
+            </plugin>
+
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-gpg-plugin</artifactId>
+              <version>1.6</version>
+              <executions>
+                <execution>
+                  <id>sign-artifacts</id>
+                  <phase>verify</phase>
+                  <goals>
+                    <goal>sign</goal>
+                  </goals>
+                </execution>
+              </executions>
+            </plugin>
+
+            <plugin>
+              <groupId>org.sonatype.plugins</groupId>
+              <artifactId>nexus-staging-maven-plugin</artifactId>
+              <version>1.6.8</version>
+              <extensions>true</extensions>
+              <configuration>
+                <serverId>ossrh</serverId>
+                <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+              </configuration>
+            </plugin>
+
+         </plugins>
+         </build>
+     </profile>
+</profiles>
+
+</project>

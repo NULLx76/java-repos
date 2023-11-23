@@ -1,0 +1,420 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+	
+    <groupId>com.brocodefist</groupId>
+    <artifactId>test-like-a-sir</artifactId>
+    <name>Test Like A Sir</name>
+    <version>0.1</version>
+    <packaging>jar</packaging>
+    <description>Pojos Auto-Testing for java</description>
+	
+    <developers>
+        <developer>
+            <name>Frackerss</name>
+            <email>fjavierroyuela@gmail.com</email>
+        </developer>
+        <developer>
+            <name>LeftHandBro</name>
+            <email>jorgem.amado@gmail.com</email>
+        </developer>
+    </developers>
+	
+	<!-- test -->
+    <profiles>
+        <profile>
+            <id>all-tests</id>
+            <activation>
+                <!-- Inactive by default. -->
+                <activeByDefault>false</activeByDefault>
+
+                <!-- Activate the profile on Hudson builds. -->
+                <property>
+                    <name>BUILD_NUMBER</name>
+                </property>
+
+                <!-- (Don't) Activate the profile too for release builds. -->
+                <!-- This is now activated as a hack in the preparationGoals attribute
+                         of the release:prepare goal.
+                <file>
+                        <exists>release.properties</exists>
+                </file>
+                -->
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>cobertura-maven-plugin</artifactId>
+                        <version>2.4-fixed</version>
+                        <configuration>
+                            <formats>
+                                <format>xml</format>
+                                <format>html</format>
+                            </formats>
+                            <check>
+                                <haltOnFailure>true</haltOnFailure>
+                                <branchRate>${per.class.coverage.rate}</branchRate>
+                                <lineRate>${per.class.coverage.rate}</lineRate>
+                                <totalBranchRate>${per.project.coverage.rate}</totalBranchRate>
+                                <totalLineRate>${per.project.coverage.rate}</totalLineRate>
+                                <packageBranchRate>${per.package.coverage.rate}</packageBranchRate>
+                                <packageLineRate>${per.package.coverage.rate}</packageLineRate>
+                            </check>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>cobertura-check</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>cobertura-clean</id>
+                                <phase>clean</phase>
+                                <goals>
+                                    <goal>clean</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>2.4.3</version>                        
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>no-tests</id>
+
+            <activation>
+                <!-- Inactive by default. -->
+                <activeByDefault>false</activeByDefault>
+            </activation>
+
+            <properties>
+                <cpd.skip>true</cpd.skip>
+                <pmd.skip>true</pmd.skip>
+                <checkstyle.skip>true</checkstyle.skip>
+                <skipTests>true</skipTests>
+                <maven.test.skip>true</maven.test.skip>
+            </properties>
+        </profile>
+    </profiles>
+    <build>
+        <pluginManagement>
+            <plugins>
+                <!-- Default values for Java 1.5 code compilation. -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>2.3.2</version>
+                    <configuration>
+                        <source>${java.source.version}</source>
+                        <target>${java.target.version}</target>
+                        <debug>true</debug>
+                        <debuglevel>lines,vars,source</debuglevel>
+                    </configuration>
+                </plugin>
+                <!-- Values for web projects, and exclusions when importing war overlays. -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-war-plugin</artifactId>
+                    <version>2.1.1</version>
+                    <configuration>
+                        <webXml>src/main/webapp/WEB-INF/web.xml</webXml>
+                        <dependentWarExcludes>WEB-INF/web.xml,index.*,WEB-INF/lib/**,WEB-INF/classes/**</dependentWarExcludes>
+                        <warName>${project.artifactId}</warName>
+                        <archive>
+                            <manifest>
+                                <addClasspath>true</addClasspath>
+                                <classpathPrefix>lib/</classpathPrefix>
+                            </manifest>
+                        </archive>
+                    </configuration>
+                </plugin>
+                <!-- Values for Enterprise Application projects. -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-ear-plugin</artifactId>
+                    <version>2.5</version>
+                    <configuration>
+                        <version>5</version>
+                    </configuration>
+                </plugin>
+                <!-- Values for EJB projects. -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-ejb-plugin</artifactId>
+                    <version>2.3</version>
+                    <configuration>
+                        <ejbVersion>3.0</ejbVersion>
+                        <generateClient>false</generateClient>
+                        <archive>
+                            <manifest>
+                                <addClasspath>true</addClasspath>
+                            </manifest>
+                        </archive>
+                    </configuration>
+                </plugin>
+                <!-- Be sure to run verification tests at release prepare time. -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-release-plugin</artifactId>
+                    <version>2.1</version>
+                    <configuration>
+                        <!-- HACK: Try to pass a profile activation parameter inside the goal list. -->
+                        <preparationGoals>-P all-tests verify integration-test</preparationGoals>
+                        <releaseProfiles>no-tests</releaseProfiles>
+                    </configuration>
+                </plugin>
+                <!-- Default configuration for running tests. -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>2.4.3</version>
+                    <configuration>
+                        <!-- Removed from unit testing (moved to integration) since it broke
+                        cobertura: -Djava.system.class.loader=es.bbva.mgyd.circe.classloader.ProcrustesWorld -->
+                        <argLine><![CDATA["-Dbbva.environment.config=${maven.environment.config.location}" -Dlog4j.configuration=log4j-test.xml]]></argLine>
+                        <systemProperties>
+                            <property>
+                                <name>bbva.environment.config</name>
+                                <value>${maven.environment.config.location}</value>
+                            </property>
+                        </systemProperties>
+                    </configuration>
+                </plugin>
+                <!-- Default values for the assembly plugin. -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-assembly-plugin</artifactId>
+                    <version>2.2</version>
+                    <dependencies>
+                        <dependency>
+                            <groupId>es.bbva.mgyd.circe</groupId>
+                            <artifactId>circe</artifactId>
+                            <version>${circe.version}</version>
+                        </dependency>
+                    </dependencies>
+                </plugin>
+
+                <!-- M2E Plugin Lifecycle mapping. -->
+                <plugin>
+                    <groupId>org.eclipse.m2e</groupId>
+                    <artifactId>lifecycle-mapping</artifactId>
+                    <version>1.0.0</version>
+                    <configuration>
+                        <lifecycleMappingMetadata>
+                            <pluginExecutions>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>es.bbva.mgyd.circe</groupId>
+                                        <artifactId>procrustes-maven-plugin</artifactId>
+                                        <versionRange>[0.0.1,)</versionRange>
+                                        <goals>
+                                            <goal>generate</goal>
+                                            <goal>generateTest</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <execute />
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.codehaus.mojo</groupId>
+                                        <artifactId>gwt-maven-plugin</artifactId>
+                                        <versionRange>[0.0.1,)</versionRange>
+                                        <goals>
+                                            <goal>generateAsync</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <execute />
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.codehaus.mojo</groupId>
+                                        <artifactId>jaxws-maven-plugin</artifactId>
+                                        <versionRange>[0.0.1,)</versionRange>
+                                        <goals>
+                                            <goal>wsgen</goal>
+                                            <goal>wsimport</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <execute />
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.apache.maven.plugins</groupId>
+                                        <artifactId>maven-dependency-plugin</artifactId>
+                                        <versionRange>[0.0.1,)</versionRange>
+                                        <goals>
+                                            <goal>unpack</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore />
+                                    </action>
+                                </pluginExecution>
+                            </pluginExecutions>
+                        </lifecycleMappingMetadata>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
+        <plugins>
+            <!-- Check for missing/unneeded dependencies. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>2.1</version>
+                <executions>
+                    <execution>
+                        <id>check-dependencies</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>analyze-only</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <failOnWarning>${fail.on.dependency.check}</failOnWarning>
+                    <ignoreNonCompile>true</ignoreNonCompile>
+                </configuration>
+            </plugin>
+            <!-- Apply PMD/CPD QA analysis. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-pmd-plugin</artifactId>
+                <version>2.6-fixes</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>pmd</groupId>
+                        <artifactId>pmd</artifactId>
+                        <version>4.3-fixes</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <linkXref>false</linkXref>
+                    <sourceEncoding>utf-8</sourceEncoding>
+                    <minimumTokens>100</minimumTokens>
+                    <targetJdk>1.5</targetJdk>
+                    <includeTests>false</includeTests>
+                    <format>xml</format>
+                    <excludeRoots>
+                        <excludeRoot>${project.build.directory}/generated-sources/antlr3</excludeRoot>
+                        <excludeRoot>${project.build.directory}/generated-sources/gwt</excludeRoot>
+                    </excludeRoots>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>main-pmd-cpd</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>pmd</goal>
+                            <goal>cpd</goal>
+                        </goals>
+                        <configuration>
+                            <includeTests>false</includeTests>                            
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>test-pmd</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>pmd</goal>
+                        </goals>
+                        <configuration>
+                            <includeTests>true</includeTests>
+                            <outputDirectory>target/test-pmd/site</outputDirectory>
+                            <targetDirectory>target/test-pmd</targetDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Apply Checkstyle QA analysis. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>2.7</version>
+                <executions>
+                    <execution>
+                        <id>checkstyle</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>checkstyle</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+    <dependencies>
+        <!--<dependency>
+            <groupId>org.powermock</groupId>
+            <artifactId>powermock-module-junit4</artifactId>
+            <version>1.4.12</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.powermock</groupId>
+            <artifactId>powermock-api-mockito</artifactId>
+            <version>1.4.12</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.powermock</groupId>
+            <artifactId>powermock-core</artifactId>
+            <version>1.4.12</version>
+            <scope>compile</scope>
+        </dependency>-->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+            <type>jar</type>
+        </dependency>
+        <!--<dependency>
+            <groupId>com.google.code.findbugs</groupId>    
+            <artifactId>annotations</artifactId>
+            <version>1.3.9</version>
+            <scope>compile</scope>
+        </dependency>-->
+    </dependencies>
+    <!-- Default values for different QA policies and related depedencies. -->
+    <properties>
+
+        <!-- Dependency checks. -->
+        <fail.on.dependency.check>true</fail.on.dependency.check>
+
+        <!-- Test coverage rates. -->
+        <per.class.coverage.rate>60</per.class.coverage.rate>
+        <per.package.coverage.rate>60</per.package.coverage.rate>
+        <per.project.coverage.rate>90</per.project.coverage.rate>
+        <fail.on.test.coverage>true</fail.on.test.coverage>
+
+        <!-- PMD/CPD checks thresholds. -->
+        <pmd.violation.threshold>0</pmd.violation.threshold>
+        <test.pmd.violation.threshold>0</test.pmd.violation.threshold>
+        <cpd.duplication.threshold>0</cpd.duplication.threshold>
+        <fail.on.check.violation>true</fail.on.check.violation>
+
+        <!-- Checkstyle checks thresholds. -->
+        <checkstyle.violation.threshold>0</checkstyle.violation.threshold>
+
+        <!-- Java source and target versions. -->
+        <java.source.version>1.6</java.source.version>
+        <java.target.version>1.6</java.target.version>
+
+    </properties>
+</project>

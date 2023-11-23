@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>fr.xebia.jpthiery.xke.sample</groupId>
+    <artifactId>sample-web</artifactId>
+    <version>0.0.5-SNAPSHOT</version>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <gatling.version>2.0.0-RC4</gatling.version>
+
+        <repot.snapshot.id>snapshot-local-docker</repot.snapshot.id>
+        <repot.snapshot.name>Snapshot local docker</repot.snapshot.name>
+        <repot.snapshot.url>http://192.168.59.101:8081/nexus/content/repositories/snapshots/</repot.snapshot.url>
+        <repot.release.id>release-local-docker</repot.release.id>
+        <repot.release.name>release local docker</repot.release.name>
+        <repot.release.url>http://192.168.59.101:8081/nexus/content/repositories/releases/</repot.release.url>
+    </properties>
+
+    <scm>
+        <developerConnection>scm:git:git@github.com:jpthiery/sample-web.git</developerConnection>
+      <tag>sample-web-0.0.1</tag>
+  </scm>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.5</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.0.7</version>
+        </dependency>
+        <!-- Server -->
+        <dependency>
+            <groupId>com.sparkjava</groupId>
+            <artifactId>spark-core</artifactId>
+            <version>2.0.0</version>
+        </dependency>
+        <!-- Testing -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>1.6.1</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>${repot.snapshot.id}</id>
+            <name>${repot.snapshot.name}</name>
+            <url>${repot.snapshot.url}</url>
+        </snapshotRepository>
+        <repository>
+            <id>${repot.release.id}</id>
+            <name>${repot.release.name}</name>
+            <url>${repot.release.url}</url>
+        </repository>
+    </distributionManagement>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>${basedir}/src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-assembly-plugin</artifactId>
+                    <version>2.2.2</version>
+                    <executions>
+                        <execution>
+                            <id>package-zip</id>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>single</goal>
+                            </goals>
+                            <configuration>
+                                <descriptors>
+                                    <descriptor>src/main/assembly/zip-assembly.xml</descriptor>
+                                </descriptors>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>2.3.1</version>
+                    <configuration>
+                        <archive>
+                            <manifest>
+                                <addClasspath>true</addClasspath>
+                                <classpathPrefix>lib/</classpathPrefix>
+                                <mainClass>fr.xebia.jpthiery.xke.sampleweb.SampleWebServer</mainClass>
+                            </manifest>
+                        </archive>
+                    </configuration>
+                </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>2.5</version>
+            </plugin>
+        </plugins>
+    </build>
+    <profiles>
+        <profile>
+            <id>gatling</id>
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>excilys</id>
+                    <name>Excilys Repository</name>
+                    <url>http://repository.excilys.com/content/groups/public</url>
+                </pluginRepository>
+            </pluginRepositories>
+
+
+            <dependencies>
+                <dependency>
+                    <groupId>io.gatling.highcharts</groupId>
+                    <artifactId>gatling-charts-highcharts</artifactId>
+                    <version>${gatling.version}</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>io.gatling</groupId>
+                        <artifactId>gatling-maven-plugin</artifactId>
+                        <version>${gatling.version}</version>
+                        <executions>
+                            <execution>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>execute</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <dataFolder>src/test/resources/data</dataFolder>
+                            <resultsFolder>target/gatling/results</resultsFolder>
+                            <requestBodiesFolder>src/test/resources/request-bodies</requestBodiesFolder>
+                            <simulationsFolder>src/test/scala</simulationsFolder>
+                            <jvmArgs>
+                                <jvmArg>-DbaseUrl=http://${containerHost}:${containerPort}</jvmArg>
+                            </jvmArgs>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

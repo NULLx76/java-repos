@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.googlecode.pennybank</groupId>
+	<artifactId>PennyBank</artifactId>
+	<packaging>jar</packaging>
+	<version>1.0-SNAPSHOT</version>
+	<name>PennyBank</name>
+	<url>http://maven.apache.org</url>
+	<profiles>
+		<profile>
+			<id>mysql</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<properties>
+				<!-- JDBC driver properties -->
+				<jdbcDriver.groupId>mysql</jdbcDriver.groupId>
+				<jdbcDriver.artifactId>mysql-connector-java</jdbcDriver.artifactId>
+				<jdbcDriver.version>5.1.6</jdbcDriver.version>
+				<jdbcDriver.className>com.mysql.jdbc.Driver</jdbcDriver.className>
+
+				<!--  Data source properties -->
+				<dataSource.prefix>jdbc:mysql://localhost/</dataSource.prefix>
+				<dataSource.postfix></dataSource.postfix>
+				<dataSource.createTablesScript>MySQLCreateTables.sql</dataSource.createTablesScript>
+
+				<!-- Hibernate properties -->
+				<hibernate.dialect>org.hibernate.dialect.MySQL5InnoDBDialect</hibernate.dialect>
+			</properties>
+		</profile>
+		<profile>
+			<id>h2database</id>
+			<properties>
+				<!-- JDBC driver properties -->
+				<jdbcDriver.groupId>com.h2database</jdbcDriver.groupId>
+				<jdbcDriver.artifactId>h2</jdbcDriver.artifactId>
+				<jdbcDriver.version>1.1.108</jdbcDriver.version>
+				<jdbcDriver.className>org.h2.Driver</jdbcDriver.className>
+
+				<!--  Data source properties -->
+				<dataSource.prefix>jdbc:h2:mem:</dataSource.prefix>
+				<dataSource.postfix>;DB_CLOSE_DELAY=-1</dataSource.postfix>
+				<dataSource.createTablesScript>H2DBCreateTables.sql</dataSource.createTablesScript>
+
+				<!-- Hibernate properties -->
+				<hibernate.dialect>org.hibernate.dialect.H2Dialect</hibernate.dialect>
+			</properties>
+		</profile>
+	</profiles>
+
+	<properties>
+		<dataSource.dbName>pennybank</dataSource.dbName>
+		<dataSource.testDbName>pennybank_test</dataSource.testDbName>
+		<dataSource.url>
+			${dataSource.prefix}${dataSource.dbName}${dataSource.postfix}
+		</dataSource.url>
+		<dataSource.testUrl>
+			${dataSource.prefix}${dataSource.testDbName}${dataSource.postfix}
+		</dataSource.testUrl>
+		<dataSource.user>pennybank</dataSource.user>
+		<dataSource.password>pennybank</dataSource.password>
+	</properties>
+
+	<build>
+		<!-- Resources -->
+		<resources>
+			<resource>
+				<filtering>true</filtering>
+				<directory>src/main/resources/</directory>
+				<includes>
+					<include>**/*.xml</include>
+				</includes>
+			</resource>
+			<resource>
+				<directory>src/main/resources/</directory>
+				<excludes>
+					<exclude>**/*.xml</exclude>
+				</excludes>
+			</resource>
+		</resources>
+		<testResources>
+			<testResource>
+				<filtering>true</filtering>
+				<directory>src/test/resources/</directory>
+				<includes>
+					<include>**/*.xml</include>
+				</includes>
+			</testResource>
+			<testResource>
+				<directory>src/test/resources/</directory>
+				<excludes>
+					<exclude>**/*.xml</exclude>
+				</excludes>
+			</testResource>
+		</testResources>
+
+		<!--  Plugins -->
+		<plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>sql-maven-plugin</artifactId>
+				<version>1.2</version>
+
+				<dependencies>
+					<!-- specify the dependent jdbc driver here -->
+					<dependency>
+						<groupId>${jdbcDriver.groupId}</groupId>
+						<artifactId>${jdbcDriver.artifactId}
+						</artifactId>
+						<version>${jdbcDriver.version}</version>
+					</dependency>
+				</dependencies>
+
+				<!-- common configuration shared by all executions -->
+				<configuration>
+					<driver>${jdbcDriver.className}</driver>
+					<url>${dataSource.testUrl}</url>
+					<username>${dataSource.user}</username>
+					<password>${dataSource.password}</password>
+				</configuration>
+				<executions>
+					<execution>
+						<id>create-schema</id>
+						<phase>process-test-resources</phase>
+						<goals>
+							<goal>execute</goal>
+						</goals>
+						<configuration>
+							<autocommit>true</autocommit>
+							<srcFiles>
+								<srcFile>${basedir}/src/sql/${dataSource.createTablesScript}
+								</srcFile>
+							</srcFiles>
+							<onError>continue</onError>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.5</source>
+					<target>1.5</target>
+					<encoding>UTF-8</encoding>
+				</configuration>
+			</plugin>
+
+			<plugin><!-- Plugin para construir paquetes para Mac OS X -->
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>osxappbundle-maven-plugin
+				</artifactId>
+				<version>1.0-alpha-2</version>
+				<configuration>
+					<jvmVersion>1.5+</jvmVersion>
+					<mainClass>com.googlecode.pennybank.App
+					</mainClass>
+					<iconFile>src/main/resources/icons/piggybank.icns
+					</iconFile>
+				</configuration>
+				<executions>
+					<execution>
+						<id>Package the application</id>
+						<phase>package</phase>
+						<goals>
+							<goal>bundle</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<artifactId>maven-resources-plugin
+				</artifactId>
+				<version>2.2</version>
+				<configuration>
+					<encoding>UTF-8</encoding>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+	<dependencies>
+
+		<dependency>
+			<groupId>${jdbcDriver.groupId}</groupId>
+			<artifactId>${jdbcDriver.artifactId}
+			</artifactId>
+			<version>${jdbcDriver.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.1</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate</artifactId>
+			<version>3.2.5.ga</version>
+			<type>jar</type>
+		</dependency>
+
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-annotations</artifactId>
+			<version>3.3.0.ga</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-entitymanager
+			</artifactId>
+			<version>3.3.1.ga</version>
+		</dependency>
+
+		<dependency>
+			<groupId>net.java.dev.swing-layout</groupId>
+			<artifactId>swing-layout</artifactId>
+			<version>1.0.2</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.jgoodies</groupId>
+			<artifactId>forms</artifactId>
+			<version>1.2.1</version>
+			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.jgoodies</groupId>
+			<artifactId>mac_widgets</artifactId>
+			<version>0.9.4</version>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>net.java.dev.glazedlists </groupId>
+			<artifactId>glazedlists_java15 </artifactId>
+			<version>1.8.0</version>
+		</dependency>
+		<dependency>
+			<groupId>jfree</groupId>
+			<artifactId>jfreechart</artifactId>
+			<version>1.0.0</version>
+		</dependency>
+
+	</dependencies>
+</project>

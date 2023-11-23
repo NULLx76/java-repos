@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    CODENVY CONFIDENTIAL
+    __________________
+
+     [2012] - [2014] Codenvy, S.A.
+     All Rights Reserved.
+
+    NOTICE:  All information contained herein is, and remains
+    the property of Codenvy S.A. and its suppliers,
+    if any.  The intellectual and technical concepts contained
+    herein are proprietary to Codenvy S.A.
+    and its suppliers and may be covered by U.S. and Foreign Patents,
+    patents in process, and are protected by trade secret or copyright law.
+    Dissemination of this information or reproduction of this material
+    is strictly forbidden unless prior written permission is obtained
+    from Codenvy S.A..
+
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <artifactId>maven-depmgt-pom</artifactId>
+        <groupId>com.codenvy</groupId>
+        <version>1.8.11-SNAPSHOT</version>
+    </parent>
+    <groupId>com.codenvy.dashboard</groupId>
+    <artifactId>user-dashboard-war</artifactId>
+    <version>0.5.0-SNAPSHOT</version>
+    <packaging>war</packaging>
+    <name>User Dashboard :: Web App</name>
+    <scm>
+        <connection>scm:git:git@github.com:codenvy/user-dashboard.git</connection>
+        <developerConnection>scm:git:git@github.com:codenvy/user-dashboard.git</developerConnection>
+        <tag>HEAD</tag>
+        <url>https://github.com/codenvy/user-dashboard</url>
+    </scm>
+    <properties>
+        <maven.releases.repo.url>https://maven.codenvycorp.com/content/repositories/codenvy-private-releases/</maven.releases.repo.url>
+        <maven.snapshots.repo.url>https://maven.codenvycorp.com/content/repositories/codenvy-private-snapshots/</maven.snapshots.repo.url>
+        <version.license-header>codenvy-codenvy-license-resource-bundle</version.license-header>
+    </properties>
+    <build>
+        <finalName>user-dashboard-war</finalName>
+        <plugins>
+            <plugin>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>2.5</version>
+                <configuration>
+                    <filesets>
+                        <fileset>
+                            <directory>${basedir}/app/bower_components</directory>
+                            <followSymlinks>false</followSymlinks>
+                        </fileset>
+                        <fileset>
+                            <directory>${basedir}/node_modules</directory>
+                            <followSymlinks>false</followSymlinks>
+                        </fileset>
+                    </filesets>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <!-- Download NPM dependencies -->
+                                <exec dir="${basedir}" executable="npm" failonerror="true">
+                                    <arg value="install" />
+                                </exec>
+                                <!-- Download Bower dependencies -->
+                                <exec dir="${basedir}" executable="bower" failonerror="true">
+                                    <arg value="install" />
+                                </exec>
+                                <!-- Disable development mode -->
+                                <replace file="${basedir}/app/scripts/app.js">
+                                    <replacetoken><![CDATA[var DEV = true;]]></replacetoken>
+                                    <replacevalue><![CDATA[var DEV = false;]]></replacevalue>
+                                </replace>
+                                <!-- Build the application -->
+                                <exec dir="${basedir}/target" executable="grunt" failonerror="true">
+                                    <arg value="build" />
+                                </exec>
+                                <!-- Change base HREF of the application that will be hosted on /dashboard -->
+                                <replace file="${basedir}/target/user-dashboard-war/index.html">
+                                    <replacetoken><![CDATA[<base href="/">]]></replacetoken>
+                                    <replacevalue><![CDATA[<base href="/dashboard/">]]></replacevalue>
+                                </replace>
+                                <!-- Enable back development mode -->
+                                <replace file="${basedir}/app/scripts/app.js">
+                                    <replacetoken><![CDATA[var DEV = false;]]></replacetoken>
+                                    <replacevalue><![CDATA[var DEV = true;]]></replacevalue>
+                                </replace>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <configuration>
+                    <failOnMissingWebXml>false</failOnMissingWebXml>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

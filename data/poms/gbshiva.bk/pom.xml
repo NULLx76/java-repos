@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.wyndham.ari</groupId>
+	<artifactId>bk</artifactId>
+	<packaging>jar</packaging>
+	<version>1.0-SNAPSHOT</version>
+	<name>bk</name>
+
+	<properties>
+		<ehcache.version>2.8.4</ehcache.version>
+		<terracotta.version>4.1.4</terracotta.version>
+		<toolkit.name>terracotta-toolkit-runtime-ee</toolkit.name>
+		<slf4j.version>1.6.6</slf4j.version>
+		<junit.version>4.0</junit.version>
+		<!-- jvm property -->
+		<maxDirectMemorySize>4g</maxDirectMemorySize>
+		<heap>2048m</heap>
+		<gc.log>gc.log</gc.log>
+		<app>com.wyndham.ari.controller.BookingASL</app>
+		<configFile>cari.properties</configFile>
+	</properties>
+
+	<repositories>
+		<repository>
+			<id>terracotta-snapshots</id>
+			<url>http://www.terracotta.org/download/reflector/snapshots</url>
+			<releases>
+				<enabled>false</enabled>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
+		<repository>
+			<id>terracotta-releases</id>
+			<url>http://www.terracotta.org/download/reflector/releases</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</repository>
+	</repositories>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.2</version>
+				<configuration>
+					<executable>java</executable>
+					<arguments>
+						<argument>-Xms${heap}</argument>
+						<argument>-Xmx${heap}</argument>
+						<argument>-Dsun.rmi.dgc.client.gcInterval=86400000</argument>
+						<argument>-Dsun.rmi.dgc.server.gcInterval=86400000</argument>
+						<argument>-XX:MaxDirectMemorySize=${maxDirectMemorySize}</argument>
+						<argument>-Dcom.tc.productkey.path=src/main/resources/terracotta-license.key</argument>
+						<argument>-Xloggc:${gc.log}</argument>
+						<argument>-XX:-PrintGCDetails</argument>
+						<argument>-XX:+PrintGCTimeStamps</argument>
+						<argument>-XX:+PrintTenuringDistribution</argument>
+						<!-- used for distribute tests -->
+						<argument>-XX:+UseCompressedOops</argument>
+						<!-- used for distribute tests -->
+						<argument>-classpath</argument>
+						<classpath />
+						<argument>${app}</argument>
+						<argument>${configFile}</argument>
+					</arguments>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>2.1</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<transformers>
+								<transformer
+									implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
+									<resource>.xml</resource>
+									<resource>.key</resource>
+
+								</transformer>
+								<transformer
+									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+									<mainClass>${app}</mainClass>
+								</transformer>
+							</transformers>
+						</configuration>
+					</execution>
+				</executions>
+
+			</plugin>
+		</plugins>
+	</build>
+
+	<dependencies>
+		<!-- ehcache -->
+		<dependency>
+			<groupId>org.terracotta.bigmemory</groupId>
+			<artifactId>bigmemory</artifactId>
+			<version>${terracotta.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>net.sf.ehcache</groupId>
+			<artifactId>ehcache-ee</artifactId>
+			<version>${ehcache.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.terracotta</groupId>
+			<artifactId>${toolkit.name}</artifactId>
+			<version>${terracotta.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>${slf4j.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>${junit.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-math3</artifactId>
+			<version>3.2</version>
+		</dependency>
+		<!-- for metrics -->
+		<dependency>
+			<groupId>com.codahale.metrics</groupId>
+			<artifactId>metrics-core</artifactId>
+			<version>3.0.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-dbcp2</artifactId>
+			<version>2.0</version>
+		</dependency>
+		
+	</dependencies>
+
+	<profiles>
+		<profile>
+			<id>cariasl</id>
+			<properties>
+				<app>com.wyndham.ari.controller.CariASL</app>
+				<configFile>cari.properties</configFile>
+			</properties>
+		</profile>
+
+		<profile>
+			<id>bookingasl</id>
+			<properties>
+				<app>com.wyndham.ari.controller.BookingASL</app>
+				<configFile>booking.properties</configFile>
+			</properties>
+		</profile>
+	</profiles>
+</project>

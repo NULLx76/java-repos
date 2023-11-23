@@ -1,0 +1,365 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>uk.ac.ebi.pride.archive</groupId>
+    <artifactId>web-service</artifactId>
+    <version>1.0.19-SNAPSHOT</version>
+    <packaging>war</packaging>
+    <name>pride-archive-webservice</name><!-- used for the finalName of the generated artifact -->
+
+    <parent>
+        <groupId>uk.ac.ebi.pride.architectural</groupId>
+        <artifactId>pride-core</artifactId>
+        <version>1.0.1</version>
+    </parent>
+
+    <!--
+         To build the project several settings are required which are provided via maven profiles
+         These are:
+                pride-archive-solr-cores (provide the SOLR cores for the searches)
+                pride-archive-user-service (for security related configuration)
+                redis-production (for Redis connections)
+
+          If DB connections are provided via JNDI no other profiles are needed, otherwise:
+                db-pride-repo-pridepro (database connection config)
+                db-pride-repo-pridearch-ro-user (database user config)
+
+
+          NOTE: If configured via JNDI, the server has to provide the connection details.
+                To run locally, for example with jetty, a local server configuration is needed.
+     -->
+
+    <properties>
+        <archive.ws.model.version>1.0.2</archive.ws.model.version>
+        <archive.security.version>1.0.4</archive.security.version>
+        <archive.search.version>1.0.14</archive.search.version>
+        <archive.utils.version>0.1.24</archive.utils.version>
+        <pride.web.utils.version>1.3.10</pride.web.utils.version>
+        <psm.index.search.version>1.0.3</psm.index.search.version>
+        <mongo.psm.index.search.version>1.0.3</mongo.psm.index.search.version>
+        <mongo.protein.identification.index.search.version>1.0.3</mongo.protein.identification.index.search.version>
+
+    </properties>
+
+    <build>
+        <!-- define the final name on the project name rather than the artifact id (for clarification) -->
+        <finalName>${project.name}-${project.version}</finalName>
+        <resources>
+            <!-- regular resources -->
+            <!-- Maven should filter properties files -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>**/props/*.properties</include>
+                </includes>
+            </resource>
+            <!-- Maven should not filter other files -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>**/props/*.properties</exclude>
+                </excludes>
+            </resource>
+            <!-- webapp resources -->
+            <!--<resource>-->
+                <!--<directory>src/main/webapp/WEB-INF</directory>-->
+                <!--<filtering>false</filtering>-->
+            <!--</resource>-->
+        </resources>
+
+        <!-- include the production mvc-config into the test resources, so we can re-use it for the tests -->
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+            </testResource>
+            <testResource>
+                <directory>src/main/webapp/WEB-INF/spring</directory>
+                <includes>
+                    <include>mvc-config.xml</include>
+                </includes>
+            </testResource>
+        </testResources>
+
+        <plugins>
+            <!-- Jetty plugin for local testing -->
+            <plugin>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>maven-jetty-plugin</artifactId>
+                <version>6.1.26</version>
+                <configuration>
+                    <webAppConfig>
+                        <contextPath>/</contextPath>
+                    </webAppConfig>
+                    <connectors>
+                        <connector implementation="org.mortbay.jetty.nio.SelectChannelConnector">
+                            <port>9091</port>
+                        </connector>
+                    </connectors>
+                    <jettyConfig>${basedir}/jetty.xml</jettyConfig>
+                    <scanIntervalSeconds>10</scanIntervalSeconds>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.oracle</groupId>
+                        <artifactId>oracle-thin</artifactId>
+                        <version>11.2.0.1.0</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>commons-dbcp</groupId>
+                        <artifactId>commons-dbcp</artifactId>
+                        <version>1.2.2</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>2.5.3</version>
+                <configuration>
+                    <remoteTagging>true</remoteTagging>
+                    <goals>deploy</goals>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>2.7</version>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>2.9.0</version>
+        </dependency>
+        <!-- overwrite older versions, as there is a bug with sorting in paged results -->
+        <dependency>
+            <groupId>org.apache.solr</groupId>
+            <artifactId>solr-solrj</artifactId>
+            <version>4.2.0</version>
+        </dependency>
+
+        <!-- ##### PRIDE dependencies ##### ##### ##### ##### ##### -->
+        <!-- web-service-model -->
+        <dependency>
+            <groupId>uk.ac.ebi.pride.archive</groupId>
+            <artifactId>web-service-model</artifactId>
+            <version>${archive.ws.model.version}</version>
+        </dependency>
+
+        <!-- archive-search -->
+        <dependency>
+            <groupId>uk.ac.ebi.pride.archive</groupId>
+            <artifactId>archive-search</artifactId>
+            <version>${archive.search.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.solr</groupId>
+                    <artifactId>solr-test-framework</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-log4j12</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.solr</groupId>
+            <artifactId>solr-test-framework</artifactId>
+            <version>4.2.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- archive-security -->
+        <dependency>
+            <groupId>uk.ac.ebi.pride.archive</groupId>
+            <artifactId>archive-security</artifactId>
+            <version>${archive.security.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-log4j12</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- mongo-psm-index-search -->
+        <dependency>
+            <groupId>uk.ac.ebi.pride</groupId>
+            <artifactId>mongo-psm-index-search</artifactId>
+            <version>${mongo.psm.index.search.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>uk.ac.ebi.pride</groupId>
+            <artifactId>mongo-protein-identification-index-search</artifactId>
+            <version>${mongo.protein.identification.index.search.version}</version>
+        </dependency>
+
+        <!-- pride-web-utils -->
+        <dependency>
+            <groupId>uk.ac.ebi.pride.web</groupId>
+            <artifactId>pride-web-utils</artifactId>
+            <version>${pride.web.utils.version}</version>
+        </dependency>
+
+        <!-- archive-utils -->
+        <dependency>
+            <groupId>uk.ac.ebi.pride.archive</groupId>
+            <artifactId>archive-utils</artifactId>
+            <version>${archive.utils.version}</version>
+            <exclusions> <!-- ToDo: This should not be included in the first place! -->
+                <exclusion>
+                    <groupId>org.eclipse.jetty.orbit</groupId>
+                    <artifactId>javax.servlet</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- psm index mongodb -->
+        <dependency>
+            <groupId>uk.ac.ebi.pride</groupId>
+            <artifactId>psm-index-search</artifactId>
+            <version>${psm.index.search.version}</version>
+        </dependency>
+
+        <!-- ##### 3rd party dependencies ##### ##### ##### ##### ##### -->
+        <!-- Spring -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>3.2.9.RELEASE</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+            <version>3.2.9.RELEASE</version>
+        </dependency>
+
+        <!-- Spring test-->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <version>3.2.9.RELEASE</version>
+        </dependency>
+
+        <!-- Spring security-->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-core</artifactId>
+            <version>3.2.4.RELEASE</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-config</artifactId>
+            <version>3.2.4.RELEASE</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-web</artifactId>
+            <version>3.2.4.RELEASE</version>
+        </dependency>
+
+        <!--json-->
+        <dependency>
+            <groupId>org.codehaus.jackson</groupId>
+            <artifactId>jackson-mapper-asl</artifactId>
+            <version>1.9.9</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <!-- Servlet -->
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
+            <version>2.5</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet.jsp</groupId>
+            <artifactId>jsp-api</artifactId>
+            <version>2.1</version>
+        </dependency>
+
+        <!-- oracle jdbc driver -->
+        <dependency>
+            <groupId>com.oracle</groupId>
+            <artifactId>oracle-thin</artifactId>
+            <version>11.2.0.1.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!--CGLIB-->
+        <dependency>
+            <groupId>cglib</groupId>
+            <artifactId>cglib</artifactId>
+            <version>2.2.2</version>
+        </dependency>
+
+        <!--commons dependencies for devproxy-->
+        <dependency>
+            <groupId>commons-httpclient</groupId>
+            <artifactId>commons-httpclient</artifactId>
+            <version>3.1</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-fileupload</groupId>
+            <artifactId>commons-fileupload</artifactId>
+            <version>1.3.1</version>
+        </dependency>
+
+        <!-- REST documentation (Swagger) -->
+        <dependency>
+            <groupId>com.mangofactory</groupId>
+            <artifactId>swagger-springmvc</artifactId>
+            <version>0.8.6</version>
+        </dependency>
+
+        <!-- testing libs -->
+        <!--<dependency>-->
+            <!--<groupId>junit</groupId>-->
+            <!--<artifactId>junit-dep</artifactId>-->
+        <!--</dependency>-->
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-library</artifactId>
+            <version>1.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-core</artifactId>
+            <version>1.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>1.9.5</version>
+        </dependency>
+
+        <!-- fongo in memory mongo db for unit testing -->
+        <dependency>
+            <groupId>com.github.fakemongo</groupId>
+            <artifactId>fongo</artifactId>
+            <version>1.5.8</version>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <!--scm git config-->
+    <scm>
+        <connection>scm:git:https://github.com/PRIDE-Archive/archive-web-service.git</connection>
+        <developerConnection>scm:git:https://github.com/PRIDE-Archive/archive-web-service.git</developerConnection>
+        <url>https://github.com/PRIDE-Archive/archive-web-service</url>
+        <tag>web-service-1.0.8</tag>
+    </scm>
+
+</project>

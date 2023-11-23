@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.netcracker.eductr.j2se</groupId>
+    <artifactId>tasks</artifactId>
+    <packaging>jar</packaging>
+
+    <!-- Use corresponding version:
+        1.0 - Task
+        1.1 - Task constructors, getters and setters
+        1.2 - Task nextTimeAfter
+        2.1 - ArrayTaskList
+        2.2 - ArrayTaskList incoming
+        3.1 - Exceptions
+        3.2 - TaskList, LinkedTaskList
+        4.1 - Iterable
+        4.2 - equals, hashCode, clone
+     -->
+    <version>4.2</version>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <test-repo>${basedir}/src/test-repo</test-repo>
+        <tests>${basedir}/src/test/java</tests>
+        <java.version>1.6</java.version>
+        <features-v1.0>task</features-v1.0>
+        <features-v1.1>taskMethods</features-v1.1>
+        <features-v1.2>taskExtMethods</features-v1.2>
+        <features-v2.0>arrayTaskList</features-v2.0>
+        <features-v2.1>arrayTaskListMethods</features-v2.1>
+        <features-v2.2>arrayTaskListExtMethods</features-v2.2>
+        <features-v3.1>taskExceptions,arrayTaskListExceptions</features-v3.1>
+        <features-v3.2>taskList,~arrayTaskList,~arrayTaskListMethods,~arrayTaskListExtMethods,~arrayTaskListExceptions</features-v3.2>
+        <features-v4.1>iterators</features-v4.1>
+        <features-v4.2>utilMethods</features-v4.2>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <defaultGoal>test</defaultGoal>
+        <plugins>
+            <!-- Java Version -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.5.1</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.7</version>
+                <executions>
+                    <!-- Generate folders on init -->
+                    <execution>
+                        <id>generate-folders</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <mkdir dir="${basedir}/src/main/java/com/netcracker/eductr/j2se/tasks"/>
+                            </target>
+                        </configuration>
+                    </execution>
+                    <!-- Copy tests for given version -->
+                    <execution>
+                        <id>select-tests-version</id>
+                        <phase>process-test-sources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <delete dir="${tests}"/>
+                                <delete dir="${project.build.testOutputDirectory}"/>
+                                <script language="javascript">
+                                    var version = project.getProperty("project.version");
+                                    var features = new java.util.LinkedHashMap();
+                                    all:
+                                    for (var major = 1; major &lt; 100; major++) {
+                                        for (var minor = 0; minor &lt; 10; minor++) {
+                                            var current = major +"."+ minor;
+                                            var fs = project.getProperty("features-v"+ current);
+                                            if (! fs) continue;
+                                            fs = fs.split(',');
+                                            for (var i = 0; i &lt; fs.length; i++) {
+                                                if (fs[i].startsWith('~'))
+                                                    features.remove(fs[i].substring(1,fs[i].length()));
+                                                else
+                                                    features.put(fs[i], current);
+                                            }
+                                            if (current == version) {
+                                                break all;
+                                            }
+                                        }
+                                    }
+                                    println("Features: "+ features);
+                                    var pattern = '';
+                                    for (var keys = features.keySet().iterator(); keys.hasNext(); ) {
+                                        pattern += '**/'+ keys.next() +'/**';
+                                        if (keys.hasNext())
+                                            pattern += ',';
+                                    }
+                                    project.setNewProperty("tests-pattern", pattern);
+                                </script>
+                                <copy todir="${tests}">
+                                    <fileset dir="${tests-source}/common"/>
+                                    <fileset dir="${tests-source}/versioned" includes="${tests-pattern}"/>
+                                </copy>
+                            </target>
+                        </configuration>
+                    </execution>
+                    <!-- Clean tests -->
+                    <execution>
+                        <id>clean-tests</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <delete dir="${tests}"/>
+                                <delete dir="${test-repo}"/>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Test results formatter -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.12.4</version>
+                <configuration>
+                    <disableXmlReport>true</disableXmlReport>
+                    <reportFormat>none</reportFormat>
+                    <properties>
+                        <property>
+                            <name>listener</name>
+                            <value>com.netcracker.eductr.tests.TestRunListener</value>
+                        </property>
+                    </properties>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+    <profiles>
+        <profile>
+            <id>default</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <tests-source>${test-repo}/src/test</tests-source>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-scm-plugin</artifactId>
+                        <version>1.9.2</version>
+                        <executions>
+                            <execution>
+                                <id>checkout-tests</id>
+                                <goals><goal>checkout</goal></goals>
+                                <phase>generate-test-sources</phase>
+                                <configuration>
+                                    <connectionUrl>scm:git:https://github.com/nc-eductr-sumy/javase-tasks.git</connectionUrl>
+                                    <checkoutDirectory>${test-repo}</checkoutDirectory>
+                                    <includes>src/test/**</includes>
+                                    <providerImplementations>
+                                        <git>jgit</git>
+                                    </providerImplementations>
+                                </configuration>
+                            </execution>
+                        </executions>
+                        <dependencies>
+                            <dependency>
+                                <groupId>org.apache.maven.scm</groupId>
+                                <artifactId>maven-scm-provider-jgit</artifactId>
+                                <version>1.9.2</version>
+                            </dependency>
+                        </dependencies>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>dev</id>
+            <properties>
+                <tests-source>${basedir}/src/test</tests-source>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>1.7</version>
+                        <executions>
+                            <!-- Clear implementation, dev only -->
+                            <execution>
+                                <id>clear-impl-version</id>
+                                <phase>clean</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <delete dir="${basedir}/src/main/java" includes="**"/>
+                                    </target>
+                                </configuration>
+                            </execution>
+                            <!-- Copy implementations for given version, dev only -->
+                            <execution>
+                                <id>select-impl-version</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <script language="javascript">
+                                            var version = project.getProperty("project.version");
+                                            var features = new java.util.LinkedHashMap();
+                                            all:
+                                            for (var major = 1; major &lt; 100; major++) {
+                                            for (var minor = 0; minor &lt; 10; minor++) {
+                                            var current = major +"."+ minor;
+                                            var fs = project.getProperty("features-v"+ current);
+                                            if (! fs) continue;
+                                            fs = fs.split(',');
+                                            for (var i = 0; i &lt; fs.length; i++) {
+                                            if (fs[i].startsWith('~'))
+                                            features.remove(fs[i].substring(1,fs[i].length()));
+                                            else
+                                            features.put(fs[i], current);
+                                            }
+                                            if (current == version) {
+                                            break all;
+                                            }
+                                            }
+                                            }
+                                            println("Features: "+ features);
+                                            var pattern = '';
+                                            for (var keys = features.keySet().iterator(); keys.hasNext(); ) {
+                                            pattern += '**/'+ keys.next() +'/**';
+                                            if (keys.hasNext())
+                                            pattern += ',';
+                                            }
+                                            project.setNewProperty("tests-pattern", pattern);
+                                        </script>
+                                        <copy todir="${basedir}/src/main/java">
+                                            <fileset dir="${basedir}/src/test-sources" includes="${tests-pattern}"/>
+                                        </copy>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

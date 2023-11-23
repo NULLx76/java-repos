@@ -1,0 +1,563 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+	Copyright 2015 Jim Alexander, Aesthetic Software, Inc. (jhaood@gmail.com)
+    Apache version 2.0 license: http://www.apache.org/licenses/LICENSE-2.0 
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<!--
+	The major technologies in this application are: 
+	spring 4.1.4, Spring-boot-1.2.1, JPA 2.1, Hibernate 4.3.7, 
+	mysql 5.6.23, H2 1.4.183, liquibase 3.3.2,
+	junit 4.12, mockito 1.10.8,
+	thymeleaf 2.1.4,  
+	
+	Other libraries are either minor or are pulled in through the dependency tree    
+	JTA 1.2, MySQL-connector 5.1.34, sping-data-jpa 1.7.1, 
+	httpclient 4.3.6, jackson-databind-2.4.4, 
+	thymeleaf-layout-dialect-1.2.7, logback 1.1.2, slf4j 1.7.8, hamcrest 1.3, 
+	
+	Here are a few command lines to help build and deploy the app:
+	
+	"mvn clean javadoc:javadoc install" => build and run tests against an embedded H2 database
+	
+	"mvn clean javadoc:javadoc install -P dev" => run tests against the local MySQL "job_db" database
+	
+	"mvn -DskipTests spring-boot:run -P prod" => launch the app and run liquibase-validate 
+	
+	"mvn -DskipTests spring-boot:run -P prod-liquibase -Djobkeywords.liquibase.update=true"
+			=> launch the app and run a liquibase-update and DELETE any existing data and rebuild the schema
+		
+	"java -Dspring.profiles.active=mysql,liquibase -Dspring.jpa.hibernate.ddl-auto=create 
+		-Djobkeywords.liquibase.update=true -jar /home/ec2-user/job-keywords-2.0.2-SNAPSHOT.jar"
+			=> Launch the web-app and DELETE any existing data and run liquibase to build the schema.
+			
+	"java -Dspring.profiles.active=mysql,liquibase -Dspring.jpa.hibernate.ddl-auto=validate 
+		-Djobkeywords.liquibase.update=false -jar /home/ec2-user/job-keywords-2.0.2-SNAPSHOT.jar"
+			=> launch the web-app and run HBM2DDL-validate and liquibase-validate
+		
+	"java -Dspring.profiles.active=mysql,liquibase -Dspring.jpa.hibernate.ddl-auto=none 
+		-Djobkeywords.liquibase.update=true -jar /home/ec2-user/job-keywords-2.0.2-SNAPSHOT.jar"
+			=> launch the web-app and run liquibase-update (HBM2DDL does NOT run)
+	 -->
+
+	<name>job-keywords</name>
+
+	<artifactId>job-keywords</artifactId>
+	<groupId>com.aestheticsw</groupId>
+	<version>2.0.3-RELEASE</version>
+	<description>keyword extraction from job listings</description>
+
+	<packaging>jar</packaging>
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<!-- Originally built for Spring-boot 1.2.1 in 2015 but the runtime is no longer compatible with JDK-1.8 -->
+		<version>1.2.1.RELEASE</version>
+		<relativePath />
+	</parent>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<start-class>com.aestheticsw.jobkeywords.JobKeywordsApplication</start-class>
+		<java.version>1.8</java.version>
+        <slf4j.version>1.7.12</slf4j.version>
+        <log4j.version>2.3</log4j.version>
+		<dbunit.version>2.5.0</dbunit.version>
+		<spring-test-dbunit.version>1.2.1</spring-test-dbunit.version>
+		<liquibase.version>3.3.2</liquibase.version>
+		<m2eclipse.wtp.contextRoot>/</m2eclipse.wtp.contextRoot>
+	</properties>
+
+	<profiles>
+		<profile>
+			<id>dev-h2</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<properties>
+				<spring-profiles-active>h2</spring-profiles-active>
+			</properties>
+		</profile>
+		<profile>
+			<id>dev</id>
+			<properties>
+				<spring-profiles-active>mysql</spring-profiles-active>
+				<spring-jpa-hibernate-ddl-auto>validate</spring-jpa-hibernate-ddl-auto>
+			</properties>
+		</profile>
+		<profile>
+			<!-- HBM2DDL "create" does not touch the liquibase tables - this may result in inconsistencies -->
+			<id>dev-newdb</id>
+			<properties>
+				<spring-profiles-active>mysql</spring-profiles-active>
+				<spring-jpa-hibernate-ddl-auto>create</spring-jpa-hibernate-ddl-auto>
+			</properties>
+		</profile>
+		<profile>
+			<id>prod</id>
+			<properties>
+				<spring-profiles-active>mysql</spring-profiles-active>
+				<spring-jpa-hibernate-ddl-auto>validate</spring-jpa-hibernate-ddl-auto>
+			</properties>
+		</profile>
+		<profile>
+			<!-- 
+				By dfeault, this runs the liquibase-validator. 
+				
+				To run the updater, launch the JVM with -Djobkeywords.liquibase.update=true 
+			-->
+			<id>prod-liquibase</id>
+			<properties>
+				<spring-profiles-active>mysql,liquibase</spring-profiles-active>
+				<!-- Hbm2ddl runs before liquibase so have to disable validation -->
+				<spring-jpa-hibernate-ddl-auto>none</spring-jpa-hibernate-ddl-auto>
+			</properties>
+		</profile>
+	</profiles>
+
+	<build>
+		<filters>
+			<filter>src/main/resources/application.properties</filter>
+		</filters>
+
+		<resources>
+			<resource>
+				<directory>${basedir}/src/main/resources</directory>
+				<filtering>true</filtering>
+				<includes>
+					<include>**/*.xml</include>
+					<include>**/*.properties</include>
+				</includes>
+			</resource>
+			<resource>
+				<directory>${basedir}/src/main/resources</directory>
+				<filtering>false</filtering>
+				<excludes>
+					<exclude>**/*.xml</exclude>
+					<exclude>**/*.properties</exclude>
+				</excludes>
+			</resource>
+		</resources>
+		<testResources>
+			<testResource>
+				<directory>src/test/resources</directory>
+				<filtering>true</filtering>
+				<includes>
+					<include>**/*.xml</include>
+					<include>**/*.properties</include>
+				</includes>
+			</testResource>
+			<testResource>
+				<directory>src/test/java</directory>
+				<filtering>false</filtering>
+				<excludes>
+					<exclude>**/*.xml</exclude>
+					<exclude>**/*.properties</exclude>
+				</excludes>
+			</testResource>
+		</testResources>
+
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.1</version>
+		        <configuration>
+		          <source>${java.version}</source>
+		          <target>${java.version}</target>
+		        </configuration>
+				<!-- The only package blocking me from using the small "compact profile" is javax.xml... 
+				<configuration>
+					<compilerArguments>
+						<verbose />
+						<profile>compact1</profile>
+					</compilerArguments>
+				</configuration>
+				 -->
+			</plugin>
+
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<dependencies>
+					<dependency>
+						<groupId>org.springframework</groupId>
+						<artifactId>springloaded</artifactId>
+						<version>1.2.3.RELEASE</version>
+					</dependency>
+				</dependencies>
+				<configuration>
+					<!--  addResources causes target/classes to get wiped out - thus deleting application.properties at runtime -->
+					<addResources>false</addResources>
+
+					<!-- -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005 -->
+					<jvmArguments>
+						-Dspring.profiles.active=${spring-profiles-active}
+						-Dspring.jpa.hibernate.ddl-auto=${spring-jpa-hibernate-ddl-auto}
+					</jvmArguments>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+
+				<configuration>
+					<!-- spring examples turn off the system loader to avoid wacky classpath and loading problems -->
+					<useSystemClassLoader>false</useSystemClassLoader>
+
+					<!-- "parallel = methods" causes Spring @Autowired to fail intermittently. Surefire is crap.  
+					<parallel>methods</parallel>
+					<threadCount>40</threadCount>
+					-->
+					<!--  "parallel = all" deadlocks... 
+						parallel = all, threadCount = 16, threadCountSuites = 2, threadCountClasses = 3, threadCountMethods = 5
+					-->
+					
+					<!-- Can't override the default value of spring.profiles.active in application.properties from the command line -->
+					<systemPropertyVariables>
+						<spring.profiles.active>${spring-profiles-active}</spring.profiles.active>
+						<spring.jpa.hibernate.ddl-auto>${spring-jpa-hibernate-ddl-auto}</spring.jpa.hibernate.ddl-auto>
+					</systemPropertyVariables>
+
+					<!-- 
+					<configuration>
+						<includes>
+							<include>src/test/java/com/aestheticsw/jobkeywords/service/termextractor/repository/*Test.java</include>
+						</includes>
+					</configuration>
+					 -->
+
+				</configuration>
+			</plugin>
+
+			<!-- Not ready for Failsafe yet. 
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>integration-test</id>
+						<goals>
+							<goal>integration-test</goal>
+						</goals>
+						<configuration>
+							<skipTests>${integration-tests.skip}</skipTests>
+							<includes>
+								<include>**/*IT.class</include>
+							</includes>
+						</configuration>
+					</execution>
+				</executions>
+				<executions>
+					<execution>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			 -->
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>2.10.1</version>
+				<dependencies>
+				</dependencies>
+				<configuration>
+					<header>Job Keywords v${project.version}</header>
+					<footer>job-keywords-${project.version}
+					    <![CDATA[
+							<script>
+							  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+							  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+							  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+							  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+							
+							  ga('create', 'UA-51874381-2', 'auto');
+							  ga('send', 'pageview');
+							
+							</script>
+					    ]]>
+					</footer>
+					<bottom>Copyright 2015 Aesthetic Software, Jim ALEXANDER (jhaood@gmail.com)</bottom>
+					<failOnError>false</failOnError>
+					<nohelp>true</nohelp>
+					<!-- 
+					<show>private</show>
+					 -->
+					<reportOutputDirectory>${basedir}/target/classes/static</reportOutputDirectory>
+					<destDir>javadoc</destDir>
+					<debug>false</debug>
+					<additionalparam>-Xdoclint:none</additionalparam>
+
+				</configuration>
+
+			</plugin>
+
+			<plugin>
+				<groupId>org.liquibase</groupId>
+				<artifactId>liquibase-maven-plugin</artifactId>
+				<version>${liquibase.version}</version>
+				<configuration>
+					<propertyFile>src/main/resources/liquibase/liquibase-maven.properties</propertyFile>
+					<changeLogFile>src/main/resources/liquibase/changelog-master.xml</changeLogFile>
+				</configuration>
+				<executions>
+					<execution>
+						<phase>test</phase>
+						<goals>
+							<goal>status</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+		</plugins>
+	</build>
+
+	<dependencies>
+		<!-- add a local JAR as a "system" dependency - trying to get "-profile compact3" working 
+		<dependency>
+			<groupId>javax.xml</groupId>
+			<artifactId>bind</artifactId>
+			<version>1.0</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/target/classes/javax.xml.bind.jar</systemPath>
+		</dependency>
+		-->
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-tomcat</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.tomcat.embed</groupId>
+			<artifactId>tomcat-embed-jasper</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>jstl</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context</artifactId>
+			<version>${spring.version}</version>
+			<!-- 
+			<exclusions>
+				<exclusion>
+					<groupId>commons-logging</groupId>
+					<artifactId>commons-logging</artifactId>
+				</exclusion>
+			</exclusions>
+			 -->
+		</dependency>
+
+        <!-- logging interface -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
+        <!-- Binding for Log4J -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+            <version>${log4j.version}</version>
+        </dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.ws</groupId>
+			<artifactId>spring-xml</artifactId>
+			<version>2.2.0.RELEASE</version>
+		</dependency>
+
+		<!-- jsoup HTML parser library @ http://jsoup.org/ -->
+		<dependency>
+			<groupId>org.jsoup</groupId>
+			<artifactId>jsoup</artifactId>
+			<version>1.8.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>4.3.6</version>
+		</dependency>
+
+		<!--
+		Might have hamcrest & junit version collisions
+		http://commons.apache.org/proper/commons-io/dependencies.html 
+		 -->
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.4</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>3.3.2</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-thymeleaf</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mobile</artifactId>
+		</dependency>
+
+		<!-- 
+		<dependency>
+			<groupId>com.fasterxml.jackson.dataformat</groupId>
+			<artifactId>jackson-dataformat-xml</artifactId>
+			<version>2.5.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+		</dependency>
+		 -->
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.github.springtestdbunit</groupId>
+			<artifactId>spring-test-dbunit</artifactId>
+			<version>${spring-test-dbunit.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.dbunit</groupId>
+			<artifactId>dbunit</artifactId>
+			<version>${dbunit.version}</version>
+			<exclusions>
+				<exclusion>
+					<artifactId>junit</artifactId>
+					<groupId>junit</groupId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<dependency>
+			<groupId>org.liquibase</groupId>
+			<artifactId>liquibase-core</artifactId>
+			<version>${liquibase.version}</version>
+		</dependency>
+
+		<!-- javax.interceptor is required for the javadoc plugin but must be declared here in the project dependencies -->
+		<dependency>
+			<groupId>javax.interceptor</groupId>
+			<artifactId>javax.interceptor-api</artifactId>
+			<version>1.2</version>
+		</dependency>
+
+<!-- 
+
+ 		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-ws</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-rest</artifactId>
+		</dependency>
+ -->
+		
+		<!-- 
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-aop</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-solr</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-integration</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-websocket</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>
+				spring-boot-starter-cloud-connectors
+			</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.scala-lang</groupId>
+			<artifactId>scala-library</artifactId>
+			<version>2.10.4</version>
+		</dependency>
+			-->
+		<dependency>
+			<groupId>org.scala-lang</groupId>
+			<artifactId>scala-library</artifactId>
+			<version>2.10.4</version>
+		</dependency>
+	</dependencies>
+
+	<!-- 
+	<repositories>
+		<repository>
+			<id>mvnrepository</id>
+			<name>mvnrepository</name>
+			<url>http://www.mvnrepository.com</url>
+		</repository>
+	</repositories>
+	 -->
+
+</project>

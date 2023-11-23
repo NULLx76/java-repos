@@ -1,0 +1,199 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<!--   Copyright (C) 2013-2014 Computer Sciences Corporation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. -->
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>ezbake</groupId>
+        <artifactId>ezbake-parent</artifactId>
+        <version>0.1-SNAPSHOT</version>
+    </parent>
+
+    <groupId>ezbake</groupId>
+    <artifactId>ezbake-permission-utils</artifactId>
+    <packaging>nar</packaging>
+    <version>0.1-SNAPSHOT</version>
+
+    <name>ezbake-permission-utils</name>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <hadoop.version>2.0.0-cdh4.5.0</hadoop.version>
+
+	<ezbake.version>${project.parent.version}</ezbake.version>
+        <thrift.version>0.9.1</thrift.version>
+        <thrift.rpm.version>0.9.1</thrift.rpm.version>
+        <ezbake.rpm.version>0.1-SNAPSHOT</ezbake.rpm.version>
+
+        <native.build.skip>true</native.build.skip>
+    </properties>
+
+    <dependencies>
+        <!-- JAR dependencies -->
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>ezbake</groupId>
+            <artifactId>ezbake-base-thrift</artifactId>
+	    <version>${ezbake.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.accumulo</groupId>
+            <artifactId>accumulo-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- NAR dependencies -->
+        <dependency>
+            <groupId>ezbake</groupId>
+            <artifactId>ezbake-base-thrift</artifactId>
+	    <version>${ezbake.version}</version>
+            <type>nar</type>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>com.github.maven-nar</groupId>
+                <artifactId>nar-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <ignore>${native.build.skip}</ignore>
+                    <cpp>
+                        <name>g++</name>
+                        <options>
+                            <option>-fmessage-length=0</option>
+                            <option>-Wall</option>
+                            <option>-Wextra</option>
+                            <option>-Werror</option>
+                            <option>-std=c++0x</option>
+                        </options>
+                    </cpp>
+                    <libraries>
+                        <library>
+                            <type>shared</type>
+                            <linkCPP>true</linkCPP>
+                        </library>
+                    </libraries>
+                    <tests>
+                        <test>
+                            <name>permissions_test</name>
+                            <link>shared</link>
+                            <run>true</run>
+                        </test>
+                    </tests>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.7</version>
+                <executions>
+                    <execution>
+                        <id>attach-artifacts</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>attach-artifact</goal>
+                        </goals>
+                        <configuration>
+                            <artifacts>
+                                <artifact>
+                                    <file>target/${project.artifactId}-${project.version}.jar</file>
+                                    <type>jar</type>
+                                </artifact>
+                            </artifacts>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <activation>
+                <os>
+                    <name>Linux</name>
+                    <family>UNIX</family>
+                    <arch>amd64</arch>
+                </os>
+            </activation>
+            <properties>
+                <native.build.skip>false</native.build.skip>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>rpm-maven-plugin</artifactId>
+                        <version>2.1-alpha-4</version>
+                        <executions>
+                            <execution>
+                                <id>generate-rpm</id>
+                                <goals>
+                                    <goal>rpm</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <vendor>42Six</vendor>
+                            <description>EzBake permission utils RPM</description>
+                            <group>Development/Libraries</group>
+                            <needarch>true</needarch>
+                            <defineStatements>
+                                <defineStatement>_unpackaged_files_terminate_build 0</defineStatement>
+                            </defineStatements>
+                            <requires>
+                                <require>thrift = ${thrift.rpm.version}</require>
+				<require>ezbake-base-thrift >= ${ezbake.rpm.version}</require>
+                            </requires>
+                            <mappings>
+                                <mapping>
+                                    <directory>/usr/lib64</directory>
+                                    <filemode>755</filemode>
+                                    <username>root</username>
+                                    <groupname>root</groupname>
+                                    <directoryIncluded>false</directoryIncluded>
+                                    <sources>
+                                        <source>
+                                            <location>
+                                                target/nar/${project.artifactId}-${project.version}-amd64-Linux-gpp-shared/lib/amd64-Linux-gpp/shared/lib${project.artifactId}-${project.version}.so
+                                            </location>
+                                            <destination>lib${project.artifactId}-${project.version}.so</destination>
+                                        </source>
+                                    </sources>
+                                </mapping>
+                            </mappings>
+                            <postinstallScriptlet>
+                                <script>/sbin/ldconfig</script>
+                            </postinstallScriptlet>
+                            <postremoveScriptlet>
+                                <script>/sbin/ldconfig</script>
+                            </postremoveScriptlet>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

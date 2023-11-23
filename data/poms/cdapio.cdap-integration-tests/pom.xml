@@ -1,0 +1,396 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright © 2015-2018 Cask Data, Inc.
+
+  Licensed under the Apache License, Version 2.0 (the "License"); you may not
+  use this file except in compliance with the License. You may obtain a copy of
+  the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+  License for the specific language governing permissions and limitations under
+  the License.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>io.cdap.cdap.test</groupId>
+  <artifactId>integration-test</artifactId>
+  <name>integration-test</name>
+  <version>1.0.0</version>
+  <modules>
+    <module>integration-test-remote</module>
+    <module>integration-test-standalone</module>
+    <module>upgrade-test</module>
+    <module>long-running-test</module>
+    <module>integration-test-core</module>
+    <module>perf-test</module>
+  </modules>
+  <packaging>pom</packaging>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <bigtable.version>1.8.0</bigtable.version>
+    <cdap.pre.version>6.2.3</cdap.pre.version>
+    <cdap.version>6.10.0-SNAPSHOT</cdap.version>
+    <cdap.plugin.version>2.12.0-SNAPSHOT</cdap.plugin.version>
+    <!-- cdap.examples.version is overridden in the pre-stage of upgrade tests -->
+    <cdap.examples.version>${cdap.version}</cdap.examples.version>
+    <cdap.common.version>0.12.0</cdap.common.version>
+    <gson.version>2.3.1</gson.version>
+    <junit.version>4.12</junit.version>
+    <kafka.version>0.8.2.2</kafka.version>
+    <snappy.version>1.1.1.7</snappy.version>
+    <chaosmonkey.version>0.1.0-SNAPSHOT</chaosmonkey.version>
+
+    <!-- Skip all test cases by default. The different test cases are enabled in the profiles defined below -->
+    <skip.remote.test>true</skip.remote.test>
+    <skip.standalone.test>true</skip.standalone.test>
+    <skip.upgrade.test>true</skip.upgrade.test>
+    <skip.performance.test>true</skip.performance.test>
+    <skip.long.running.test>true</skip.long.running.test>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-pubsub</artifactId>
+      <version>1.103.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-storage</artifactId>
+      <version>1.105.2</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-datastore</artifactId>
+      <version>1.101.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.cloud.bigtable</groupId>
+      <artifactId>bigtable-hbase-1.x-shaded</artifactId>
+      <version>${bigtable.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-log4j12</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>log4j</groupId>
+          <artifactId>log4j</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-spanner</artifactId>
+      <version>1.49.2</version>
+      <exclusions>
+        <exclusion>
+          <groupId>io.opencensus</groupId>
+          <artifactId>opencensus-api</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-bigquery</artifactId>
+      <version>1.107.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-dlp</artifactId>
+      <version>1.0.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>20.0</version>
+    </dependency>
+    <dependency>
+      <groupId>io.cdap.common</groupId>
+      <artifactId>common-http</artifactId>
+      <version>${cdap.common.version}</version>
+      <!-- Avoid conflict with asm-commons dependency in cdap-common (io.cdap.cdap)-->
+      <exclusions>
+        <exclusion>
+          <groupId>org.ow2.asm</groupId>
+          <artifactId>asm-all</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>io.cdap.common</groupId>
+      <artifactId>common-cli</artifactId>
+      <version>${cdap.common.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>${gson.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.cdap.cdap</groupId>
+      <artifactId>cdap-api</artifactId>
+      <version>${cdap.version}</version>
+    </dependency>
+    <dependency> <!-- ETLBatchConfig -->
+      <groupId>io.cdap.cdap</groupId>
+      <artifactId>cdap-data-pipeline3_2.12</artifactId>
+      <version>${cdap.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.cdap.cdap</groupId>
+      <artifactId>cdap-data-streams3_2.12</artifactId>
+      <version>${cdap.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.cdap.cdap</groupId>
+      <artifactId>cdap-program-report</artifactId>
+      <version>${cdap.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.cdap.plugin</groupId>
+      <artifactId>core-plugins</artifactId>
+      <version>${cdap.plugin.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>*</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <!-- io.cdap.plugin.common.Constants -->
+      <groupId>io.cdap.plugin</groupId>
+      <artifactId>hydrator-common</artifactId>
+      <version>${cdap.plugin.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>*</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>io.cdap.cdap</groupId>
+      <artifactId>cdap-common</artifactId>
+      <version>${cdap.version}</version>
+    </dependency>
+    <!-- to test Hydrator Kafka plugins -->
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka_2.11</artifactId>
+      <version>${kafka.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.zookeeper</groupId>
+          <artifactId>zookeeper</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>log4j</groupId>
+          <artifactId>log4j</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <version>${snappy.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.cdap.cdap</groupId>
+      <artifactId>cdap-integration-test</artifactId>
+      <version>${cdap.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>log4j</groupId>
+          <artifactId>log4j</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>io.cdap.chaosmonkey</groupId>
+      <artifactId>chaos-monkey-standalone</artifactId>
+      <version>${chaosmonkey.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.cdap.chaosmonkey</groupId>
+      <artifactId>chaos-monkey-proto</artifactId>
+      <version>${chaosmonkey.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>${junit.version}</version>
+    </dependency>
+  </dependencies>
+
+  <repositories>
+    <repository>
+      <id>sonatype</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+    </repository>
+  </repositories>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.1</version>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.18.1</version>
+        <configuration>
+          <argLine>-Xmx5000m -Djava.awt.headless=true -XX:+UseConcMarkSweepGC -XX:OnOutOfMemoryError="kill -9 %p"</argLine>
+          <systemPropertyVariables>
+            <java.io.tmpdir>${project.build.directory}</java.io.tmpdir>
+            <stage>${upgrade.test.stage}</stage>
+            <longrunning.as.upgrade>${longrunning.as.upgrade}</longrunning.as.upgrade>
+            <input.state>${input.state}</input.state>
+            <output.state>${output.state}</output.state>
+          </systemPropertyVariables>
+          <forkCount>1</forkCount>
+          <reuseForks>false</reuseForks>
+          <includes>
+            <include>**/*Test.java</include>
+            <include>**/*TestSuite.java</include>
+          </includes>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>3.1.2</version>
+        <executions>
+          <execution>
+            <id>validate</id>
+            <phase>process-test-classes</phase>
+            <configuration>
+              <configLocation>checkstyle.xml</configLocation>
+              <suppressionsLocation>suppressions.xml</suppressionsLocation>
+              <encoding>UTF-8</encoding>
+              <consoleOutput>true</consoleOutput>
+              <failsOnError>true</failsOnError>
+              <includeTestSourceDirectory>true</includeTestSourceDirectory>
+            </configuration>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>com.puppycrawl.tools</groupId>
+            <artifactId>checkstyle</artifactId>
+            <version>8.45.1</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+        <version>0.10</version>
+        <executions>
+          <execution>
+            <id>rat-check</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <configuration>
+              <excludes>
+                <exclude>LICENSE*.txt</exclude>
+                <exclude>**/Apache-LICENSE-2.0</exclude>
+                <exclude>**/*.state</exclude>
+                <exclude>**/*.json</exclude>
+                <exclude>**/*.csv</exclude>
+                <exclude>**/*.conf</exclude>
+                <exclude>**/*.iml</exclude>
+                <exclude>**/*.md</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>remote-test</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <properties>
+        <skip.remote.test>false</skip.remote.test>
+      </properties>
+    </profile>
+
+    <profile>
+      <id>perf-tests</id>
+      <properties>
+        <skip.performance.test>false</skip.performance.test>
+      </properties>
+    </profile>
+    <profile>
+      <id>standalone-test</id>
+      <properties>
+        <skip.standalone.test>false</skip.standalone.test>
+      </properties>
+    </profile>
+
+    <profile>
+      <id>upgrade-test-pre</id>
+      <properties>
+        <cdap.examples.version>${cdap.pre.version}</cdap.examples.version>
+        <upgrade>true</upgrade>
+        <upgrade.test.stage>PRE</upgrade.test.stage>
+
+        <skip.upgrade.test>false</skip.upgrade.test>
+        <skip.long.running.test>false</skip.long.running.test>
+        <longrunning.as.upgrade>true</longrunning.as.upgrade>
+        <input.state>./upgrade-test.state</input.state>
+        <output.state>./upgrade-test.state</output.state>
+      </properties>
+    </profile>
+
+    <profile>
+      <id>upgrade-test-post</id>
+      <properties>
+        <upgrade>true</upgrade>
+        <upgrade.test.stage>POST</upgrade.test.stage>
+
+        <skip.upgrade.test>false</skip.upgrade.test>
+        <skip.long.running.test>false</skip.long.running.test>
+        <longrunning.as.upgrade>true</longrunning.as.upgrade>
+        <input.state>./upgrade-test.state</input.state>
+        <output.state>./upgrade-test.state</output.state>
+      </properties>
+    </profile>
+
+    <profile>
+      <id>long-running-test</id>
+      <properties>
+        <skip.long.running.test>false</skip.long.running.test>
+      </properties>
+    </profile>
+  </profiles>
+
+</project>

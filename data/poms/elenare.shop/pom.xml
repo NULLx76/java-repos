@@ -1,0 +1,2647 @@
+<?xml version="1.0"?>
+
+<!--
+ * Copyright (C) 2013 Juergen Zimmermann, Hochschule Karlsruhe
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+<!--
+	Aufrufe:
+	0) Generell: fuer Multi-Threading z.B. "-T 1C" fuer z.B. 8 Threads (bei einem 8-Kern-Proz.) ergaenzen
+	             Updates von Snapshots unterbinden: -nsu
+
+	Aufraeumen:
+	1) Verzeichnis "target" loeschen
+		 mvn clean
+	
+	Testen
+	2)   mvn test
+
+	Qualitaetssicherung mit Sonar (vorher den H2-Server fuer WildFly herunterfahren)
+	3)   mvn -DskipTests sonar:sonar
+			 Tests ueberspringen, weil JaCoCo nicht mit Arquillian funktioniert
+             http://localhost:9000
+    
+    Projekt-Doku generieren
+	4)   mvn -DskipTests site
+		 mvn -DskipTests -o site				// -o : offline
+
+	Abhaengigkeiten anzeigen sowie Sources und javadoc zu den JARs herunterladen
+	5)   mvn dependency:tree
+	6)   mvn -T 1C dependency:sources
+	7)   mvn -T 1C dependency:resolve -Dclassifier=javadoc -Dtype=jar
+		 
+	Hilfetext zu Plugins ausgeben, z.B.
+	8)   mvn help:describe -Ddetail -Dplugin=org.apache.maven.plugins:maven-compiler-plugin
+    
+	Un-/Deployment nur mit Maven
+	9)   mvn -DskipTests package wildfly:deploy
+	10)  mvn wildfly:undeploy
+
+    Pruefung auf Sicherheitsluecken mit dem Dependency-Plugin von OWASP
+    11) mvn -Powasp dependency-check:check
+
+    Neueste APIs ueberpruefen
+    12) mvn modernizer:modernizer
+    
+    Javadoc generieren (fuer Jenkins)
+    13)  mvn javadoc:javadoc
+    
+    Doku fuer REST-Schnittstelle generieren (funktioniert nicht mit Java 8, deshalb deaktiviert)
+    14)  mvn enunciate:docs
+    
+	Versionsnummern auf Aktualitaet pruefen
+	15) JARs ueberpruefen
+	     mvn versions:display-dependency-updates
+	16) Plugins ueberpruefen
+	     mvn versions:display-plugin-updates
+
+	Eclipse statt NetBeans:
+	   rechte Maustaste > Properties > Java Compiler > Annotation Processing
+               Enable project specific settings
+	           Generated source directory: target/generated-sources/apt durch org.hibernate.jpamodelgen.JPAMetaModelEntityProcessor
+	                                       target/generated-sources/annotations ohne maven-processor-plugin
+-->
+
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>de.hska</groupId>
+	<artifactId>shop</artifactId>
+	<name>${project.artifactId}</name>
+	<version>1.0</version>
+	<packaging>war</packaging>
+	
+	<!--
+	<name>shop</name>
+	-->
+	
+	<url>http://www.iwi.hs-karlsruhe.de</url>
+	<inceptionYear>2009</inceptionYear>
+	<description>Semester-Projekt</description>
+	
+	<!-- scm = source code management = Versionsmanagement -->
+	<scm>
+		<connection>scm:git:https://github.com/juergenzimmermann/shop.git</connection>
+		<url>https://github.com/juergenzimmermann/shop.git</url>
+		<developerConnection>scm:git:https://github.com/juergenzimmermann/shop.git</developerConnection>
+	</scm>
+	
+	<licenses>
+		<license>
+			<name>GNU General Public License (GPL)</name>
+            <distribution>repo</distribution>
+			<url>http://www.gnu.org/licenses/gpl-3.0.html</url>
+		</license>
+	</licenses>
+	
+	<organization>
+		<name>Hochschule Karlsruhe</name>
+		<url>http://www.hs-karlsruhe.de</url>
+	</organization>
+	
+	<developers>
+		<developer>
+			<id>Juergen.Zimmermann</id>
+			<name>J&#252;rgen Zimmermann</name>
+			<email>Juergen.Zimmermann@HS-Karlsruhe.de</email>
+			<url>http://www.iwi.hs-karlsruhe.de</url>
+			<organization>Hochschule Karlsruhe</organization>
+			<organizationUrl>http://www.hs-karlsruhe.de</organizationUrl>
+			<roles>
+				<role>Dozent</role>
+			</roles>
+			<timezone>+1</timezone>     <!-- relativ zu GMT -->
+			<properties>
+				<!--
+				<picUrl>http://my.host.com/my/pic.gif</picUrl>
+				-->
+			</properties>
+		</developer>
+	</developers>
+	
+	<mailingLists>
+		<mailingList>
+			<name>ILIAS Forum</name>
+			<archive>https://ilias.hs-karlsruhe.de</archive>
+		</mailingList>
+	</mailingLists>
+
+	<issueManagement>
+		<system>MantisBT</system>
+	</issueManagement>
+
+	<ciManagement>
+		<system>Jenkins</system>
+	</ciManagement>
+
+	<properties>
+            
+            <toolchain.jdk.version>1.8</toolchain.jdk.version>
+            <toolchain.jdk.vendor>sun</toolchain.jdk.vendor>
+		<encoding>UTF-8</encoding>
+		<project.build.sourceEncoding>${encoding}</project.build.sourceEncoding>
+		<compiler.sourceEncoding>ISO-8859-1</compiler.sourceEncoding>
+        
+        <os.family>mac</os.family>
+		
+		<javadoc.minmemory>128m</javadoc.minmemory>
+		<javadoc.maxmemory>768m</javadoc.maxmemory>
+		
+		<!-- SWE: Endorsed Directories fuer z.B. SOAP-Clients durch Komma getrennt aufzaehlen -->
+		<modules.dir>${env.JBOSS_HOME}/modules/system/layers/base</modules.dir>
+		<endorsed.dirs>${modules.dir}/javax/xml/bind/api/main,${modules.dir}/com/sun/xml/bind/main,${modules.dir}/javax/jws/api/main,${modules.dir}/org/apache/cxf/main,${modules.dir}/org/apache/cxf/impl/main</endorsed.dirs>
+		<surefire.argLine>-Xms256m -Xmx768m -Djava.endorsed.dirs=${endorsed.dirs}</surefire.argLine>
+		
+		<!-- SWE: Testklassen fuer JUnit und Tests mit Arquillian Graphene -->
+		<testklassen>**/*Test.java</testklassen>
+        <testklassen.exclude>**/jsf/*Test.java</testklassen.exclude>
+		<firefox.bin>C:\Program Files (x86)\Mozilla Firefox\firefox.exe</firefox.bin>
+		<chrome.bin>C:\Program Files (x86)\Google\Chrome\Application\chrome.exe</chrome.bin>		
+		
+        <owasp.mavenSettingsProxyId>proxyhttp</owasp.mavenSettingsProxyId>
+        <owasp.autoUpdate>false</owasp.autoUpdate>
+		
+		<sonar.sources>src/main/java,src/main/webapp</sonar.sources>
+		<sonar.tests>src/test/java</sonar.tests>
+		<sonar.java.source>${java.version}</sonar.java.source>
+		<sonar.java.target>${java.version}</sonar.java.target>
+        <sonar.javascript.forceZeroCoverage>true</sonar.javascript.forceZeroCoverage>
+        <sonar.jdbc.url>jdbc:h2:tcp://localhost:9092/sonar</sonar.jdbc.url>
+		<sonar.jdbc.driverClassName>org.h2.Driver</sonar.jdbc.driverClassName>
+        <sonar.scm.disabled>true</sonar.scm.disabled>
+		<sonar.exclusions>**/UAgentInfo.java,**/*min.js,src/main/webapp/contracts/shop/js/1_0/*.js,**/angular*.js,**/lodash*.js,**/underscore*.js,**/*min.css,src/main/webapp/contracts/shop/css/1_0/*.css,**/font-awesome*.css,**/animate*.css,**/bootstrap*.css,**/api-docs/*.js,**/api-docs/lib/*.js,**/api-docs/lib/shred/*.js,**/api-docs/css/*.css</sonar.exclusions>
+        
+        <victimsRule.skip>true</victimsRule.skip>
+		<enunciate.skip>true</enunciate.skip>
+		
+        <jsf.skip>true</jsf.skip>
+        <ng.skip>true</ng.skip>
+
+        <!-- SWE: CSS-Praeprozessor LESS -->
+        <npm.dir>${env.NPM_CONFIG_PREFIX}</npm.dir>
+		<!-- UNIX (in eigener settings.xml setzen)
+        <npm.dir>${env.APPDATA}/npm</npm.dir>
+		<npm.dir>/opt</npm.dir>
+		--> 
+        
+		<!-- SWE: Minification durch UglifyJS -->
+		<uglifyjs.exe>${npm.dir}/uglifyjs.cmd</uglifyjs.exe>
+		<!-- UNIX (in eigener settings.xml setzen)
+		<uglifyjs.exe>${npm.dir}/uglifyjs/bin/uglifyjs</uglifyjs.exe>
+		-->
+        <webapp.dir>src/main/webapp</webapp.dir>
+        <jsf.js.dir>${webapp.dir}/contracts/shop/js/1_0</jsf.js.dir>
+        <ng.app.dir>${webapp.dir}/app</ng.app.dir>
+        <ng.artikelverwaltung.dir>${webapp.dir}/artikelverwaltung</ng.artikelverwaltung.dir>
+        <ng.bestellverwaltung.dir>${webapp.dir}/bestellverwaltung</ng.bestellverwaltung.dir>
+        <ng.kundenverwaltung.dir>${webapp.dir}/kundenverwaltung</ng.kundenverwaltung.dir>
+        <ng.util.dir>${webapp.dir}/util</ng.util.dir>
+        <uglifyjs.ng.dir>${webapp.dir}/js</uglifyjs.ng.dir>
+
+        <!-- SWE: Babel als Transpiler von ES 2015 nach ES 5 -->
+		<babel.exe>${npm.dir}/babel.cmd</babel.exe>
+		<!-- UNIX (in eigener settings.xml setzen)
+		<babel.exe>${npm.dir}/babel/bin/babel</babel.exe>
+		-->
+        <babel.dir>target/babel</babel.dir>
+
+        <!-- SWE: ESLint -->
+		<eslint.exe>${npm.dir}/eslint.cmd</eslint.exe>
+		<!-- UNIX (in eigener settings.xml setzen)
+		<eslint.exe>${npm.dir}/eslint/bin/eslint</eslint.exe>
+		-->
+        <eslint.skip>true</eslint.skip>
+
+        <!-- SWE: JSHint -->
+		<jshint.exe>${npm.dir}/jshint.cmd</jshint.exe>
+		<!-- UNIX (in eigener settings.xml setzen)
+		<jshint.exe>${npm.dir}/jshint/bin/jshint</jshint.exe>
+		-->
+        <jshint.skip>true</jshint.skip>
+        
+        <!-- SWE: JSCS -->
+		<jscs.exe>${npm.dir}/jscs.cmd</jscs.exe>
+		<!-- UNIX (in eigener settings.xml setzen)
+		<jscs.exe>${npm.dir}/jscs/bin/jscs</jscs.exe>
+		-->
+        <jscs.skip>true</jscs.skip>
+        
+        <!-- SWE: JSDoc -->
+		<jsdoc.exe>${npm.dir}/jsdoc.cmd</jsdoc.exe>
+		<!-- UNIX (in eigener settings.xml setzen)
+		<jsdoc.exe>${npm.dir}/jsdoc/bin/jsdoc</jsdoc.exe>
+		-->
+        <jsdoc.skip>true</jsdoc.skip>
+        
+		<less.exe>${npm.dir}/lessc.cmd</less.exe>
+		<!-- UNIX (in eigener settings.xml setzen)
+		<less.exe>${npm.dir}/lessc/bin/lessc</less.exe>
+		-->
+		<less.p.dir>${basedir}/src/main/resources/less/primefaces</less.p.dir>
+		<less.dir>${basedir}/src/main/resources/less</less.dir>
+		<css.p.dir>target/css-primefaces</css.p.dir>
+		<css.p.min.dir>target/css-primefaces-min</css.p.min.dir>
+		<css.dir>target/css</css.dir>
+		<css.min.dir>target/css-min</css.min.dir>
+        
+        <!-- SWE: clean-css -->
+		<cleancss.exe>${npm.dir}/cleancss.cmd</cleancss.exe>
+		<!-- UNIX (in eigener settings.xml setzen)
+		<cleancss.exe>/opt/csslint/bin/cleancss</cleancss.exe>
+		-->
+
+        <!-- SWE: CSSLint -->
+		<csslint.exe>${npm.dir}/csslint.cmd</csslint.exe>
+		<!-- UNIX (in eigener settings.xml setzen)
+		<csslint.exe>/opt/csslint/bin/csslint</csslint.exe>
+		-->
+
+		<!-- =============================================================== -->
+		<!-- Versionsnummern fuer "3rd Party Software"                       -->
+		<!-- =============================================================== -->
+		
+		<maven.version>3.3.1</maven.version>
+		<java.version>1.8</java.version>
+		<java.minor.version>${java.version}.0-40</java.minor.version>
+
+        <wildfly-spec-api.version>9.0.0.Beta2</wildfly-spec-api.version>
+        <!--
+		<jboss-javaee-7.0.version>1.0.1.Final</jboss-javaee-7.0.version>
+        -->
+        <weld-api.version>3.0.Alpha5</weld-api.version>
+        <!--
+        <weld.version>3.0.0.Alpha6</weld.version>
+        -->
+		<resteasy-bom.version>3.0.11.Final</resteasy-bom.version>
+        <!--
+		<resteasy-bom.version>3.0.10.Final</resteasy-bom.version>
+        -->
+        <classmate.version>1.1.0</classmate.version>
+        <jackson.version>2.5.1</jackson.version>
+		<hibernate-validator-annotation-processor.version>5.2.0.Beta1</hibernate-validator-annotation-processor.version>
+		<hibernate.version>4.3.8.Final</hibernate.version>
+		<!--
+		<eclipselink.version>2.5.1</eclipselink.version>
+		-->
+        <mongodb.version>3.0.0-rc0</mongodb.version>
+        
+        <picketlink.version>2.6.1.Final</picketlink.version>
+        <!--
+        <picketlink.version>2.7.0.Final</picketlink.version>
+        -->
+        <deltaspike.version>1.3.0</deltaspike.version>
+        
+        <!--
+        <primefaces.version>5.2.0-12352</primefaces.version>
+        -->
+        <primefaces.version>5.2.RC1</primefaces.version>
+        <primefaces.all-themes.version>1.0.10</primefaces.all-themes.version>
+        <primefaces.resources-ckeditor.version>3.0.0</primefaces.resources-ckeditor.version>
+        <!-- PrimeFaces 5.2 verwendet Atmosphere 2.3, PrimeFaces 5.1 verwendet Atmosphere 2.2 -->
+		<atmosphere.version>2.3.0-RC5</atmosphere.version>
+        <!--
+		<atmosphere.version>2.3.0-RC4</atmosphere.version>
+        -->
+        <commons-fileupload.version>1.3.1</commons-fileupload.version>
+        <itext.version>4.2.1</itext.version>
+        <poi.version>3.12-beta1</poi.version>
+        <rome.version>1.0</rome.version>
+        
+        <swagger-jaxrs.version>1.5.2-M1</swagger-jaxrs.version>
+        
+        <jboss-remoting.version>4.0.8.Final</jboss-remoting.version>
+        <xnio.version>3.3.0.Final</xnio.version>
+		
+		<junit.version>4.12</junit.version>
+        <assertj.version>2.0.0</assertj.version>
+        
+		<shrinkwrap-resolver.version>2.2.0-beta-2</shrinkwrap-resolver.version>
+        <wagon.version>2.8</wagon.version>
+		<shrinkwrap.version>1.2.2</shrinkwrap.version>
+		<arquillian-bom.version>1.1.7.Final</arquillian-bom.version>
+        <wildfly-arquillian.version>1.0.0.Alpha5</wildfly-arquillian.version>
+		<arquillian.managedOrRemote>remote</arquillian.managedOrRemote>
+        
+		<!-- WildFly nutzt 4.3.2 -->
+		<httpclient.version>4.4</httpclient.version>
+		<httpcore.version>4.4.1</httpcore.version>
+		<graphene-webdriver.version>2.1.0.Alpha2</graphene-webdriver.version>
+        <screenshooter.version>${graphene-webdriver.version}</screenshooter.version>
+		<arquillian-drone-bom.version>2.0.0.Alpha4</arquillian-drone-bom.version>
+		<selenium.version>2.45.0</selenium.version>
+        <mockito.version>2.0.5-beta</mockito.version>
+		
+        <plexus-container-default.version>1.6</plexus-container-default.version>
+        <org.eclipse.sisu.plexus.version>0.3.0</org.eclipse.sisu.plexus.version>
+        <enforce-victims-rule.version>1.3.4</enforce-victims-rule.version>
+
+        <!-- Versionsnummern fuer Maven-Plugins -->
+        <!--
+		<lifecycle-mapping.version>1.0.0</lifecycle-mapping.version>
+        -->
+		<maven-enforcer-plugin.version>1.4</maven-enforcer-plugin.version>
+		<maven-war-plugin.version>2.6</maven-war-plugin.version>
+		<wildfly-maven-plugin.version>1.1.0.Alpha1</wildfly-maven-plugin.version>
+		<maven-processor-plugin.version>3.1.0-beta1</maven-processor-plugin.version>
+		<maven-compiler-plugin.version>3.2</maven-compiler-plugin.version>
+        <maven-toolchains-plugin.version>1.1</maven-toolchains-plugin.version>
+        <dependency-check-maven.version>1.2.9</dependency-check-maven.version>
+        <modernizer-maven-plugin.version>1.3.0</modernizer-maven-plugin.version>
+		<maven-jxr-plugin.version>2.5</maven-jxr-plugin.version>
+		<maven-surefire-plugin.version>2.18.1</maven-surefire-plugin.version>
+		<maven-surefire-report-plugin.version>${maven-surefire-plugin.version}</maven-surefire-report-plugin.version>
+		<maven-project-info-reports-plugin.version>2.8</maven-project-info-reports-plugin.version>
+		<taglist-maven-plugin.version>2.4</taglist-maven-plugin.version>
+		<maven-site-plugin.version>3.4</maven-site-plugin.version>
+		<maven-javadoc-plugin.version>2.10.2</maven-javadoc-plugin.version>
+		<maven-enunciate-plugin.version>1.30-RC1</maven-enunciate-plugin.version>
+		<sonar-maven-plugin.version>2.5</sonar-maven-plugin.version>
+        <sonar.maven.version>${maven.version}</sonar.maven.version>
+		<versions-maven-plugin.version>2.1</versions-maven-plugin.version>
+		<maven-plugin-plugin.version>3.2</maven-plugin-plugin.version>
+        <exec-maven-plugin.version>1.3.2</exec-maven-plugin.version>
+		<maven-antrun-plugin.version>1.8</maven-antrun-plugin.version>
+		<!--
+		<eclipselink-staticweave-maven-plugin.version>1.0.4</eclipselink-staticweave-maven-plugin.version>
+		-->
+		
+		<maven-clean-plugin.version>2.6.1</maven-clean-plugin.version>
+		<maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
+		<maven-jar-plugin.version>2.6</maven-jar-plugin.version>
+		<maven-install-plugin.version>2.5.2</maven-install-plugin.version>
+		<maven-resources-plugin.version>2.7</maven-resources-plugin.version>
+		<maven-dependency-plugin.version>2.10</maven-dependency-plugin.version>
+	
+        <!-- URIs fuer Maven Repositories -->
+        <jcenter.repo>https://jcenter.bintray.com</jcenter.repo>
+        <jboss.repo>https://repository.jboss.org/nexus/content/groups/public</jboss.repo>
+        <primefaces.repo>http://repository.primefaces.org</primefaces.repo>
+        <java.net.repo>https://maven.java.net/content/repositories/releases</java.net.repo>
+
+        <!-- Eclipse: m2e-wtp settings -->
+        <!--
+		<m2e.jaxrs.activation>true</m2e.jaxrs.activation>
+		<m2e.jpa.activation>false</m2e.jpa.activation>
+		<m2e.jsf.activation>false</m2e.jsf.activation> 
+        -->
+	</properties>
+	
+	<!-- Repositories, aus denen die benoetigte Software heruntergeladen werden kann -->
+	<repositories>
+		<repository>
+			<id>jcenter</id>
+			<name>jcenter Maven Repository</name>
+			<url>${jcenter.repo}</url>
+		</repository>
+		<repository>
+			<id>jboss</id>
+			<name>JBoss Maven 2 Repository</name>
+			<url>${jboss.repo}</url>
+		</repository>
+		<repository>
+			<id>primefaces</id>
+			<name>PrimeFaces Maven Repository</name>
+			<url>${primefaces.repo}</url>
+		</repository>
+		<repository>
+			<id>java.net</id>
+			<name>java.net Maven Repository</name>
+			<url>${java.net.repo}</url>
+		</repository>
+	</repositories>
+	
+	<pluginRepositories>
+		<pluginRepository>
+			<id>jcenter</id>
+			<name>jcenter Maven Repository</name>
+			<url>${jcenter.repo}</url>
+		</pluginRepository>
+		<pluginRepository>
+			<id>jboss</id>
+			<name>JBoss Maven 2 Repository</name>
+			<url>${jboss.repo}</url>
+		</pluginRepository>
+	</pluginRepositories>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.jboss.shrinkwrap.resolver</groupId>
+				<artifactId>shrinkwrap-resolver-bom</artifactId>
+				<version>${shrinkwrap-resolver.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			
+			<dependency>
+				<groupId>org.jboss.shrinkwrap</groupId>
+				<artifactId>shrinkwrap-bom</artifactId>
+				<version>${shrinkwrap.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+
+            <dependency>
+				<groupId>org.jboss.arquillian</groupId>
+				<artifactId>arquillian-bom</artifactId>
+				<version>${arquillian-bom.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			
+			<dependency>
+				<groupId>org.jboss.resteasy</groupId>
+				<artifactId>resteasy-bom</artifactId>
+				<version>${resteasy-bom.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+
+            <!--
+            <dependency>
+				<groupId>org.jboss.spec</groupId>
+				<artifactId>jboss-javaee-7.0</artifactId>
+				<version>${jboss-javaee-7.0.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+            -->
+            
+			<dependency>
+				<groupId>org.wildfly</groupId>
+				<artifactId>wildfly-spec-api</artifactId>
+				<version>${wildfly-spec-api.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+            
+            <dependency>
+                <groupId>org.picketlink</groupId>
+                <artifactId>picketlink-javaee-6.0</artifactId>
+                <!--
+                <artifactId>picketlink-javaee-7.0</artifactId>
+                -->
+                <version>${picketlink.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+		
+            <!--
+            <dependency>
+                <groupId>org.picketlink</groupId>
+                <artifactId>picketlink-javaee-7.0</artifactId>
+                <version>${picketlink.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            -->
+            
+			<dependency>
+				<groupId>org.jboss.arquillian.selenium</groupId>
+				<artifactId>selenium-bom</artifactId>
+				<version>${selenium.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.jboss.arquillian.extension</groupId>
+				<artifactId>arquillian-drone-bom</artifactId>
+				<version>${arquillian-drone-bom.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<!--
+		Verwendete Software in Form von .jar-Dateien: notwendig fuer Uebersetzung und zur Laufzeit
+	-->
+	<dependencies>
+	
+		<!-- ========================================================================================= -->
+		<!-- J A V A E E   7   V O N   G L A S S F I S H                                               -->
+		<!-- ========================================================================================= -->
+		<!--
+		<dependency>
+			<groupId>javax</groupId>
+			<artifactId>javaee-api</artifactId>
+			<version>7.0</version>
+			<scope>provided</scope>
+		</dependency>
+		-->
+	
+		<!-- ========================================================================================= -->
+		<!-- J P A ,   S T A T I C   M E T A M O D E L L                                               -->
+		<!-- ========================================================================================= -->
+		
+		<dependency>
+			<groupId>org.hibernate.javax.persistence</groupId>
+			<artifactId>hibernate-jpa-2.1-api</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		
+        <!-- EntityManager.createQuery(criteriaQuery).unwrap(org.hibernate.Query) -->
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-core</artifactId>
+            <!--
+            <version>${hibernate.version}</version>
+            -->
+			<scope>provided</scope>
+            
+            <exclusions>
+                <exclusion>
+                    <groupId>dom4j</groupId>
+                    <artifactId>dom4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.javassist</groupId>
+                    <artifactId>javassist</artifactId>
+                </exclusion>
+            </exclusions>
+		</dependency>
+
+        <dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-jpamodelgen</artifactId>
+			<version>${hibernate.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- EclipseLink statt Hibernate -->
+		<!--
+		<dependency>
+			<groupId>org.eclipse.persistence</groupId>
+			<artifactId>eclipselink</artifactId>
+			<version>${eclipselink.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		-->
+        
+		<dependency>
+			<groupId>org.mongodb</groupId>
+			<artifactId>mongo-java-driver</artifactId>
+			<version>${mongodb.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		
+		<!-- ========================================================================================= -->
+		<!-- B e a n   V a l i d a t i o n ,   H i b e r n a t e   V a l i d a t o r                   -->
+		<!-- ========================================================================================= -->
+		
+		<dependency>
+			<groupId>javax.validation</groupId>
+			<artifactId>validation-api</artifactId>
+			<scope>provided</scope>
+		</dependency>
+				
+		<!-- http://docs.jboss.org/hibernate/stable/validator/reference/en-US/html/validator-annotation-processor.html -->
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-validator-annotation-processor</artifactId>
+			<version>${hibernate-validator-annotation-processor.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		
+		<!-- ========================================================================================= -->
+		<!-- E L                                                                                       -->
+		<!-- ========================================================================================= -->
+		<dependency>
+			<groupId>org.jboss.spec.javax.el</groupId>
+			<artifactId>jboss-el-api_3.0_spec</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		
+		<!-- ========================================================================================= -->
+		<!-- J A X B                                                                                   -->
+		<!-- ========================================================================================= -->
+		
+		<dependency>
+			<groupId>org.jboss.spec.javax.xml.bind</groupId>
+			<artifactId>jboss-jaxb-api_2.2_spec</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		
+		<!-- ========================================================================================= -->
+		<!-- C D I                                                                                    -->
+		<!-- ========================================================================================= -->
+
+		<dependency>
+			<groupId>javax.enterprise</groupId>
+			<artifactId>cdi-api</artifactId>
+			<scope>provided</scope>
+		</dependency>
+        
+		<dependency>
+			<groupId>org.jboss.weld</groupId>
+			<artifactId>weld-api</artifactId>
+            <version>${weld-api.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		
+		<!-- ========================================================================================= -->
+		<!-- E J B                                                                                     -->
+		<!-- ========================================================================================= -->
+		
+		<dependency>
+			<groupId>org.jboss.spec.javax.ejb</groupId>
+			<artifactId>jboss-ejb-api_3.2_spec</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		
+		<!-- @org.jboss.ejb3.annotation.SecurityDomain -->
+        <!--
+		<dependency>
+			<groupId>org.jboss.ejb3</groupId>
+			<artifactId>jboss-ejb3-ext-api</artifactId>
+			<scope>provided</scope>
+		</dependency>
+        -->
+		
+		<!-- ========================================================================================= -->
+		<!-- I n t e r c e p t o r                                                                     -->
+		<!-- ========================================================================================= -->
+		
+		<dependency>
+			<groupId>org.jboss.spec.javax.interceptor</groupId>
+  			<artifactId>jboss-interceptors-api_1.2_spec</artifactId>
+			<scope>provided</scope>
+  		</dependency>
+	
+		<!-- ========================================================================================= -->
+		<!-- C o m m o n   A n n o t a t i o n s                                                       -->
+		<!-- ========================================================================================= -->
+		
+		<dependency>
+			<groupId>org.jboss.spec.javax.annotation</groupId>
+  			<artifactId>jboss-annotations-api_1.2_spec</artifactId>
+			<scope>provided</scope>
+  		</dependency>
+	
+		<!-- ========================================================================================= -->
+		<!-- J T A                                                                                     -->
+		<!-- ========================================================================================= -->
+		
+		<dependency>
+			<groupId>org.jboss.spec.javax.transaction</groupId>
+			<artifactId>jboss-transaction-api_1.2_spec</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		
+		<!-- ========================================================================================= -->
+		<!-- J a v a M a i l                                                                           -->
+		<!-- ========================================================================================= -->
+
+		<dependency>
+			<groupId>com.sun.mail</groupId>
+			<artifactId>javax.mail</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		
+		<!-- ========================================================================================= -->
+		<!-- J A X - R S ,   R E S T E a s y ,   J a c k s o n                                         -->
+		<!-- ========================================================================================= -->
+		
+		<!-- @Wrapped, @Cache -->
+		<dependency>
+			<groupId>org.jboss.resteasy</groupId>
+			<artifactId>resteasy-jaxrs</artifactId>
+			<scope>provided</scope>
+			
+			<exclusions>
+                <exclusion>
+					<groupId>org.jboss.spec.javax.annotation</groupId>
+					<artifactId>jboss-annotations-api_1.1_spec</artifactId>
+				</exclusion>
+				<!-- In WildFly ist ein aktuelleres slf4j 1.7 -->
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-simple</artifactId>
+				</exclusion>
+				<!-- In WildFly ist ein aktuelleres javassist -->
+				<exclusion>
+					<groupId>javassist</groupId>
+					<artifactId>javassist</artifactId>
+				</exclusion>
+                <exclusion>
+                    <groupId>commons-io</groupId>
+                    <artifactId>commons-io</artifactId>
+                </exclusion>
+			</exclusions>
+		</dependency>
+
+		<!--
+		<dependency>
+			<groupId>org.jboss.spec.javax.ws.rs</groupId>
+			<artifactId>jboss-jaxrs-api_2.0_spec</artifactId>
+			<version>1.0.0.Alpha1</version>
+			<scope>provided</scope>
+		</dependency>
+		-->
+
+	    <dependency>
+			<groupId>org.jboss.resteasy</groupId>
+			<artifactId>resteasy-jackson-provider</artifactId>
+			<scope>provided</scope>
+			
+			<!-- Jackson 2.x statt 1.x -->
+			<exclusions>
+				<exclusion>
+					<groupId>org.codehaus.jackson</groupId>
+					<artifactId>jackson-core-asl</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.codehaus.jackson</groupId>
+					<artifactId>jackson-mapper-asl</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.codehaus.jackson</groupId>
+					<artifactId>jackson-xc</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.codehaus.jackson</groupId>
+					<artifactId>jackson-jaxrs</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		
+		<!-- Jackson 2.x statt 1.x -->
+	    <dependency>
+			<groupId>com.fasterxml.jackson.jaxrs</groupId>
+			<artifactId>jackson-jaxrs-json-provider</artifactId>
+            <version>${jackson.version}</version><!--$NO-MVN-MAN-VER$-->
+			<scope>provided</scope>
+		</dependency>
+	    <dependency>
+			<groupId>com.fasterxml.jackson.jaxrs</groupId>
+			<artifactId>jackson-jaxrs-base</artifactId>
+            <version>${jackson.version}</version><!--$NO-MVN-MAN-VER$-->
+			<scope>provided</scope>
+		</dependency>
+	    <dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-core</artifactId>
+            <version>${jackson.version}</version><!--$NO-MVN-MAN-VER$-->
+			<scope>provided</scope>
+		</dependency>
+	    <dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version><!--$NO-MVN-MAN-VER$-->
+			<scope>provided</scope>
+		</dependency>
+	    <dependency>
+			<groupId>com.fasterxml.jackson.module</groupId>
+			<artifactId>jackson-module-jaxb-annotations</artifactId>
+            <version>${jackson.version}</version><!--$NO-MVN-MAN-VER$-->
+			<scope>provided</scope>
+		</dependency>
+	    <dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-annotations</artifactId>
+            <version>${jackson.version}</version><!--$NO-MVN-MAN-VER$-->
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.jboss.resteasy</groupId>
+			<artifactId>resteasy-jackson2-provider</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		
+		<!-- ViolationReport und ResteasyConstraintViolation -->
+		<dependency>
+			<groupId>com.fasterxml</groupId>
+			<artifactId>classmate</artifactId>
+            <version>${classmate.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.jboss.resteasy</groupId>
+			<artifactId>resteasy-validator-provider-11</artifactId>
+			<scope>provided</scope>
+            
+            <!-- In WildFly ist ein aktuelleres Hibernate Validator und ein aktuelleres Weld -->
+            <exclusions>
+				<exclusion>
+					<groupId>org.hibernate</groupId>
+					<artifactId>hibernate-validator</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.jboss.weld.se</groupId>
+					<artifactId>weld-se</artifactId>
+				</exclusion>
+            </exclusions>
+		</dependency>
+
+		<!-- @Formatted -->
+	    <dependency>
+			<groupId>org.jboss.resteasy</groupId>
+			<artifactId>resteasy-jaxb-provider</artifactId>
+			<scope>provided</scope>
+		</dependency>
+        
+        <!-- Swagger zur Generierung der REST-Dokumentation -->
+        <dependency>
+            <groupId>com.wordnik</groupId>
+            <artifactId>swagger-jaxrs</artifactId>
+            <version>${swagger-jaxrs.version}</version>
+            <scope>provided</scope>
+            
+            <exclusions>
+                <exclusion>
+                    <groupId>javax.ws.rs</groupId>
+                    <artifactId>jsr311-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>commons-lang</groupId>
+                    <artifactId>commons-lang</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>joda-time</groupId>
+                    <artifactId>joda-time</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.javassist</groupId>
+                    <artifactId>javassist</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        
+		<!-- ========================================================================================= -->
+		<!-- S e r v l e t ,   J S F ,    R i c h F a c e s ,   A t m o s p h e r e                    -->
+		<!-- ========================================================================================= -->
+		
+		<dependency>
+			<groupId>org.jboss.spec.javax.servlet</groupId>
+			<artifactId>jboss-servlet-api_3.1_spec</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.jboss.spec.javax.faces</groupId>
+			<artifactId>jboss-jsf-api_2.2_spec</artifactId>
+			<scope>provided</scope>
+		</dependency>
+        
+        <dependency>
+			<groupId>org.primefaces</groupId>
+			<artifactId>primefaces</artifactId>
+			<version>${primefaces.version}</version>
+		</dependency>
+		
+        <dependency>
+			<groupId>org.primefaces.themes</groupId>
+			<artifactId>all-themes</artifactId>
+			<version>${primefaces.all-themes.version}</version>
+		</dependency>
+		
+        <dependency>
+			<groupId>org.primefaces.extensions</groupId>
+			<artifactId>resources-ckeditor</artifactId>
+			<version>${primefaces.resources-ckeditor.version}</version>
+            
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-io</groupId>
+                    <artifactId>commons-io</artifactId>
+                </exclusion>
+			</exclusions>
+		</dependency>
+        
+		<dependency>
+			<groupId>org.atmosphere</groupId>
+			<artifactId>atmosphere-runtime</artifactId>
+			<version>${atmosphere.version}</version>
+			<exclusions>
+				<!-- In WildFly ist ein aktuelleres slf4j -->
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-api</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+        
+        <dependency>
+			<groupId>commons-fileupload</groupId>
+			<artifactId>commons-fileupload</artifactId>
+			<version>${commons-fileupload.version}</version>
+            
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-io</groupId>
+                    <artifactId>commons-io</artifactId>
+                </exclusion>
+			</exclusions>
+		</dependency>
+		
+        <dependency>
+			<groupId>com.lowagie</groupId>
+			<artifactId>itext</artifactId>
+			<version>${itext.version}</version>
+
+            <!-- in WildFly ist dom4j bereits enthalten -->
+            <exclusions>
+                <exclusion>
+                    <groupId>bouncycastle</groupId>
+                    <artifactId>bcmail-jdk14</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>bouncycastle</groupId>
+                    <artifactId>bcprov-jdk14</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.bouncycastle</groupId>
+                    <artifactId>bctsp-jdk14</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>dom4j</groupId>
+                    <artifactId>dom4j</artifactId>
+                </exclusion>
+			</exclusions>
+        </dependency>
+		
+        <dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi</artifactId>
+			<version>${poi.version}</version>
+            
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-codec</groupId>
+                    <artifactId>commons-codec</artifactId>
+                </exclusion>
+            </exclusions>
+		</dependency>
+		
+        <dependency>
+			<groupId>rome</groupId>
+			<artifactId>rome</artifactId>
+			<version>${rome.version}</version>
+
+            <exclusions>
+                <exclusion>
+                    <groupId>jdom</groupId>
+                    <artifactId>jdom</artifactId>
+                </exclusion>
+            </exclusions>
+		</dependency>
+		
+		<!-- ========================================================================================= -->
+		<!-- S e c u r i t y                                                                           -->
+		<!-- ========================================================================================= -->
+		
+        <!-- Identity Management: Identity, Account, BaseAuthenticator, ... -->
+		<!-- "uber jar" bestehend aus picketlink-api, picketlink-impl, -->
+		<!-- picketlink-idm-api, picketlink-idm-impl und picketlink-deltaspike -->
+        <!--
+        <dependency>
+            <groupId>org.picketlink</groupId>
+            <artifactId>picketlink</artifactId>
+			<scope>provided</scope>
+        </dependency>
+        -->
+
+        <dependency>
+            <groupId>org.picketlink</groupId>
+            <artifactId>picketlink-api</artifactId>
+            <version>${picketlink.version}</version><!--$NO-MVN-MAN-VER$-->
+			<scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.picketlink</groupId>
+            <artifactId>picketlink-common</artifactId>
+            <version>${picketlink.version}</version><!--$NO-MVN-MAN-VER$-->
+			<scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.picketlink</groupId>
+            <artifactId>picketlink-impl</artifactId>
+            <version>${picketlink.version}</version><!--$NO-MVN-MAN-VER$-->
+			<scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.picketlink</groupId>
+            <artifactId>picketlink-idm-api</artifactId>
+            <version>${picketlink.version}</version><!--$NO-MVN-MAN-VER$-->
+			<scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.picketlink</groupId>
+            <artifactId>picketlink-idm-impl</artifactId>
+            <version>${picketlink.version}</version><!--$NO-MVN-MAN-VER$-->
+			<scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.picketlink</groupId>
+            <artifactId>picketlink-deltaspike</artifactId>
+            <version>${picketlink.version}</version><!--$NO-MVN-MAN-VER$-->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.picketlink</groupId>
+                    <artifactId>picketlink-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.picketlink</groupId>
+                    <artifactId>picketlink-impl</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.deltaspike.core</groupId>
+            <artifactId>deltaspike-core-api</artifactId>
+            <version>${deltaspike.version}</version><!--$NO-MVN-MAN-VER$-->
+        </dependency>
+        <dependency>
+            <groupId>org.apache.deltaspike.core</groupId>
+            <artifactId>deltaspike-core-impl</artifactId>
+            <version>${deltaspike.version}</version><!--$NO-MVN-MAN-VER$-->
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.deltaspike.modules</groupId>
+            <artifactId>deltaspike-security-module-api</artifactId>
+            <version>${deltaspike.version}</version><!--$NO-MVN-MAN-VER$-->
+        </dependency>
+        <dependency>
+            <groupId>org.apache.deltaspike.modules</groupId>
+            <artifactId>deltaspike-security-module-impl</artifactId>
+            <version>${deltaspike.version}</version><!--$NO-MVN-MAN-VER$-->
+            <scope>runtime</scope>
+        </dependency>
+        
+        <!-- AccountTypeEntity, RoleTypeEntity, GroupTypeEntity, PasswordCredentialTypeEntity, IdentityTypeEntity -->
+        <dependency>
+            <groupId>org.picketlink</groupId>
+            <artifactId>picketlink-idm-simple-schema</artifactId>
+            <version>${picketlink.version}</version><!--$NO-MVN-MAN-VER$-->
+			<scope>provided</scope>
+        </dependency>
+
+        <!-- WildFly Elytron wird PicketBox und JAAS ersetzen:  https://community.jboss.org/wiki/WildFlyElytron-ProjectSummary -->
+
+        <!--
+		<dependency>
+			<groupId>org.jboss.spec.javax.security.jacc</groupId>
+			<artifactId>jboss-jacc-api_1.5_spec</artifactId>
+			<scope>provided</scope>
+		</dependency>
+        -->
+
+		<!-- org.wildfly.controller.client.ModelControllerClient und org.jboss.dmr.ModelNode; dmr = Detyped Model Representation -->
+        <!--
+		<dependency>
+			<groupId>org.wildfly</groupId>
+			<artifactId>wildfly-controller-client</artifactId>
+			<scope>provided</scope>
+		</dependency>
+        -->
+		
+		<!-- org.jboss.security.SimpleGroup -->
+        <!--
+		<dependency>
+			<groupId>org.picketbox</groupId>
+			<artifactId>jbosssx</artifactId>
+			<version>${picketbox.version}</version>
+			<scope>provided</scope>
+		</dependency>
+        -->
+		<!-- org.jboss.security.client.SecurityClient: fuer Login bei EJBs mit  -->
+        <!--
+		<dependency>
+			<groupId>org.picketbox</groupId>
+			<artifactId>jboss-security-spi</artifactId>
+			<version>${picketbox.version}</version>
+			<scope>test</scope>
+		</dependency>
+        -->
+		
+		<!-- ========================================================================================= -->
+		<!-- C o n c u r r e n c y   U t i l i t i e s                                                 -->
+		<!-- ========================================================================================= -->
+
+		<dependency>
+			<groupId>org.jboss.spec.javax.enterprise.concurrent</groupId>
+			<artifactId>jboss-concurrency-api_1.0_spec</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		
+		<!-- ========================================================================================= -->
+		<!-- J A X - W S                                                                               -->
+		<!-- ========================================================================================= -->
+		
+		<dependency>
+			<groupId>org.jboss.spec.javax.xml.ws</groupId>
+			<artifactId>jboss-jaxws-api_2.2_spec</artifactId>
+			<scope>provided</scope>
+		</dependency>
+	
+		<dependency>
+			<groupId>org.jboss.ws</groupId>
+			<artifactId>jbossws-api</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+        <!--
+		<dependency>
+			<groupId>com.google.javascript</groupId>
+			<artifactId>closure-compiler</artifactId>
+            <version>${closure-compiler.version}</version>
+			<scope>provided</scope>
+		</dependency>
+        -->
+
+		<!-- ========================================================================================= -->
+		<!-- J B o s s   L o g g i n g                                                                 -->
+		<!-- ========================================================================================= -->
+		
+		<!--
+		<dependency>
+			<groupId>org.jboss.logging</groupId>
+			<artifactId>jboss-logging</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		-->
+		
+		<!-- ========================================================================================= -->
+		<!-- T e s t e n                                                                               -->
+		<!-- ========================================================================================= -->
+
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>${junit.version}</version><!--$NO-MVN-MAN-VER$-->
+			<scope>test</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.assertj</groupId>
+			<artifactId>assertj-core</artifactId>
+			<version>${assertj.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-aether-provider</artifactId>
+            <version>${maven.version}</version>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.codehaus.plexus</groupId>
+                    <artifactId>plexus-component-annotations</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.codehaus.plexus</groupId>
+                    <artifactId>plexus-utils</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.aether</groupId>
+                    <artifactId>aether-util</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.aether</groupId>
+                    <artifactId>aether-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.aether</groupId>
+                    <artifactId>aether-impl</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.aether</groupId>
+                    <artifactId>aether-spi</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-settings</artifactId>
+            <version>${maven.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-settings-builder</artifactId>
+            <version>${maven.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven.wagon</groupId>
+            <artifactId>wagon-provider-api</artifactId>
+            <version>${wagon.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven.wagon</groupId>
+            <artifactId>wagon-file</artifactId>
+            <version>${wagon.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven.wagon</groupId>
+            <artifactId>wagon-http-lightweight</artifactId>
+            <version>${wagon.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+		<dependency>
+			<groupId>org.jboss.shrinkwrap.resolver</groupId>
+			<!-- https://github.com/shrinkwrap/resolver/blob/master/README.asciidoc -->
+			<artifactId>shrinkwrap-resolver-depchain</artifactId>
+			<type>pom</type>
+			<scope>test</scope>
+		</dependency>
+        
+        <dependency>
+            <groupId>org.jboss.shrinkwrap</groupId>
+            <artifactId>shrinkwrap-depchain</artifactId>
+            <type>pom</type>
+            <scope>test</scope>
+        </dependency>
+		
+		<dependency>
+			<groupId>org.wildfly.arquillian</groupId>
+			<artifactId>wildfly-arquillian-container-${arquillian.managedOrRemote}</artifactId>
+            <version>${wildfly-arquillian.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.jboss.arquillian.junit</groupId>
+			<artifactId>arquillian-junit-container</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.jboss.arquillian.protocol</groupId>
+			<artifactId>arquillian-protocol-servlet</artifactId>
+			<scope>test</scope>
+		</dependency>
+		
+	    <dependency>
+			<groupId>org.jboss.resteasy</groupId>
+			<artifactId>resteasy-client</artifactId>
+			<scope>test</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpcore</artifactId>
+			<version>${httpcore.version}</version><!--$NO-MVN-MAN-VER$-->
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>${httpclient.version}</version><!--$NO-MVN-MAN-VER$-->
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.jboss.arquillian.graphene</groupId>
+			<artifactId>graphene-webdriver</artifactId>
+			<version>${graphene-webdriver.version}</version>
+			<type>pom</type>
+			<scope>test</scope>
+			
+			<exclusions>
+				<exclusion>
+					<groupId>org.mortbay.jetty</groupId>
+					<artifactId>servlet-api-2.5</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+        
+        <dependency>
+            <groupId>org.jboss.arquillian.graphene</groupId>
+            <artifactId>arquillian-browser-screenshooter</artifactId>
+            <version>${screenshooter.version}</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <!-- Tests mit Weld SE statt mit dem In-Container-Modus von Arquillian -->
+        <!--
+        <dependency>
+            <groupId>org.jboss.weld.se</groupId>
+            <artifactId>weld-se-core</artifactId>
+            <version>${weld.version}</version>
+            <scope>test</scope>
+        </dependency>
+        
+         <dependency>
+            <groupId>org.jboss.weld</groupId>
+            <artifactId>weld-core-impl</artifactId>
+            <version>${weld.version}</version>
+            <scope>test</scope>
+        </dependency>
+        
+         <dependency>
+            <groupId>org.jboss.weld</groupId>
+            <artifactId>weld-core</artifactId>
+            <version>${weld.version}</version>
+            <scope>test</scope>
+        </dependency>
+        
+         <dependency>
+            <groupId>org.jboss.weld</groupId>
+            <artifactId>weld-spi</artifactId>
+            <version>${weld-api.version}</version>
+            <scope>test</scope>
+        </dependency>
+        -->
+       
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+	</dependencies>
+	
+	<prerequisites>
+		<maven>${maven.version}</maven>
+	</prerequisites>
+
+	<build>
+		<defaultGoal>test-compile</defaultGoal>
+		
+		<finalName>${project.artifactId}</finalName>
+
+		<!-- Nur zum Abspeichern der Konfiguration von Eclipse/M2E; nicht relevant fuer die Ausfuehrung von Maven -->
+        <!--
+		<pluginManagement>	
+			<plugins>
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>${lifecycle-mapping.version}</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>org.apache.maven.plugins</groupId>
+										<artifactId>maven-enforcer-plugin</artifactId>
+										<versionRange>[${maven-enforcer-plugin.version},)</versionRange>
+										<goals>
+											<goal>enforce</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore/>
+									</action>
+								</pluginExecution>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>org.apache.maven.plugins</groupId>
+										<artifactId>maven-antrun-plugin</artifactId>
+										<versionRange>[${maven-antrun-plugin.version},)</versionRange>
+										<goals>
+											<goal>run</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore/>
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+        -->
+	
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<version>${maven-enforcer-plugin.version}</version>
+                
+				<configuration>
+					<rules>
+						<requireMavenVersion>
+							<version>[${maven.version},)</version>
+						</requireMavenVersion>
+						<requireJavaVersion>
+							<version>[${java.minor.version},)</version>
+						</requireJavaVersion>
+						<requireProperty>
+							<property>env.JAVA_HOME</property>
+							<message>"JAVA_HOME muss fuer den Java-Compiler gesetzt sein"</message>
+						</requireProperty>
+						<!--<requireProperty>
+							<property>env.JBOSS_HOME</property>
+							<message>"JBOSS_HOME muss fuer die Arquillian-Tests gesetzt sein"</message>
+						</requireProperty>-->
+						<requireOS>
+							<family>${os.family}</family>
+						</requireOS>
+						<requirePluginVersions/>
+                        
+						<!--
+						<DependencyConvergence/>
+						-->
+					</rules>
+				</configuration>
+                
+                <!--
+                -->
+                <dependencies>
+                    <dependency>
+                        <groupId>com.redhat.victims</groupId>
+                        <artifactId>enforce-victims-rule</artifactId>
+                        <version>${enforce-victims-rule.version}</version>
+                    </dependency>
+                </dependencies>
+
+				<executions>
+					<execution>
+						<id>enforce-maven-environment</id>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+					</execution>
+                    
+                    <!-- http://www.victi.ms ist nicht verfuegbar -->
+                    <execution>
+                        <id>enforce-victims-rule</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${victimsRule.skip}</skip>
+                            <rules>
+                                <rule implementation="com.redhat.victims.VictimsRule">
+                                    <metadata>warning</metadata>
+                                    <fingerprint>fatal</fingerprint>
+                                    <updates>weekly</updates>
+                                </rule>
+                            </rules>
+                            
+                            <jdbcUrl>jdbc:h2:tcp://localhost/C:/Zimmermann/victims</jdbcUrl>
+                        </configuration>
+                    </execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>${maven-antrun-plugin.version}</version>
+
+				<executions>
+					<execution>
+						<id>softwarearchitektur-init</id>
+						<phase>validate</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<target name="softwarearchitektur" description="Verzeichnisse fuer Softwarearchitektur erstellen">
+                                <mkdir dir="${jsf.js.dir}"/>
+								<mkdir dir="${ng.artikelverwaltung.dir}"/>
+								<mkdir dir="${ng.bestellverwaltung.dir}"/>
+								<mkdir dir="${ng.kundenverwaltung.dir}"/>
+								<mkdir dir="${ng.util.dir}"/>
+								<mkdir dir="${ng.app.dir}"/>
+
+								<mkdir dir="${less.dir}"/>
+								<mkdir dir="${css.dir}"/>
+								<mkdir dir="${css.min.dir}"/>
+								<mkdir dir="${less.p.dir}"/>
+								<mkdir dir="${css.p.dir}"/>
+								<mkdir dir="${css.p.min.dir}"/>
+                                
+                                <mkdir dir="${babel.dir}/${jsf.js.dir}"/>
+                                <mkdir dir="${babel.dir}/${uglifyjs.ng.dir}"/>
+                            </target>
+						</configuration>
+					</execution>
+                    
+					<execution>
+						<id>ng-init</id>
+						<phase>validate</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+                            <skip>${ng.skip}</skip>
+							<target name="angularjs-init" description="Verzeichnisse fuer AngularJS erstellen">
+                                <mkdir dir="${babel.dir}/${uglifyjs.ng.dir}"/>
+                                <mkdir dir="${babel.dir}/${ng.app.dir}"/>
+                                <mkdir dir="${babel.dir}/${ng.artikelverwaltung.dir}"/>
+                                <mkdir dir="${babel.dir}/${ng.bestellverwaltung.dir}"/>
+                                <mkdir dir="${babel.dir}/${ng.kundenverwaltung.dir}"/>
+                                <mkdir dir="${babel.dir}/${ng.util.dir}"/>
+                            </target>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+            
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>${exec-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+						<id>eslint</id>
+						<phase>validate</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${eslint.skip}</skip>
+                            <executable>${eslint.exe}</executable>
+                            <arguments>
+                                <argument>-c</argument>
+                                <!-- Einstellung der Regeln: siehe http://eslint.org/docs/rules -->
+                                <argument>${basedir}/src/main/resources/eslint.config</argument>
+                                <argument>-o</argument>
+                                <argument>target/eslint.log</argument>
+                                <argument>${jsf.js.dir}/mojarra-fix.js</argument>
+                                <argument>${ng.artikelverwaltung.dir}</argument>
+                                <argument>${ng.bestellverwaltung.dir}</argument>
+                                <argument>${ng.kundenverwaltung.dir}</argument>
+                                <argument>${ng.util.dir}</argument>
+                                <argument>${ng.app.dir}</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+						<id>jshint</id>
+						<phase>validate</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jshint.skip}</skip>
+                            <executable>${jshint.exe}</executable>
+                            <arguments>
+                                <argument>--config</argument>
+                                <!-- Einstellung der Regeln: siehe http://jshint.com/docs/options -->
+                                <argument>${basedir}/src/main/resources/jshint.config</argument>
+                                <argument>--show-non-errors</argument>
+                                <argument>--verbose</argument>
+                                <argument>${jsf.js.dir}/mojarra-fix.js</argument>
+                                <argument>${ng.artikelverwaltung.dir}</argument>
+                                <argument>${ng.bestellverwaltung.dir}</argument>
+                                <argument>${ng.kundenverwaltung.dir}</argument>
+                                <argument>${ng.util.dir}</argument>
+                                <argument>${ng.app.dir}</argument>
+                            </arguments>
+                            <outputFile>target/jshint.log</outputFile>
+                        </configuration>
+                    </execution>
+
+                    <!-- jscs verwendet Esprima als Parser, das aber ES 2015 nur rudimentaer unterstuetzt -->
+                    <execution>
+						<id>jscs</id>
+						<phase>validate</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jscs.skip}</skip>
+                            <executable>${jscs.exe}</executable>
+                            <arguments>
+                                <argument>-c</argument>
+                                <!-- Einstellung der Optionen: siehe https://github.com/jscs-dev/node-jscs -->
+                                <argument>${basedir}/src/main/resources/jscs.config</argument>
+                                <argument>-e</argument>
+                                <argument>-r</argument>
+                                <argument>text</argument>
+                                <argument>${jsf.js.dir}/mojarra-fix.js</argument>
+                                <argument>${ng.artikelverwaltung.dir}</argument>
+                                <argument>${ng.bestellverwaltung.dir}</argument>
+                                <argument>${ng.kundenverwaltung.dir}</argument>
+                                <argument>${ng.util.dir}</argument>
+                                <argument>${ng.app.dir}</argument>
+                            </arguments>
+                            <outputFile>target/jscs.log</outputFile>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+						<id>jsdoc</id>
+						<phase>validate</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jsdoc.skip}</skip>
+                            <executable>${jsdoc.exe}</executable>
+                            <arguments>
+                                <argument>-d</argument>
+                                <argument>target/jsdoc</argument>
+                                <argument>-t</argument>
+                                <argument>${env.NPM_CONFIG_PREFIX}/node_modules/jsdoc/templates/default</argument>
+                                <argument>-p</argument>
+                                <argument>${ng.artikelverwaltung.dir}</argument>
+                                <argument>${ng.bestellverwaltung.dir}</argument>
+                                <argument>${ng.kundenverwaltung.dir}</argument>
+                                <argument>${ng.util.dir}</argument>
+                                <argument>${ng.app.dir}</argument>
+                            </arguments>
+                            <outputFile>target/jsdoc.log</outputFile>
+                        </configuration>
+                    </execution>
+                    
+                    <!--
+                    <execution>
+						<id>babel-primefaces</id>
+						<phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jsf.skip}</skip>
+                            <executable>${babel.exe}</executable>
+                            <arguments>
+                                <argument>-o</argument>
+                                <argument>${babel.dir}/${jsf.js.dir}/mojarra-fix.js</argument>
+                                <argument>${jsf.js.dir}/mojarra-fix.js</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    -->
+
+                    <execution>
+						<id>babel-ng-app</id>
+						<phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${ng.skip}</skip>
+                            <executable>${babel.exe}</executable>
+                            <arguments>
+                                <argument>-d</argument>
+                                <argument>${babel.dir}/${ng.app.dir}</argument>
+                                <argument>${ng.app.dir}</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+						<id>babel-ng-artikelverwaltung</id>
+						<phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${ng.skip}</skip>
+                            <executable>${babel.exe}</executable>
+                            <arguments>
+                                <argument>-d</argument>
+                                <argument>${babel.dir}/${ng.artikelverwaltung.dir}</argument>
+                                <argument>${ng.artikelverwaltung.dir}</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+						<id>babel-ng-bestellverwaltung</id>
+						<phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${ng.skip}</skip>
+                            <executable>${babel.exe}</executable>
+                            <arguments>
+                                <argument>-d</argument>
+                                <argument>${babel.dir}/${ng.bestellverwaltung.dir}</argument>
+                                <argument>${ng.bestellverwaltung.dir}</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+						<id>babel-ng-kundenverwaltung</id>
+						<phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${ng.skip}</skip>
+                            <executable>${babel.exe}</executable>
+                            <arguments>
+                                <argument>-d</argument>
+                                <argument>${babel.dir}/${ng.kundenverwaltung.dir}</argument>
+                                <argument>${ng.kundenverwaltung.dir}</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+						<id>babel-ng-util</id>
+						<phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${ng.skip}</skip>
+                            <executable>${babel.exe}</executable>
+                            <arguments>
+                                <argument>-d</argument>
+                                <argument>${babel.dir}/${ng.util.dir}</argument>
+                                <argument>${ng.util.dir}</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+						<id>uglifyjs-primefaces</id>
+						<phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jsf.skip}</skip>
+                            <executable>${uglifyjs.exe}</executable>
+                            <workingDirectory>${jsf.js.dir}</workingDirectory>
+                            <!--
+                            <workingDirectory>${babel.dir}/${jsf.js.dir}</workingDirectory>
+                            -->
+                            <arguments>
+                                <argument>mojarra-fix.js</argument>
+                                <argument>-v</argument>
+                                <argument>-c</argument>
+                                <argument>-m</argument>
+                                <argument>--lint</argument>
+                                <argument>-o</argument>
+                                <argument>shop.min.js</argument>
+                                <argument>--source-map</argument>
+                                <argument>shop.min.js.map</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+						<id>uglifyjs-ng</id>
+						<phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${ng.skip}</skip>
+                            <executable>${uglifyjs.exe}</executable>
+                            <workingDirectory>${babel.dir}/${uglifyjs.ng.dir}</workingDirectory>
+                            <arguments>
+                                <argument>../util/appUtil.js</argument>
+                                <argument>../util/config.js</argument>
+                                <argument>../util/values.js</argument>
+                                <argument>../util/notificationService.js</argument>
+                                <argument>../util/iamService.js</argument>
+                                <argument>../artikelverwaltung/appArtikelverwaltung.js</argument>
+                                <argument>../artikelverwaltung/katalogService.js</argument>
+                                <argument>../artikelverwaltung/artikelService.js</argument>
+                                <argument>../artikelverwaltung/listArtikelController.js</argument>
+                                <argument>../artikelverwaltung/warenkorbController.js</argument>
+                                <argument>../artikelverwaltung/createArtikelController.js</argument>
+                                <argument>../bestellverwaltung/appBestellverwaltung.js</argument>
+                                <argument>../bestellverwaltung/bestellungService.js</argument>
+                                <argument>../bestellverwaltung/bestaetigungController.js</argument>
+                                <argument>../kundenverwaltung/appKundenverwaltung.js</argument>
+                                <argument>../kundenverwaltung/kundeService.js</argument>
+                                <argument>../kundenverwaltung/registrierungService.js</argument>
+                                <argument>../kundenverwaltung/kundeBestellungenService.js</argument>
+                                <argument>../kundenverwaltung/detailsKundeController.js</argument>
+                                <argument>../kundenverwaltung/listKundenController.js</argument>
+                                <argument>../kundenverwaltung/registrierePrivatkundeController.js</argument>
+                                <argument>../kundenverwaltung/updateKundeController.js</argument>
+                                <argument>../app/app.js</argument>
+                                <argument>../app/headerController.js</argument>
+                                <argument>../app/navController.js</argument>
+                                <argument>../app/routesConfig.js</argument>
+                                <argument>-v</argument>
+                                <argument>-c</argument>
+                                <argument>-m</argument>
+                                <argument>--lint</argument>
+                                <argument>-o</argument>
+                                <argument>shop.min.js</argument>
+                                <argument>--source-map</argument>
+                                <argument>shop.min.js.map</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+						<id>less-css-preprocessor-primefaces</id>
+						<phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jsf.skip}</skip>
+                            <executable>${less.exe}</executable>
+                            <arguments>
+                                <argument>--verbose</argument>
+                                <argument>${less.p.dir}/shop.less</argument>
+                                <argument>${css.p.dir}/shop.css</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+						<id>less-css-preprocessor-ng</id>
+						<phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${ng.skip}</skip>
+                            <executable>${less.exe}</executable>
+                            <arguments>
+                                <argument>--verbose</argument>
+                                <argument>${less.dir}/shop-blueSky.less</argument>
+                                <argument>${css.dir}/shop-blueSky.css</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+						<id>csslint-primefaces</id>
+						<phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jsf.skip}</skip>
+                            <executable>${csslint.exe}</executable>
+                            <arguments>
+                                <argument>--errors=known-properties,display-property-grouping,compatible-vendor-prefixes,regex-selectors,errors,duplicate-background-images,gradients,font-faces,outline-none,ids,shorthand,unqualified-attributes,vendor-prefix,zero-units</argument>
+                                <argument>${css.p.dir}/shop.css</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+						<id>csslint-ng</id>
+						<phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${ng.skip}</skip>
+                            <executable>${csslint.exe}</executable>
+                            <arguments>
+                                <argument>--errors=known-properties,display-property-grouping,compatible-vendor-prefixes,regex-selectors,errors,duplicate-background-images,gradients,font-faces,outline-none,ids,shorthand,unqualified-attributes,vendor-prefix,zero-units</argument>
+                                <argument>${css.dir}/shop-blueSky.css</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+						<id>clean-css-primefaces</id>
+						<phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jsf.skip}</skip>
+                            <executable>${cleancss.exe}</executable>
+                            <arguments>
+                                <argument>-o</argument>
+                                <argument>${css.p.min.dir}/shop.min.css</argument>
+                                <argument>--source-map</argument>
+                                <argument>${css.p.dir}/shop.css</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+						<id>clean-css-ng</id>
+						<phase>generate-resources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${ng.skip}</skip>
+                            <executable>${cleancss.exe}</executable>
+                            <arguments>
+                                <argument>-o</argument>
+                                <argument>${css.min.dir}/shop-blueSky.min.css</argument>
+                                <argument>--source-map</argument>
+                                <argument>${css.dir}/shop-blueSky.css</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.gaul</groupId>
+                <artifactId>modernizer-maven-plugin</artifactId>
+                <version>${modernizer-maven-plugin.version}</version>
+                <configuration>
+                    <javaVersion>${java.version}</javaVersion>
+                </configuration>
+                
+                <executions>
+                    <execution>
+                        <id>modernizer</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>modernizer</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            
+            <!-- Generierung der Metamodel-Klassen (fuer Criteria Queries) -->
+			<plugin>
+				<groupId>org.bsc.maven</groupId>
+				<artifactId>maven-processor-plugin</artifactId>
+				<version>${maven-processor-plugin.version}</version>
+
+				<executions>
+					<execution>
+						<id>generate-metamodel-classes</id>
+						<phase>process-sources</phase>
+						<goals>
+							<goal>process</goal>
+						</goals>
+                        
+                        <configuration>
+                            <processors>
+                                <processor>org.hibernate.jpamodelgen.JPAMetaModelEntityProcessor</processor>
+                            </processors>
+
+                            <!-- Warning, falls es keine Entity-Klassen gemaess JPA gibt -->
+                            <compilerArguments>-AfullyAnnotationConfigured=true -AaddGenerationDate=true -AaddGeneratedAnnotation=true</compilerArguments>
+
+                            <excludes>
+                                <!-- AbstractKunde importiert KundeListener, und KundeListener importiert IamService
+                                <exclude>**/business/*.java</exclude>
+                                -->
+                                <exclude>**/rest/*.java</exclude>
+                                <exclude>**/jsf/*.java</exclude>
+                                <exclude>**/jsf/primefaces/*.java</exclude>
+                                <exclude>**/soap/*.java</exclude>
+                                <exclude>**/PicketLink*.java</exclude>
+                            </excludes>
+
+                            <!-- NetBeans: Verzeichnisname fuer die generierten Sources ist Name des Maven-Plugins -->
+                            <outputDirectory>${project.build.directory}/generated-sources/maven-processor-plugin</outputDirectory>
+
+                            <!-- EclipseLink: META-INF/persistence.xml als default; Warning wg. Java 8 (max Java 6) -->
+                            <!--
+                            <outputDirectory>${project.build.directory}/generated-sources/metamodel</outputDirectory>
+                            <compilerArguments>-Aeclipselink.persistencexml=${project.basedir}/src/main/resources/META-INF/persistence.xml</compilerArguments>
+                            <processors>
+                                <processor>org.eclipse.persistence.internal.jpa.modelgen.CanonicalModelProcessor</processor>
+                            </processors>
+                            -->
+                        </configuration>
+					</execution>
+				</executions>
+				
+				<dependencies>
+					<dependency>
+						<groupId>org.hibernate</groupId>
+						<artifactId>hibernate-jpamodelgen</artifactId>
+						<version>${hibernate.version}</version>
+					</dependency>
+				</dependencies>
+				
+				<!-- EclipseLink -->
+				<!-- http://wiki.eclipse.org/UserGuide/JPA/Using_the_Canonical_Model_Generator_%28ELUG%29 -->
+				<!--
+				<dependencies>
+					<dependency>
+						<groupId>org.eclipse.persistence</groupId>
+						<artifactId>org.eclipse.persistence.jpa.modelgen.processor</artifactId>
+						<version>${eclipselink.version}</version>
+					</dependency>
+				</dependencies>
+				-->
+			</plugin>
+			
+			<!-- Static Weaving fuer EclipseLink wegen @MappedSuperclass -->
+			<!-- Bei Windows gibt es dabei immer wieder Probleme mit Dateisperren -->
+			<!--
+			<plugin>
+				<groupId>au.com.alderaan</groupId>
+				<artifactId>eclipselink-staticweave-maven-plugin</artifactId>
+				<version>${eclipselink-staticweave-maven-plugin.version}</version>
+				<configuration>
+					<logLevel>ALL</logLevel>
+				</configuration>
+				<executions>
+					<execution>
+						<phase>process-classes</phase>
+						<goals>
+							<goal>weave</goal>
+						</goals>
+					</execution>
+				</executions>
+
+				<dependencies>
+					<dependency>
+						<groupId>org.eclipse.persistence</groupId>
+						<artifactId>eclipselink</artifactId>
+						<version>${eclipselink.version}</version>
+					</dependency>
+				</dependencies>
+			</plugin>
+			-->
+			
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${maven-compiler-plugin.version}</version>
+
+				<configuration>
+					<source>${java.version}</source>
+					<target>${java.version}</target>
+					<showDeprecation>true</showDeprecation>
+					<showWarnings>true</showWarnings>
+					<encoding>${compiler.sourceEncoding}</encoding>
+					<!-- org.bsc.maven:maven-processor-plugin -->
+					<compilerArgs>
+						<arg>-proc:none</arg>
+						<arg>-Djava.endorsed.dirs=${endorsed.dir}</arg>
+						<!-- Generate metadata for reflection on method parameters -->
+						<arg>-parameters</arg>
+						<!-- Alle Warnings von Lint ausgeben -->
+						<arg>-Xlint:all</arg>
+						<!-- Ausfuehrlicher Diagnosemodus bei Uebersetzungsfehlern -->
+						<arg>-Xdiags:verbose</arg>
+					</compilerArgs>
+				</configuration>
+
+				<!-- Generierung der Metamodel-Klassen fuer Criteria Queries -->
+				<!-- http://docs.jboss.org/hibernate/jpamodelgen/1.3/reference/en-US/html_single -->
+				<!-- http://in.relation.to/12805.lace -->
+				<!-- http://relation.to/Bloggers/AMoreConciseWayToGenerateTheJPA2MetamodelInMaven -->
+				<!-- https://community.jboss.org/en/tools/blog/2012/05/20/annotation-processing-support-in-m2e-or-m2e-apt-100-is-out -->
+				<!-- target/generated-sources/annotations -->
+				<!--
+				<dependencies>
+					<dependency>
+						<groupId>org.hibernate</groupId>
+						<artifactId>hibernate-jpamodelgen</artifactId>
+						<version>${hibernate-jpamodelgen.version}</version>
+						<scope>compile</scope>
+					</dependency>
+				</dependencies>
+				-->
+			</plugin>
+            
+            <!-- %M2_HOME%\conf\toolchain.xml erst ab Maven 3.3.1 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-toolchains-plugin</artifactId>
+                <version>${maven-toolchains-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>toolchain</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <toolchains>
+                        <jdk>
+                            <version>${toolchain.jdk.version}</version>
+                            <vendor>${toolchain.jdk.vendor}</vendor>
+                        </jdk>
+                    </toolchains>
+                </configuration>
+            </plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<version>${maven-war-plugin.version}</version>
+				<configuration>
+					<!-- Maven erwartet web.xml: im Gegensatz zu Java EE ab Version 6 -->
+					<failOnMissingWebXml>false</failOnMissingWebXml>
+                    
+                    <!-- siehe src/main/webapp/WEB-INF/jboss-deployment-structure.xml
+					<archive>
+						<manifestEntries>
+							<Dependencies>org.jboss.as.controller-client,org.jboss.dmr</Dependencies>
+						</manifestEntries>
+					</archive>
+                    -->
+                    
+                    <webResources>
+                        <resource>
+                            <directory>${babel.dir}/${jsf.js.dir}</directory>
+                            <targetPath>contracts/shop/js/1_0</targetPath>
+                        </resource>
+                        <resource>
+                            <directory>${css.p.min.dir}</directory>
+                            <targetPath>contracts/shop/css/1_0</targetPath>
+                        </resource>
+
+                        <resource>
+                            <directory>${babel.dir}/${uglifyjs.ng.dir}</directory>
+                            <targetPath>js</targetPath>
+                        </resource>
+                        <resource>
+                            <directory>${css.min.dir}</directory>
+                            <targetPath>css</targetPath>
+                        </resource>
+                    </webResources>
+				</configuration>
+			</plugin>
+			
+			<!-- Durchfuehren der Tests mit Arquillian und JUnit --> 
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+    			<artifactId>maven-surefire-plugin</artifactId>
+    			<version>${maven-surefire-plugin.version}</version>
+				
+				<configuration>
+					<argLine>${surefire.argLine}</argLine>
+					<systemProperties>
+						<java.util.logging.config.file>${basedir}\src\test\resources\logging.properties</java.util.logging.config.file>
+						<java.awt.headless>true</java.awt.headless>
+						<webdriver.firefox.bin>${firefox.bin}</webdriver.firefox.bin>
+						<webdriver.chrome.driver>${chrome.bin}</webdriver.chrome.driver>
+						<!--
+						<arquillian.launch>${arquillian.launch}</arquillian.launch>
+						-->
+					</systemProperties>
+					<runOrder>alphabetical</runOrder>
+					<redirectTestOutputToFile>true</redirectTestOutputToFile>
+					<trimStackTrace>false</trimStackTrace>
+					<printSummary>true</printSummary>
+					<includes>
+						<include>${testklassen}</include>
+					</includes>
+					<excludes>
+						<exclude>${testklassen.exclude}</exclude>
+					</excludes>
+					<useFile>true</useFile>
+				</configuration>
+			</plugin>
+			
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>${maven-resources-plugin.version}</version>
+			</plugin>
+			
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<version>${maven-dependency-plugin.version}</version>
+			</plugin>
+			
+			<!-- Plugin fuer Querverweise -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jxr-plugin</artifactId>
+				<version>${maven-jxr-plugin.version}</version>
+			</plugin>
+
+			<!-- Testbericht erstellen -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-project-info-reports-plugin</artifactId>
+				<version>${maven-project-info-reports-plugin.version}</version>
+				<!--
+				<configuration>
+					<dependencyLocationsEnabled>false</dependencyLocationsEnabled>
+				</configuration>
+				-->
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-report-plugin</artifactId>
+				<version>${maven-surefire-report-plugin.version}</version>
+				
+				<configuration>
+					<showSuccess>true</showSuccess>
+					<inputEncoding>UTF-8</inputEncoding>
+					<outputEncoding>UTF-8</outputEncoding>
+				</configuration>
+		
+				<executions>
+					<execution>
+						<id>test-report</id>
+						<phase>test</phase>
+						<goals>
+							<goal>report-only</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+            
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>${maven-javadoc-plugin.version}</version>
+                <!-- javadoc nur fuer Klassen in src\main, nicht src\test -->
+                <!--
+                <reportSets>
+                    <reportSet>
+                        <id>default</id>
+                        <reports>
+                            <report>javadoc</report>
+                        </reports>
+                    </reportSet>
+                </reportSets>
+                -->
+
+                <configuration>
+                    <minmemory>${javadoc.minmemory}</minmemory>
+                    <maxmemory>${javadoc.maxmemory}</maxmemory>
+
+                    <!-- in den Web-Tests sind Kommentare mit < und > -->
+                    <sourcepath>${basedir}/src/main/java;${basedir}/target/generated-sources/maven-processor-plugin</sourcepath>
+                    <show>private</show>
+                    <additionalparam>-Xdoclint:all</additionalparam>
+
+                    <!-- Javadoc mit externen Quellen verknuepfen (dauert sehr lange!) -->
+                    <!--
+                    <detectJavaApiLink>true</detectJavaApiLink>
+                    <linksource>true</linksource>
+                    <links>
+                        <link>http://docs.oracle.com/javaee/7/api</link>
+                        <link>http://junit.sourceforge.net/javadoc</link>
+                    </links>
+                    -->
+
+                    <packagesheader>Packages des Webshops</packagesheader>
+                    <doctitle>${project.name}: Version ${project.version}</doctitle>
+                    <windowtitle>${project.name}: Version ${project.version}</windowtitle>
+                    <bottom>Copyright &#169; ${project.inceptionYear}-${currentYear} Hochschule Karlsruhe - Informatik und Wirtschaftsinformatik. All Rights Reserved.</bottom>
+                </configuration>
+            </plugin>
+			
+			<plugin>
+				<groupId>org.codehaus.enunciate</groupId>
+				<artifactId>maven-enunciate-plugin</artifactId>
+				<version>${maven-enunciate-plugin.version}</version>
+				<configuration>
+					<docsDir>${project.build.directory}/docs</docsDir>
+					<skip>${enunciate.skip}</skip>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>docs</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>sonar-maven-plugin</artifactId>
+                <version>${sonar-maven-plugin.version}</version>
+                
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven</groupId>
+                        <artifactId>maven-plugin-api</artifactId>
+                        <version>${sonar.maven.version}</version>
+                        <scope>runtime</scope>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.apache.maven</groupId>
+                        <artifactId>maven-artifact</artifactId>
+                        <version>${sonar.maven.version}</version>
+                        <scope>runtime</scope>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.apache.maven</groupId>
+                        <artifactId>maven-core</artifactId>
+                        <version>${sonar.maven.version}</version>
+                        <scope>runtime</scope>
+                    </dependency>
+                </dependencies>
+			</plugin>
+            
+			<!-- Deployment in den WildFly Appserver durch Maven:  mvn package wildfly:deploy -->
+			<!-- https://docs.jboss.org/wildfly/plugins/maven/latest -->
+			<plugin>
+				<groupId>org.wildfly.plugins</groupId>
+				<artifactId>wildfly-maven-plugin</artifactId>
+				<version>${wildfly-maven-plugin.version}</version>
+                
+                <dependencies>
+                    <dependency>
+                        <groupId>org.jboss.xnio</groupId>
+                        <artifactId>xnio-nio</artifactId>
+                        <version>${xnio.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.jboss.remoting</groupId>
+                        <artifactId>jboss-remoting</artifactId>
+                        <version>${jboss-remoting.version}</version>
+                    </dependency>
+                </dependencies>
+			</plugin>
+
+			<!-- Web-Site mit HTML-Seiten auf deutsch ("de") generieren -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-site-plugin</artifactId>
+				<version>${maven-site-plugin.version}</version>
+				<configuration>
+					<locales>de</locales>
+					<outputEncoding>UTF-8</outputEncoding>
+				
+					<reportPlugins>
+						<plugin>
+							<groupId>org.apache.maven.plugins</groupId>
+							<artifactId>maven-project-info-reports-plugin</artifactId>
+							<version>${maven-project-info-reports-plugin.version}</version>
+						</plugin>
+			
+						<plugin>
+							<groupId>org.apache.maven.plugins</groupId>
+							<artifactId>maven-surefire-report-plugin</artifactId>
+							<version>${maven-surefire-report-plugin.version}</version>
+							
+							<configuration>
+								<showSuccess>true</showSuccess>
+								<inputEncoding>UTF-8</inputEncoding>
+								<outputEncoding>UTF-8</outputEncoding>
+							</configuration>
+						</plugin>
+			
+						<plugin>
+							<groupId>org.apache.maven.plugins</groupId>
+							<artifactId>maven-javadoc-plugin</artifactId>
+							<version>${maven-javadoc-plugin.version}</version>
+							<!-- javadoc nur fuer Klassen in src\main, nicht src\test -->
+							<!--
+							<reportSets>
+								<reportSet>
+									<id>default</id>
+									<reports>
+										<report>javadoc</report>
+									</reports>
+								</reportSet>
+							</reportSets>
+							-->
+
+							<configuration>
+								<minmemory>${javadoc.minmemory}</minmemory>
+								<maxmemory>${javadoc.maxmemory}</maxmemory>
+								
+                                <!-- in den Web-Tests sind Kommentare mit < und > -->
+                                <sourcepath>${basedir}/src/main/java;${basedir}/target/generated-sources/maven-processor-plugin</sourcepath>
+                                <show>private</show>
+                                <additionalparam>-Xdoclint:all</additionalparam>
+
+                                <!-- Javadoc mit externen Quellen verknuepfen (dauert sehr lange!) -->
+                                <!--
+                                <detectJavaApiLink>true</detectJavaApiLink>
+                                <linksource>true</linksource>
+                                <links>
+                                    <link>http://docs.oracle.com/javaee/7/api/</link>
+                                    <link>http://kentbeck.github.com/junit/javadoc/latest/</link>
+                                </links>
+                                -->
+								
+								<packagesheader>Packages des Webshops</packagesheader>
+								<doctitle>${project.name}: Version ${project.version}</doctitle>
+								<windowtitle>${project.name}: Version ${project.version}</windowtitle>
+								<bottom>Copyright &#169; ${project.inceptionYear}-${currentYear} Hochschule Karlsruhe - Informatik und Wirtschaftsinformatik. All Rights Reserved.</bottom>
+							</configuration>
+						</plugin>
+
+						<!-- Generierung der HTML-Seiten mit Java-Quellcode und Querverweisen -->
+						<plugin>
+							<groupId>org.apache.maven.plugins</groupId>
+							<artifactId>maven-jxr-plugin</artifactId>
+							<version>${maven-jxr-plugin.version}</version>
+						</plugin>
+						
+						<plugin>
+							<groupId>org.codehaus.mojo</groupId>
+							<artifactId>taglist-maven-plugin</artifactId>
+							<version>${taglist-maven-plugin.version}</version>
+							<configuration>
+								<tagListOptions>
+									<tagClasses>
+										<tagClass>
+											<displayName>Todo Liste</displayName>
+											<tags>
+												<tag>
+													<matchString>TODO</matchString>
+													<matchType>ignoreCase</matchType>
+												</tag>
+												<tag>
+													<matchString>FIXME</matchString>
+													<matchType>ignoreCase</matchType>
+												</tag>
+											</tags>
+										</tagClass>
+									</tagClasses>
+								</tagListOptions>
+							</configuration>
+						</plugin>
+						
+						<plugin>
+							<groupId>org.codehaus.mojo</groupId>
+							<artifactId>versions-maven-plugin</artifactId>
+							<version>${versions-maven-plugin.version}</version>
+						</plugin>
+						
+						<plugin>
+							<groupId>org.apache.maven.plugins</groupId>
+							<artifactId>maven-plugin-plugin</artifactId>
+							<version>${maven-plugin-plugin.version}</version>
+						</plugin>
+					</reportPlugins>
+				</configuration>
+			</plugin>
+			
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>versions-maven-plugin</artifactId>
+				<version>${versions-maven-plugin.version}</version>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-clean-plugin</artifactId>
+				<version>${maven-clean-plugin.version}</version>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>${maven-jar-plugin.version}</version>
+				<configuration>
+					<skip>true</skip>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-install-plugin</artifactId>
+				<version>${maven-install-plugin.version}</version>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-deploy-plugin</artifactId>
+				<version>${maven-deploy-plugin.version}</version>
+				<configuration>
+					<skip>true</skip>
+				</configuration>
+			</plugin>
+		</plugins>
+
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<excludes>
+					<exclude>less/*.less</exclude>
+					<exclude>less/primefaces/*.less</exclude>
+                    <exclude>eslint.config</exclude>
+                    <exclude>jscs.config</exclude>
+                    <exclude>jshint.config</exclude>
+                    <exclude>jsdoc.config</exclude>
+                    <exclude>package.json</exclude>
+                    <exclude>README.ng.md</exclude>
+				</excludes>
+			</resource>
+		</resources>
+		
+		<testResources>
+			<testResource>
+				<directory>src/test/resources</directory>
+				<excludes>
+					<exclude>jboss-deployment-structure.xml</exclude>
+					<exclude>hibernate.console.properties</exclude>
+					<exclude>https/*</exclude>
+					<exclude>rest/*</exclude>
+					<exclude>logging.properties</exclude>
+				</excludes>
+			</testResource>
+            
+            <!-- Tests mit Weld SE statt mit dem In-Container-Modus von Arquillian
+			<testResource>
+				<directory>src/main/webapp/WEB-INF</directory>
+                <includes>
+                    <include>beans.xml</include>
+                </includes>
+                <targetPath>/META-INF</targetPath>
+            </testResource>
+            -->
+		</testResources>
+	</build>
+	
+	<profiles>
+		<profile>
+			<id>arq-jbossas-remote</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+		</profile>
+
+		<profile>
+			<id>openshift</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-war-plugin</artifactId>
+						<version>${maven-war-plugin.version}</version>
+						<configuration>
+							<outputDirectory>deployments</outputDirectory>
+							<warName>ROOT</warName>
+							<failOnMissingWebXml>false</failOnMissingWebXml>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+        
+        <profile>
+            <id>owasp</id>
+            <build>
+                <plugins>
+                    <!-- https://www.owasp.org/index.php/OWASP_Dependency_Check -->
+                    <!-- NVD CVE ab dem Jahr 2002 -->
+                    <!-- XML-Dateien in:   %TEMP%\cve...xml -->
+                    <!-- H2-Datenbank in:  C:\Zimmermann\maven-repository\org\owasp\dependency-check-data\cve.2.9.h2.db -->
+                    <plugin>
+                        <groupId>org.owasp</groupId>
+                        <artifactId>dependency-check-maven</artifactId>
+                        <version>${dependency-check-maven.version}</version>
+                        <configuration>
+                            <mavenSettingsProxyId>${owasp.mavenSettingsProxyId}</mavenSettingsProxyId>
+                            <logFile>${project.build.directory}/owasp-dependency-check.log</logFile>
+                            <autoUpdate>${owasp.autoUpdate}</autoUpdate>
+                        </configuration>
+
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        
+                        <dependencies>
+                            <dependency>
+                                <groupId>org.apache.maven</groupId>
+                                <artifactId>maven-plugin-api</artifactId>
+                                <version>${maven.version}</version>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.apache.maven</groupId>
+                                <artifactId>maven-artifact</artifactId>
+                                <version>${maven.version}</version>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.apache.maven</groupId>
+                                <artifactId>maven-core</artifactId>
+                                <version>${maven.version}</version>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.apache.maven</groupId>
+                                <artifactId>maven-core</artifactId>
+                                <version>${maven.version}</version>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.eclipse.sisu</groupId>
+                                <artifactId>org.eclipse.sisu.plexus</artifactId>
+                                <version>${org.eclipse.sisu.plexus.version}</version>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.codehaus.plexus</groupId>
+                                <artifactId>plexus-container-default</artifactId>
+                                <version>${plexus-container-default.version}</version>
+                            </dependency>
+                        </dependencies>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+	</profiles>
+</project>

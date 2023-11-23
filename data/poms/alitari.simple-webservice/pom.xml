@@ -1,0 +1,333 @@
+<?xml version="1.0"?>
+<!-- JBoss, Home of Professional Open Source Copyright 2013, Red Hat, Inc. 
+	and/or its affiliates, and individual contributors by the @authors tag. See 
+	the copyright.txt in the distribution for a full listing of individual contributors. 
+	Licensed under the Apache License, Version 2.0 (the "License"); you may not 
+	use this file except in compliance with the License. You may obtain a copy 
+	of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required 
+	by applicable law or agreed to in writing, software distributed under the 
+	License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS 
+	OF ANY KIND, either express or implied. See the License for the specific 
+	language governing permissions and limitations under the License. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>de.alexkrieg</groupId>
+	<artifactId>simple-webservice</artifactId>
+	<version>${main.version}-${build.number}</version>
+	<packaging>war</packaging>
+	<name>Hello World JAX-WS Web service</name>
+	<description>Hello World JAX-WS Web service</description>
+
+	<url>http://wildfly.org</url>
+	<licenses>
+		<license>
+			<name>Apache License, Version 2.0</name>
+			<distribution>repo</distribution>
+			<url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
+		</license>
+	</licenses>
+
+	<properties>
+		<major.version>1</major.version>
+		<minor.version>0</minor.version>
+		<patch.version>0</patch.version>
+		<main.version>${major.version}.${minor.version}.${patch.version}</main.version>
+
+
+		<!-- docker -->
+		<!-- <dockerHost>192.168.0.24</dockerHost> -->
+		<!-- <dockerPort>2375</dockerPort> -->
+		<!-- <certPath></certPath> -->
+		
+		<wsport>8888</wsport>
+
+		<imageFrom>jboss/wildfly:latest</imageFrom>
+
+		<image.registryHost></image.registryHost>
+		<image.namespace>alitari/</image.namespace>
+		<image.repository>simple-webservice</image.repository>
+		<image.version>${project.version}</image.version>
+
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+
+		<!-- Explicitly declaring the source encoding eliminates the following 
+			message: -->
+		<!-- [WARNING] Using platform encoding (UTF-8 actually) to copy filtered 
+			resources, i.e. build is platform dependent! -->
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+		<!-- JBoss dependency versions -->
+
+		<version.wildfly.maven.plugin>1.0.2.Final</version.wildfly.maven.plugin>
+
+		<!-- Define the version of the JBoss BOMs we want to import to specify 
+			tested stacks. -->
+		<version.jboss.bom>8.2.1.Final</version.jboss.bom>
+		<version.arquillian.container>8.0.0.Final</version.arquillian.container>
+
+
+
+		<!-- other plugin versions -->
+		<version.war.plugin>2.5</version.war.plugin>
+		<version.compiler.plugin>3.1</version.compiler.plugin>
+		<version.surefire.plugin>2.12.4</version.surefire.plugin>
+
+		<!-- maven-compiler-plugin -->
+		<maven.compiler.target>1.7</maven.compiler.target>
+		<maven.compiler.source>1.7</maven.compiler.source>
+
+		<!-- Remote Server URL -->
+		<remote.server.url>http://localhost:8080/</remote.server.url>
+	</properties>
+
+
+	<distributionManagement>
+		<repository>
+			<id>deployment</id>
+			<name>Internal Releases</name>
+			<url>http://192.168.0.24:8081/content/repositories/releases/</url>
+		</repository>
+		<snapshotRepository>
+			<id>deployment</id>
+			<name>Internal Releases</name>
+			<url>http://192.168.0.24:8081/content/repositories/snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
+
+	<pluginRepositories>
+		<pluginRepository>
+			<id>smartbear-sweden-plugin-repository</id>
+			<url>http://www.soapui.org/repository/maven2/</url>
+		</pluginRepository>
+	</pluginRepositories>
+
+
+
+
+	<dependencyManagement>
+		<dependencies>
+			<!-- Define the version of JBoss' Java EE 7 APIs we want to import. Any 
+				dependencies from org.jboss.spec will have their version defined by this 
+				BOM -->
+			<!-- JBoss distributes a complete set of Java EE 7 APIs including a Bill 
+				of Materials (BOM). A BOM specifies the versions of a "stack" (or a collection) 
+				of artifacts. We use this here so that we always get the correct versions 
+				of artifacts. Here we use the jboss-javaee-7.0 stack (you can read this as 
+				the JBoss stack of the Java EE 7 APIs). You can actually use this stack with 
+				any version of WildFly that implements Java EE 7, not just JBoss WildFly 
+				8! -->
+			<dependency>
+				<groupId>org.wildfly.bom</groupId>
+				<artifactId>jboss-javaee-7.0-with-tools</artifactId>
+				<version>${version.jboss.bom}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<dependencies>
+		<!-- Import the CDI API, we use provided scope as the API is included in 
+			JBoss WildFly -->
+		<dependency>
+			<groupId>javax.enterprise</groupId>
+			<artifactId>cdi-api</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Import the Servlet API, we use provided scope as the API is included 
+			in JBoss WildFly -->
+		<dependency>
+			<groupId>org.jboss.spec.javax.servlet</groupId>
+			<artifactId>jboss-servlet-api_3.1_spec</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Import the Common Annotations API (JSR-250), we use provided scope 
+			as the API is included in JBoss WildFly -->
+		<dependency>
+			<groupId>org.jboss.spec.javax.annotation</groupId>
+			<artifactId>jboss-annotations-api_1.2_spec</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Test dependencies -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.hamcrest</groupId>
+			<artifactId>hamcrest-library</artifactId>
+			<version>1.3</version>
+			<scope>test</scope>
+		</dependency>
+
+
+
+	</dependencies>
+
+	<build>
+		<!-- Set the name of the war, used as the context root when the app is 
+			deployed -->
+		<finalName>${project.artifactId}</finalName>
+		<plugins>
+			<plugin>
+				<artifactId>maven-war-plugin</artifactId>
+				<version>${version.war.plugin}</version>
+				<configuration>
+					<failOnMissingWebXml>false</failOnMissingWebXml>
+					<manifest>
+						<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+					</manifest>
+					<archive>
+						<manifestEntries>
+							<Specification-Title>${project.name}</Specification-Title>
+							<Specification-Version>${project.version}</Specification-Version>
+							<Implementation-Version>${git.commit}</Implementation-Version>
+						</manifestEntries>
+					</archive>
+				</configuration>
+			</plugin>
+			<!-- WildFly plugin to deploy war -->
+			<plugin>
+				<groupId>org.wildfly.plugins</groupId>
+				<artifactId>wildfly-maven-plugin</artifactId>
+				<version>${version.wildfly.maven.plugin}</version>
+			</plugin>
+			<!-- Compiler plugin enforces Java 1.6 compatibility and activates annotation 
+				processors -->
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${version.compiler.plugin}</version>
+				<configuration>
+					<source>${maven.compiler.source}</source>
+					<target>${maven.compiler.target}</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.jolokia</groupId>
+				<artifactId>docker-maven-plugin</artifactId>
+				<version>0.11.0</version>
+				<configuration>
+					<logDate>default</logDate>
+					<autoPull>true</autoPull>
+					<dockerHost>http://${dockerHost}:${dockerPort}</dockerHost>
+					<certPath>${certPath}</certPath>
+					<images>
+						<!-- Docker Image to use -->
+						<image>
+							<!-- App-Server Image -->
+							<alias>server</alias>
+							<name>${image.registryHost}${image.namespace}${image.repository}:${image.version}</name>
+							<build>
+								<from>${imageFrom}</from>
+								<!-- The assembly descriptor prepares the "/maven" directory in the 
+									temporary data container which will be made available to the specified container. -->
+								<assembly>
+									<basedir>/opt/jboss/wildfly/standalone/deployments</basedir>
+									<descriptor>docker-assembly.xml</descriptor>
+								</assembly>
+							</build>
+
+							<run>
+								<env>
+
+								</env>
+								<ports>
+									<!-- Port mappings: Container internal port (which must be exposed) 
+										will be dynamically mapped and this (random) port will be assigned to the 
+										maven variable ${jolokia.port}. Multiple port mappings can be specified here -->
+									<port>${wsport}:8080</port>
+								</ports>
+								<wait>
+									<!-- The plugin waits until this URL is reachable via HTTP ... -->
+									<log>Server startup</log>
+									<url>http://${dockerHost}:${wsport}</url>
+									<time>10000</time>
+									<shutdown>500</shutdown>
+								</wait>
+								<log>
+									<enabled>true</enabled>
+									<color>red</color>
+								</log>
+							</run>
+						</image>
+
+					</images>
+				</configuration>
+				<!-- Connect this plugin to the maven lifecycle around the integration-test 
+					phase. I.e. start the container in pre-integration-test and stop it in post-integration-test. -->
+				<executions>
+					<execution>
+						<id>start</id>
+						<phase>pre-integration-test</phase>
+						<goals>
+							<goal>build</goal>
+							<goal>start</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>stop</id>
+						<phase>post-integration-test</phase>
+						<goals>
+							<goal>stop</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>push</id>
+						<phase>deploy</phase>
+						<goals>
+							<goal>push</goal>
+							<goal>remove</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- the plugin supports both OSS and PRO versions of SoapUI -->
+
+			<plugin>
+				<groupId>com.github.redfish4ktc.soapui</groupId>
+				<artifactId>maven-soapui-extension-plugin</artifactId>
+				<version>4.6.4.2</version>
+				<configuration>
+					<projectFile>target/test-classes/helloworldws-soapui-project.xml</projectFile>
+					<junitReport>true</junitReport>
+					<exportwAll>true</exportwAll>
+					<printReport>false</printReport>
+					<testFailIgnore>true</testFailIgnore>
+					<globalProperties>
+						<value>wshost=${dockerHost}</value>
+						<value>wsport=${wsport}</value>
+						<value>wsname=simple-webservice</value>
+					</globalProperties>
+				</configuration>
+				<executions>
+					<execution>
+						<id>start</id>
+						<phase>integration-test</phase>
+						<goals>
+							<goal>test</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>test-verify</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>test-verify</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+
+
+</project>
+

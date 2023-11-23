@@ -1,0 +1,222 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>de.unibayreuth.bayceer.bayeos</groupId>
+	<artifactId>bayeos-server</artifactId>
+	<version>2.0.12</version>
+	<packaging>jar</packaging>
+
+	<licenses>
+		<license>
+			<name>GNU Public License v2.0</name>
+			<url> http://www.gnu.org/licenses/old-licenses/gpl-2.0.html</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+
+	<organization>
+		<name>University of Bayreuth - BayCEER</name>
+		<url>http://www.bayceer.uni-bayreuth.de</url>
+	</organization>
+
+	<name>bayeos-server</name>
+	<description>bayeos-server</description>
+
+	<properties>
+		<java.version>11</java.version>
+		<release>bullseye</release>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<build.year>${maven.build.timestamp}</build.year>
+		<maven.build.timestamp.format>yyyy</maven.build.timestamp.format>
+		<maven.compiler.release>11</maven.compiler.release>
+
+		<db.user>bayeos</db.user>
+		<db.password>4336bc9de7a6b11940e897ee22956d51</db.password>
+		<db.url>jdbc:postgresql://localhost/bayeos</db.url>
+
+		<server.port>5532</server.port>
+		<server.timezone>GMT+1</server.timezone>
+		<server.contextPath>/XMLServlet</server.contextPath>
+
+	</properties>
+
+
+	<profiles>
+		<profile>
+			<id>prod</id>
+			<properties>
+				<skipTests>true</skipTests>
+			</properties>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<artifactId>jdeb</artifactId>
+						<groupId>org.vafer</groupId>
+						<version>1.5</version>
+						<executions>
+							<execution>
+								<phase>package</phase>
+								<goals>
+									<goal>jdeb</goal>
+								</goals>
+								<configuration>
+									<controlDir>${project.build.directory}/deb/control</controlDir>
+									<deb>${project.build.directory}/${project.artifactId}-${project.version}+${release}.deb</deb>
+									<verbose>false</verbose>
+									<dataSet>
+										<data>
+											<src>${project.build.directory}/deb/data</src>
+											<type>directory</type>
+										</data>
+										<data>
+											<src>${project.build.directory}/${project.build.finalName}.jar</src>
+											<dst>/var/lib/bayeos-server/bayeos-server.jar</dst>
+											<type>file</type>
+										</data>
+									</dataSet>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+				</plugins>
+			</build>
+		</profile>
+
+
+	</profiles>
+
+	<build>
+		<finalName>bayeos-server</finalName>
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>true</filtering>
+			</resource>
+			<resource>
+				<directory>src/deb</directory>
+				<filtering>true</filtering>
+				<targetPath>${project.build.directory}/deb</targetPath>
+			</resource>
+		</resources>
+
+		<plugins>
+
+
+			<plugin>
+				<!-- Filtering of user defined variables in resources folders -->
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>3.0.1</version>
+				<configuration>
+					<nonFilteredFileExtensions>
+						<nonFilteredFileExtension>jar</nonFilteredFileExtension>
+						<nonFilteredFileExtension>sql</nonFilteredFileExtension>
+						<nonFilteredFileExtension>xml</nonFilteredFileExtension>
+					</nonFilteredFileExtensions>
+				</configuration>
+			</plugin>
+
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.10.1</version>
+			</plugin>
+
+			<plugin>
+				<!-- Packages the application and all dependency in one jar -->
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>2.4.3</version>
+				<configuration>
+					<createDependencyReducedPom>false</createDependencyReducedPom>
+				</configuration>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<transformers>
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+									<mainClass>de.unibayreuth.bayceer.bayeos.server.App</mainClass>
+								</transformer>
+							</transformers>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+
+		</plugins>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-server</artifactId>
+			<version>11.0.9</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-servlet</artifactId>
+			<version>11.0.9</version>
+		</dependency>
+
+		<dependency>
+			<groupId>de.unibayreuth.bayceer.bayeos</groupId>
+			<artifactId>bayeos-xmlrpc</artifactId>
+			<version>2.0.2</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.novell.ldap</groupId>
+			<artifactId>jldap</artifactId>
+			<version>4.3</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>42.3.6</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-dbcp2</artifactId>
+			<version>2.9.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.7.36</version>
+		</dependency>
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>1.2.11</version>
+		</dependency>
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-core</artifactId>
+			<version>1.2.11</version>
+		</dependency>
+
+	</dependencies>
+
+
+</project>

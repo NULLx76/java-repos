@@ -1,0 +1,214 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.wwflgames.fury</groupId>
+    <artifactId>fury-roguelike</artifactId>
+    <packaging>jar</packaging>
+    <version>1.0</version>
+    <name>fury-roguelike</name>
+    <url>http://maven.apache.org</url>
+
+    <properties>
+        <lwjgl.version>2.1.0</lwjgl.version>
+        <platform>mac</platform>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
+    <repositories>
+        <repository>
+            <id>slick-repo</id>
+            <url>http://slick.cokeandcode.com/mavenrepo</url>
+        </repository>
+        <repository>
+            <id>b2s-repo</id>
+            <url>http://b2s-repo.googlecode.com/svn/trunk/mvn-repo</url>
+        </repository>
+    </repositories>
+
+    <dependencyManagement>
+        <dependencies>
+
+            <dependency>
+                <groupId>org.lwjgl</groupId>
+                <artifactId>lwjgl-native</artifactId>
+                <version>${lwjgl.version}</version>
+                <classifier>${platform}</classifier>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>com.google.collections</groupId>
+            <artifactId>google-collections</artifactId>
+            <version>1.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>slick</groupId>
+            <artifactId>slick</artifactId>
+            <version>270</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl-native</artifactId>
+            <version>${lwjgl.version}</version>
+            <classifier>mac</classifier>
+        </dependency>
+
+        <dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl-native</artifactId>
+            <version>${lwjgl.version}</version>
+            <classifier>linux32</classifier>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.1</version>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.0.2</version>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <configuration>
+                    <artifactItems>
+                        <artifactItem>
+                            <groupId>org.lwjgl</groupId>
+                            <artifactId>lwjgl-native</artifactId>
+                            <version>${lwjgl.version}</version>
+                            <type>jar</type>
+                            <classifier>${platform}</classifier>
+                            <outputDirectory>${project.build.directory}/natives</outputDirectory>
+                            <overWrite>true</overWrite>
+                        </artifactItem>
+                    </artifactItems>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>unpack</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.3</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <keystore>fury-keystore</keystore>
+                    <alias>fury</alias>
+                    <storepass>vogons</storepass>
+                    <signedjar>${project.build.directory}/web-root/${project.build.finalName}.jar</signedjar>
+                    <verify>true</verify>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.3</version>
+                <executions>
+                    <execution>
+                        <id>copy-prod-resources</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/web-root</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <filtering>false</filtering>
+                                    <directory>src/main/applet</directory>
+                                    <excludes>
+                                        <exclude>**/*html</exclude>
+                                    </excludes>
+                                </resource>
+                                <resource>
+                                    <filtering>true</filtering>
+                                    <directory>src/main/applet</directory>
+                                    <includes>
+                                        <include>**/*html</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>ftp</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <tasks>
+                                <ftp server="${ftp.site}"
+                                     remotedir="/fury"
+                                     userid="${ftp.user}"
+                                     password="${ftp.pass}"
+                                     verbose="yes">
+                                    <fileset dir="${project.build.directory}/web-root">
+                                        <include name="**/fury*jar"/>
+                                        <include name="**/index.html"/>
+                                    </fileset>
+                                </ftp>
+                            </tasks>
+                        </configuration>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>ant</groupId>
+                        <artifactId>ant-commons-net</artifactId>
+                        <version>1.6.5</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>commons-net</groupId>
+                        <artifactId>commons-net</artifactId>
+                        <version>1.4.1</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+
+        </plugins>
+
+
+    </build>
+</project>

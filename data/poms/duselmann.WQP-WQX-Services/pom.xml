@@ -1,0 +1,529 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>gov.usgs.cida.wqp</groupId>
+	<artifactId>wqp</artifactId>
+	<version>0.1.0-SNAPSHOT</version>
+	<packaging>war</packaging>
+
+	<name>wqpgateway</name>
+	<url>http://cida.usgs.gov/</url>
+
+	<inceptionYear>2015</inceptionYear>
+	<organization>
+		<name>Center for Integrated Data Analytics</name>
+		<url>http://cida.usgs.gov</url>
+	</organization>
+
+	<licenses>
+		<license>
+			<name>Public Domain</name>
+			<url>http://water.usgs.gov/software/help/notice/</url>
+			<comments>
+                U.S.Geological Survey Software User Rights Notice
+                Copied from http://water.usgs.gov/software/help/notice/ on December 6, 2013.  Please check webpage for updates.
+                Software and related material (data and (or) documentation), contained in or furnished in connection with a software distribution, are made available by the U.S. Geological Survey (USGS) to be used in the public interest and in the advancement of science. You may, without any fee or cost, use, copy, modify, or distribute this software, and any derivative works thereof, and its supporting documentation, subject to the following restrictions and understandings.
+                If you distribute copies or modifications of the software and related material, make sure the recipients receive a copy of this notice and receive or can get a copy of the original distribution. If the software and (or) related material are modified and distributed, it must be made clear that the recipients do not have the original and they must be informed of the extent of the modifications. For example, modified files must include a prominent notice stating the modifications made, the author of the modifications, and the date the modifications were made. This restriction is necessary to guard against problems introduced in the software by others, reflecting negatively on the reputation of the USGS.
+                The software is public property and you therefore have the right to the source code, if desired.
+                You may charge fees for distribution, warranties, and services provided in connection with the software or derivative works thereof. The name USGS can be used in any advertising or publicity to endorse or promote any products or commercial entity using this software if specific written permission is obtained from the USGS.
+                The user agrees to appropriately acknowledge the authors and the USGS in publications that result from the use of this software or in products that include this software in whole or in part.
+                Because the software and related material are free (other than nominal materials and handling fees) and provided "as is," the authors, the USGS, and the United States Government have made no warranty, express or implied, as to accuracy or completeness and are not obligated to provide the user with any support, consulting, training or assistance of any kind with regard to the use, operation, and performance of this software nor to provide the user with any updates, revisions, new versions or "bug fixes".
+                The user assumes all risk for any damages whatsoever resulting from loss of use, data, or profits arising in connection with the access, use, quality, or performance of this software.
+			</comments>
+		</license>
+	</licenses>
+	
+	<developers>
+		<developer>
+			<id>prusso</id>
+			<name>Philip Russo</name>
+			<email>prusso@usgs.gov</email>
+			<organization>Center for Integrated Data Analytics</organization>
+			<organizationUrl>http://cida.usgs.gov</organizationUrl>
+			<timezone>-6</timezone>
+		</developer>
+		<developer>
+			<id>duselman</id>
+			<name>David Uselmann</name>
+			<email>duselmann@usgs.gov</email>
+			<organization>Center for Integrated Data Analytics</organization>
+			<organizationUrl>http://cida.usgs.gov</organizationUrl>
+			<timezone>-6</timezone>
+		</developer>
+	</developers>
+	
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<cida.maven.url>http://internal.cida.usgs.gov/maven</cida.maven.url>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<spring.version>4.1.5.RELEASE</spring.version>
+		<warName>wqp</warName>
+		<mybatis-version>3.2.8</mybatis-version>
+		<mybatis-spring-version>1.2.2</mybatis-spring-version>
+		<commons-lang3-version>3.3.2</commons-lang3-version>
+	</properties>
+
+<!-- ==================================================================================================================== -->
+	<build>
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <filtering>true</filtering>
+            </testResource>
+        </testResources>
+		<plugins>
+			
+			<!-- Need to remove the requirement of the web.xml since	-->
+			<!-- 	we are now using SpringConfig (no more xml yay!)	-->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.2</version>
+				<configuration>
+					<failOnMissingWebXml>false</failOnMissingWebXml>
+					<source>1.7</source>
+					<target>1.7</target>
+					<encoding>${project.build.sourceEncoding}</encoding>
+					<debug>true</debug>
+					
+					<!-- Copy configuration properties to WEBINF/classes -->
+					<webResources>
+						<resource>
+				          		<directory>src/main/resources/</directory>
+							<includes>
+								<include>**/*.properties</include>
+							</includes>        
+							<targetPath>WEB-INF/classes</targetPath>
+			         		</resource>
+			      	</webResources>
+				</configuration>
+			</plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.7</version>
+                <configuration>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>buildnumber-maven-plugin</artifactId>
+                <version>1.3</version>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>create</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <doCheck>false</doCheck>
+                    <doUpdate>false</doUpdate>
+                    <providerImplementations>
+                        <svn>javasvn</svn>
+                    </providerImplementations>
+                    <revisionOnScmFailure>unknown</revisionOnScmFailure>
+                    <shortRevisionLength>7</shortRevisionLength>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>2.6</version>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Implementation-Build>${build.scm.version}</Implementation-Build>
+ 							<!-- The following are non-standard manifest entries. Tag names have 
+                                 been styled according to Manifest conventions -->
+                            <BuildTime>${maven.build.timestamp}</BuildTime>
+                            <Project-GroupId>${project.groupId}</Project-GroupId>
+                            <Project-ArtifactId>${project.artifactId}</Project-ArtifactId>
+                            <Project-Version>${project.version}</Project-Version>
+                            <SCM-Url>${project.scm.developerConnection}</SCM-Url>
+                            <IssueManagement-Url>${project.issueManagement.url}</IssueManagement-Url>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.18.1</version>
+				<dependencies>
+			 		<dependency>
+			  			<groupId>org.apache.maven.surefire</groupId>
+			  			<artifactId>surefire-junit47</artifactId>
+			  			<version>2.18.1</version>
+			 		</dependency>
+				</dependencies>
+				<configuration>
+			 		<includes>
+			  			<include>**/*.class</include>
+			 		</includes>
+			 		<excludedGroups>gov.usgs.cida.wqp.IntegrationTest</excludedGroups>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+			 	<artifactId>maven-failsafe-plugin</artifactId>
+			 	<version>2.18.1</version>
+			 	<dependencies>
+			  		<dependency>
+			   			<groupId>org.apache.maven.surefire</groupId>
+			   			<artifactId>surefire-junit47</artifactId>
+			   			<version>2.18.1</version>
+			  		</dependency>
+			 	</dependencies>
+			 	<configuration>
+			  		<groups>gov.usgs.cida.wqp.IntegrationTest</groups>
+			 	</configuration>
+				<executions>
+				  	<execution>
+					   	<goals>
+					    	<goal>integration-test</goal>
+					   	</goals>
+					   	<configuration>
+					    	<includes>
+					     		<include>**/*.class</include>
+					    	</includes>
+					   	</configuration>
+			  		</execution>
+			      	<execution>
+			        	<id>verify</id>
+			        	<phase>verify</phase>
+			        	<goals>
+			            	<goal>verify</goal>
+			        	</goals>
+			    	</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+
+
+<!-- ==================================================================================================================== -->
+	<repositories>
+        <repository>
+            <id>cida-qw-releases</id>
+            <url>${cida.maven.url}/content/repositories/cida-qw-releases</url>
+        </repository>
+        <repository>
+            <id>cida-qw-snapshots</id>
+            <url>${cida.maven.url}/content/repositories/cida-qw-snapshots</url>
+        </repository>
+		<repository>
+			<id>nexus-snapshots</id>
+			<name>CIDA Nexus</name>
+			<url>${cida.maven.url}/content/repositories/cida-snapshots/</url>
+		</repository>
+<!-- 		<repository> -->
+<!-- 			<id>maven2-repository.dev.java.net</id> -->
+<!-- 			<name>Java.net repository</name> -->
+<!-- 			<url>http://download.java.net/maven/2</url> -->
+<!-- 		</repository> -->
+<!-- 		<repository> -->
+<!-- 			<id>osgeo</id> -->
+<!-- 			<name>Open Source Geospatial Foundation Repository</name> -->
+<!-- 			<url>http://download.osgeo.org/webdav/geotools/</url> -->
+<!-- 		</repository> -->
+<!-- 		<repository> -->
+<!-- 			<snapshots> -->
+<!-- 				<enabled>true</enabled> -->
+<!-- 			</snapshots> -->
+<!-- 			<id>opengeo</id> -->
+<!-- 			<name>OpenGeo Maven Repository</name> -->
+<!-- 			<url>http://repo.boundlessgeo.com/main/</url> -->
+<!-- 		</repository> -->
+        <repository>
+            <id>cida-thirdparty</id>
+            <url>${cida.maven.url}/content/repositories/cida-thirdparty/</url>
+        </repository>
+		<repository>
+			<id>nexus-public</id>
+			<name>CIDA Nexus</name>
+			<url>${cida.maven.url}/content/groups/public/</url>
+		</repository>
+	</repositories>
+	
+	<pluginRepositories>
+		<pluginRepository>
+			<id>plugin-nexus</id>
+			<name>CIDA Plugin repo</name>
+			<url>${cida.maven.url}/content/groups/public/</url>
+		</pluginRepository>
+	</pluginRepositories>
+
+	<distributionManagement>
+		<repository>
+			<id>cida-releases</id>
+			<name>CIDA Releases</name>
+			<url>${cida.maven.url}/content/repositories/cida-releases</url>
+		</repository>
+		<snapshotRepository>
+			<id>cida-snapshots</id>
+			<name>CIDA Snapshots</name>
+			<url>${cida.maven.url}/content/repositories/cida-snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
+
+	<scm>
+		<connection>git:http://cida-eros-stash.er.usgs.gov:7999/wqp/wqpgateway.git</connection>
+        	<developerConnection>scm:git:ssh://git@cida-eros-stash.er.usgs.gov:7999/wqp/wqpgateway.git</developerConnection>
+        	<url>http://internal.cida.usgs.gov/stash/projects/WQP/repos/wqpgateway/browse</url>
+   		<tag>HEAD</tag>
+  	</scm>
+
+<!-- ==================================================================================================================== -->
+	<dependencyManagement>
+    	<dependencies>
+    		<dependency>
+    			<groupId>org.springframework</groupId>
+    			<artifactId>spring-framework-bom</artifactId>
+    			<version>${spring.version}</version>
+				<type>pom</type>
+            	<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<dependencies>
+		<dependency>
+			<groupId>gov.usgs.cida</groupId>
+			<artifactId>cdat</artifactId>
+			<version>0.1.1-SNAPSHOT</version>
+		</dependency>
+        <dependency>
+            <groupId>com.oracle</groupId>
+            <artifactId>ojdbc6</artifactId>
+            <version>11.2.0.2.0-1</version>
+            <scope>provided</scope>
+        </dependency>
+		<!-- ================================================================== -->
+		<!-- Testing dependencies -->
+		<!-- ================================================================== -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-all</artifactId>
+			<version>1.10.19</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.jayway.jsonpath</groupId>
+			<artifactId>json-path-assert</artifactId>
+			<version>2.0.0</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.dbunit</groupId>
+			<artifactId>dbunit</artifactId>
+			<version>2.5.0</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>uk.co.datumedge</groupId>
+			<artifactId>hamcrest-json</artifactId>
+			<version>0.2</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- ================================================================== -->
+		<!-- Logging dependencies -->
+		<!-- ================================================================== -->
+		<dependency>
+		    <groupId>org.apache.logging.log4j</groupId>
+		    <artifactId>log4j-api</artifactId>
+		    <version>2.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-core</artifactId>
+			<version>2.1</version>
+		</dependency>
+		<dependency>
+		    <groupId>org.apache.logging.log4j</groupId>
+		    <artifactId>log4j-1.2-api</artifactId>
+		    <version>2.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>1.7.10</version>
+        	<exclusions>
+        		<exclusion>
+        			<artifactId>log4j</artifactId>
+        			<groupId>log4j</groupId>
+        		</exclusion>
+        	</exclusions>
+		</dependency>
+		
+		
+		<!-- ================================================================== -->
+		<!-- Other dependencies -->
+		<!-- ================================================================== -->
+		<dependency>
+			<groupId>org.mybatis</groupId>
+			<artifactId>mybatis</artifactId>
+			<version>${mybatis-version}</version>
+		</dependency>
+		<dependency>
+			<groupId>xerces</groupId>
+			<artifactId>xercesImpl</artifactId>
+			<version>2.11.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.sun.jersey</groupId>
+			<artifactId>jersey-client</artifactId>
+			<version>1.18.1</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.0</version>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>${commons-lang3-version}</version>
+		</dependency>
+		<dependency>
+		   	<groupId>org.apache.poi</groupId>
+		   	<artifactId>poi-ooxml</artifactId>
+		   	<version>3.11</version>
+		</dependency>
+		<!-- ================================================================== -->
+		<!-- Spring 4 dependencies -->
+		<!-- http://docs.spring.io/spring/docs/current/spring-framework-reference/htmlsingle/#overview-core-container -->
+		<!-- ================================================================== -->
+        <dependency>
+            <groupId>org.mybatis</groupId>
+            <artifactId>mybatis-spring</artifactId>
+            <version>${mybatis-spring-version}</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>spring-context</artifactId>
+                    <groupId>org.springframework</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>spring-core</artifactId>
+                    <groupId>org.springframework</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>spring-beans</artifactId>
+                    <groupId>org.springframework</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-webmvc</artifactId>
+		</dependency>
+<!-- 		<dependency> -->
+<!-- 			<groupId>org.springframework</groupId> -->
+<!-- 			<artifactId>spring-dao</artifactId> -->
+<!-- 			<version>2.0.8</version> -->
+<!--             <exclusions> -->
+<!--                 <exclusion> -->
+<!--                     <artifactId>spring-aop</artifactId> -->
+<!--                     <groupId>org.springframework</groupId> -->
+<!--                 </exclusion> -->
+<!--                 <exclusion> -->
+<!--                     <artifactId>spring-beans</artifactId> -->
+<!--                     <groupId>org.springframework</groupId> -->
+<!--                 </exclusion> -->
+<!--                 <exclusion> -->
+<!--                     <artifactId>spring-context</artifactId> -->
+<!--                     <groupId>org.springframework</groupId> -->
+<!--                 </exclusion> -->
+<!--                 <exclusion> -->
+<!--                     <artifactId>spring-core</artifactId> -->
+<!--                     <groupId>org.springframework</groupId> -->
+<!--                 </exclusion> -->
+<!--                 <exclusion> -->
+<!--                     <artifactId>aopalliance</artifactId> -->
+<!--                     <groupId>aopalliance</groupId> -->
+<!--                 </exclusion> -->
+<!--                 <exclusion> -->
+<!--                     <artifactId>commons-logging</artifactId> -->
+<!--                     <groupId>commons-logging</groupId> -->
+<!--                 </exclusion> -->
+<!--                 <exclusion> -->
+<!--                     <artifactId>xapool</artifactId> -->
+<!--                     <groupId>com.experlog</groupId> -->
+<!--                 </exclusion> -->
+<!--                 <exclusion> -->
+<!--                     <artifactId>jotm</artifactId> -->
+<!--                     <groupId>jotm</groupId> -->
+<!--                 </exclusion> -->
+<!--             </exclusions> -->
+<!-- 		</dependency> -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-jdbc</artifactId>
+		</dependency>
+<!-- 	    <dependency> -->
+<!-- 	      <groupId>org.springframework.batch</groupId> -->
+<!-- 	      <artifactId>spring-batch-infrastructure</artifactId> -->
+<!-- 	      <version>2.1.9.RELEASE</version> -->
+<!-- 		  <scope>package</scope> -->
+<!-- 	    </dependency> -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+        <dependency>
+            <groupId>com.github.springtestdbunit</groupId>
+            <artifactId>spring-test-dbunit</artifactId>
+            <version>1.2.1</version>
+            <scope>test</scope>
+        </dependency>
+
+   		
+		<!-- ================================================================== -->
+		<!-- Servlet dependencies -->
+		<!-- ================================================================== -->
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>3.1.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>jstl</artifactId>
+			<version>1.1.2</version>
+		</dependency>
+		<dependency>
+			<groupId>taglibs</groupId>
+			<artifactId>standard</artifactId>
+			<version>1.1.2</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>4.1.3</version>
+			<scope>compile</scope>
+			<exclusions>
+				<exclusion>
+					<artifactId>commons-logging</artifactId>
+					<groupId>commons-logging</groupId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+	</dependencies>
+</project>

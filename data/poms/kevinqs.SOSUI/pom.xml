@@ -1,0 +1,197 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.kelitech</groupId>
+  <artifactId>kelitech-extjs</artifactId>
+  <packaging>war</packaging>
+  <version>1.0-SNAPSHOT</version>
+  <name>kelitech extjs Maven jar</name>
+  <url>http://maven.apache.org</url>
+    <dependencies>
+        <dependency>
+            <groupId>com.sun.jersey</groupId>
+            <artifactId>jersey-server</artifactId>
+            <version>1.8</version>
+        </dependency>
+	    <dependency>
+	        <groupId>javax.ws.rs</groupId>
+	        <artifactId>jsr311-api</artifactId>
+	        <version>1.0</version>
+	    </dependency>
+	    <dependency>
+	        <groupId>mysql</groupId>
+	        <artifactId>mysql-connector-java</artifactId>
+	        <version>5.1.9</version>
+	    </dependency>
+	 
+	    <!-- Hibernate framework -->
+	    <dependency>
+	        <groupId>org.hibernate</groupId>
+	        <artifactId>hibernate-core</artifactId>
+	        <version>4.2.5.Final</version>
+	    </dependency>
+	 
+	    <!-- Hibernate library dependecy start -->
+	    <dependency>
+	        <groupId>dom4j</groupId>
+	        <artifactId>dom4j</artifactId>
+	        <version>1.6.1</version>
+	    </dependency>
+	 
+	    <dependency>
+	        <groupId>commons-logging</groupId>
+	        <artifactId>commons-logging</artifactId>
+	        <version>1.1.1</version>
+	    </dependency>
+	 
+	    <dependency>
+	        <groupId>commons-collections</groupId>
+	        <artifactId>commons-collections</artifactId>
+	        <version>3.2.1</version>
+	    </dependency>
+	 
+	    <dependency>
+	        <groupId>cglib</groupId>
+	        <artifactId>cglib</artifactId>
+	        <version>2.2</version>
+	    </dependency>
+	    <!-- Hibernate library dependecy end -->
+	 
+	    <dependency>
+	        <groupId>javax.transaction</groupId>
+	        <artifactId>jta</artifactId>
+	        <version>1.1</version>
+	    </dependency>
+	 
+	</dependencies>
+
+  <profiles>
+    <profile>
+        <id>sencha-app-build</id>
+			<activation>
+                <file>
+                    <exists>build.properties</exists>
+                </file>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-war-plugin</artifactId>
+			             <executions>
+							 <execution>
+	           					 <phase>none</phase>
+	       					 </execution>
+       					 </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.mortbay.jetty</groupId>
+                        <artifactId>jetty-maven-plugin</artifactId>
+                        <version>8.1.7.v20120910</version>
+
+                        <configuration>
+                            <webAppConfig>
+                                <contextPath>/${project.build.finalName}</contextPath>
+                                <descriptor>${web.xml.path}/${web.xml}</descriptor>
+                                <baseResource implementation="org.eclipse.jetty.util.resource.ResourceCollection">
+                                    <resourcesAsCSV>src/main/sencha-app,src/main/webapp</resourcesAsCSV>
+                                </baseResource>
+                            </webAppConfig>
+                            <stopPort>${jetty.stop.port}</stopPort>
+                            <stopKey>stopJetty</stopKey>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>1.7</version>
+                        <executions>
+
+                            <execution>
+                                <id>build properties</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <exportAntProperties>true</exportAntProperties>
+                                    <tasks>
+                                        <property file="build.properties"/>
+                                        <property file="src/main/sencha-app/.sencha/app/sencha.cfg"/>
+                                        <!--<echoproperties/>-->
+                                    </tasks>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>sencha-command-exec</id>
+                                <phase>prepare-package</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+
+                                <configuration>
+                                    <target>
+                                        <echo>//////////////////////// test///////////////////////////////</echo>
+                                        <!--
+                                        First we need to execute the sencha build, that will create a
+                                        properties file that contains the folder where the build is located, then
+                                        we copy that build folder to the final folder name that will be package as war
+                                        -->
+                                        <exec executable="${sencha.cmd.bin}" dir="${project.basedir}/src/main/sencha-app">
+                                            <arg value="app"/>
+                                            <arg value="build"/>
+                                            <arg value="production"/>
+                                        </exec>
+                                        <property file="${project.basedir}/src/main/sencha-app/sencha.cmd.properties"/>
+                                        <copy todir="${project.build.directory}/${project.build.finalName}">
+                                            <fileset dir="${sencha.cmd.build.dir}">
+                                                <exclude name="**/*.scss"/>
+                                                <exclude name="**/*.rb"/>
+                                                <exclude name="**/.sass-cache/**"/>
+                                            </fileset>
+                                        </copy>
+                                    </target>
+
+                                </configuration>
+                            </execution>
+							<execution>
+                                <id>build-jar-folder-structure</id>
+                                <phase>prepare-package</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+
+                                <configuration>
+                                    <target>
+                                    	<!--move  todir="${project.build.directory}/${project.build.finalName}/META-INF/resources/extjs" includeEmptyDirs="true">
+                                            <fileset dir="${project.build.directory}/${project.build.finalName}"/>
+                                        </move-->
+                                    	<move todir="${project.build.directory}/${project.build.finalName}/extjs" includeEmptyDirs="true">
+                                            <fileset dir="${project.build.directory}/${project.build.finalName}"/>
+                                        </move>
+                                   </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    
+                    <plugin>
+				        <groupId>org.apache.maven.plugins</groupId>
+				        <artifactId>maven-jar-plugin</artifactId>
+				        <version>2.4</version>
+				        <configuration>
+						  <classesDirectory>${project.build.directory}/${project.build.finalName}</classesDirectory>
+				        </configuration>
+			      </plugin>
+                </plugins>
+
+                </build>
+                
+        </profile>
+
+    </profiles>
+    
+  <build>
+    <finalName>kelitech-extjs</finalName>
+  </build>
+</project>

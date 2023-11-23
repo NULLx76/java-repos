@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <!--
+         Local build identity
+    -->
+    <modelVersion>4.0.0</modelVersion>
+        <groupId>edu.pdx.sso</groupId>
+        <artifactId>psu-cas</artifactId>
+        <packaging>war</packaging>
+        <!-- version is [selected CAS version].[PSU CAS local version].[maven build profile] -->
+        <version>${cas.version}.${psu-cas.version}.${project.activeProfiles[0].id}</version>
+        <!-- the tag is name, but the meaning is more like "sub-title" -->
+        <name>Local CAS overlay for Portland State University</name>
+        <description>
+Local theme overlay and some custom configurations for JASIG CAS.
+        </description>
+        <organization>
+            <name>Portland State University - Office of Information Technologies</name>
+            <url>https://github.com/psu-oit-cis-unixteam</url>
+        </organization>
+    
+    <!-- Centralize these values for later re-use -->
+    <properties>
+        <cas.version>3.4.10</cas.version>
+        <hibernate.version>3.5.6-Final</hibernate.version>
+        <log4j.version>1.0</log4j.version>
+        <rpm-maven.version>2.1-alpha-2</rpm-maven.version>
+        <!-- NOTE: This is the local package version, increment for changes
+             Local version Format: 
+                $psu-major.$psu-incremental -->
+        <psu-cas.version>0.1</psu-cas.version>
+        <psu-cas.prefix>/var/lib/tomcat5/webapps</psu-cas.prefix>
+        <!-- In EL tomcat.version is like tomcat{5,6,7},
+             the full version is like {5,6,7}.\d.\d -->
+        <tomcat.version>tomcat5</tomcat.version>
+        <tomcat.version.minimum>5.5.0</tomcat.version.minimum>
+    </properties>
+
+    <!-- Maven plugins -->
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-war-plugin</artifactId>
+                <configuration>
+                    <warName>cas-${project.version}</warName>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <!-- produce an rpm as a side effect to producing a .war -->
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>rpm-maven-plugin</artifactId>
+                <version>${rpm-maven.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>rpm</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <!-- Details for the RPM -->
+                <configuration>
+                    <copyright>http://www.jasig.org/cas/license</copyright>
+                    <distribution>PSU CAS</distribution>
+                    <group>Applications/Internet</group>
+                    <targetVendor>unknown</targetVendor> <!-- is this right for el*? -->
+                    <packager>${env.USER}</packager>
+                    <prefix>${psu-cas.prefix}</prefix>
+
+                    <defineStatements>
+                        <defineStatement>_unpackaged_files_terminate_build 0</defineStatement>
+                    </defineStatements>
+                    
+                    <!-- RPM dep management -->
+                    <provides>
+                        <provide>${project.artifactId}</provide>
+                    </provides>
+                    <requires>
+                        <require>${tomcat.version} &gt; ${tomcat.version.minimum}</require>
+                    </requires>
+                   
+                    <!-- the %files section of the spec, more-or-less -->
+                    <mappings>
+                        <mapping>
+                            <directory>${psu-cas.prefix}/cas</directory>
+                            <username>tomcat</username>
+                            <groupname>tomcat</groupname>
+                            <sources>
+                                <source>
+                                    <location>target/${project.artifactId}-${project.version}</location>
+                                </source>
+                            </sources>
+                        </mapping>
+
+                        <mapping>
+                            <directory>/etc/cas</directory>
+                            <configuration>true</configuration>
+                            <username>root</username>
+                            <groupname>tomcat</groupname>
+                            <sources>
+                                <softlinkSource>
+                                    <location>${psu-cas.prefix}/cas/WEB-INF</location>
+                                </softlinkSource>
+                            </sources>
+                        </mapping>
+
+                    </mappings>
+                </configuration>
+            </plugin>
+
+        </plugins>
+    </build>
+
+    <!-- Required packages to build psu cas -->
+    <dependencies>
+        <!-- Core JASIG CAS -->
+        <dependency>
+            <groupId>org.jasig.cas</groupId>
+            <artifactId>cas-server-core</artifactId>
+            <version>${cas.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jasig.cas</groupId>
+            <artifactId>cas-server-webapp</artifactId>
+            <version>${cas.version}</version>
+            <type>war</type>
+            <scope>runtime</scope>
+        </dependency>
+        
+        <!-- LDAP support -->
+        <dependency>
+            <groupId>org.jasig.cas</groupId>
+            <artifactId>cas-server-support-ldap</artifactId>
+            <version>${cas.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- extended log4j logging support -->
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>apache-log4j-extras</artifactId>
+            <version>${log4j.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Hibernate support for Ticket/Service registries -->
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-entitymanager</artifactId>
+            <version>${hibernate.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-annotations</artifactId>
+            <version>${hibernate.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
+    </dependencies>
+
+    <profiles>
+        <profile>
+            <id>production</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <dependencies>
+                <!-- JBOSS/shared ticket state support for production -->
+                <dependency>
+                    <groupId>org.jasig.cas</groupId>
+                    <artifactId>cas-server-integration-jboss</artifactId>
+                    <version>${cas.version}</version>
+                    <scope>runtime</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+
+        <profile>
+            <id>development</id>
+            <build>
+                <resources>
+                    <resource>
+                        <!-- ignore the jboss ticket cache config in devel -->
+                        <directory>src/main/webapp/WEB-INF/classes</directory>
+                        <excludes>
+                            <exclude>jbossTicketCacheReplicationConfig.xml</exclude>
+                        </excludes>
+                    </resource>
+                </resources>
+            </build>
+        </profile>
+
+    </profiles>
+
+    <!-- Get the afforementioned dependencies from where?? -->
+    <repositories>
+        <repository>
+            <id>ja-sig</id>
+            <url>http://oss.sonatype.org/content/repositories/releases/</url>
+        </repository>
+    </repositories>
+</project>

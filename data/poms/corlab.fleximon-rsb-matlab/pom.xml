@@ -1,0 +1,213 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- General project settings. -->
+    <groupId>rsb</groupId>
+    <artifactId>rsb-matlab</artifactId>
+    <version>0.11-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>RSB Matlab</name>
+    <url>https://code.cor-lab.org/projects/rsb/</url>
+
+    <description>Matlab integration for the Robotics Service Bus (RSB).</description>
+
+    <organization>
+        <name>CoR-Lab</name>
+        <url>http://www.cor-lab.org/</url>
+    </organization>
+
+    <scm>
+        <developerConnection>scm:git:https://code.cor-lab.org/git/rsb.git.matlab</developerConnection>
+        <url>https://code.cor-lab.org/projects/rsb/repository/rsb-matlab</url>
+    </scm>
+
+    <!-- Properties that can be overridden using e.g. 'mvn -Dspread.daemon=/some/path
+        package'. -->
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <pbuf.version>2.4.1</pbuf.version>
+        <rst.version>0.11-SNAPSHOT</rst.version>
+        <target.java.version>1.6</target.java.version>
+    </properties>
+
+    <build>
+        <!-- Set up the source and test source folders. -->
+        <sourceDirectory>src</sourceDirectory>
+
+        <plugins>
+            <!-- Check the availability of different external dependencies. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>1.1.1</version>
+                <executions>
+                    <execution>
+                        <id>enforce-external-dependencies</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <!-- This makes it fail when the first check
+                                fails. -->
+                            <failFast>true</failFast>
+                            <rules>
+                                <requireJavaVersion>
+                                    <!-- This defines the minimum version. -->
+                                    <version>${target.java.version}</version>
+                                </requireJavaVersion>
+                                <requireFilesExist>
+                                    <message>Could not find 'gitversion'
+                                        and 'gitbranch' files,
+                                        please run
+                                        mvnprep.sh before building with
+                                        Maven.</message>
+                                    <files>
+                                        <file>gitversion</file>
+                                        <file>gitbranch</file>
+                                    </files>
+                                </requireFilesExist>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Compiler settings -->
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
+                <configuration>
+                    <source>${target.java.version}</source>
+                    <target>${target.java.version}</target>
+                    <showWarnings>true</showWarnings>
+                    <showDeprecation>true</showDeprecation>
+                </configuration>
+            </plugin>
+
+            <!-- Load the last git commit from gitversion. -->
+            <plugin>
+                <groupId>org.codehaus.gmaven</groupId>
+                <artifactId>gmaven-plugin</artifactId>
+                <version>1.4</version>
+                <executions>
+                    <execution>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <properties>
+                                <git.version.file>gitversion</git.version.file>
+                            </properties>
+                            <source>
+                                def file = new
+                                File(project.properties["git.version.file"])
+                                commit =
+                                file.getText().replaceFirst(/^.*-/,"")
+                                project.properties["git.commit"] =
+                                commit
+                            </source>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Settings for the generated JAR. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.4</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            <!-- <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries> -->
+                        </manifest>
+                        <manifestEntries>
+                            <Last-Commit>${git.commit}</Last-Commit>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-site-plugin</artifactId>
+                <version>3.2</version>
+            </plugin>
+        </plugins>
+    </build>
+
+    <reporting>
+        <plugins>
+
+            <!-- Generate cross-referenced HTML for the sources. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jxr-plugin</artifactId>
+                <version>2.3</version>
+            </plugin>
+
+            <!-- Generate Javadoc -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.9</version>
+                <configuration>
+                    <show>public</show>
+                    <excludePackageNames>spread:tutorial.protobuf</excludePackageNames>
+                </configuration>
+            </plugin>
+
+            <!-- Just so maven doesn't complain about a missing version. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-project-info-reports-plugin</artifactId>
+                <version>2.6</version>
+            </plugin>
+        </plugins>
+    </reporting>
+
+    <!-- All direct dependencies need to be specified here. -->
+    <dependencies>
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>[${pbuf.version}]</version>
+        </dependency>
+        <dependency>
+            <groupId>rsb</groupId>
+            <artifactId>rsb</artifactId>
+            <version>0.11-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>rsb</groupId>
+            <artifactId>rst-fleximon</artifactId>
+            <version>${rst.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>rsb</groupId>
+            <artifactId>rst-sandbox-fleximon</artifactId>
+            <version>${rst.version}</version>
+        </dependency>
+    </dependencies>
+
+    <!-- Since we're not descending from the "ai-common" project, we have
+        to specify our default repository ourself -->
+    <distributionManagement>
+        <!-- use the following if you're not using a snapshot version. -->
+        <repository>
+            <id>citec</id>
+            <name>CIT-EC Repository</name>
+            <url>https://repo.cit-ec.uni-bielefeld.de/content/repositories/public-releases/</url>
+        </repository>
+        <!-- use the following if you ARE using a snapshot version. -->
+        <snapshotRepository>
+            <id>citec</id>
+            <name>CIT-EC Repository</name>
+            <url>https://repo.cit-ec.uni-bielefeld.de/content/repositories/public-snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+</project>

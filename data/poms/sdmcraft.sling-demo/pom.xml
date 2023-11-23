@@ -1,0 +1,453 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one
+  or more contributor license agreements.  See the NOTICE file
+  distributed with this work for additional information
+  regarding copyright ownership.  The ASF licenses this file
+  to you under the Apache License, Version 2.0 (the
+  "License"); you may not use this file except in compliance
+  with the License.  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing,
+  software distributed under the License is distributed on an
+  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  KIND, either express or implied.  See the License for the
+  specific language governing permissions and limitations
+  under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.github.sdmcraft</groupId>
+    <artifactId>sling-demo</artifactId>
+    <packaging>bundle</packaging>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>sling-demo</name>
+    <description>com.github.sdmcraft - sling-demo</description>
+
+    <!--
+        To keep the instance under test running and run individual tests
+        against it, use:
+
+            mvn clean verify -DkeepJarRunning=true -Dhttp.port=8080
+
+        optionally using jar.executor.vm.options to enable remote debugging,
+        and in another console:
+
+            mvn -o verify -Dtests.to.run=**/**Test.java -Dtest.server.url=http://localhost:8080
+
+        optionally using -Dmaven.surefire.debug to enable debugging.
+     -->
+    <properties>
+        <!-- HTTP port of Sling instance to test -->
+        <!--<http.port>8080</http.port>-->
+
+        <!-- path suffix for HTTP access to Sling test instance -->
+        <http.base.path/>
+
+        <!-- path suffix for WebDAV access to Sling test instance -->
+        <webdav.workspace.path/>
+
+        <!-- hostname of Sling instance to test -->
+        <test.host>localhost</test.host>
+
+        <!-- Timeout when checking for Sling readyness before starting tests -->
+        <HttpTestBase.readyTimeoutSeconds>62</HttpTestBase.readyTimeoutSeconds>
+
+        <!-- Test server setup configs-->
+
+        <!-- Set this to run tests against an existing server instance -->
+        <keepJarRunning>false</keepJarRunning>
+
+        <!--<test.server.url>http://${test.host}:${http.port}/${http.base.path}</test.server.url>-->
+        <!-- Set this to run tests against a specific hostname, if test.server.url is not set-->
+        <test.server.hostname/>
+
+        <!-- Set this to use a different username for remote execution of sling junit tests -->
+        <test.server.username/>
+
+        <!-- Set this to use a different password for remote execution of sling junit tests -->
+        <test.server.password/>
+
+        <!-- Options for the VM that executes our runnable jar -->
+        <jar.executor.vm.options>-Xmx512m</jar.executor.vm.options>
+
+        <!-- Change this to use longer or shorter timeouts for testing -->
+        <sling.testing.timeout.multiplier>1.0</sling.testing.timeout.multiplier>
+
+        <!-- Set this to run the executable jar in a specified filesystem folder -->
+        <jar.executor.work.folder/>
+
+        <!-- Options for the jar to execute. $JAREXEC_SERVER_PORT$ is replaced by the
+            selected port number -->
+        <jar.executor.jar.options>-p $JAREXEC_SERVER_PORT$</jar.executor.jar.options>
+
+        <!-- Change this to run selected tests only -->
+        <tests.to.run>**/**IT.java</tests.to.run>
+
+        <!-- Ignore the MultipleOsgiConsoleTest by default, it slows down tests and that's a somewhat exotic case -->
+        <!--<tests.to.ignore>**/**MultipleOsgiConsoleTest.java</tests.to.ignore>-->
+
+    </properties>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <version>3.1.0</version>
+        </dependency>
+
+        <!--OSGi dependencies-->
+        <dependency>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>org.osgi.compendium</artifactId>
+            <version>1.4.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>org.apache.felix.scr.annotations</artifactId>
+            <version>1.9.10</version>
+        </dependency>
+
+        <!--JCR dependencies-->
+        <dependency>
+            <groupId>javax.jcr</groupId>
+            <artifactId>jcr</artifactId>
+            <version>2.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.jackrabbit</groupId>
+            <artifactId>jackrabbit-jcr-server</artifactId>
+            <version>2.10.2-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <!--Sling dependencies-->
+        <dependency>
+            <groupId>org.apache.sling</groupId>
+            <artifactId>org.apache.sling.api</artifactId>
+            <version>2.9.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.sling</groupId>
+            <artifactId>org.apache.sling.servlets.post</artifactId>
+            <version>2.3.6</version>
+        </dependency>
+
+
+        <!--Other dependencies-->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.12</version>
+        </dependency>
+
+        <!--Testing dependencies-->
+        <dependency>
+            <groupId>org.apache.sling</groupId>
+            <artifactId>org.apache.sling.commons.testing</artifactId>
+            <version>2.0.19-SNAPSHOT</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-simple</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>junit</groupId>
+                    <artifactId>junit-dep</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.sling</groupId>
+            <artifactId>org.apache.sling.testing.tools</artifactId>
+            <version>1.0.11-SNAPSHOT</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20141113</version>
+        </dependency>
+
+
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-scr-plugin</artifactId>
+                <version>1.21.0</version>
+                <executions>
+                    <execution>
+                        <id>generate-scr-scrdescriptor</id>
+                        <goals>
+                            <goal>scr</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <extensions>true</extensions>
+                <version>2.5.4</version>
+                <configuration>
+                    <instructions>
+                        <Export-Package>com.github.sdmcraft.slingdemo.api</Export-Package>
+                        <Private-Package>com.github.sdmcraft.slingdemo.*</Private-Package>
+                        <Sling-Nodetypes>
+                            SLING-INF/nodetypes/nodetypes.cnd
+                        </Sling-Nodetypes>
+                        <Sling-Initial-Content>
+                            SLING-INF/scripts;overwrite:=true;uninstall:=true;path:=/apps/slingdemo,
+                            SLING-INF/content;overwrite:=true;uninstall:=true;path:=/content/slingdemo
+                        </Sling-Initial-Content>
+                    </instructions>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.16</version>
+                <configuration>
+                    <!-- Ignore all tests here. failsafe plugin will run them in integration-tests phase-->
+                    <excludes>
+                        <exclude>**</exclude>
+                    </excludes>
+                    <systemProperties>
+                        <!--
+                            Settings for running the integration against a specific Sling instance
+                        -->
+                        <!--<property>
+                            <name>launchpad.http.server.url</name>
+                            <value>
+                                http://${test.host}:${http.port}/${http.base.path}
+                            </value>
+                        </property>
+                        <property>
+                            <name>launchpad.webdav.server.url</name>
+                            <value>
+                                http://${test.host}:${http.port}/${webdav.workspace.path}
+                            </value>
+                        </property>
+                        <property>
+                            <name>HttpTestBase.readyTimeoutSeconds</name>
+                            <value>
+                                ${HttpTestBase.readyTimeoutSeconds}
+                            </value>
+                        </property>-->
+                    </systemProperties>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>2.5</version>
+                <configuration>
+                    <filesets>
+                        <fileset>
+                            <directory>${basedir}</directory>
+                            <includes>
+                                <!-- sling folder is the workdir of the executable jar that we test -->
+                                <include>sling/**</include>
+                            </includes>
+                        </fileset>
+                    </filesets>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.rat</groupId>
+                <artifactId>apache-rat-plugin</artifactId>
+                <version>0.10</version>
+                <configuration>
+                    <excludes>
+                        <exclude>derby.log</exclude>
+                        <exclude>sling/**</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>2.10</version>
+                <executions>
+                    <execution>
+                        <id>copy-runnable-jar</id>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <phase>package</phase>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>org.apache.sling</groupId>
+                                    <artifactId>org.apache.sling.launchpad</artifactId>
+                                    <version>8-SNAPSHOT</version>
+                                    <type>jar</type>
+                                    <overWrite>true</overWrite>
+                                    <outputDirectory>${project.build.directory}/testing</outputDirectory>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.jackrabbit</groupId>
+                                    <artifactId>jackrabbit-jcr-server</artifactId>
+                                    <version>2.10.2-SNAPSHOT</version>
+                                    <type>jar</type>
+                                    <overWrite>true</overWrite>
+                                    <outputDirectory>${project.build.directory}/testing/additional-bundles
+                                    </outputDirectory>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.sling</groupId>
+                                    <artifactId>org.apache.sling.jcr.webdav</artifactId>
+                                    <version>2.2.3-SNAPSHOT</version>
+                                    <type>jar</type>
+                                    <overWrite>true</overWrite>
+                                    <outputDirectory>${project.build.directory}/testing/additional-bundles
+                                    </outputDirectory>
+                                </artifactItem>
+
+                            </artifactItems>
+                            <outputDirectory>${project.build.directory}/sling</outputDirectory>
+                            <overWriteReleases>false</overWriteReleases>
+                            <overWriteSnapshots>false</overWriteSnapshots>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <configuration>
+                            <tasks>
+                                <copy file="${project.build.directory}/${project.build.finalName}.jar"
+                                      toDir="${project.build.directory}/testing/additional-bundles" verbose="true" failonerror="false"/>
+                            </tasks>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <!-- Find free ports to run our server -->
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.9.1</version>
+                <executions>
+                    <execution>
+                        <id>reserve-server-port</id>
+                        <goals>
+                            <goal>reserve-network-port</goal>
+                        </goals>
+                        <phase>process-resources</phase>
+                        <configuration>
+                            <portNames>
+                                <portName>http.port</portName>
+                            </portNames>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>integration-test</id>
+                        <goals>
+                            <goal>integration-test</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>verify</id>
+                        <goals>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <!--<debugForkedProcess>${maven.surefire.debug}</debugForkedProcess>-->
+                    <includes>
+                        <include>${tests.to.run}</include>
+                    </includes>
+                    <!--<excludes>
+                        <exclude>${tests.to.ignore}</exclude>
+                    </excludes>-->
+                    <systemPropertyVariables>
+                        <!--<test.server.url>${test.server.url}</test.server.url>-->
+                        <!--<test.server.hostname>${test.server.hostname}</test.server.hostname>-->
+                        <!--<test.server.username>${test.server.username}</test.server.username>-->
+                        <!--<test.server.password>${test.server.password}</test.server.password>-->
+                        <jar.executor.server.port>${http.port}</jar.executor.server.port>
+                        <jar.executor.vm.options>${jar.executor.vm.options}</jar.executor.vm.options>
+                        <jar.executor.work.folder>${project.build.directory}/testing</jar.executor.work.folder>
+                        <jar.executor.jar.folder>${project.build.directory}/testing</jar.executor.jar.folder>
+                        <jar.executor.jar.name.regexp>org.apache.sling.launchpad.*jar$</jar.executor.jar.name.regexp>
+                        <jar.executor.work.folder>${jar.executor.work.folder}</jar.executor.work.folder>
+                        <jar.executor.jar.options>${jar.executor.jar.options}
+                            -Dsling.home=${project.build.directory}/testing/sling
+                        </jar.executor.jar.options>
+                        <additional.bundles.path>${project.basedir}/target/testing/additional-bundles
+                        </additional.bundles.path>
+                        <keepJarRunning>${keepJarRunning}</keepJarRunning>
+                        <server.ready.timeout.seconds>60</server.ready.timeout.seconds>
+                        <sling.testing.timeout.multiplier>${sling.testing.timeout.multiplier}
+                        </sling.testing.timeout.multiplier>
+                        <server.ready.path.1>/:script src="system/sling.js"</server.ready.path.1>
+                        <server.ready.path.2>/.explorer.html:href="/libs/sling/explorer/css/explorer.css"
+                        </server.ready.path.2>
+                        <server.ready.path.3>/sling-test/sling/sling-test.html:Sling client library tests
+                        </server.ready.path.3>
+                        <start.bundles.timeout.seconds>30</start.bundles.timeout.seconds>
+                        <bundle.install.timeout.seconds>20</bundle.install.timeout.seconds>
+
+                        <!--
+                            Define additional bundles to install by specifying the beginning of their artifact name.
+                            The bundles are installed in lexical order of these property names.
+                            All bundles must be listed as dependencies in this pom, or they won't be installed.
+                        -->
+                        <sling.additional.bundle.1>jackrabbit-jcr-server</sling.additional.bundle.1>
+                        <sling.additional.bundle.2>org.apache.sling.jcr.webdav</sling.additional.bundle.2>
+                        <sling.additional.bundle.3>sling-demo</sling.additional.bundle.3>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+    <profiles>
+        <profile>
+            <id>autoInstallBundle</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.sling</groupId>
+                        <artifactId>maven-sling-plugin</artifactId>
+                        <version>2.0.4-incubator</version>
+                        <executions>
+                            <execution>
+                                <id>install-bundle</id>
+                                <goals>
+                                    <goal>install</goal>
+                                </goals>
+                                <configuration>
+                                    <slingUrl>http://localhost:8080/system/console</slingUrl>
+                                    <user>admin</user>
+                                    <password>admin</password>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

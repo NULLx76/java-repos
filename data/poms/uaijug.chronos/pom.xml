@@ -1,0 +1,544 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>br.com.uaijug.chronos</groupId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>war</packaging>
+
+	<!-- Define as versões das bibliotecas a serem usadas -->
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<version.arquillian_core>1.0.0.Final</version.arquillian_core>
+		<version.arquillian.container>1.1.5.Final</version.arquillian.container>
+		<version.jboss-javaee-7>1.0.0.Final</version.jboss-javaee-7>
+		<version.junit>4.10</version.junit>
+		<version.commons-lang>2.4</version.commons-lang>
+		<version.json-lib>2.2.3</version.json-lib>
+		<!-- >version.jasperreports>5.0.0</version.jasperreports -->
+
+		<jboss-as-maven-plugin>7.1.1.Final</jboss-as-maven-plugin>
+		<jboss.as.plugin.version>7.1.1.Final</jboss.as.plugin.version>
+
+		<compiler.plugin.version>2.3.2</compiler.plugin.version>
+		<surefire.plugin.version>2.4.3</surefire.plugin.version>
+		<war.plugin.version>2.1.1</war.plugin.version>
+
+		<maven.compiler.source>1.7</maven.compiler.source>
+		<maven.compiler.target>1.7</maven.compiler.target>
+		<version.primefaces>3.4</version.primefaces>
+		<version.primefaces.themes>1.0.9</version.primefaces.themes>
+	</properties>
+
+	<!-- Repositórios para download das bibliotecas -->
+	<repositories>
+		<repository>
+			<id>prime-repo</id>
+			<name>Prime Technology Maven Repository</name>
+			<url>http://repository.primefaces.org</url>
+			<layout>default</layout>
+		</repository>
+		<repository>
+			<id>JBoss repository</id>
+			<url>https://repository.jboss.org/nexus/content/groups/public-jboss/</url>
+		</repository>
+		<repository>
+			<id>jasperreports</id>
+			<url>http://jasperreports.sourceforge.net/maven2</url>
+		</repository>
+		<repository>
+			<id>Maven HUB</id>
+			<url>http://search.maven.org/</url>
+		</repository>
+	</repositories>
+
+	<!-- Define o profile para execução dos testes unitários com Arquillian 
+		no JBoss AS -->
+	<profiles>
+		<profile>
+			<id>jbossas-remote-7</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<dependencies>
+				<dependency>
+					<groupId>org.jboss.as</groupId>
+					<artifactId>jboss-as-arquillian-container-remote</artifactId>
+					<version>7.1.1.Final</version>
+					<scope>test</scope>
+				</dependency>
+			</dependencies>
+		</profile>
+		<profile>
+			<id>jbossas-7</id>
+			<dependencies>
+				<dependency>
+					<groupId>org.jboss.arquillian</groupId>
+					<artifactId>arquillian-bom</artifactId>
+					<version>${version.arquillian_core}</version>
+					<type>pom</type>
+					<scope>test</scope>
+				</dependency>
+				<dependency>
+					<groupId>org.jboss.as</groupId>
+					<artifactId>jboss-as-arquillian-container-managed</artifactId>
+					<version>${version.arquillian_container}</version>
+					<scope>test</scope>
+				</dependency>
+				<dependency>
+					<groupId>org.jboss.arquillian.junit</groupId>
+					<artifactId>arquillian-junit-container</artifactId>
+					<version>${version.arquillian_core}</version>
+					<scope>test</scope>
+				</dependency>
+				<dependency>
+					<groupId>org.jboss.ws.cxf</groupId>
+					<artifactId>jbossws-cxf-client</artifactId>
+					<version>4.1.1.Final</version>
+					<scope>provided</scope>
+				</dependency>
+			</dependencies>
+		</profile>
+	</profiles>
+
+	<!-- Configurações de compilação. Nesse caso está sendo informado que o 
+		código deve ser compilado usando o Java 6 -->
+	<build>
+		<finalName>${project.artifactId}-${project.version}</finalName>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${compiler.plugin.version}</version>
+				<configuration>
+					<source>${maven.compiler.source}</source>
+					<target>${maven.compiler.target}</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<artifactId>maven-war-plugin</artifactId>
+				<version>${war.plugin.version}</version>
+				<configuration>
+					<!-- Java EE 6 doesn't require web.xml, Maven needs to catch up! -->
+					<failOnMissingWebXml>false</failOnMissingWebXml>
+				</configuration>
+			</plugin>
+			<!-- The JBoss Teste AS plugin deploys your war to a local JBoss AS container -->
+			<!-- To use, run: mvn package jboss-as:deploy -->
+			<plugin>
+				<groupId>org.jboss.as.plugins</groupId>
+				<artifactId>jboss-as-maven-plugin</artifactId>
+				<version>${jboss.as.plugin.version}</version>
+				<configuration>
+					<hostname>127.0.0.1</hostname>
+				</configuration>
+			</plugin>
+			<!--plugin> <groupId>org.jboss.ws.plugins</groupId> <artifactId>maven-jaxws-tools-plugin</artifactId> 
+				<version>1.1.1.Final</version> < executions> <execution> <id>My execution</id> 
+				<goals> <goal>wsconsume</goal> </goals> <configuration> <wsdls> <wsdl>${basedir}/src/main/resources/test.wsdl</wsdl> 
+				</wsdls> <targetPackage>foo.bar</targetPackage> </configuration> </execution> 
+				</executions> </plugin -->
+			<plugin>
+				<!--To support pmd goals. For example: "mvn pmd:pmd" -->
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-pmd-plugin</artifactId>
+				<version>3.2</version>
+				<configuration>
+					<targetJdk>1.7</targetJdk>
+					<rulesets>
+						<ruleset>src/main/resources/chronos-pmd.xml</ruleset>
+					</rulesets>
+				</configuration>
+			</plugin>
+			<plugin>
+				<!--To support checkstyle goals. For example: "mvn checkstyle:checkstyle" -->
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-checkstyle-plugin</artifactId>
+				<version>5.7</version>
+				<configuration>
+					<!-- The above conguration line works as well, but the below is prefered. -->
+					<configLocation>src/main/resources/chronos-checkstyle.xml</configLocation>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>findbugs-maven-plugin</artifactId>
+				<version>3.0.0</version>
+				<configuration>
+					<!-- Enables analysis which takes more memory but finds more bugs. If 
+						you run out of memory, changes the value of the effort element to 'low'. -->
+					<effort>Max</effort>
+					<!-- Reports all bugs (other values are medium and max) -->
+					<threshold>Low</threshold>
+					<!-- Produces XML report -->
+					<xmlOutput>true</xmlOutput>
+					<includeFilterFile>src/main/resources/chronos-findbugs.xml</includeFilterFile>
+					<formats>
+						<format>xml</format>
+						<format>html</format>
+					</formats>
+					<canGenerate>true</canGenerate>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>com.googlecode.flyway</groupId>
+				<artifactId>flyway-maven-plugin</artifactId>
+				<version>2.3.1</version>
+				<configuration>
+					<user>root</user>
+					<password>admin</password>
+					<driver>com.mysql.jdbc.Driver</driver>
+					<url>jdbc:mysql://localhost:3306/chronos</url>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+	<!-- Define as versões das dependências que podem ser usadas no projeto. 
+		Somente faz a configuração, não importa nenhuma dessas bibliotecas -->
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.jboss.arquillian</groupId>
+				<artifactId>arquillian-bom</artifactId>
+				<version>1.0.1.Final</version>
+				<scope>import</scope>
+				<type>pom</type>
+			</dependency>
+			<dependency>
+				<groupId>org.jboss.spec</groupId>
+				<artifactId>jboss-javaee-7.0</artifactId>
+				<version>${version.jboss-javaee-7}</version>
+				<type>pom</type>
+			</dependency>
+			<!-- Import the JSF API, we use provided scope as the API is included 
+				in JBoss WildFly -->
+			<dependency>
+				<groupId>org.jboss.spec.javax.faces</groupId>
+				<artifactId>jboss-jsf-api_2.2_spec</artifactId>
+				<version>2.2.2</version>
+				<scope>provided</scope>
+			</dependency>
+			<!-- Import the JAX-RS API, we use provided scope as the API is included 
+				in JBoss WildFly -->
+			<dependency>
+				<groupId>org.jboss.resteasy</groupId>
+				<artifactId>jaxrs-api</artifactId>
+				<version>3.0.8.Final</version>
+				<scope>provided</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.primefaces</groupId>
+				<artifactId>primefaces</artifactId>
+				<version>${version.primefaces}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.primefaces.themes</groupId>
+				<artifactId>all-themes</artifactId>
+				<version>${version.primefaces.themes}</version>
+			</dependency>
+			<dependency>
+				<groupId>commons-lang</groupId>
+				<artifactId>commons-lang</artifactId>
+				<version>${version.commons-lang}</version>
+			</dependency>
+			<!-- for JSF 2.x -->
+			<dependency>
+				<groupId>org.ocpsoft.rewrite</groupId>
+				<artifactId>rewrite-servlet</artifactId>
+				<version>2.0.10.Final</version>
+			</dependency>
+			<dependency>
+				<groupId>org.ocpsoft.rewrite</groupId>
+				<artifactId>rewrite-config-prettyfaces</artifactId>
+				<version>2.0.10.Final</version>
+			</dependency>
+			<dependency>
+				<groupId>junit</groupId>
+				<artifactId>junit</artifactId>
+				<version>${version.junit}</version>
+			</dependency>
+			<!-- dependency> <groupId>net.sf.json-lib</groupId> <artifactId>json-lib</artifactId> 
+				<version>${version.json-lib}</version> </dependency -->
+			<!-- dependency> <groupId>com.fasterxml</groupId> <artifactId>jackson-module-hibernate</artifactId> 
+				<version>1.9.1</version> </dependency -->
+
+			<!-- dependency> <groupId>org.jboss.resteasy</groupId> <artifactId>resteasy-jaxrs</artifactId> 
+				<version>2.3.1.GA</version> </dependency> <dependency> <groupId>org.jboss.resteasy</groupId> 
+				<artifactId>resteasy-jackson-provider</artifactId> <version>2.3.1.GA</version> 
+				</dependency -->
+
+			<!-- dependency> <groupId>org.jboss.resteasy</groupId> <artifactId>resteasy-jaxb-provider</artifactId> 
+				<version>2.2.0.GA</version> <exclusions> <exclusion> <groupId>com.sun.xml.bind</groupId> 
+				<artifactId>jaxb-impl</artifactId> </exclusion> <exclusion> <groupId>com.sun.xml.stream</groupId> 
+				<artifactId>sjsxp</artifactId> </exclusion> </exclusions> </dependency -->
+
+			<!-- dependency> <groupId>org.jboss.resteasy</groupId> <artifactId>resteasy-jettison-provider</artifactId> 
+				<version>2.2.0.GA</version> </dependency -->
+			<!-- <dependency> <groupId>net.sf.scannotation</groupId> <artifactId>scannotation</artifactId> 
+				<version>1.0.2</version> </dependency> -->
+			<dependency>
+				<groupId>commons-fileupload</groupId>
+				<artifactId>commons-fileupload</artifactId>
+				<version>1.2</version>
+			</dependency>
+
+			<dependency>
+				<groupId>com.thetransactioncompany</groupId>
+				<artifactId>cors-filter</artifactId>
+				<version>1.9</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.javassist</groupId>
+				<artifactId>javassist</artifactId>
+				<version>3.14.0-GA</version>
+			</dependency>
+
+			<!-- dependency> <groupId>org.codehaus.jackson</groupId> <artifactId>jackson-mapper-asl</artifactId> 
+				<version>1.9.12</version> </dependency> <dependency> <groupId>org.codehaus.jackson</groupId> 
+				<artifactId>jackson-core-asl</artifactId> <version>1.9.12</version> </dependency -->
+
+			<dependency>
+				<groupId>org.hibernate</groupId>
+				<artifactId>hibernate-core</artifactId>
+				<version>4.1.10.Final</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.hibernate</groupId>
+				<artifactId>hibernate-entitymanager</artifactId>
+				<version>4.1.10.Final</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.hibernate</groupId>
+				<artifactId>hibernate-annotations</artifactId>
+				<version>3.5.6-Final</version>
+			</dependency>
+
+			<!-- Fly way -->
+			<dependency>
+				<groupId>com.googlecode.flyway</groupId>
+				<artifactId>flyway-core</artifactId>
+				<version>2.3.1</version>
+			</dependency>
+
+			<!-- mysql jdbc driver -->
+			<dependency>
+				<groupId>mysql</groupId>
+				<artifactId>mysql-connector-java</artifactId>
+				<version>5.1.31</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.picketbox</groupId>
+				<artifactId>picketbox</artifactId>
+				<version>4.0.7.Final</version>
+			</dependency>
+
+			<dependency>
+				<groupId>net.glxn</groupId>
+				<artifactId>qrgen</artifactId>
+				<version>1.3</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.codehaus.jackson</groupId>
+				<artifactId>jackson-core-asl</artifactId>
+				<version>1.9.13</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.codehaus.jackson</groupId>
+				<artifactId>jackson-mapper-asl</artifactId>
+				<version>1.9.13</version>
+			</dependency>
+
+
+
+			<!-- dependency> <groupId>net.sf.jasperreports</groupId> <artifactId>jasperreports</artifactId> 
+				<version>${version.jasperreports}</version> </dependency -->
+
+			<!-- Optional, but highly recommended -->
+			<!-- Arquillian allows you to test enterprise code such as EJBs and Transactional(JTA) 
+				JPA from JUnit/TestNG -->
+			<dependency>
+				<groupId>org.jboss.arquillian.junit</groupId>
+				<artifactId>arquillian-junit-container</artifactId>
+				<version>${version.arquillian.container}</version>
+				<scope>test</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.jboss.arquillian.protocol</groupId>
+				<artifactId>arquillian-protocol-servlet</artifactId>
+				<version>${version.arquillian.container}</version>
+				<scope>test</scope>
+			</dependency>
+
+		</dependencies>
+	</dependencyManagement>
+
+	<!-- Faz a importação propriamente dita das bibliotecas. Repare que como 
+		já definimos as versões em dependencyManagement, não é necessário informá-las 
+		aqui -->
+	<dependencies>
+		<dependency>
+			<groupId>org.jboss.arquillian.testng</groupId>
+			<artifactId>arquillian-testng-container</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testng</groupId>
+			<artifactId>testng</artifactId>
+			<version>6.4</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.jboss.spec</groupId>
+			<artifactId>jboss-javaee-7.0</artifactId>
+			<type>pom</type>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.primefaces</groupId>
+			<artifactId>primefaces</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.primefaces.themes</groupId>
+			<artifactId>all-themes</artifactId>
+		</dependency>
+		<!-- for JSF 2.x -->
+		<dependency>
+			<groupId>org.ocpsoft.rewrite</groupId>
+			<artifactId>rewrite-servlet</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.ocpsoft.rewrite</groupId>
+			<artifactId>rewrite-config-prettyfaces</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>commons-lang</groupId>
+			<artifactId>commons-lang</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- dependency> <groupId>org.jboss.resteasy</groupId> <artifactId>resteasy-jaxrs</artifactId> 
+			</dependency> <dependency> <groupId>org.jboss.resteasy</groupId> <artifactId>resteasy-jackson-provider</artifactId> 
+			</dependency> <dependency> <groupId>org.jboss.resteasy</groupId> <artifactId>resteasy-jaxb-provider</artifactId> 
+			</dependency -->
+
+		<dependency>
+			<groupId>commons-fileupload</groupId>
+			<artifactId>commons-fileupload</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.thetransactioncompany</groupId>
+			<artifactId>cors-filter</artifactId>
+		</dependency>
+
+		<!-- dependency> <groupId>org.jboss.resteasy</groupId> <artifactId>resteasy-jettison-provider</artifactId> 
+			</dependency -->
+
+		<!-- <dependency> <groupId>net.sf.scannotation</groupId> <artifactId>scannotation</artifactId> 
+			</dependency> -->
+
+		<dependency>
+			<groupId>org.javassist</groupId>
+			<artifactId>javassist</artifactId>
+		</dependency>
+
+		<!-- dependency> <groupId>org.codehaus.jackson</groupId> <artifactId>jackson-core-asl</artifactId> 
+			</dependency> <dependency> <groupId>org.codehaus.jackson</groupId> <artifactId>jackson-mapper-asl</artifactId> 
+			</dependency -->
+
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-core</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-entitymanager</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-annotations</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.googlecode.flyway</groupId>
+			<artifactId>flyway-core</artifactId>
+		</dependency>
+
+		<!-- mysql jdbc driver -->
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+		</dependency>
+		<!-- dependency> <groupId>net.sf.jasperreports</groupId> <artifactId>jasperreports</artifactId> 
+			</dependency -->
+		<!-- JSR-303 (Bean Validation) Implementation -->
+		<!-- Provides portable constraints such as @Email -->
+		<!-- Hibernate Validator is shipped in JBoss AS 7 -->
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-validator</artifactId>
+			<version>4.2.0.Final</version>
+			<scope>provided</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-api</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<!-- dependency> <groupId>net.sf.json-lib</groupId> <artifactId>json-lib</artifactId> 
+			</dependency> <dependency> <groupId>com.fasterxml</groupId> <artifactId>jackson-module-hibernate</artifactId> 
+			</dependency -->
+
+		<dependency>
+			<groupId>org.picketbox</groupId>
+			<artifactId>picketbox</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>net.glxn</groupId>
+			<artifactId>qrgen</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.codehaus.jackson</groupId>
+			<artifactId>jackson-core-asl</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.codehaus.jackson</groupId>
+			<artifactId>jackson-mapper-asl</artifactId>
+		</dependency>
+
+		<!-- Optional, but highly recommended -->
+		<!-- Arquillian allows you to test enterprise code such as EJBs and Transactional(JTA) 
+			JPA from JUnit/TestNG -->
+		<dependency>
+			<groupId>org.jboss.arquillian.junit</groupId>
+			<artifactId>arquillian-junit-container</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.jboss.arquillian.protocol</groupId>
+			<artifactId>arquillian-protocol-servlet</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+	</dependencies>
+
+	<artifactId>Chronos</artifactId>
+</project>

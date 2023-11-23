@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.codehaus.sonar-plugins</groupId>
+    <artifactId>parent</artifactId>
+    <version>18</version>
+  </parent>
+
+  <artifactId>sonar-scala-plugin</artifactId>
+  <packaging>sonar-plugin</packaging>
+  <version>1.0.0-SNAPSHOT</version>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <sonar.sources>src/main</sonar.sources>
+    <sonar.tests>src/test</sonar.tests>
+    <sonar.junit.reportsPath>target/surefire-reports</sonar.junit.reportsPath>
+    <sonar.jacoco.reportPath>target/coverage-reports/jacoco-ut.exec</sonar.jacoco.reportPath>
+    <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
+    <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
+    <scalac-scoverage-plugin_2.11.version>0.99.7</scalac-scoverage-plugin_2.11.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.scoverage</groupId>
+      <artifactId>scalac-scoverage-plugin_2.11</artifactId>
+      <version>${scalac-scoverage-plugin_2.11.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.sonar</groupId>
+      <artifactId>sonar-plugin-api</artifactId>
+      <version>4.2</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
+    </dependency>
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-library</artifactId>
+      <version>1.3</version>
+    </dependency>
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-library</artifactId>
+      <version>2.11.1</version>
+    </dependency>
+  </dependencies>
+  <build>
+      <pluginManagement>
+        <plugins>
+          <plugin>
+              <groupId>org.scala-tools</groupId>
+              <artifactId>maven-scala-plugin</artifactId>
+              <version>2.15.2</version>
+          </plugin>
+          <plugin>
+              <groupId>org.codehaus.sonar</groupId>
+              <artifactId>sonar-packaging-maven-plugin</artifactId>
+              <version>1.12.1</version>
+          </plugin>
+          <plugin>
+              <groupId>org.jacoco</groupId>
+              <artifactId>jacoco-maven-plugin</artifactId>
+              <version>0.7.1.201405082137</version>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <version>2.17</version>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <version>2.17</version>
+          </plugin>
+          <plugin>
+              <groupId>org.scoverage</groupId>
+              <artifactId>maven-scoverage-plugin</artifactId>
+              <version>0.99.2</version>
+          </plugin>
+        </plugins>
+      </pluginManagement>
+      <plugins>
+          <plugin>
+              <groupId>org.scala-tools</groupId>
+              <artifactId>maven-scala-plugin</artifactId>
+              <executions>
+                  <execution>
+                      <id>scala-compile</id>
+                      <phase>process-resources</phase>
+                      <goals>
+                          <goal>compile</goal>
+                      </goals>
+                  </execution>
+                  <execution>
+                      <id>scala-test-compile</id>
+                      <phase>process-test-resources</phase>
+                      <goals>
+                          <goal>testCompile</goal>
+                      </goals>
+                  </execution>
+              </executions>
+          </plugin>
+          <plugin>
+              <groupId>org.codehaus.sonar</groupId>
+              <artifactId>sonar-packaging-maven-plugin</artifactId>
+              <extensions>true</extensions>
+              <configuration>
+                  <pluginKey>scala</pluginKey>
+                  <pluginClass>org.sonar.plugins.scala.ScalaPlugin</pluginClass>
+                  <pluginName>Sonar Scala plugin</pluginName>
+                  <pluginDescription>Enables analysis of Scala projects into Sonar.</pluginDescription>
+              </configuration>
+          </plugin>
+          <plugin>
+              <groupId>org.jacoco</groupId>
+              <artifactId>jacoco-maven-plugin</artifactId>
+              <executions>
+                <!--
+                  Prepares the property pointing to the JaCoCo runtime agent which
+                  is passed as VM argument when Maven the Surefire plugin is executed.
+                -->
+                <execution>
+                  <id>pre-unit-test</id>
+                  <goals>
+                    <goal>prepare-agent</goal>
+                  </goals>
+                  <configuration>
+                    <!-- Sets the path to the file which contains the execution data. -->
+                    <destFile>${project.build.directory}/coverage-reports/jacoco-ut.exec</destFile>
+                    <!--
+                      Sets the name of the property containing the settings
+                      for JaCoCo runtime agent.
+                    -->
+                    <propertyName>surefireArgLine</propertyName>
+                    <excludes>
+                      <exclude>**/*.scala</exclude>
+                    </excludes>
+                  </configuration>
+                </execution>
+                <!--
+                  Ensures that the code coverage report for unit tests is created after
+                  unit tests have been run.
+                -->
+                <execution>
+                  <id>post-unit-test</id>
+                  <phase>test</phase>
+                  <goals>
+                    <goal>report</goal>
+                  </goals>
+                  <configuration>
+                    <!-- Sets the path to the file which contains the execution data. -->
+                    <dataFile>${project.build.directory}/coverage-reports/jacoco-ut.exec</dataFile>
+                    <!-- Sets the output directory for the code coverage report. -->
+                    <outputDirectory>${project.reporting.outputDirectory}/jacoco-ut</outputDirectory>
+                  </configuration>
+                </execution>
+              </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <!-- Sets the VM argument line used when unit tests are run. -->
+              <argLine>${surefireArgLine}</argLine>
+              <!-- Skips unit tests if the value of skip.unit.tests property is true -->
+              <skipTests>${skip.unit.tests}</skipTests>
+              <!-- Excludes integration tests when unit tests are run. -->
+              <excludes>
+                <exclude>**/IT*.java</exclude>
+              </excludes>
+           </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <executions>
+              <!--
+                Ensures that both integration-test and verify goals of the Failsafe Maven
+                plugin are executed.
+              -->
+              <execution>
+                <id>integration-tests</id>
+                <goals>
+                  <goal>integration-test</goal>
+                  <goal>verify</goal>
+                </goals>
+                <configuration>
+                  <!-- Sets the VM argument line used when integration tests are run. -->
+                  <argLine>${failsafeArgLine}</argLine>
+                  <!--
+                      Skips integration tests if the value of skip.integration.tests property
+                      is true
+                  -->
+                  <skipTests>${skip.integration.tests}</skipTests>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+  <profiles>
+    <profile>
+      <id>sonar</id>
+        <build>
+          <plugins>
+          <plugin>
+              <groupId>org.scoverage</groupId>
+              <artifactId>maven-scoverage-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>net.alchim31.maven</groupId>
+            <artifactId>scala-maven-plugin</artifactId>
+            <version>3.2.0</version>
+            <executions>
+              <execution>
+                <id>compile</id>
+                <goals>
+                  <goal>compile</goal>
+                </goals>
+                <configuration>
+                  <jvmArgs>
+                    <jvmArg>-Xms64m</jvmArg>
+                    <jvmArg>-Xmx1024m</jvmArg>
+                  </jvmArgs>
+                  <sourceDir>src/main/scala</sourceDir>
+                  <testSourceDir>src/test/scala</testSourceDir>
+                  <compilerPlugins>
+                    <compilerPlugin>
+                        <groupId>org.scoverage</groupId>
+                        <artifactId>scalac-scoverage-plugin_2.11</artifactId>
+                        <version>${scalac-scoverage-plugin_2.11.version}</version>
+                    </compilerPlugin>
+                  </compilerPlugins>
+                  <args>
+                    <arg>-g:vars</arg>
+                    <arg>-P:scoverage:dataDir:${project.build.directory}</arg>
+                  </args>
+                </configuration>
+              </execution>
+              <execution>
+                <id>test</id>
+                <goals>
+                  <goal>testCompile</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>       
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

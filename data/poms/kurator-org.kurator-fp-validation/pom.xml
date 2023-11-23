@@ -1,0 +1,266 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.kurator</groupId>
+    <artifactId>kurator-fp-validation</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+    <name>kurator-fp-validation</name>
+    <url>http://opensource.ncsa.illinois.edu/projects/KURATOR</url>
+
+	<properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+	<repositories>
+
+		<repository>
+			<id>gbif-all</id>
+			<name>GBIF repository</name>
+			<url>http://repository.gbif.org/content/groups/gbif</url>
+		</repository>
+
+        <repository>
+            <id>ossrh-snapshots</id>
+            <url>https://oss.sonatype.org/content/groups/public/</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+
+	</repositories>
+
+    <dependencies>
+		<dependency>
+			<groupId>org.filteredpush</groupId>
+			<artifactId>FP-KurationServices</artifactId>
+			<version>1.1.8</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.datakurator</groupId>
+			<artifactId>kurator-validation</artifactId>
+			<version>1.0.2</version>
+		</dependency>
+
+		<dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+            <version>1.26</version>
+            <optional>true</optional>
+        </dependency>
+
+		<dependency>
+			<groupId>org.gbif</groupId>
+			<artifactId>dwca-io</artifactId>
+			<version>1.23</version>
+		</dependency>
+		<dependency>
+			<groupId>org.gbif</groupId>
+			<artifactId>dwca-reader</artifactId>
+			<version>1.21</version>
+		</dependency>
+
+		<dependency>
+			<groupId>joda-time</groupId>
+			<artifactId>joda-time</artifactId>
+			<version>2.2</version>
+		</dependency>
+		
+    </dependencies>
+
+	<build>
+	   <plugins>
+
+	       <!-- Set Java compiler source and target versions -->
+	       <plugin>
+	           <groupId>org.apache.maven.plugins</groupId>
+	           <artifactId>maven-compiler-plugin</artifactId>
+	           <version>2.3.2</version>
+	           <configuration>
+	               <source>1.8</source>
+	               <target>1.8</target>
+	           </configuration>
+	       </plugin>
+
+	       <!-- Copy the dependency jars into the target/dependency directory -->
+	       <plugin>
+	           <groupId>org.apache.maven.plugins</groupId>
+	           <artifactId>maven-dependency-plugin</artifactId>
+	           <executions>
+	               <execution>
+    	               <id>copy</id>
+    	               <phase>compile</phase>
+    	               <goals>
+	                       <goal>copy-dependencies</goal>
+	                   </goals>
+	               </execution>
+	           </executions>
+      	 </plugin>
+
+            <plugin>
+                <!-- Exclude integration tests from default test phase (see integrationTests 
+                    profile) -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.11</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.surefire</groupId>
+                        <artifactId>surefire-junit47</artifactId>
+                        <version>2.12</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <includes>
+                        <include>**/*.class</include>
+                    </includes>
+                    <excludedGroups>org.kurator.validation.IntegrationTest</excludedGroups>
+                </configuration>
+            </plugin>	       
+	       
+    	   <!-- Add the manifest file to the jar and force classpath to the
+                dependency directory to automatically include the dependency jars -->
+    	   <plugin>
+    	       <groupId>org.apache.maven.plugins</groupId>
+    	       <artifactId>maven-jar-plugin</artifactId>
+    	       <configuration>
+    	           <archive>
+    	               <manifest>
+    	                   <addClasspath>true</addClasspath>
+    	                   <mainClass>org.kurator.akka.KuratorCLI</mainClass>
+    	                   <!--  <classpathPrefix>dependency/</classpathPrefix>-->
+    	               </manifest>
+    	           </archive>
+                </configuration>
+    	   </plugin>
+
+        	<!-- Build javadocs -->
+        	<plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.10.1</version>
+                <configuration>
+                </configuration>
+        	</plugin>
+
+            <!-- Make a standalone jar file -->
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.4</version>
+                <configuration>
+                    <archiveBaseDirectory>${project.basedir}</archiveBaseDirectory>
+                    <archive>
+                        <manifest>
+                            <mainClass>org.kurator.akka.KuratorCLI</mainClass>
+                        </manifest>
+                    </archive>
+					<descriptors>
+						<descriptor>src/assembly/packages.xml</descriptor>
+					</descriptors>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+		   <!-- use jarsigner on packages zip file -->
+		   <plugin>
+			   <groupId>org.apache.maven.plugins</groupId>
+			   <artifactId>maven-jarsigner-plugin</artifactId>
+			   <version>1.4</version>
+			   <configuration>
+				   <archiveDirectory>${project.build.directory}</archiveDirectory>
+				   <includes>
+					   <include>*.zip</include>
+				   </includes>
+				   <keystore>${keystore.location}</keystore>
+				   <alias>${keystore.alias}</alias>
+				   <storepass>${keystore.storepass}</storepass>
+				   <keypass>${keystore.keypass}</keypass>
+			   </configuration>
+		   </plugin>
+	</plugins>
+
+        <pluginManagement>
+        	<plugins>
+
+        		<!--This plugin's configuration is used to store Eclipse m2e settings only.
+                    It has no influence on the Maven build itself -->
+        		<plugin>
+                    <groupId>org.eclipse.m2e</groupId>
+                    <artifactId>lifecycle-mapping</artifactId>
+                    <version>1.0.0</version>
+                    <configuration>
+	                   <lifecycleMappingMetadata>
+	                       <pluginExecutions>
+	                           <pluginExecution>
+	                               <pluginExecutionFilter>
+	                                   <groupId>
+	                                       org.apache.maven.plugins
+	                                    </groupId>
+	                                   <artifactId>
+	                                       maven-dependency-plugin
+	                                   </artifactId>
+	                                   <versionRange>
+	                                       [2.8,)
+	                                   </versionRange>
+	                                   <goals>
+	                                       <goal>
+	                                           copy-dependencies
+	                                       </goal>
+	                                   </goals>
+                                   </pluginExecutionFilter>
+	                               <action>
+	                                   <ignore></ignore>
+	                               </action>
+	                           </pluginExecution>
+	                       </pluginExecutions>
+	                   </lifecycleMappingMetadata>
+	               </configuration>
+	           </plugin>
+
+	       </plugins>
+	   </pluginManagement>
+
+	</build>
+	
+	<profiles>
+	           <profile>
+            <!-- mvn package -P integrationTests -->
+            <id>integrationTests</id>
+            <build>
+                <!-- Runs those tests which require connection to a database, will bring 
+                    up a login dialog while running tests -->
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <excludedGroups>org.kurator.validation.IgnoreInIntegration</excludedGroups>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+	</profiles>
+
+</project>

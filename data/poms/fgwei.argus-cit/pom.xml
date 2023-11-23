@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <prerequisites>
+    <maven>3.0</maven>
+  </prerequisites>
+
+  <organization>
+    <name>arguslab.org</name>
+    <url>http://arguslab.org</url>
+  </organization>
+
+  <groupId>org.argus-ide</groupId>
+  <artifactId>org.argus-ide.build</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <description>Default config holder (value, profiles, versions, ...) for the build of Argus IDE for Eclipse</description>
+  <packaging>pom</packaging>
+
+  <properties>
+    <encoding>UTF-8</encoding>
+    <retryFlakyTests>true</retryFlakyTests>
+    <!-- p2 repositories location -->
+    <repo.ajdt.luna>http://download.eclipse.org/tools/ajdt/44/dev/update</repo.ajdt.luna>
+    <repo.equinox.launcher>http://download.scala-ide.org/plugins/equinox-weaving-launcher/releases/site</repo.equinox.launcher>
+    <repo.nebula>http://download.eclipse.org/technology/nebula/snapshot</repo.nebula>
+    <repo.eclipse.luna>http://download.eclipse.org/releases/luna</repo.eclipse.luna>
+    <!-- fixed versions -->
+    <miglayout.version>3.7.4</miglayout.version>
+    <log4j.version>1.2.17</log4j.version>
+    <mockito.version>1.9.5</mockito.version>
+    <diffutils.version>1.2.1</diffutils.version>
+
+    <!-- plugin versions -->
+    <tycho.plugin.version>0.21.0</tycho.plugin.version>
+    <scala.plugin.version>3.1.6</scala.plugin.version>
+    <aspectj.plugin.version>1.7</aspectj.plugin.version>
+    <aspectj.version>1.8.2</aspectj.version>
+    <maven-bundle.plugin.version>2.3.7</maven-bundle.plugin.version>
+    <properties-maven.plugin.version>1.1.10</properties-maven.plugin.version>
+    <buildnumber-maven.plugin.version>1.1</buildnumber-maven.plugin.version>
+    <maven-clean.plugin.version>2.5</maven-clean.plugin.version>
+
+    <!-- Weaving plugin version -->
+    <weaving.hook.plugin.version>Select an Eclipse profile</weaving.hook.plugin.version>
+
+    <!-- tycho test related -->
+    <tycho.test.OSspecific></tycho.test.OSspecific>
+    <!-- Partial workaround against JDT Weaving deadlocks. See #1000317 and the original ticket on https://issuetracker.springsource.com/browse/STS-1445 -->
+    <tycho.test.weaving>-XX:+UnlockDiagnosticVMOptions -XX:+UnsyncloadClass -Dosgi.classloader.lock=classname</tycho.test.weaving>
+    <tycho.test.jvmArgs>-Xmx1024m -XX:MaxPermSize=256m -Dsdtcore.headless -Dsdtcore.notimeouts -DretryFlakyTests=${retryFlakyTests} ${tycho.test.weaving} ${tycho.test.OSspecific}</tycho.test.jvmArgs>
+
+    <!-- base versions -->
+
+    <!-- dependencies repos, can be overwritten by profiles -->
+    <eclipse.codename>Select an Eclipse profile</eclipse.codename>
+    <repo.eclipse>Select an Eclipse profile</repo.eclipse>
+    <repo.ajdt>Select an Eclipse profile</repo.ajdt>
+
+    <!-- default values, can be overwritten by profiles -->
+    <scala.version>Select a Scala profile</scala.version>
+    <scala.short.version>Select a Scala profile</scala.short.version>
+    <scala.minor.version>Select a Scala profile</scala.minor.version>
+    <version.suffix>Select a Scala profile</version.suffix>
+    <jdt.core.version.range>Select an Eclipse profile</jdt.core.version.range>
+    <version.tag>local</version.tag>
+    <sbt.version>0.13.6</sbt.version>
+
+    <!-- the repos containing the Scala dependencies -->
+
+  </properties>
+
+  <profiles>
+    <profile>
+      <id>retryFlakyTests</id>
+      <properties>
+        <retryFlakyTests>true</retryFlakyTests>
+      </properties>
+    </profile>
+    
+    <profile>
+      <id>scala-2.11.x</id>
+      <properties>
+        <scala.version>${scala211.version}</scala.version>
+        <scala.short.version>211</scala.short.version>
+        <scala.minor.version>2.11</scala.minor.version>
+        <version.suffix>2_11</version.suffix>
+
+      </properties>
+    </profile>
+
+    <profile>
+      <!-- Eclipse Luna -->
+      <id>eclipse-luna</id>
+      <properties>
+        <eclipse.codename>luna</eclipse.codename>
+        <repo.eclipse>${repo.eclipse.luna}</repo.eclipse>
+        <repo.ajdt>${repo.ajdt.luna}</repo.ajdt>
+        <jdt.core.version.range>[3.10.0,4.0.0)</jdt.core.version.range>
+        <weaving.hook.plugin.version>1.1.100.weaving-hook-20140821</weaving.hook.plugin.version>
+      </properties>
+    </profile>
+
+    <profile>
+      <!-- some extra configuration for running tests with tycho on Mac OS -->
+      <id>macOs</id>
+      <activation>
+        <os>
+          <family>mac</family>
+        </os>
+      </activation>
+      <properties>
+        <tycho.test.OSspecific>-Dosgi.ws=cocoa -XstartOnFirstThread</tycho.test.OSspecific>
+      </properties>
+       <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.eclipse.tycho</groupId>
+              <artifactId>tycho-surefire-plugin</artifactId>
+              <configuration>
+                <dependencies>
+                  <dependency>
+                    <groupId>org.eclipse.jdt</groupId>
+                    <artifactId>org.eclipse.jdt.launching.macosx</artifactId>
+                    <type>eclipse-plugin</type>
+                  </dependency>
+                </dependencies>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
+    </profile>
+
+    <profile>
+      <!-- pull the data needed to add the version numbers to the manifests -->
+      <id>set-versions</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.argus-ide</groupId>
+          <artifactId>build-tools_1.01</artifactId>
+          <version>1.0.0</version>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>1.2.1</version>
+            <executions>
+              <execution>
+                <id>copy.reflect</id>
+                <goals>
+                  <goal>java</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <classpathScope>compile</classpathScope>
+              <mainClass>org.scalaide.buildtools.UpdateScalaIDEManifests</mainClass>
+              <arguments>
+                <argument>${scala.version}</argument>
+                <argument>${settings.localRepository}</argument>
+              </arguments>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+  </profiles>
+
+  <repositories>
+    <!-- the sonatype repos -->
+    <repository>
+      <id>sonatype.release</id>
+      <name>Sonatype maven release repository</name>
+      <url>https://oss.sonatype.org/content/repositories/releases/</url>
+      <snapshots><enabled>false</enabled></snapshots>
+    </repository>
+    <repository>
+      <id>sonatype.snapshot</id>
+      <name>Sonatype maven snapshot repository</name>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+      <snapshots>
+        <updatePolicy>daily</updatePolicy>
+      </snapshots>
+    </repository>
+  </repositories>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.miglayout</groupId>
+        <artifactId>miglayout</artifactId>
+        <version>${miglayout.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>log4j</groupId>
+        <artifactId>log4j</artifactId>
+        <version>${log4j.version}</version>
+      </dependency>
+      <!-- test support -->
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-all</artifactId>
+        <version>${mockito.version}</version>
+        <scope>compile</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-core</artifactId>
+        <version>${mockito.version}</version>
+        <scope>compile</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-core</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <!-- define the version of all used plugins, and some default configuration -->
+      <plugins>
+        <!-- osgi bundle builder -->
+        <plugin>
+          <groupId>org.apache.felix</groupId>
+          <artifactId>maven-bundle-plugin</artifactId>
+          <version>${maven-bundle.plugin.version}</version>
+          <extensions>true</extensions>
+          <configuration>
+            <unpackBundle>true</unpackBundle>
+            <manifestLocation>${project.build.directory}/META-INF</manifestLocation>
+          </configuration>
+        </plugin>
+        <!-- set property value from file -->
+        <plugin>
+          <groupId>org.kuali.maven.plugins</groupId>
+          <artifactId>properties-maven-plugin</artifactId>
+          <version>${properties-maven.plugin.version}</version>
+        </plugin>
+        <!-- tycho plugins -->
+        <plugin>
+          <groupId>org.eclipse.tycho</groupId>
+          <artifactId>tycho-maven-plugin</artifactId>
+          <version>${tycho.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.eclipse.tycho</groupId>
+          <artifactId>tycho-compiler-plugin</artifactId>
+          <version>${tycho.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.eclipse.tycho</groupId>
+          <artifactId>target-platform-configuration</artifactId>
+          <version>${tycho.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.eclipse.tycho</groupId>
+          <artifactId>tycho-packaging-plugin</artifactId>
+          <version>${tycho.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.eclipse.tycho</groupId>
+          <artifactId>tycho-surefire-plugin</artifactId>
+          <version>${tycho.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.eclipse.tycho</groupId>
+          <artifactId>tycho-source-plugin</artifactId>
+          <version>${tycho.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.eclipse.tycho</groupId>
+          <artifactId>tycho-versions-plugin</artifactId>
+          <version>${tycho.plugin.version}</version>
+        </plugin>
+        <!-- aspectJ support -->
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>aspectj-maven-plugin</artifactId>
+          <version>${aspectj.plugin.version}</version>
+          <dependencies>
+            <dependency>
+              <groupId>org.aspectj</groupId>
+              <artifactId>aspectjtools</artifactId>
+              <version>${aspectj.version}</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+        <!-- scala compiler -->
+        <plugin>
+          <groupId>net.alchim31.maven</groupId>
+          <artifactId>scala-maven-plugin</artifactId>
+          <version>${scala.plugin.version}</version>
+        </plugin>
+        <!-- git hash extractor -->
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>buildnumber-maven-plugin</artifactId>
+          <version>${buildnumber-maven.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-clean-plugin</artifactId>
+          <version>${maven-clean.plugin.version}</version>
+        </plugin>
+        <!-- Scalastyle -->
+        <plugin>
+          <groupId>org.scalastyle</groupId>
+          <artifactId>scalastyle-maven-plugin</artifactId>
+          <version>0.3.2</version>
+          <configuration>
+            <inputEncoding>UTF-8</inputEncoding>
+            <verbose>false</verbose>
+            <failOnViolation>true</failOnViolation>
+            <includeTestSourceDirectory>false</includeTestSourceDirectory>
+            <failOnWarning>false</failOnWarning>
+            <sourceDirectories>
+              <dir>org.argus-ide.cit.core/src</dir>
+            </sourceDirectories>
+            <configLocation>org.argis-ide.cit.core/argus-ide-style-config.xml</configLocation>
+          </configuration>
+          <executions>
+            <execution>
+              <goals>
+                <goal>check</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>

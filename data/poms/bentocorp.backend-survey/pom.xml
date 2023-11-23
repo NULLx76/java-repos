@@ -1,0 +1,448 @@
+<project
+  xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.bentonow</groupId>
+  <artifactId>survey</artifactId>
+  <version>0.1.0</version>
+  <name>${project.groupId}.${project.artifactId}</name>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <keyStorePassword>bento1</keyStorePassword>
+  </properties>
+  <build>
+    <finalName>survey</finalName>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>src/main/webapp</directory>
+      </resource>
+    </resources>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.8</version>
+        <executions>
+          <execution>
+            <phase>generate-resources</phase>
+            <configuration>
+              <tasks>
+                <exec executable="sh" outputproperty="out" errorproperty="err">
+                  <arg value="-c"/>
+                  <arg value="ls -1r ${basedir}/src/main/ssl/*-*.crt | xargs -n 1 cat &gt;&gt; ${project.build.directory}/ca.pem"/>
+                </exec>
+                <echo message="sh: ${out} ${err}"/>
+                <exec executable="openssl" outputproperty="out" errorproperty="err">
+                  <arg value="pkcs12"/>
+                  <arg value="-export"/>
+                  <arg value="-chain"/>
+                  <arg value="-in"/>
+                  <arg value="${basedir}/src/main/ssl/*.bentonow.com.crt"/>
+                  <arg value="-inkey"/>
+                  <arg value="${basedir}/src/main/ssl/bento-ssl-private-key.pem"/>
+                  <arg value="-out"/>
+                  <arg value="${project.build.directory}/server.p12"/>
+                  <arg value="-name"/>
+                  <arg value="*.bentonow.com.crt"/>
+                  <arg value="-CAfile"/>
+                  <arg value="${basedir}/target/ca.pem"/>
+                  <arg value="-caname"/>
+                  <arg value="root"/>
+                  <arg value="-passout"/>
+                  <arg value="pass:${keyStorePassword}"/>
+                </exec>
+                <echo message="openssl: ${out} ${err}"/>
+                <exec executable="keytool" outputproperty="out" errorproperty="err">
+                  <arg value="-importkeystore"/>
+                  <arg value="-deststorepass"/>
+                  <arg value="${keyStorePassword}"/>
+                  <arg value="-destkeypass"/>
+                  <arg value="${keyStorePassword}"/>
+                  <arg value="-destkeystore"/>
+                  <arg value="${project.build.directory}/classes/keystore.jks"/>
+                  <arg value="-srckeystore"/>
+                  <arg value="${project.build.directory}/server.p12"/>
+                  <arg value="-srcstoretype"/>
+                  <arg value="PKCS12"/>
+                  <arg value="-srcstorepass"/>
+                  <arg value="${keyStorePassword}"/>
+                  <arg value="-alias"/>
+                  <arg value="*.bentonow.com.crt"/>
+                </exec>
+                <echo message="keytool: ${out} ${err}"/>
+              </tasks>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>2.4</version>
+        <executions>
+          <execution>
+            <phase>verify</phase>
+            <goals>
+              <goal>jar-no-fork</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <excludes>
+            <exclude>**/*.class</exclude>
+            <exclude>**/*.jar</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-war-plugin</artifactId>
+        <version>2.6</version>
+        <configuration>
+          <failOnMissingWebXml>false</failOnMissingWebXml>
+        </configuration>
+      </plugin>      
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>2.4</version>
+        <executions>
+          <execution>
+            <id>package-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>2.4</version>
+        <configuration>
+          <descriptors>
+            <descriptor>assembly.xml</descriptor>
+          </descriptors>
+          <archive>
+            <manifest>
+              <mainClass>com.bentonow.survey.Server</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      
+      <plugin>
+        <groupId>org.mortbay.jetty</groupId>
+        <artifactId>maven-jetty-plugin</artifactId>
+        <version>6.1.26</version>
+        <configuration>
+          <contextPath>/</contextPath>
+          <reload>manual</reload>
+          <stopKey>stop</stopKey>
+          <stopPort>9966</stopPort>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.safris.maven.plugin</groupId>
+        <artifactId>xdb</artifactId>
+        <version>0.2.1-SNAPSHOT</version>
+        <executions>
+          <execution>
+            <id>xdb</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>ddl</goal>
+            </goals>
+            <configuration>
+              <vendor>MySQL</vendor>
+              <manifest xmlns="http://xml.safris.org/toolkit/binding/manifest.xsd">
+                <destdir>${project.build.directory}/generated-resources/xdl</destdir>
+                <schemas>
+                  <schema>${basedir}/src/main/resources/survey.xdl</schema>
+                </schemas>
+              </manifest>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.safris.maven.plugin.xml</groupId>
+        <artifactId>binding</artifactId>
+        <version>2.0.1-SNAPSHOT</version>
+        <executions>
+          <execution>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <manifest xmlns="http://xml.safris.org/toolkit/binding/manifest.xsd">
+            <destdir explodeJars="true">${project.build.directory}/generated-sources/xmlbinding</destdir>
+            <schemas>
+              <schema>${basedir}/src/main/resources/config.xsd</schema>
+            </schemas>
+          </manifest>
+        </configuration>
+      </plugin>
+    </plugins>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <configuration>
+            <fork>true</fork>
+            <meminitial>256m</meminitial>
+            <maxmem>4096m</maxmem>
+            <source>1.7</source>
+            <target>1.7</target>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <trimStackTrace>false</trimStackTrace>
+            <systemProperties>
+              <property>
+                <name>net.sourceforge.cobertura.datafile</name>
+                <value>target/cobertura/cobertura.ser</value>
+              </property>
+            </systemProperties>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.eclipse.m2e</groupId>
+          <artifactId>lifecycle-mapping</artifactId>
+          <version>1.0.0</version>
+          <configuration>
+            <lifecycleMappingMetadata>
+              <pluginExecutions>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-antrun-plugin</artifactId>
+                    <versionRange>[0.0,)</versionRange>
+                    <goals>
+                      <goal>run</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <execute>
+                      <runOnIncremental>false</runOnIncremental>
+                    </execute>
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-plugin-plugin</artifactId>
+                    <versionRange>[0.0,)</versionRange>
+                    <goals>
+                      <goal>descriptor</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <execute>
+                      <runOnIncremental>false</runOnIncremental>
+                    </execute>
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.bsc.maven</groupId>
+                    <artifactId>maven-processor-plugin</artifactId>
+                    <versionRange>[0.0,)</versionRange>
+                    <goals>
+                      <goal>process-test</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <execute>
+                      <runOnIncremental>false</runOnIncremental>
+                    </execute>
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.bsc.maven</groupId>
+                    <artifactId>maven-processor-plugin</artifactId>
+                    <versionRange>[0.0,)</versionRange>
+                    <goals>
+                      <goal>process</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <execute>
+                      <runOnIncremental>false</runOnIncremental>
+                    </execute>
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.bsc.maven</groupId>
+                    <artifactId>maven-processor-plugin</artifactId>
+                    <versionRange>[0.0,)</versionRange>
+                    <goals>
+                      <goal>process-test</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <execute>
+                      <runOnIncremental>false</runOnIncremental>
+                    </execute>
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.safris.maven.plugin</groupId>
+                    <artifactId>codegen</artifactId>
+                    <versionRange>[0.0,)</versionRange>
+                    <goals>
+                      <goal>istenum</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <execute>
+                      <runOnIncremental>false</runOnIncremental>
+                    </execute>
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.safris.maven.plugin.xml</groupId>
+                    <artifactId>binding</artifactId>
+                    <versionRange>[0.0,)</versionRange>
+                    <goals>
+                      <goal>generate</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <execute>
+                      <runOnIncremental>false</runOnIncremental>
+                    </execute>
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.safris.maven.plugin</groupId>
+                    <artifactId>xdb</artifactId>
+                    <versionRange>[0.0,)</versionRange>
+                    <goals>
+                      <goal>ddl</goal>
+                      <goal>xsd</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <execute>
+                      <runOnIncremental>false</runOnIncremental>
+                    </execute>
+                  </action>
+                </pluginExecution>
+              </pluginExecutions>
+            </lifecycleMappingMetadata>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+  <dependencies>
+    <dependency>
+      <groupId>cobertura</groupId>
+      <artifactId>cobertura</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <artifactId>junit</artifactId>
+      <groupId>junit</groupId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-servlet</artifactId>
+      <version>9.2.10.v20150310</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-security</artifactId>
+      <version>9.2.10.v20150310</version>
+    </dependency>
+    <dependency>
+      <groupId>mysql</groupId>
+      <artifactId>mysql-connector-java</artifactId>
+      <version>5.1.35</version>
+    </dependency>
+    <dependency>
+      <groupId>org.safris.commons</groupId>
+      <artifactId>net</artifactId>
+      <version>0.4.18-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.safris.commons</groupId>
+      <artifactId>xml</artifactId>
+      <version>0.6.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.safris.commons</groupId>
+      <artifactId>dbcp</artifactId>
+      <version>2.0.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.safris.commons</groupId>
+      <artifactId>sql</artifactId>
+      <version>1.0.13-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.safris.commons</groupId>
+      <artifactId>cli</artifactId>
+      <version>0.5.16-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.safris.xml.toolkit</groupId>
+      <artifactId>binding</artifactId>
+      <version>2.0.1-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>servlet-api</artifactId>
+      <version>RELEASE</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.3.1</version>
+    </dependency>
+  </dependencies>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <artifactId>junit</artifactId>
+        <groupId>junit</groupId>
+        <version>4.11</version>
+      </dependency>
+      <dependency>
+        <groupId>cobertura</groupId>
+        <artifactId>cobertura</artifactId>
+        <version>1.8</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+</project>

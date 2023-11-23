@@ -1,0 +1,234 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<repositories>
+		<repository>
+			<id>sbks.local</id>
+			<url>file://${basedir}/lib</url>
+		</repository>
+	</repositories>
+
+	<groupId>com.socialbakers</groupId>
+	<artifactId>phoenix-proxy-server</artifactId>
+	<version>1.3.2</version>
+	<packaging>jar</packaging>
+
+	<name>phoenix-proxy-server</name>
+	<url>http://maven.apache.org</url>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<easy-config.version>0.4.1</easy-config.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.11</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.google.protobuf</groupId>
+			<artifactId>protobuf-java</artifactId>
+			<version>2.5.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.phoenix</groupId>
+			<artifactId>phoenix</artifactId>
+			<version>3.0.0-incubating</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.eclipse.jdt</groupId>
+			<artifactId>core</artifactId>
+			<version>3.1.1</version>
+			<type>jar</type>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.mina</groupId>
+			<artifactId>mina-core</artifactId>
+			<version>2.0.7</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.socialbakers</groupId>
+			<artifactId>easy-config-maven-plugin</artifactId>
+			<version>${easy-config.version}</version>
+		</dependency>
+	</dependencies>
+
+
+	<build>
+		<plugins>
+			<plugin>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>generate-sources</id>
+						<phase>generate-sources</phase>
+						<configuration>
+							<tasks>
+								<mkdir dir="target/generated-sources" />
+								<exec executable="protoc">
+									<arg value="--java_out=target/generated-sources" />
+									<arg value="proto/Phoenix.proto" />
+								</exec>
+							</tasks>
+							<sourceRoot>target/generated-sources</sourceRoot>
+						</configuration>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<configuration>
+					<archive>
+						<manifest>
+							<mainClass>com.socialbakers.phoenix.proxy.server.ProxyServer</mainClass>
+						</manifest>
+					</archive>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-assembly</id> <!-- this is used for inheritance merges -->
+						<phase>package</phase> <!-- bind to the packaging phase -->
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>com.socialbakers</groupId>
+				<artifactId>easy-config-maven-plugin</artifactId>
+				<version>${easy-config.version}</version>
+				<configuration>
+					<!-- <outputDir>/tmp</outputDir> -->
+					<configClass>com.socialbakers.phoenix.proxy.Configuration</configClass>
+					<abstract>false</abstract>
+					<configFileDefault>phoenix-proxy-default.xml</configFileDefault>
+					<configFileSite>phoenix-proxy-site.xml</configFileSite>
+					<helpName>phoenix-proxy</helpName>
+					<helpDescription>phoenix-proxy is a ... </helpDescription>
+					<params>
+						<param>
+							<name>zooKeeper</name>
+							<order>1</order>
+							<env>PHOENIX_ZK</env>
+							<description>Zookeeper connection string</description>
+							<javaType>String</javaType>
+							<required>true</required>
+						</param>
+						<param>
+							<name>port</name>
+							<order>0</order>
+							<env>PORT</env>
+							<description>Listening port</description>
+							<javaType>Integer</javaType>
+							<required>true</required>
+						</param>
+						<param>
+							<name>corePoolSize</name>
+							<option>c</option>
+							<env>CORE_POOL_SIZE</env>
+							<description>Core size of thread pool</description>
+							<javaType>int</javaType>
+							<defaultValue>32</defaultValue>
+						</param>
+						<param>
+							<name>maxPoolSize</name>
+							<option>m</option>
+							<env>MAX_POOL_SIZE</env>
+							<description>Maximum size of thread pool</description>
+							<javaType>int</javaType>
+							<defaultValue>64</defaultValue>
+						</param>
+						<param>
+							<name>queueSize</name>
+							<option>q</option>
+							<env>QUEUE_SIZE</env>
+							<description>Size of thread queue</description>
+							<javaType>int</javaType>
+							<defaultValue>65384</defaultValue>
+						</param>
+						<param>
+							<name>keepAliveTime</name>
+							<option>k</option>
+							<env>KEEP_ALIVE_TIME</env>
+							<description>Time in millisecond to keep alive idle connection thread</description>
+							<javaType>int</javaType>
+							<defaultValue>60000</defaultValue>
+						</param>
+						<param>
+							<name>maxRequestLen</name>
+							<option>r</option>
+							<env>MAX_REQUEST_LEN</env>
+							<description>Maximum length of request message in bytes</description>
+							<javaType>int</javaType>
+							<defaultValue>10485760</defaultValue>
+						</param>
+						<param>
+							<name>maxConnRetries</name>
+							<option>t</option>
+							<env>MAX_CONN_RETRIES</env>
+							<description>Maximum retries attempts to get zooKeeper connection</description>
+							<javaType>int</javaType>
+							<defaultValue>3</defaultValue>
+						</param>
+
+					</params>
+				</configuration>
+				<executions>
+					<execution>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>generate-config</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<version>1.2</version>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<executions>
+					<execution>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>add-source</goal>
+						</goals>
+						<configuration>
+							<sources>
+								<source>${project.build.directory}/generated-sources</source>
+							</sources>
+							<jdkLevel>1.6</jdkLevel>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.0</version>
+				<configuration>
+					<source>1.6</source>
+					<target>1.6</target>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>

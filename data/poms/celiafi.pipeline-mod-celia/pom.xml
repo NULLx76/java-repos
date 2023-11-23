@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.daisy.pipeline.modules</groupId>
+    <artifactId>modules-parent</artifactId>
+    <version>1.14.3</version>
+    <relativePath />
+  </parent>
+
+  <groupId>org.daisy.pipeline.modules.braille</groupId>
+  <artifactId>mod-celia</artifactId>
+  <version>1.5.1-SNAPSHOT</version>
+  <packaging>bundle</packaging>
+
+  <name>DP2 Braille Modules :: mod-celia</name>
+  
+  <properties>
+    <expose-services>
+      fi.celia.pipeline.braille.impl.CeliaTranslator$Provider,
+      fi.celia.pipeline.braille.impl.TexHyphenatorTablePath,
+      org.daisy.pipeline.braille.liblouis.impl.LiblouisTablePath_celia_liblouis_tables,
+      org.daisy.pipeline.braille.libhyphen.impl.LibhyphenTablePath_celia_hyphen_tables,
+      org.daisy.pipeline.modules.impl.Module_mod_celia,
+      org.daisy.pipeline.script.impl.XProcScript_celia_dtbook_to_pef
+    </expose-services>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.daisy.pipeline.modules.braille</groupId>
+      <artifactId>common-utils</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.daisy.pipeline.modules.braille</groupId>
+      <artifactId>liblouis-utils</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.daisy.pipeline.modules.braille</groupId>
+      <artifactId>libhyphen-utils</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.daisy.pipeline.modules.braille</groupId>
+      <artifactId>texhyph-utils</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.daisy.pipeline.modules.braille</groupId>
+      <artifactId>dtbook-to-pef</artifactId>
+    </dependency>
+    <!--
+        runtime dependencies
+    -->
+    <dependency>
+      <groupId>org.daisy.pipeline.modules.braille</groupId>
+      <artifactId>css-utils</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <!--
+        test dependencies
+    -->
+    <dependency>
+      <groupId>org.daisy.pipeline.modules</groupId>
+      <artifactId>css-utils</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.daisy.pipeline.modules.braille</groupId>
+      <artifactId>dotify-utils</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.daisy.pipeline.modules.braille</groupId>
+      <artifactId>pef-utils</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <excludes>
+          <exclude>hyph/hyph-fi</exclude>
+          <!--
+              modules-parent
+          -->
+          <exclude>META-INF/catalog.xml</exclude>
+        </excludes>
+      </resource>
+      <resource>
+        <directory>${project.build.directory}/generated-resources</directory>
+        <includes>
+          <include>hyph/hyph-fi.dic</include>
+          <include>hyph/hyph-fi.tex</include>
+        </includes>
+      </resource>
+    </resources>
+    <plugins>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <concat destfile="target/generated-resources/hyph/hyph-fi.dic.tmp">
+                  <header trimleading="yes">
+                    % This file has been translated from TeX hyphenation file
+                    % Originally by Kauko Saarinen et al., original copyright below.
+                    % Translation by Jukka Eerikäinen 2015
+                    %
+                  </header>
+                  <path path="src/main/resources/hyph/hyph-fi" />
+                </concat>
+                <exec executable="perl" failonerror="yes">
+                  <arg value="substrings.pl" />
+                  <arg value="target/generated-resources/hyph/hyph-fi.dic.tmp" />
+                  <arg value="target/generated-resources/hyph/hyph-fi.dic" />
+                  <arg value="UTF-8" />
+                  <arg value="1" />
+                  <arg value="1" />
+                  <redirector output="target/substrings.log" />
+                </exec>
+                <concat destfile="target/generated-resources/hyph/hyph-fi.tex">
+                  <header trimleading="yes">
+                    \patterns{
+                  </header>
+                  <path path="src/main/resources/hyph/hyph-fi" />
+                  <footer trimleading="yes">
+                    }
+                  </footer>
+                </concat>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <org.daisy.pipeline.junit.runners>PaxExam</org.daisy.pipeline.junit.runners>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.vafer</groupId>
+        <artifactId>jdeb</artifactId>
+        <version>1.0</version>
+        <executions>
+          <execution>
+            <id>package-deb</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jdeb</goal>
+            </goals>
+            <configuration>
+              <controlDir>src/main/deb/DEBIAN</controlDir>
+              <classifier>all</classifier>
+              <deb>target/${project.artifactId}_${project.version}_all.deb</deb>
+              <dataSet>
+                <data>
+                  <type>file</type>
+                  <src>target/${project.artifactId}-${project.version}.jar</src>
+                  <mapper>
+                    <type>perm</type>
+                    <prefix>/opt/daisy-pipeline2/modules</prefix>
+                  </mapper>
+                </data>
+              </dataSet>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+        <configuration>
+          <tagNameFormat>v@{project.version}</tagNameFormat>
+          <arguments>-DskipTests -Psonatype-oss-release</arguments>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+      <profile>
+      <id>mac</id>
+      <activation>
+        <os>
+          <family>mac</family>
+        </os>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.daisy.pipeline.modules.braille</groupId>
+          <artifactId>liblouis-utils</artifactId>
+          <classifier>mac</classifier>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.daisy.pipeline.modules.braille</groupId>
+          <artifactId>libhyphen-utils</artifactId>
+          <classifier>mac</classifier>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>linux</id>
+      <activation>
+        <os>
+          <name>linux</name>
+        </os>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.daisy.pipeline.modules.braille</groupId>
+          <artifactId>liblouis-utils</artifactId>
+          <classifier>linux</classifier>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.daisy.pipeline.modules.braille</groupId>
+          <artifactId>libhyphen-utils</artifactId>
+          <classifier>linux</classifier>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>win</id>
+      <activation>
+        <os>
+          <family>windows</family>
+        </os>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.daisy.pipeline.modules.braille</groupId>
+          <artifactId>liblouis-utils</artifactId>
+          <classifier>windows</classifier>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.daisy.pipeline.modules.braille</groupId>
+          <artifactId>libhyphen-utils</artifactId>
+          <classifier>windows</classifier>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
+
+</project>

@@ -1,0 +1,199 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>org.jboss.tools.jmxconsole</groupId>
+	<artifactId>jmx-console</artifactId>
+	<packaging>war</packaging>
+	<version>7.1</version>
+
+	<name>jboss-as-jmx-console</name>
+	
+	<dependencies>
+		<dependency>
+			<groupId>org.jboss</groupId>
+			<artifactId>jboss-common-core</artifactId>
+			<scope>provided</scope>
+			<version>${version.org.jboss.jboss-common-core}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jboss.logging</groupId>
+			<artifactId>jboss-logging</artifactId>
+			<scope>provided</scope>
+			<version>${version.org.jboss.logging.jboss-logging}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jboss.spec.javax.servlet</groupId>
+			<artifactId>jboss-servlet-api_3.0_spec</artifactId>
+			<scope>provided</scope>
+			<version>${version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.0_spec}</version>
+		</dependency>
+		<dependency>
+			<groupId>dom4j</groupId>
+			<artifactId>dom4j</artifactId>
+			<scope>compile</scope>
+			<version>${version.dom4j}</version>
+		</dependency>
+	</dependencies>
+	
+	<!-- 
+	<dependencies>
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>servlet-api</artifactId>
+			<scope>provided</scope>
+			<version>2.5</version>
+		</dependency>
+	</dependencies>
+	 -->
+	
+	
+	<properties>
+        <version.jboss.as.maven.plugin>7.1.1.Final</version.jboss.as.maven.plugin>
+        <version.org.jboss.jboss-common-core>2.2.17.GA</version.org.jboss.jboss-common-core>
+        <version.org.jboss.logging.jboss-logging>3.1.0.Beta3</version.org.jboss.logging.jboss-logging>
+        <version.org.jboss.logging.jboss-logging-tools>1.0.0.CR3</version.org.jboss.logging.jboss-logging-tools>
+        <version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.0_spec>1.0.0.Final</version.org.jboss.spec.javax.servlet.jboss-servlet-api_3.0_spec>
+        <version.dom4j>1.6.1</version.dom4j>
+        
+		<jboss.deploy>D:/Runtime/JBoss/jboss-eap-6.2/standalone/deployments</jboss.deploy>
+    </properties>
+	
+	
+	<build>
+        <finalName>${project.artifactId}</finalName>
+        <sourceDirectory>src/main/java</sourceDirectory>
+		<resources>
+			<resource>
+				<directory>src/main/java</directory>
+				<excludes>
+					<exclude>**/*.java</exclude>
+				</excludes>
+			</resource>
+		</resources>
+        <plugins>
+            <!-- Force Java 6 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.4</version>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+            
+            <!-- WAR plugin --> 
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<configuration>
+					<archive>
+						<manifestEntries>
+							<Dependencies>org.dom4j, org.jboss.common-core</Dependencies>
+						</manifestEntries>
+					</archive>
+				</configuration>
+			</plugin>
+            
+            <!-- Deployent on AS from console -->
+            <plugin>
+                <groupId>org.jboss.as.plugins</groupId>
+                <artifactId>jboss-as-maven-plugin</artifactId>
+                <version>${version.jboss.as.maven.plugin}</version>
+            </plugin>
+            
+            <!-- Surefire plugin before 2.9 version is buggy -->
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.12</version>
+            </plugin>
+            
+            <!-- It seems useless... -->
+            <plugin>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<executions>
+					<execution>
+						<phase>install</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<target>
+								<echo message="begin .............................. " />
+								<delete verbose="true"
+									file="${jboss.deploy}/standalone/deployments/${project.name}.${project.packaging}.failed" />
+								<copy verbose="true"
+									file="${project.build.directory}/${project.build.finalName}.${project.packaging}"
+									tofile="${jboss.deploy}/${project.name}.${project.packaging}" 
+									overwrite="true" failonerror="false"/>
+								<echo message="end .............................. " />
+							</target>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+            
+        </plugins>
+    </build>
+    
+    
+    <profiles>
+        <profile>
+            <!-- When built in OpenShift the 'openshift' profile will be 
+                used when invoking mvn. -->
+            <!-- Use this profile for any OpenShift specific customization 
+                your app will need. -->
+            <!-- By default that is to put the resulting archive into the 
+                'deployments' folder. -->
+            <!-- http://maven.apache.org/guides/mini/guide-building-for-different-environments.html -->
+            <id>openshift</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-war-plugin</artifactId>
+                        <version>2.2</version>
+                        <configuration>
+                            <outputDirectory>deployments</outputDirectory>
+                            <warName>ROOT</warName>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+	
+	<!-- 
+	<properties>
+		<jboss.deploy>D:/Runtime/JBoss/jboss-eap-6.2/standalone/deployments</jboss.deploy>
+	</properties>
+
+
+	<build>
+		<plugins>
+			<plugin>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<executions>
+					<execution>
+						<phase>install</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<target>
+								<delete
+									file="${jboss.deploy}/standalone/deployments/${project.name}.${project.packaging}.failed" />
+								<copy
+									file="${project.build.directory}/${project.build.finalName}.${project.packaging}"
+									tofile="${jboss.deploy}/${project.name}.${project.packaging}" />
+							</target>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+	 -->
+
+
+</project>

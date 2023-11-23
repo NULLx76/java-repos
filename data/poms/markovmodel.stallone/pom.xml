@@ -1,0 +1,258 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<name>Stallone</name>
+	<description>Library for creating Markov models for analyzing molecular trajectory data</description>
+	<groupId>compmolbio</groupId>
+	<artifactId>stallone</artifactId>
+	<version>1.0-SNAPSHOT</version>
+	<packaging>jar</packaging>
+	<url>http://compmolbio.biocomputing-berlin.de/index.php</url>
+	<licenses>
+		<license>
+			<name>BSD</name>
+		</license>
+	</licenses>
+	<properties>
+		<finalName>${project.artifactId}-${project.version}</finalName>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+	<scm>
+		<url>https://bitbucket.org/cmb_fu/stallone</url>
+		<connection>scm:git:https://bitbucket.org/cmb_fu/stallone.git</connection>
+	</scm>
+	<!-- TODO: describe build process -->
+	<build>
+		<sourceDirectory>src</sourceDirectory>
+		<testSourceDirectory>test</testSourceDirectory>
+		<plugins>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.1</version>
+				<configuration>
+					<source>1.6</source>
+					<target>1.6</target>
+					<optimize>true</optimize>
+					<useIncrementalCompilation>false</useIncrementalCompilation>
+					<showWarnings>true</showWarnings>
+					<showDeprecation>true</showDeprecation>
+					<compilerArgs>
+						<arg>-Xlint:unchecked</arg>
+					</compilerArgs>
+				</configuration>
+			</plugin>
+			<!-- generate a build number -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>buildnumber-maven-plugin</artifactId>
+				<version>1.3</version>
+				<executions>
+					<execution>
+						<phase>validate</phase>
+						<goals>
+							<goal>create</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<doCheck>false</doCheck> <!-- allow dirty repo on build -->
+					<doUpdate>false</doUpdate>
+					<shortRevisionLength>6</shortRevisionLength>
+				</configuration>
+			</plugin>
+			<!-- create single jar from stallone classes -->
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<!-- Goal assembly:single is bound to maven execution phase "prepare-package" -->
+				<executions>
+					<execution>
+						<id>distro-assembly</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+						<configuration>
+							<descriptorRefs>
+								<descriptorRef>jar-with-dependencies</descriptorRef>
+							</descriptorRefs>
+							<!-- used to override on github release -->
+							<finalName>${finalName}</finalName>
+							<archive>
+								<index>true</index>
+								<manifest>
+									<addClasspath>true</addClasspath>
+									<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+								</manifest>
+								<manifestEntries>
+									<version>${project.version}</version>
+									<Implementation-Build>${buildNumber}</Implementation-Build>
+								</manifestEntries>
+							</archive>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+	<profiles>
+		<profile>
+		    <!-- FIXME: proguard produces non-working jar! -->
+			<id>buildDistribution</id>
+			<build>
+				<plugins>
+					<!-- build runtime jar, which includes all dependencies -->
+					<plugin>
+						<artifactId>proguard-maven-plugin</artifactId>
+						<groupId>com.github.wvengen</groupId>
+						<version>2.0.8</version>
+						<executions>
+							<execution>
+								<phase>package</phase>
+								<goals>
+									<goal>proguard</goal>
+								</goals>
+							</execution>
+						</executions>
+						<dependencies>
+							<dependency>
+								<groupId>net.sf.proguard</groupId>
+								<artifactId>proguard-base</artifactId>
+								<version>5.1</version>
+								<scope>runtime</scope>
+							</dependency>
+						</dependencies>
+						<configuration>
+							<injar>${finalName}-jar-with-dependencies.jar</injar>
+							<outjar>${project.build.finalName}-opt.jar</outjar>
+							<outputDirectory>${project.build.directory}</outputDirectory>
+							<libs>
+								<lib>${java.home}/lib/rt.jar</lib>
+								<lib>${java.home}/lib/jsse.jar</lib>
+							</libs>
+							<addMavenDescriptor>false</addMavenDescriptor>
+							<!-- do not include any libraries. we depend on: we are already working
+								on a jar which contains all dependencies in one jar See: previous 
+								package
+								step -->
+							<includeDependency>false</includeDependency>
+							<obfuscate>false</obfuscate>
+							<proguardInclude>${basedir}/proguard.conf</proguardInclude>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+	<dependencies>
+		<!-- jep library, for function string parsing/evaluation -->
+		<dependency>
+			<groupId>jep</groupId>
+			<artifactId>jep</artifactId>
+			<version>2.24</version>
+		</dependency>
+		
+		<!-- cern colt library used for Step_Rev_Quad_Trendelkamp -->
+		<dependency>
+			<groupId>colt</groupId>
+			<artifactId>colt</artifactId>
+			<version>1.2.0</version>
+		</dependency>
+		
+		<!-- junit testing -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.11</version>
+			<scope>test</scope>
+		</dependency>
+		
+		<!-- matrix tools kit -->
+		<dependency>
+			<groupId>com.googlecode.matrix-toolkits-java</groupId>
+			<artifactId>mtj</artifactId>
+			<version>1.0.1</version>
+			<!-- try to exclude native support -->
+			<exclusions>
+				<exclusion>
+					<artifactId>netlib-native_ref-osx-x86_64</artifactId>
+					<groupId>com.github.fommil.netlib</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>netlib-native_ref-linux-x86_64</artifactId>
+					<groupId>com.github.fommil.netlib</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>netlib-native_system-osx-x86_64</artifactId>
+					<groupId>com.github.fommil.netlib</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>netlib-native_ref-win-x86_64</artifactId>
+					<groupId>com.github.fommil.netlib</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>netlib-native_ref-linux-armhf</artifactId>
+					<groupId>com.github.fommil.netlib</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>netlib-native_system-linux-i686</artifactId>
+					<groupId>com.github.fommil.netlib</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>netlib-native_system-linux-armhf</artifactId>
+					<groupId>com.github.fommil.netlib</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>netlib-native_system-win-i686</artifactId>
+					<groupId>com.github.fommil.netlib</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>netlib-native_ref-win-i686</artifactId>
+					<groupId>com.github.fommil.netlib</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>netlib-native_system-linux-x86_64</artifactId>
+					<groupId>com.github.fommil.netlib</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>netlib-native_system-win-x86_64</artifactId>
+					<groupId>com.github.fommil.netlib</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>netlib-native_ref-linux-i686</artifactId>
+					<groupId>com.github.fommil.netlib</groupId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<!-- dependency>
+			<groupId>com.github.fommil.netlib</groupId>
+			<artifactId>core</artifactId>
+			<version>1.1.2</version>
+			</dependency>
+			<dependency>
+			<groupId>com.github.fommil.netlib</groupId>
+			<artifactId>native_ref-java</artifactId>
+			<version>1.1</version>
+			</dependency -->
+	</dependencies>
+	<reporting>
+		<plugins>
+			<!-- javadoc generation -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>2.9.1</version>
+				<configuration>
+					<!-- TODO: include only public api -->
+					<sourceFileExcludes>
+						<sourceFileExclude>stallone.algebra.*</sourceFileExclude>
+					</sourceFileExcludes>
+				</configuration>
+			</plugin>
+			<!-- PMD static code analysis -->
+			<!-- plugin> <groupId>org.apache.maven.plugins</groupId> <artifactId>maven-pmd-plugin</artifactId>
+				<version>3.0.1</version> <configuration> <rulesets> <ruleset>/rulesets/braces.xml</ruleset>
+				<ruleset>/rulesets/naming.xml</ruleset> <ruleset>/rulesets/design.xml</ruleset>
+				</rulesets> </configuration> </plugin -->
+		</plugins>
+	</reporting>
+</project>

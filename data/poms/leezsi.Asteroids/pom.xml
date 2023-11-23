@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>ar.edu.unq</groupId>
+	<artifactId>Asteroids</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<properties>
+		<!-- clase principal del juego -->
+		<gameClass>ar.edu.unq.Asteroids.Asteroids</gameClass>
+		<!-- La dimensión con que se ve el applet. Debería conincidir con la definida 
+			en la clase del juego -->
+		<width>800</width>
+		<height>600</height>
+		<!-- modificar estos atributos para configurar el certificado autofirmado 
+			con el que se firma el applet. luego de modificar alguno de estos atributos, 
+			elimine el keystore anterior ya que el plugin que genera el certificado solo 
+			se ejecuta si no existe. Ese comportamiento es intencional ya que el certificado 
+			generado para desarrollo debería ser reemplazado con uno acorde con el sitio 
+			web donde se deployará el applet -->
+		<security.dir>src/main/security/</security.dir>
+		<security.keystore>keystore.jks</security.keystore>
+		<security.alias>aliasDefault</security.alias>
+		<security.storepass>storePassDefault</security.storepass>
+		<security.keypass>keyPassDefault</security.keypass>
+		<security.dName>CN=hostname, OU=Example Department, O=Example Company,
+			L=Buenos Aires, ST=Buenos Aires, C=AR </security.dName>
+
+		<!-- Las siguientes propiedades no se suelen modificar -->
+
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<!-- Estos son los parámetros de la JVM con los que el desktop y el applet 
+			ejecuta el juego. El launcher del eclipse sólo se genera al inicio del proyecto 
+			y no se modifica al cambiar este parámetro. Por lo tanto en caso de modificarse 
+			se debe reconfigurar manualmente en el menu run configurations -->
+		<javaArgs>-Dsun.java2d.noddraw=true -Dsun.java2d.opengl=True -Xmx1024M
+			-Xms512M</javaArgs>
+		<!-- La clases launchers del en modo desktop, debe contener un main que 
+			reciba por parámetro la clase del juego -->
+		<mainClass>ar.edu.unq.americana.DesktopGameLauncher</mainClass>
+		<!-- La clases launchers del en modo Applet, puede usar la clase del juego 
+			como parámetro -->
+		<appletClass>ar.edu.unq.americana.GameApplet</appletClass>
+		<!-- el html que dispara el launcher espera un único jar, para lo cual 
+			usa el plugin assembly para unir tanto el proyecto como sus dependencias 
+			en un único jar. Este parámetro configura el descriptor usado por el plugin 
+			y se espera que forme parte del jar resultante. En caso de que no sea así 
+			reconfigure el plugin de velocity en este mismo pom para adecuar el parametro 
+			jarFile -->
+		<assemblyDescriptor>jar-with-dependencies</assemblyDescriptor>
+	</properties>
+	<name>Asteroids</name>
+	<url>.</url>
+	<description>Asteroids Powered By Uqbar-Vainilla</description>
+	<build>
+		<plugins>
+			<!-- Utilizado para ejecutar keytool y así generar el certificado usado 
+				por el applet. Usa el keytool disponible como comando del sistema operativo. 
+				En caso de querer utilizar otro keytool, o una versión del mismo antigua 
+				sin la opción "gencert" tendrá que modificar la configuración. El keytool 
+				solo se ejecuta en caso de que no exista ya el keystore. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>1.6</version>
+				<executions>
+					<execution>
+						<phase>generate-sources</phase>
+						<configuration>
+							<tasks>
+								<taskdef resource="net/sf/antcontrib/antcontrib.properties" />
+
+								<if>
+									<available
+										file="${project.basedir}/${security.dir}/${security.keystore}" />
+									<then>
+										<echo>The keystore file exists. The creation was skiped</echo>
+									</then>
+
+									<else>
+										<exec dir="${project.basedir}/${security.dir}"
+											executable="keytool" failonerror="true">
+											<arg
+												line="-genkey -keyalg RSA -alias ${security.alias} -keystore ${security.keystore} -dname &quot;${security.dName}&quot; -storepass ${security.storepass} -validity 360 -keysize 2048 -keypass ${security.keypass}" />
+										</exec>
+									</else>
+								</if>
+							</tasks>
+						</configuration>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+				</executions>
+				<dependencies>
+					<dependency>
+						<groupId>ant-contrib</groupId>
+						<artifactId>ant-contrib</artifactId>
+						<version>20020829</version>
+					</dependency>
+				</dependencies>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>2.3.2</version>
+				<configuration>
+					<source>1.6</source>
+					<target>1.6</target>
+				</configuration>
+			</plugin>
+
+			<!-- En el manifest agrega el Desktop Launcher para poder ser un jar ejecutable -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>2.4</version>
+				<configuration>
+					<archive>
+						<manifest>
+							<mainClass>${mainClass}</mainClass>
+						</manifest>
+						<manifestEntries>
+							<Permissions>all-permissions</Permissions>
+						</manifestEntries>
+					</archive>
+				</configuration>
+			</plugin>
+
+			<!-- Construye un único jar con todas las dependencias para que sea más 
+				cómodo el deploy tanto del applet como desktop. Agrega en el manifest el 
+				Main (necesario para usarse en modo desktop y el "Pemissions" necesario para 
+				que el applet pueda acceder a todos los recursos de la máquina (en particular 
+				la aceleración por hardware) -->
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.4</version>
+				<configuration>
+					<descriptorRefs>
+						<descriptorRef>${assemblyDescriptor}</descriptorRef>
+					</descriptorRefs>
+					<archive>
+						<manifest>
+							<mainClass>${mainClass}</mainClass>
+						</manifest>
+						<manifestEntries>
+							<Permissions>all-permissions</Permissions>
+						</manifestEntries>
+					</archive>
+					<recompressZippedFiles>true</recompressZippedFiles>
+					<verbose>true</verbose>
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-assembly</id>
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- Firma los jars con el certificado para que pueda ser utilizado como 
+				un applet -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jarsigner-plugin</artifactId>
+				<executions>
+					<execution>
+						<goals>
+							<goal>sign</goal>
+						</goals>
+						<phase>package</phase>
+						<configuration>
+							<keystore>${security.dir}/${security.keystore}</keystore>
+							<alias>${security.alias}</alias>
+							<storepass>${security.storepass}</storepass>
+							<keypass>${security.keypass}</keypass>
+							<!-- <verbose>true</verbose> -->
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+
+			<!-- Genera los archivos que acompañan al jar generado por el assembly 
+				para que sea más sencillo su ejecución. En caso de quere modificar el .sh, 
+				el .bat o el .html generado se puede modficiar los templates o los parámetros 
+				utilizados -->
+			<plugin>
+				<groupId>com.googlecode.velocity-maven-plugin</groupId>
+				<artifactId>velocity-maven-plugin</artifactId>
+				<version>1.0.0</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>velocity</goal>
+						</goals>
+						<phase>package</phase>
+						<configuration>
+							<templateFiles>
+								<directory>src/main/templates</directory>
+								<includes>
+									<include>*.vm</include>
+								</includes>
+							</templateFiles>
+							<templateValues>
+								<title>${project.name}</title>
+								<gameClass>${gameClass}</gameClass>
+								<appletClass>${appletClass}</appletClass>
+								<jarFile>${project.build.finalName}-${assemblyDescriptor}.jar</jarFile>
+								<javaArgs>${javaArgs}</javaArgs>
+								<width>${width}</width>
+								<height>${height}</height>
+							</templateValues>
+							<removeExtension>.vm</removeExtension>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+		</plugins>
+		<pluginManagement>
+			<plugins>
+				<!-- Evita un bug del m2eclipse existente cuando se agregan plugins a 
+					la fase generate-sources http://wiki.eclipse.org/M2E_plugin_execution_not_covered -->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>org.apache.maven.plugins</groupId>
+										<artifactId>maven-antrun-plugin</artifactId>
+										<versionRange>[1.6,)</versionRange>
+										<goals>
+											<goal>run</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore />
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>ar.edu.unq</groupId>
+			<artifactId>americana</artifactId>
+			<version>0.0.2</version>
+		</dependency>
+	</dependencies>
+</project>

@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.github.wisebrains.archetypes</groupId>
+  <artifactId>wise-archetypes-parent</artifactId>
+  <packaging>pom</packaging>
+  <version>1.2-SNAPSHOT</version>
+
+  <name>${project.groupId}:${project.artifactId}</name>
+
+  <description>
+    A collection of archetypes aiming to facilitate basically
+    some GateIn Portal components creation.
+  </description>
+
+  <url>https://github.com/wisebrains/wise-archetypes</url>
+
+  <licenses>
+    <license>
+      <name>The Apache Software License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>tmarwen</id>
+      <name>Marwen Trabelsi</name>
+      <email>marwen.trabelsi.insat@gmail.com</email>
+      <url>http://www.wisebrains.com/</url>
+      <organization>Wise Software</organization>
+      <organizationUrl>http://www.wisebrains.com/</organizationUrl>
+      <roles>
+        <role>developer</role>
+        <role>support</role>
+      </roles>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:ssh://github.com/wisebrains/wise-archetypes</connection>
+    <developerConnection>scm:git:ssh://git@github.com/wisebrains/wise-archetypes</developerConnection>
+    <url>https://github.com/wisebrains/wise-archetypes</url>
+    <tag>HEAD</tag>
+  </scm>
+
+  <properties>
+    <oss.perform.release>false</oss.perform.release>
+  </properties>
+
+  <profiles>
+
+    <!--
+      A test profile used to deploy project artifacts locally
+      * Artifacts can be found under ${project.build.directory}/mvn-repo
+    -->
+    <profile>
+      <id>local-release</id>
+      <distributionManagement>
+        <repository>
+          <id>internal.repo</id>
+          <name>Temporary Filesystem Staging Repository</name>
+          <url>file://${project.build.directory}/mvn-repo</url>
+        </repository>
+        <site>
+          <id>wise.home</id>
+          <name>WiseBrains Home Page</name>
+          <url>scp://www.wisebrains.org/</url>
+        </site>
+      </distributionManagement>
+    </profile>
+
+    <!--
+      A profile dedicated for real production releases
+      * Snapshot artifacts goes to https://oss.sonatype.org/content/repositories/snapshots
+      * Release artifacts goes to https://oss.sonatype.org/service/local/staging/deploy/maven2/
+      Some parts of this profile declaration lands in local settings.xml
+      file such as properties declaration (e.g. gpg properties).
+      Common use:
+      ~ mvn clean deploy : Snapshot or Release artifacts deployment
+      ~ mvn clean deploy -Doss.perform.release=true : Deploy Release
+      artifacts even with a SNAPSHOT project version.
+      ~ mvn release:clean release:prepare Along with mvn release:perform :
+      Sanity project, perform tag commit and deploy release version using
+      hooked configuration of Maven Release Plugin.
+    -->
+    <profile>
+      <id>oss-sonatype-release</id>
+
+      <activation>
+        <property>
+          <name>release</name>
+          <value>true</value>
+        </property>
+      </activation>
+
+      <distributionManagement>
+        <snapshotRepository>
+          <id>ossrh</id>
+          <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+          <id>ossrh</id>
+          <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+      </distributionManagement>
+
+      <build>
+        <plugins>
+
+          <!--
+            Nexus Staging Maven Plugin for deploy/release automation
+            ossrh server (More info about ossrh server under
+            <distributionManagement />)
+          -->
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nexus-staging-maven-plugin</artifactId>
+            <version>1.6.2</version>
+            <extensions>true</extensions>
+            <configuration>
+              <serverId>ossrh</serverId>
+              <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+              <autoReleaseAfterClose>${oss.perform.release}</autoReleaseAfterClose>
+            </configuration>
+          </plugin>
+
+          <!--
+            Maven Source Plugin configuration to generate
+            code source (following OSS conventions)
+          -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>2.2.1</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+
+          <!--
+            Maven JavaDoc Plugin configuration to generate
+            code source (following OSS conventions)
+          -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>2.9.1</version>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+
+          <!--
+            Maven GPG Plugin configuration for signing generated
+            maven artifacts
+          -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>1.5</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+
+          <!--
+            Maven Release Plugin should be updated to be compliant
+            with nexus-staging-maven-plugin
+            * Default Maven release profile is disabled
+          -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-release-plugin</artifactId>
+            <version>2.5</version>
+            <configuration>
+              <useReleaseProfile>false</useReleaseProfile>
+              <releaseProfiles>oss-sonatype-release</releaseProfiles>
+              <autoVersionSubmodules>true</autoVersionSubmodules>
+              <tagNameFormat>v@{project.version}</tagNameFormat>
+              <preparationGoals>clean verify</preparationGoals>
+              <goals>deploy</goals>
+            </configuration>
+          </plugin>
+
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+  <modules>
+    <module>gatein-rest-resource-archetype</module>
+  </modules>
+
+</project>

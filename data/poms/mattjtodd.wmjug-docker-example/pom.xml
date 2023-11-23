@@ -1,0 +1,139 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>1.2.1.RELEASE</version>
+	</parent>
+	
+	<groupId>com.mattjtodd.dockermicro</groupId>
+	<artifactId>docker-micro</artifactId>
+	<version>0.1.0-SNAPSHOT</version>
+	<name>Docker Microservice</name>
+	<description>A simple example of a spring boot microservice which is built into a docker image and unit and integration tested.</description>
+
+	<prerequisites>
+		<maven>3.2.1</maven>
+	</prerequisites>
+
+	<properties>
+		<java.version>1.8</java.version>
+		<app.ip>192.168.59.103</app.ip>
+	</properties>
+	
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+
+			<plugin>
+				<groupId>org.jolokia</groupId>
+				<artifactId>docker-maven-plugin</artifactId>
+				<version>0.10.5</version>
+				<configuration>
+					<images>
+						<image>
+							<alias>${project.artifactId}</alias>
+							<name>mattjtodd/${project.artifactId}:${project.version}</name>
+							<build>
+								<from>java:openjdk-8-jre</from>
+								<assemblyDescriptorRef>artifact</assemblyDescriptorRef>
+								<ports>
+									<port>8080</port>
+								</ports>
+								<command>java -jar /maven/${project.build.finalName}.jar</command>
+							</build>
+							<run>
+								<ports>
+									<port>app.port:8080</port>
+								</ports>
+								<wait>
+									<log>Started Application in</log>
+									<time>100000</time>
+								</wait>
+							</run>
+						</image>
+					</images>
+				</configuration>
+
+				<!-- Hooking into the lifecycle -->
+				<executions>
+					<execution>
+						<id>start</id>
+						<phase>pre-integration-test</phase>
+						<goals>
+							<goal>build</goal>
+							<goal>start</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>stop</id>
+						<phase>post-integration-test</phase>
+						<goals>
+							<goal>stop</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<includes>
+						<include>**/*.class</include>
+					</includes>
+					<excludedGroups>org.springframework.boot.test.IntegrationTest</excludedGroups>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<executions>
+					<execution>
+						<goals>
+							<goal>integration-test</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<systemPropertyVariables>
+						<log.url>http://${app.ip}:${app.port}/randomWhale</log.url>
+					</systemPropertyVariables>
+					<groups>org.springframework.boot.test.IntegrationTest</groups>
+					<includes>
+						<include>**/*.class</include>
+					</includes>
+				</configuration>
+			</plugin>
+
+		</plugins>
+	</build>
+
+	<dependencies>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>3.3.2</version>
+		</dependency>
+
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+	</dependencies>
+
+</project>

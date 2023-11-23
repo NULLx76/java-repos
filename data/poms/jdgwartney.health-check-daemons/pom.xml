@@ -1,0 +1,152 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.boundary</groupId>
+  <artifactId>health-check-daemons</artifactId>
+  <version>0.1.00</version>
+  <packaging>uexe</packaging>
+
+  <name>daemon</name>
+  <description>Contains a daemon that can be used to test health checks against, such as ping, socket check, SSH check.</description>
+  <url>https://github.com/boundary/boundary-sdk</url>
+  <licenses>
+      <license>
+          <name>Apache License, Version 2.0</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+          <distribution>manual</distribution>
+          <comments>A business-friendly OSS license</comments>
+      </license>
+  </licenses>
+  <organization>
+      <name>Boundary,Inc.</name>
+      <url>http://www.boundary.com</url>
+  </organization>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <native-maven-plugin-version>1.0-alpha-8</native-maven-plugin-version>
+    <rpm-maven-plugin-version>2.0.1</rpm-maven-plugin-version>
+    <velocity-maven-plugin-version>1.0.0</velocity-maven-plugin-version>
+
+    <rpm-user-name>root</rpm-user-name>
+    <rpm-group-name>root</rpm-group-name>
+    <rpm-bin-dir>/bin</rpm-bin-dir>
+    <rpm-etc-dir>/etc</rpm-etc-dir>
+    <rpm-usr-share-dir>/usr/share/${project.name}</rpm-usr-share-dir>
+    <rpm-initd-dir>/etc/init.d</rpm-initd-dir>
+  </properties>
+
+  <build>
+  <plugins>
+      <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>rpm-maven-plugin</artifactId>
+          <version>${rpm-maven-plugin-version}</version>
+          <executions>
+              <execution>
+                  <id>generate-rpm</id>
+                  <goals>
+                      <goal>rpm</goal>
+                  </goals>
+              </execution>
+          </executions>
+          <configuration>
+              <license> Apache License Version 2.0, January 2004</license>
+              <distribution>Boundary,Inc 2014</distribution>
+              <group>Application/Collectors</group>
+              <needarch>true</needarch>
+              <packager>Boundary, Inc.</packager>
+              <defineStatements>
+                  <defineStatement>_unpackaged_files_terminate_build 0</defineStatement>
+              </defineStatements>
+              <mappings>
+                  <mapping>
+                      <directory>${rpm-bin-dir}</directory>
+                      <directoryIncluded>false</directoryIncluded>
+                      <filemode>755</filemode>
+                      <username>${rpm-user-name}</username>
+                      <groupname>${rpm-group-name}</groupname>
+                      <sources>
+                          <source>
+                              <location>${project.build.directory}/${project.artifactId}.uexe</location>
+                              <destination>${project.name}</destination>
+                          </source>
+                      </sources>
+                  </mapping>
+                  <mapping>
+                      <directory>${rpm-etc-dir}</directory>
+                      <directoryIncluded>false</directoryIncluded>
+                      <filemode>744</filemode>
+                      <username>${rpm-user-name}</username>
+                      <groupname>${rpm-group-name}</groupname>
+                      <sources>
+                          <source>
+                              <location>${basedir}/src/main/resources/${project.name}</location>
+                              <destination>${project.name}</destination>
+                          </source>
+                      </sources>
+                  </mapping>
+                  <mapping>
+                      <directory>${rpm-initd-dir}</directory>
+                      <directoryIncluded>false</directoryIncluded>
+                      <filemode>744</filemode>
+                      <username>${rpm-user-name}</username>
+                      <groupname>${rpm-group-name}</groupname>
+                      <sources>
+                          <source>
+                              <location>${project.build.directory}/${project.name}.vm</location>
+                              <destination>${project.name}</destination>
+                          </source>
+                      </sources>
+                  </mapping>
+             </mappings>
+          </configuration>
+      </plugin>
+      <plugin>
+	<groupId>org.codehaus.mojo</groupId>
+	<artifactId>native-maven-plugin</artifactId>
+	<version>${native-maven-plugin-version}</version>
+        <extensions>true</extensions>
+        <configuration>
+            <sources>
+                <source>
+                    <directory>src/main/c</directory>
+                    <fileNames>
+                       <fileName>daemon.c</fileName>
+                    </fileNames>
+                </source>
+            </sources>
+        </configuration>
+      </plugin>
+      <plugin>
+	<groupId>com.googlecode.velocity-maven-plugin</groupId>
+	<artifactId>velocity-maven-plugin</artifactId>
+	<version>${velocity-maven-plugin-version}</version>
+        <executions>
+            <execution>
+                <id>copy-resources</id>
+                <phase>validate</phase>
+                <goals>
+                   <goal>velocity</goal>
+                </goals>
+            </execution>
+        </executions>
+        <configuration>
+            <removeExtension>true</removeExtension>
+            <templateFiles>
+                <directory>src/main/resources</directory>
+                <includes>
+                    <include>*.vm</include>
+                </includes>
+            </templateFiles>
+            <templateValues>
+                <daemon>daemon</daemon>
+            </templateValues>
+        </configuration>
+     </plugin>
+  </plugins>
+  </build>
+
+</project>

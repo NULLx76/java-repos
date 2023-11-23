@@ -1,0 +1,331 @@
+<project 
+        xmlns="http://maven.apache.org/POM/4.0.0" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    
+    <!-- 
+    
+        Environment:
+        1.  Windows 7 64 bit (assume OS installed in C:\Windows)
+        2.  Eclipse 4.4
+        3.  JDK 8.0
+        4.  IISExpress 7.5 
+                -which further requires .net framework 4
+                -tweaked portable, included in src/main/resources       
+       
+        Approach1 - all automate
+        1.  "mvn install". This will include 
+                a) launch IISExpress / example3 endpoint 
+                b) generate java stub from server
+                c) run integration test 
+                d) close IISExpress / example3 endpoint in post-integration-test phase
+        2.  this project includes integration test 
+        3.  with maven-failsafe-plugin, any java file name with "IT" will be treated as 
+            intergration test (by maven, the phase is integration-test). 
+            it also help to close up IISExpress / example3 endpoint at the end (by maven, the phase is post-integration-test)
+        4)  the integration test report can be found in \target\failsafe-reports
+       
+       
+        Approach2 - run manually
+        1.  for example3, run "{env.JAVA_HOME}\bin\java.exe -classpath ${basedir}\src\main\resources\javase\jaxws\metro\example3\server\server.jar javase.jaxws.metro.example3.server.TimeServerPublishe"       
+        
+        Reference
+        1.  for example3,   refer to http://www.mkyong.com/webservices/jax-ws/jax-ws-hello-world-example/
+        2.  for ant,        refer to https://ant.apache.org/manual/Tasks/java.html   
+                     
+    -->
+        
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>   
+    </properties>
+
+    
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>jaxws-metro-snippets</groupId>
+    <artifactId>jaxws-metro-snippets</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    
+    <build>
+    
+    <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.eclipse.m2e</groupId>
+                    <artifactId>lifecycle-mapping</artifactId>
+                    <version>1.0.0</version>
+                    <configuration>
+                        <lifecycleMappingMetadata>
+                            <pluginExecutions>                                                                                             
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.apache.maven.plugins</groupId>
+                                        <artifactId>maven-antrun-plugin</artifactId>
+                                        <versionRange>[1.8]</versionRange>
+                                        <goals>
+                                            <goal>run</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <execute>  
+                                            <runOnIncremental>false</runOnIncremental>  
+                                        </execute>                                            
+                                    </action>
+                                </pluginExecution>  
+                                              
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.jvnet.jax-ws-commons</groupId>
+                                        <artifactId>jaxws-maven-plugin</artifactId>
+                                        <versionRange>[2.2]</versionRange>  
+                                        <goals>
+                                            <goal>wsimport</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <execute>  
+                                            <runOnIncremental>false</runOnIncremental>  
+                                        </execute>                                            
+                                    </action>
+                                </pluginExecution>   
+                                
+                            </pluginExecutions>
+                        </lifecycleMappingMetadata>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    
+        <plugins>   
+            
+            <!-- initialize -->
+   
+            
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <groupId>org.apache.maven.plugins</groupId>
+                <version>1.8</version>
+                <executions>
+
+                    <execution>
+                        <id>javase.jaxws.metro.example3.server | launch-endpoint </id>
+                        <phase>initialize</phase>
+                        <configuration>
+                            <target>
+                                <!-- 
+                                    1. for generating RPC java sources                                  
+                                    2. package the server as a jar previously, src located in javase.jaxws.example3.server                  
+                                    2. able to launch another jvm, but unable to connect by wsimport
+                                        a) even failed by "telnet localhost 9876"
+                                        b) even failed by allow firewall port
+                                -->
+                                <!-- 
+                                <echo message="${env.JAVA_HOME}\bin\java.exe -classpath ${basedir}\src\main\resources\javase\jaxws\metro\example3\server\server.jar javase.jaxws.metro.example3.server.TimeServerPublisher" /> 
+                                <exec executable="${env.JAVA_HOME}\bin\java.exe" spawn="true">
+                                    <arg value="-classpath ${basedir}\src\main\resources\javase\jaxws\metro\example3\server\server.jar" />
+                                    <arg value="javase.jaxws.example3.server.TimeServerPublisher" />
+                                </exec>
+                                -->
+                                
+                                <!-- 
+                                    1.  it creates 2 java.exe instance, suspected one is from "mvn install" itself
+                                    2.  both are killed by wildcard "java.ex*"
+                                
+                                 -->
+                                
+                                <echo message="javase.jaxws.metro.example3.server.TimeServerPublisher" /> 
+                                <java classname="javase.jaxws.metro.example3.server.TimeServerPublisher" fork="true" spawn="true">      
+                                    <classpath>     
+                                        <path path="${basedir}\src\main\resources\javase\jaxws\metro\example3\server\server.jar" />
+                                    </classpath>                                                                
+                                </java>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                    
+                    
+                    <!-- 
+                        1. for debugging
+                        2. "mvn test -e" or "mvn test -X"                  
+                     -->
+                    <execution>
+                        <id>javase.jaxws.metro.example3.server | sleep-after-launch-endpoint </id>
+                        <phase>initialize</phase>
+                        <configuration>
+                            <tasks>
+                                 <sleep seconds="2" />
+                            </tasks>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+     
+                
+                    <execution>
+                        <id>javase.jaxws.metro.example2.stub | launch-iis-express</id>
+                        <phase>initialize</phase>
+                        <configuration>
+                            <target>                                
+                                <!-- 
+                                    1.  it throws the following error, because of duplicate instance                                   
+                                        "Could not load file or assembly ‘Microsoft.Web.Diagnostics, Version=7.9.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35′ or one of its dependencies. The system cannot find the file specified."                                     
+                                    2.  the path must strictly be "\", but not "/". Damn IIS                                                                                                            
+                                    3.  The '/config' switch can be combined only with '/site', '/apppool' and '/systray' switches. 
+                                        In other words, the switch '/path' can't use with '/config'.                                        
+                                    4.  the log is stored in "%IIS_USER_HOME%\TraceLogFiles", which is actually in C:\Users\[user name]\Documents\IISExpress\Logs
+                                        It can be changed with using '/config'                                                                                                  
+                                -->
+                                
+                                <echo message="${basedir}\src\main\resources\javase\jaxws\metro\example2\iisexpress\iisexpress.exe /path:${basedir}\src\main\resources\javase\jaxws\metro\example2\iis_root /port:8181 /clr:v4.0" /> 
+                                <exec executable="${basedir}\src\main\resources\javase\jaxws\metro\example2\iisexpress\iisexpress.exe" spawn="true">
+                                    <arg value="/path:${basedir}\src\main\resources\javase\jaxws\metro\example2\iis_root" />
+                                    <arg value="/port:8181" />
+                                    <arg value="/clr:v4.0" />
+                                </exec>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                   </execution>
+                             
+                             
+                   <execution>
+                        <id>javase.jaxws.metro.example2.stub | stop-iis-express</id>
+                        <phase>post-integration-test</phase>
+                        <configuration>
+                            <target>                                                               
+                                <echo message="C:\Windows\System32\taskkill.exe /IM iisexpress.exe" /> 
+                                <exec executable="C:\Windows\System32\taskkill.exe" spawn="true">
+                                    <arg value="/IM" />
+                                    <arg value="iisexpress.exe" />
+                                </exec>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                   </execution>      
+                   
+                  
+                   <execution>
+                        <id>javase.jaxws.metro.example2.stub | stop-endpoint</id>
+                        <phase>post-integration-test</phase>
+                        <configuration>
+                            <target>                                                               
+                                <echo message='C:\Windows\System32\taskkill.exe /F /FI "IMAGENAME eq java.ex*"' /> 
+                                <exec executable="C:\Windows\System32\taskkill.exe" spawn="true">
+                                    <arg value="/F /FI 'IMAGENAME eq java.ex*'" />
+                                </exec>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                   </execution>     
+                              
+               </executions>
+            </plugin>
+                                   
+            <!-- compile -->                  
+            <plugin>                                   
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.0</version>
+                <configuration>
+                    <source>1.6</source>     <!-- javase.jaxws.example3.server   requires JDK 1.6 -->
+                    <target>1.6</target>
+                </configuration>
+            </plugin>  
+            
+            
+            <!-- generate-sources -->  
+            <plugin>
+                <groupId>org.jvnet.jax-ws-commons</groupId>
+                <artifactId>jaxws-maven-plugin</artifactId>
+                <version>2.2</version>
+                <executions>
+                    <execution>
+                        <id>javase.jaxws.metro.example1.stub | generate-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>wsimport</goal>
+                        </goals>
+                        <configuration>
+                            <wsdlUrls>
+                                <wsdlUrl>http://www.webservicex.net/CurrencyConvertor.asmx?WSDL</wsdlUrl>                        
+                            </wsdlUrls>                    
+                            <packageName>javase.jaxws.metro.example1.stub</packageName>                  
+                            <bindingDirectory>${basedir}/src/main/java</bindingDirectory>
+                            <sourceDestDir>${basedir}/src/main/java</sourceDestDir>
+                        </configuration>                  
+                    </execution>
+                    <execution>
+                        <id>javase.jaxws.metro.example2.stub | generate-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>wsimport</goal>
+                        </goals>
+                        <configuration>
+                            <wsdlUrls>
+                                <wsdlUrl>http://localhost:8181/Service1.asmx?wsdl</wsdlUrl>                        
+                            </wsdlUrls>                    
+                            <packageName>javase.jaxws.metro.example2.stub</packageName>                  
+                            <bindingDirectory>${basedir}/src/main/java</bindingDirectory>
+                            <sourceDestDir>${basedir}/src/main/java</sourceDestDir>
+                        </configuration>                  
+                    </execution>
+                    <execution>
+                        <id>javase.jaxws.metro.example3.stub | generate-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>wsimport</goal>
+                        </goals>
+                        <configuration>
+                            <wsdlUrls>
+                                <wsdlUrl>http://localhost:9876/ts?wsdl</wsdlUrl>                        
+                            </wsdlUrls>                    
+                            <packageName>javase.jaxws.metro.example3.rpc</packageName>                  
+                            <bindingDirectory>${basedir}/src/main/java</bindingDirectory>
+                            <sourceDestDir>${basedir}/src/main/java</sourceDestDir>
+                        </configuration>                  
+                    </execution>
+                </executions>                                                             
+            </plugin>     
+            
+            <!-- integration-test -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.12</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+                
+        </plugins>    
+    </build>     
+    
+    
+
+    <dependencies>
+           
+        <!-- junit -->                
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.10</version>
+            <type>jar</type>
+            <scope>compile</scope>
+        </dependency>
+
+    </dependencies>             
+</project>

@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.foundationdb</groupId>
+    <artifactId>fdb-sql-layer</artifactId>
+    <version>2.2.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>FoundationDB SQL Layer</name>
+    <inceptionYear>2009</inceptionYear>
+    <url>http://www.foundationdb.com/</url>
+    <organization>
+        <name>FoundationDB, LLC</name>
+        <url>http://www.foundationdb.com</url>
+    </organization>
+
+    <licenses>
+        <license>
+            <name>GNU Affero General Public License v3</name>
+            <url>https://www.gnu.org/licenses/agpl</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <scm>
+        <url>git@github.com:foundationdb/sql-layer.git</url>
+        <connection>scm:git:git@github.com:foundationdb/sql-layer.git</connection>
+    </scm>
+
+    <modules>
+      <module>fdb-sql-layer-routinefw</module>
+      <module>fdb-sql-layer-jdbc-proxy</module>
+      <module>fdb-sql-layer-test-yaml</module>
+      <module>fdb-sql-layer-core</module>
+      <module>fdb-sql-layer-pg</module>
+      <module>fdb-sql-layer-rest</module>
+    </modules>
+
+    <properties>
+         <main.basedir>${project.basedir}</main.basedir>
+         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.6</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
+                <configuration>
+                    <source>1.7</source>
+                    <target>1.7</target>
+                    <!-- apparently this is backwards, false here means use incremental compilation
+                         Maven issue for this: https://jira.codehaus.org/browse/MCOMPILER-209 -->
+                    <useIncrementalCompilation>false</useIncrementalCompilation>
+                    <compilerArgs>
+                        <arg>-Xlint:all</arg>
+                        <arg>-Werror</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>2.2.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>2.8</version>
+                <configuration>
+                    <includeScope>runtime</includeScope>
+                </configuration>
+                <executions>
+                    <execution>
+                      <id>copy-dependencies</id>
+                      <phase>package</phase>
+                      <goals>
+                          <goal>copy-dependencies</goal>
+                      </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.17</version>
+                <configuration>
+		    <failIfNoTests>false</failIfNoTests>
+                    <systemPropertyVariables>
+                        <fdbsql.port>${fdbsql.port}</fdbsql.port>
+                        <fdbsql.postgres.port>${fdbsql.postgres.port}</fdbsql.postgres.port>
+                    </systemPropertyVariables>
+                    <argLine>-Xmx512m ${fdbsql.test.extraJvmArgs} ${fdbsql.test.JmxJvmArgs} ${surefireJacocoArg}
+                        -Dmvn.main.basedir=${main.basedir} -Dmvn.settings.localRepository=${settings.localRepository}
+                        -Djava.security.manager -Djava.security.policy=${main.basedir}/fdb-sql-layer-common/test/resources/tests.policy
+                    </argLine>
+                    <includes>
+                        <include>**/*Test.java</include>
+                        <include>**/*Test?.java</include>
+                    </includes>
+                    <excludes>
+                        <!-- None -->
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.17</version>
+                <configuration>
+                    <systemPropertyVariables>
+                        <fdbsql.port>${fdbsql.port}</fdbsql.port>
+                        <fdbsql.postgres.port>${fdbsql.postgres.port}</fdbsql.postgres.port>
+                    </systemPropertyVariables>
+                    <argLine>-Xmx512m ${fdbsql.test.extraJvmArgs} ${fdbsql.test.JmxJvmArgs} ${failsafeJacocoArg}
+                              <!-- These two properties have to be set here rather than in the systemPropertyVariables section
+                                   because they bubble into the policy file before failsafe starts setting properties -->
+                             -Dmvn.main.basedir=${main.basedir} -Dmvn.settings.localRepository=${settings.localRepository}
+                             -Djava.security.manager -Djava.security.policy=${main.basedir}/fdb-sql-layer-common/test/resources/tests.policy
+                    </argLine>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>integration-test</id>
+                        <goals>
+                            <goal>integration-test</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>verify</id>
+                        <goals>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>findbugs-maven-plugin</artifactId>
+                <version>2.5.4</version>
+                <configuration>
+                    <findbugsXmlOutput>true</findbugsXmlOutput>
+                    <findbugsXmlWithMessages>true</findbugsXmlWithMessages>
+                    <xmlOutput>true</xmlOutput>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.8</version>
+                <executions>
+                    <execution>
+                        <id>reserve-network-port</id>
+                        <goals>
+                            <goal>reserve-network-port</goal>
+                        </goals>
+                        <phase>process-resources</phase>
+                        <configuration>
+                            <portNames>
+                                <portName>fdbsql.port</portName>
+                                <portName>debug.port</portName>
+                                <portName>fdbsql.postgres.port</portName>
+                                <portName>fdbsql.http.port</portName>
+                            </portNames>
+                        </configuration>
+                    </execution>
+                    <execution>
+                      <id>add-test-sources</id>
+                      <phase>generate-test-sources</phase>
+                      <goals>
+                          <goal>add-test-source</goal>
+                      </goals>
+                      <configuration>
+                          <sources>
+                              <source>${project.build.directory}/generated-test-sources</source>
+                          </sources>
+                      </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.mycila.maven-license-plugin</groupId>
+                <artifactId>maven-license-plugin</artifactId>
+                <version>1.10.b1</version>
+                <configuration>
+                    <header>${main.basedir}/fdb-sql-layer-common/etc/header.txt</header>
+                    <headerSections>
+                        <headerSection>
+                            <key>__YEAR_SECTION__</key>
+                            <defaultValue>2014</defaultValue>
+                            <ensureMatch>20([0-9][0-9])\-20[0-9][0-9]|2014</ensureMatch>
+                        </headerSection>
+                    </headerSections>
+                    <strictCheck>true</strictCheck>
+                    <failIfMissing>true</failIfMissing>
+                    <excludes>
+                        <!-- General files that can't have or don't need header -->
+                        <exclude>.gitignore</exclude>
+                        <exclude>.idea/**</exclude>
+                        <exclude>LICENSE.txt</exclude>
+                        <!-- No extension. Manually add header and ignore -->
+                        <exclude>bin/fdbsqllayer</exclude>
+                        <!-- Files requiring a specific format (packaging control, test output, etc) -->
+                        <exclude>README.md</exclude>
+                        <exclude>SECURITY.md</exclude>
+                        <exclude>**/*.policy</exclude>
+                        <exclude>conf/**</exclude>
+                        <exclude>packaging/**</exclude>
+                        <exclude>src/main/protobuf/*.proto</exclude>
+                        <exclude>src/main/resources/**</exclude>
+                        <exclude>src/test/bin/*</exclude>
+                        <exclude>src/test/resources/**</exclude>
+                        <exclude>src/test/protobuf/*.proto</exclude>
+                    </excludes>
+                    <mapping>
+                        <options>SCRIPT_STYLE</options>
+                        <yaml>SCRIPT_STYLE</yaml>
+                        <yml>SCRIPT_STYLE</yml>
+                    </mapping>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project
+    xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.jitsi</groupId>
+  <artifactId>jitsi-lgpl-dependencies</artifactId>
+  <version>1.2-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>jitsi-lgpl-dependencies</name>
+  <description>
+    This is a submodule of libjitsi that encapsulates references to
+    external LGPL licensed libraries.
+  </description>
+  <url>https://github.com/jitsi/jitsi-lgpl-dependencies</url>
+
+  <organization>
+    <name>jitsi.org</name>
+    <url>https://jitsi.org</url>
+  </organization>
+
+  <developers>
+    <developer>
+      <id>org.jitsi</id>
+      <name>Jitsi Team</name>
+      <email>dev@jitsi.org</email>
+    </developer>
+  </developers>
+
+  <scm>
+    <url>https://github.com/jitsi/jitsi-lgpl-dependencies</url>
+    <connection>scm:git:https://github.com/jitsi/jitsi-lgpl-dependencies.git</connection>
+    <developerConnection>scm:git:https://github.com/jitsi/jitsi-lgpl-dependencies.git</developerConnection>
+    <tag>HEAD</tag>
+  </scm>
+
+  <licenses>
+    <license>
+      <name>LGPL-2.1-only</name>
+      <url>https://github.com/jitsi/jitsi-lgpl-dependencies/blob/master/LICENSE</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.10.1</version>
+        <configuration>
+          <release>11</release>
+          <compilerArgs>
+            <arg>-Xlint:all</arg>
+            <arg>-h</arg>
+            <arg>${project.build.directory}/native/javah/</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>3.2.1</version>
+        <configuration>
+          <excludeResources>true</excludeResources>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>3.4.0</version>
+        <configuration>
+          <doclint>-missing</doclint>
+          <source>11</source>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <version>3.0.0-M2</version>
+      </plugin>
+      <plugin>
+        <groupId>org.sonatype.plugins</groupId>
+        <artifactId>nexus-staging-maven-plugin</artifactId>
+        <version>1.6.13</version>
+        <extensions>true</extensions>
+        <configuration>
+          <serverId>ossrh</serverId>
+          <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+          <autoReleaseAfterClose>true</autoReleaseAfterClose>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.3.0</version>
+        <executions>
+          <execution>
+            <id>parse-version</id>
+            <goals>
+              <goal>parse-version</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Generate the plain Java and Windows/Mac jars -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.2.2</version>
+        <configuration>
+          <includes combine.children="append">
+            <include>org/**</include>
+            <include>META-INF/LICENSE</include>
+          </includes>
+          <archive>
+            <manifestEntries>
+              <!--
+               Create OSGi headers manually because we create multiple jars,
+               which is not possible with maven-bundle-plugin and bnd-maven-plugin
+               is not available in Debian/Ubuntu.
+               And the manifest is relatively simple. Rethink this as soon as
+               there is a Import-Package.
+              -->
+              <Bundle-Description>${project.description}</Bundle-Description>
+              <Bundle-License>
+                LGPL-2.1-only;link="https://github.com/jitsi/jitsi-lgpl-dependencies/blob/master/LICENSE"
+              </Bundle-License>
+              <Bundle-ManifestVersion>2</Bundle-ManifestVersion>
+              <Bundle-Name>${project.name}</Bundle-Name>
+              <Bundle-SymbolicName>org.jitsi.lgpl-dependencies
+              </Bundle-SymbolicName>
+              <Bundle-Vendor>jitsi.org</Bundle-Vendor>
+              <Bundle-Version>${parsedVersion.osgiVersion}</Bundle-Version>
+              <Fragment-Host>org.jitsi.libjitsi</Fragment-Host>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>multi-platform</id>
+      <activation>
+        <property>
+          <name>multiplatform</name>
+          <value>true</value>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <!-- Generate the plain Windows and Mac jars -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>win32-x86-64</id>
+                <goals><goal>jar</goal></goals>
+                <phase>package</phase>
+                <configuration>
+                  <classifier>win32-x86-64</classifier>
+                  <includes>
+                    <include>win32-x86-64/**</include>
+                  </includes>
+                  <archive>
+                    <manifestEntries>
+                      <Bundle-NativeCode>
+                        win32-x86-64/jng722.dll;
+                        win32-x86-64/jnffmpeg.dll;
+                        win32-x86-64/jnffmpeg-no-openh264.dll;osname=Win32;processor=x86-64
+                      </Bundle-NativeCode>
+                    </manifestEntries>
+                  </archive>
+                </configuration>
+              </execution>
+              <!--
+              <execution>
+                <id>win32-x86</id>
+                <goals><goal>jar</goal></goals>
+                <phase>package</phase>
+                <configuration>
+                  <classifier>win32-x86</classifier>
+                  <includes>
+                    <include>win32-x86/**</include>
+                  </includes>
+                  <archive>
+                    <manifestEntries>
+                      <Bundle-NativeCode>
+                        win32-x86/jng722.dll;
+                        win32-x86/jnffmpeg.dll;
+                        win32-x86/jnffmpeg-no-openh264.dll;osname=Win32;processor=x86
+                      </Bundle-NativeCode>
+                    </manifestEntries>
+                  </archive>
+                </configuration>
+              </execution>
+              -->
+              <execution>
+                <id>mac-x86_64</id>
+                <goals><goal>jar</goal></goals>
+                <phase>package</phase>
+                <configuration>
+                  <classifier>darwin-x86-64</classifier>
+                  <includes>
+                    <include>darwin-x86-64/**</include>
+                  </includes>
+                  <archive>
+                    <manifestEntries>
+                      <Bundle-NativeCode>
+                        darwin-x86-64/jng722.dylib;
+                        darwin-x86-64/libjnffmpeg.dylib;
+                        darwin-x86-64/libjnffmpeg-no-openh264.dylib;osname=Mac OS X;processor=x86-64
+                      </Bundle-NativeCode>
+                    </manifestEntries>
+                  </archive>
+                </configuration>
+              </execution>
+              <execution>
+                <id>mac-arm64</id>
+                <goals><goal>jar</goal></goals>
+                <phase>package</phase>
+                <configuration>
+                  <classifier>darwin-aarch64</classifier>
+                  <includes>
+                    <include>darwin-aarch64/**</include>
+                  </includes>
+                  <archive>
+                    <manifestEntries>
+                      <Bundle-NativeCode>
+                        darwin-aarch64/jng722.dylib;
+                        darwin-aarch64/libjnffmpeg.dylib;
+                        darwin-aarch64/libjnffmpeg-no-openh264.dylib;osname=Mac OS X;processor=AArch64
+                      </Bundle-NativeCode>
+                    </manifestEntries>
+                  </archive>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>release</id>
+      <activation>
+        <property>
+          <name>release</name>
+          <value>true</value>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>3.0.1</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <gpgArguments>
+                <arg>--pinentry-mode</arg>
+                <arg>loopback</arg>
+              </gpgArguments>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+  <distributionManagement>
+    <snapshotRepository>
+      <id>ossrh</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    </snapshotRepository>
+    <repository>
+      <id>ossrh</id>
+      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+    </repository>
+  </distributionManagement>
+</project>

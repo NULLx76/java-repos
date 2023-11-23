@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>my.test</groupId>
+    <artifactId>sandbox</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <maven.failsafe.plugin>2.18.1</maven.failsafe.plugin>
+        <groovy.maven.plugin.version>2.0</groovy.maven.plugin.version>
+        <parallel>classes</parallel>
+        <threadCount>2</threadCount>
+        <include.groups></include.groups>
+        <extended.groups></extended.groups>
+        <groups.additivity></groups.additivity>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <profiles>
+        <profile>
+            <id>fast</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <extended.groups>my.test.category.Fast</extended.groups>
+            </properties>
+        </profile>
+        <profile>
+            <id>furious</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <extended.groups>my.test.category.Furious</extended.groups>
+            </properties>
+        </profile>
+        <profile>
+            <id>fast-and-furious</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <extended.groups>my.test.category.Fast AND my.test.category.Furious</extended.groups>
+            </properties>
+        </profile>
+    </profiles>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.gmaven</groupId>
+                <artifactId>groovy-maven-plugin</artifactId>
+                <version>${groovy.maven.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>Calculate categories to run</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <classpathScope>runtime</classpathScope>
+                            <source>
+                                include = project.properties['include.groups']
+                                if (properties['include.groups'] != '' &amp;&amp; properties['extended.groups'] != '') {
+                                    project.properties['analyzed.include.groups'] = '' + properties['include.groups'] + ' AND ' + properties['extended.groups']
+                                }
+                                else {
+                                    project.properties['analyzed.include.groups'] = properties['include.groups'] ?: project.properties['extended.groups']
+                                }
+                            </source>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.14</version>
+                <configuration>
+                    <!-- skips surefire tests without skipping failsafe tests -->
+                    <skipTests>true</skipTests>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${maven.failsafe.plugin}</version>
+                <executions>
+                    <execution>
+                        <id>Execute integration tests</id>
+                        <phase>integration-test</phase>
+                        <goals>
+                            <goal>integration-test</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <parallel>${parallel}</parallel>
+                    <threadCount>${threadCount}</threadCount>
+                    <groups>${analyzed.include.groups}</groups>
+                    <includes>
+                        <!-- By default failsafe runs *ITest.java -->
+                        <include>**/*Test.java</include>
+                    </includes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

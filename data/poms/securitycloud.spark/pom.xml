@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>cz.muni.fi</groupId>
+    <artifactId>sparkTest</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <properties>
+        <!-- Misc -->
+        <java.version>1.8</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- Dependency versions -->
+        <spark.version>2.1.0</spark.version>
+        <scala.binary.version>2.11</scala.binary.version>
+        <kafka.version>0.8.2.1</kafka.version>
+        <!-- Kafka -->
+        <kafka.consumer.zookeeper.url>10.16.31.200:2181</kafka.consumer.zookeeper.url>
+        <!-- input topic mutual prefix, expecting existing input topics to have suffixes in the format: "-'machinesCount'part", i.e. -5part, -3part ...
+         so if kafka.consumer.topic is set to "data" and we will test on 5 and 4 partitions, then we need topics "data-5part, "data-4part" prepared for testing -->
+        <kafka.consumer.topic>36m</kafka.consumer.topic>
+        <kafka.producer.topic>sparkOutput</kafka.producer.topic> <!-- topic for test output -->
+        <kafka.producer.resultsTopic>sparkResults</kafka.producer.resultsTopic> <!-- topic for test performance results -->
+        <kafka.producer.statisticsTopic>sparkStatistics</kafka.producer.statisticsTopic> <!-- topic for test statistics -->
+        <kafka.producer.statisticsFormat>CSV</kafka.producer.statisticsFormat> <!-- test statistics format -->
+        <kafka.producer.servers>10.16.31.201:9092</kafka.producer.servers>
+        <kafka.producer.value.serializer>org.apache.kafka.common.serialization.StringSerializer</kafka.producer.value.serializer>
+        <kafka.producer.key.serializer>org.apache.kafka.common.serialization.StringSerializer</kafka.producer.key.serializer>
+        <kafka.producer.client.id>my-producer</kafka.producer.client.id>
+        <kafka.producer.auto.offset.reset>largest</kafka.producer.auto.offset.reset>
+        <kafka.producer.batch.size>5000</kafka.producer.batch.size>
+        <!-- Spark -->
+        <spark.home>/root/spark/spark-bin-hadoop</spark.home>
+        <spark.master>spark://sc-211:7077</spark.master>
+        <spark.app.name>${project.artifactId}</spark.app.name>
+        <spark.ui.port>4040</spark.ui.port>
+        <spark.driver.memory>2500mb</spark.driver.memory>
+        <!-- Amount of memory to use for the driver process, this config must not be set through the SparkConf directly -->
+        <spark.executor.memory>2500mb</spark.executor.memory>
+        <spark.driver.cores>2</spark.driver.cores>
+        <spark.default.parallelism>8</spark.default.parallelism>
+        <spark.serializer>org.apache.spark.serializer.KryoSerializer</spark.serializer>
+        <!-- start receiving all messages from topic start -->
+        <kafka.consumer.auto.offset.reset>smallest</kafka.consumer.auto.offset.reset>
+        <!-- command line arguments defaults -->
+        <spark.machines>Undefined</spark.machines> <!-- total number of machines in cluster -->
+        <spark.testtype>Undefined</spark.testtype> <!-- test class name, i.e. ReadWriteTest | FilterIPTest | ... -->
+    </properties>
+
+    <dependencies>
+        <dependency> <!-- Spark -->
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-core_${scala.binary.version}</artifactId>
+            <version>${spark.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency> <!-- Spark SQL -->
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-sql_${scala.binary.version}</artifactId>
+            <version>${spark.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency> <!-- Spark streaming -->
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-streaming_${scala.binary.version}</artifactId>
+            <version>${spark.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency> <!-- Spark streaming kafka -->
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-streaming-kafka-0-8_${scala.binary.version}</artifactId>
+            <version>${spark.version}</version>
+        </dependency>
+        <dependency> <!-- Kafka -->
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka_${scala.binary.version}</artifactId>
+            <version>${kafka.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <sourceDirectory>src/main/java</sourceDirectory>
+        <testSourceDirectory>src/test/java</testSourceDirectory>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.3</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.18.1</version>
+                <configuration>
+                    <skipTests>true</skipTests>
+                </configuration>
+            </plugin>
+            <!--
+                spark-streaming-kafka is not included in the spark assembly, this builds a fat uber-jar
+                with all dependencies and file suffix from descriptorRef, TD: look for a faster solution
+            -->
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!--
+                submits uber-jar to spark-submit: $WRK/project/target/sparkTest-1.0-SNAPSHOT-jar-with-dependencies.jar
+            -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.4.0</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <executable>
+                        ${spark.home}/bin/spark-submit
+                    </executable>
+                    <arguments>
+                        <argument>--class</argument><argument>cz.muni.fi.spark.App</argument>
+                        <argument>--master</argument><argument>${spark.master}</argument>
+                        <argument>--deploy-mode</argument><argument>cluster</argument>
+                        <argument>--driver-memory</argument><argument>${spark.driver.memory}</argument>
+                        <argument>${project.build.directory}/${project.build.finalName}-jar-with-dependencies.${project.packaging}</argument>
+                        <argument>${spark.testtype}</argument>
+                        <argument>${spark.machines}</argument>
+                    </arguments>
+
+                </configuration>
+            </plugin>
+        </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>**/*.properties</include>
+                </includes>
+            </resource>
+        </resources>
+    </build>
+</project>

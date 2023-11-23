@@ -1,0 +1,664 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>net.faustedition</groupId>
+	<artifactId>faust-gen</artifactId>
+	<version>1.0-SNAPSHOT</version>
+	<name>Faust-Edition Site Generation</name>
+	
+	<properties>
+		<project.build.sourceEncoding>utf-8</project.build.sourceEncoding>
+		<upload.url>beta.faustedition.net:/var/www/dev</upload.url>
+		<faust.diplo.allowedFailures>10</faust.diplo.allowedFailures>
+		<faust.diplo.server>false</faust.diplo.server> <!-- Run only the web server, don't actually convert -->
+		<faust.diplo.port>0</faust.diplo.port> <!-- Specify port for server, default to auto -->
+		<faust.diplo.debug>false</faust.diplo.debug>   <!-- Debug phantomjs, produces massive output -->
+                <faust.diplo.target>${project.build.directory}</faust.diplo.target>
+		<existAppName>faust-dev</existAppName>
+	</properties>
+
+	<repositories>
+
+        <repository>
+            <id>maven-central</id>
+            <url>https://repo1.maven.org/maven2/</url>
+        </repository>
+
+		<repository>
+			<id>dh.nexus.public</id>
+			<name>Cophi Nexus</name>
+			<url>http://dev.digital-humanities.de/nexus/content/groups/public</url>
+			<!--releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots-->
+		</repository>
+		
+<!--
+		<repository>
+			<id>nexus.dariah</id>
+			<name>DARIAH Nexus Public Repository</name>
+			<url>http://dev.dariah.eu/nexus/content/groups/public</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
+-->
+
+		<repository>
+			<id>maven-restlet</id>
+			<name>Public online Restlet repository</name>
+			<url>http://maven.restlet.com</url>
+		</repository>
+		
+	    <repository>
+	      <id>exist</id>
+	      <url>https://raw.github.com/eXist-db/mvn-repo/master/</url>
+	    </repository>		
+
+	</repositories>
+
+
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.13.1</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.nanohttpd</groupId>
+			<artifactId>nanohttpd-webserver</artifactId>
+			<version>2.2.0</version>
+		</dependency>
+		<dependency>
+			<groupId>de.faustedition</groupId>
+			<artifactId>faust</artifactId>
+			<version>1.4-SNAPSHOT</version>
+			<exclusions>
+				<exclusion>
+					<artifactId>org.restlet</artifactId>
+					<groupId>org.restlet.jse</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>org.restlet.ext.xml</artifactId>
+					<groupId>org.restlet.jse</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>org.restlet.ext.simple</artifactId>
+					<groupId>org.restlet.jse</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>org.restlet.ext.freemarker</artifactId>
+					<groupId>org.restlet.jse</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>org.restlet.ext.json</artifactId>
+					<groupId>org.restlet.jse</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>logback-classic</artifactId>
+					<groupId>ch.qos.logback</groupId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>com.mycila</groupId>
+			<artifactId>mycila-xmltool</artifactId>
+			<version>4.4.ga</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava-collections</artifactId>
+			<version>r03</version>
+		</dependency>
+		<dependency>
+			<groupId>com.xmlcalabash</groupId>
+			<artifactId>xmlcalabash</artifactId>
+			<version>1.1.13-96</version>
+		</dependency>
+		
+	</dependencies>
+	
+	
+	<build>
+                <directory>${project.basedir}/build</directory>
+
+		<defaultGoal>package</defaultGoal>
+
+		<extensions>
+			<extension>
+				<groupId>kr.motd.maven</groupId>
+				<artifactId>os-maven-plugin</artifactId>
+				<version>1.6.0</version>
+			</extension>
+		</extensions>
+			
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.5.1</version>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+			
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.4.0</version>
+				
+				<executions>
+					<execution>
+						<id>deploy-rsync</id>
+						<phase>deploy</phase>
+						<goals><goal>exec</goal></goals>
+						<configuration>
+							<executable>rsync</executable>
+							<arguments>
+								<argument>-a</argument>
+								<argument>-u</argument>
+								<argument>--chmod=ug+rwX,o+rX,Dg+s</argument>
+								<argument>--omit-dir-times</argument>
+								<argument>--info=del,stats2,copy,flist2</argument>
+								<argument>${project.build.directory}/www/</argument>
+								<argument>${upload.url}</argument>
+							</arguments>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-deploy-plugin</artifactId>
+				<version>2.8.2</version>
+				<executions>
+					<execution>
+						<id>default-deploy</id>
+						<phase>none</phase>
+					</execution>
+				</executions>
+			</plugin>
+			
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.6</version>
+				<executions>
+					<execution>
+						<id>xar</id>
+						<phase>package</phase>
+						<goals><goal>single</goal></goals>
+						<configuration>
+							<descriptor>${basedir}/src/main/assembly/exist-app.xml</descriptor>
+							<finalName>${existAppName}</finalName>
+							<appendAssemblyId>false</appendAssemblyId>
+							<attach>false</attach>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>1.8</version>
+				<executions>
+					<execution>
+						<id>xar-rename</id>
+						<phase>package</phase>
+						<goals><goal>run</goal></goals>
+						<configuration>
+							<target>
+								<move file="${project.build.directory}/${existAppName}.zip"
+									tofile="${project.build.directory}/${existAppName}.xar"/>
+							</target>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>		
+	</build>
+	
+	<profiles>
+		<profile>
+			<id>svg-base</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>			
+			</activation>
+			<build>
+				<plugins>
+
+				<!-- PhantomJS or SlimerJS? 
+				
+				 Uncomment either of the plugins below: 
+				 
+				 - phantomjs-maven-plugin fetches the configured version of phantomjs and
+				   sets the property ${phantomjs.binary} accordingly.
+				   
+				 - the configured maven dependency plugin fetches both slimerjs and firefox
+				  
+				 You will also need to adjust the exec-maven-plugin execution below, 
+				 see the comment there.
+				
+				 -->
+                    <plugin>
+                        <groupId>com.github.eirslett</groupId>
+                        <artifactId>frontend-maven-plugin</artifactId>
+                        <version>1.9.1</version>
+                        <configuration>
+                            <nodeVersion>v12.16.1</nodeVersion>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>install node and npm</id>
+                                <goals><goal>install-node-and-npm</goal></goals>
+                            </execution>
+                            <execution>
+                                <id>npm install</id>
+                                <goals><goal>npm</goal></goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+				 
+<!--					<plugin>
+						<groupId>com.github.klieber</groupId>
+						<artifactId>phantomjs-maven-plugin</artifactId>
+						<version>0.7</version>
+						<configuration>
+							<version>2.2.0-SNAPSHOT</version>
+						</configuration>
+						<executions>
+							<execution>
+								<goals><goal>install</goal></goals>
+							</execution>
+						</executions>
+					</plugin>
+-->							
+				<!--
+					
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-dependency-plugin</artifactId>
+						<version>2.10</version>
+						<executions>
+							<execution>
+								<id>get-slimerjs</id>
+								<phase>compile</phase>
+								<goals><goal>unpack</goal></goals>
+								<configuration>
+									<artifactItems>
+										<artifactItem>
+											<groupId>net.faustedition</groupId>
+											<artifactId>slimerjs</artifactId>
+											<version>1.0.0-beta.1</version>
+											<type>zip</type>
+										</artifactItem>
+										<artifactItem>
+											<groupId>org.mozilla</groupId>
+											<artifactId>firefox</artifactId>
+											<version>57.0.4</version>
+											<classifier>${os.detected.classifier}</classifier>
+											<type>tar.bz2</type>
+										</artifactItem>
+									</artifactItems>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+					-->
+				</plugins>
+			</build>
+		</profile>
+		
+		<profile>
+			<id>svg</id>
+			<activation><activeByDefault>true</activeByDefault></activation>
+			<build>
+				
+				<plugins>			
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>exec-maven-plugin</artifactId>
+						<version>1.4.0</version>
+						<executions>
+							<execution>
+								<id>generate-svgs</id>
+								<goals>
+									<goal>exec</goal>
+								</goals>
+								<phase>prepare-package</phase>
+								<configuration>
+									<environmentVariables>
+										<LANG>en_US.UTF-8</LANG>
+										<LC_ALL>en_US.UTF-8</LC_ALL>
+										<SLIMERJSLAUNCHER>${project.build.directory}/dependency/firefox/firefox</SLIMERJSLAUNCHER>
+									</environmentVariables>
+									<executable>java</executable>
+									<arguments>
+										<argument>-classpath</argument>
+										<classpath/>
+										<!-- For PhantomJS: -->										
+										<!-- <argument>-Dphantomjs.binary=${phantomjs.binary}</argument> -->
+										<!-- For SlimerJS instead: -->
+										<!--argument>-Dphantomjs.binary=${project.build.directory}/dependency/slimerjs-1.0.0-beta.1/slimerjs</argument-->
+                                        <!-- or for puppeteer: -->
+                                        <argument>-Dnode.binary=${project.basedir}/node/node</argument>
+										<argument>-Dnode.script=${project.basedir}/render-multi-pages.js</argument>
+										<argument>-Dfaust.diplo.allowedFailures=${faust.diplo.allowedFailures}</argument>
+										<argument>-Dfaust.diplo.server=${faust.diplo.server}</argument>
+										<argument>-Dfaust.diplo.port=${faust.diplo.port}</argument>
+										<argument>-Dfaust.diplo.debug=${faust.diplo.debug}</argument>
+										<argument>-Dfaust.diplo.target=${faust.diplo.target}</argument>
+										<argument>net.faustedition.gen.DiplomaticConversion</argument> 			
+									</arguments>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+									
+				</plugins>
+			</build>
+		</profile>
+		
+					
+		<profile>
+			<id>svg-print</id>
+			<activation><activeByDefault>false</activeByDefault></activation>
+			<build>
+				<resources>
+					<resource>
+						<directory>svg_rendering/page</directory>
+						<filtering>false</filtering>
+						<targetPath>${project.build.directory}/preprint-rendering</targetPath>						
+					</resource>
+				</resources>
+				
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-resources-plugin</artifactId>
+						<version>3.0.2</version>
+						<configuration>
+							<overwrite>true</overwrite>
+						</configuration>
+						<executions>
+							<execution>
+								<id>copy-preprint-specific-resources</id>
+								<goals><goal>copy-resources</goal></goals>
+								<phase>compile</phase>
+								<configuration>
+									<overwrite>true</overwrite>
+									<outputDirectory>${project.build.directory}/preprint-rendering</outputDirectory>
+									<resources>
+										<resource>
+											<directory>src/main/preprint-web</directory>
+											<filtering>false</filtering>						
+										</resource>
+									</resources>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>exec-maven-plugin</artifactId>
+						<version>1.4.0</version>
+						<executions>
+							<execution>
+								<id>generate-svgs-preprint</id>
+								<goals>
+									<goal>exec</goal>
+								</goals>
+								<phase>prepare-package</phase>
+								<configuration>
+									<environmentVariables>
+										<LANG>en_US.UTF-8</LANG>
+										<LC_ALL>en_US.UTF-8</LC_ALL>
+										<SLIMERJSLAUNCHER>${project.build.directory}/dependency/firefox/firefox</SLIMERJSLAUNCHER>
+									</environmentVariables>
+									<executable>java</executable>
+									<arguments>
+										<argument>-classpath</argument>
+										<classpath/>
+										<!-- For PhantomJS: -->										
+										<!-- <argument>-Dphantomjs.binary=${phantomjs.binary}</argument> -->
+										<!-- For SlimerJS instead: -->
+										<argument>-Dphantomjs.binary=${project.build.directory}/dependency/slimerjs-1.0.0-beta.1/slimerjs</argument>
+										<argument>-Dfaust.diplo.allowedFailures=${faust.diplo.allowedFailures}</argument>
+										<argument>-Dfaust.diplo.server=${faust.diplo.server}</argument>
+										<argument>-Dfaust.diplo.port=${faust.diplo.port}</argument>
+										<argument>-Dfaust.diplo.debug=${faust.diplo.debug}</argument>
+										<argument>-Dfaust.diplo.webapp=${project.build.directory}/preprint-rendering</argument>
+										<argument>-Dfaust.diplo.documentroot=document/faust/2</argument>
+										<argument>-Dfaust.diplo.transcript_www=www-preprint</argument>
+										<argument>-Dfaust.diplo.prepared-svg=preprint-svg</argument>
+										<argument>net.faustedition.gen.DiplomaticConversion</argument> 
+			
+									</arguments>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+									
+				</plugins>
+			</build>
+		</profile>
+		
+		
+		<profile>
+			<id>sources</id>
+			<activation><activeByDefault>true</activeByDefault></activation>
+			<build>
+				<resources>
+					<resource>
+						<directory>data/xml</directory>
+						<filtering>false</filtering>
+						<targetPath>${project.build.directory}/www/xml</targetPath>
+					</resource>
+					<resource>
+						<directory>src/main/web</directory>
+						<filtering>false</filtering>
+						<targetPath>${project.build.directory}/www</targetPath>
+					</resource>
+					<resource>
+						<directory>src/main/profile</directory>
+						<filtering>false</filtering>
+						<targetPath>${project.build.directory}/profile</targetPath>
+					</resource>					
+				</resources>
+			</build>
+		</profile>
+		
+		<profile>
+			<id>xproc</id>
+			<activation><activeByDefault>true</activeByDefault></activation>
+			<build>
+				<resources>
+					<resource>
+						<directory>src/main/xproc</directory>
+						<filtering>false</filtering>
+						<targetPath>${project.build.directory}/xproc</targetPath>
+						<excludes><exclude>config.xml</exclude></excludes>						
+					</resource>
+					<resource>
+						<directory>src/main/xproc-config</directory>
+						<filtering>true</filtering>
+						<targetPath>${project.build.directory}/xproc</targetPath>
+					</resource>
+					<resource>
+						<directory>src/main/xproc-config</directory>
+						<includes><include>paths.xml</include></includes>
+						<filtering>true</filtering>
+						<targetPath>${project.build.directory}</targetPath>
+					</resource>
+				</resources>
+				
+				<plugins>
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>exec-maven-plugin</artifactId>
+						<executions>
+							<!--execution>
+								<id>app2xml</id>
+								<goals><goal>exec</goal></goals>
+								<phase>generate-sources</phase>
+								<configuration>
+									<executable>src/main/xproc/text/app2xml.py</executable>
+									<workingDirectory>src/main/xproc/text</workingDirectory>
+								</configuration>
+							</execution-->
+							<execution>
+								<id>xproc</id>
+								<goals><goal>java</goal></goals>
+								<phase>compile</phase>
+								<configuration>								
+									<!-- executableDependency>
+										<groupId>com.xmlcalabash</groupId>
+										<artifactId>xmlcalabash</artifactId>
+									</executableDependency-->	
+									<mainClass>com.xmlcalabash.drivers.Main</mainClass>
+									<commandlineArgs>${project.build.directory}/xproc/generate-all.xpl paths=${project.build.directory}/xproc/paths.xml</commandlineArgs>
+									<systemProperties>
+										<systemProperty>
+											<key>com.xmlcalabash.debug</key>
+											<value>false</value>
+										</systemProperty>
+										<systemProperty>
+											<key>log4j.configurationFile</key>
+											<value>${project.basedir}/src/main/resources/log4j2.xml</value>
+										</systemProperty>
+									</systemProperties>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		
+		<profile>
+			<id>debug-rendering</id>
+			<activation><activeByDefault>true</activeByDefault></activation>
+			<build>
+				<resources>
+					<resource>
+						<directory>svg_rendering/page</directory>
+						<targetPath>${project.build.directory}/www</targetPath>
+						<includes>
+							<include>debug*.html</include>
+							<include>js-gen/**</include>
+						</includes>
+					</resource>
+				</resources>
+				<plugins>
+					<plugin>
+						<artifactId>maven-resources-plugin</artifactId>
+						<version>2.7</version>
+						<executions>
+							<execution>
+								<id>copy-debug-data</id>
+								<phase>package</phase>
+								<goals><goal>copy-resources</goal></goals>
+								<configuration>
+									<resources>
+										<resource>
+											<directory>${project.build.directory}/pages</directory>
+										</resource>
+									</resources>
+									<outputDirectory>${project.build.directory}/www/json</outputDirectory>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		
+		<profile>
+			<id>install-fonts</id>
+			<activation><activeByDefault>true</activeByDefault></activation>
+			<build>
+				<resources>
+					<resource>
+						<directory>src/main/web/webfonts</directory>
+						<targetPath>${user.home}/.fonts</targetPath>
+						<includes><include>*.ttf</include></includes>
+					</resource>
+				</resources>
+			</build>
+		</profile>
+		
+		<profile>
+			<id>exist</id>
+			<properties>
+				<!--exist.uri>xmldb:exist://localhost:8080/exist/xmlrpc/db/apps/faust</exist.uri-->
+				<exist.user>${env.EXIST_USER}</exist.user>
+				<exist.pass>${env.EXIST_PASS}</exist.pass>
+			</properties>
+			<dependencies>
+				<dependency>
+					<groupId>org.exist-db</groupId>
+					<artifactId>exist-core</artifactId>
+					<version>3.0.RC1</version>			
+				</dependency>
+				<dependency>
+					<groupId>org.exist-db</groupId>
+					<artifactId>exist-optional</artifactId>
+					<version>3.0.RC1</version>			
+				</dependency>
+			</dependencies>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-antrun-plugin</artifactId>
+						<version>1.8</version>
+						<executions>
+							<execution>
+								<id>prepare-exist</id>
+								<phase>deploy</phase>
+								<goals><goal>run</goal></goals>
+							</execution>
+						</executions>
+						<configuration>
+							<target xmlns:xdb="http://exist-db.org/ant">
+								<taskdef name="store" classname="org.exist.ant.XMLDBStoreTask"
+									classpathref="maven.compile.classpath" />
+								<store uri="${exist.uri}" user="${exist.user}" password="${exist.pass}"
+									createcollection="true" createsubcollections="true">
+									<fileset dir="${project.basedir}/src/main/xproc/exist">
+										<include name="*"/>
+									</fileset>
+								</store>
+								<store uri="${exist.uri}/data" user="${exist.user}" password="${exist.pass}"
+									createcollection="true" createsubcollections="true">
+									<fileset dir="${project.build.directory}/search/textTranscript">
+										<include name="**/*.xml" />
+									</fileset>
+								</store>
+								<store uri="${exist.uri}/xslt" user="${exist.user}" password="${exist.pass}"
+									createcollection="true" createsubcollections="true">
+									<fileset dir="${project.basedir}/src/main/xproc/xslt">
+										<include name="*.xsl" />
+										<include name="*.xml" />
+									</fileset>
+								</store>
+							</target>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		
+	</profiles>
+</project>

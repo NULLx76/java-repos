@@ -1,0 +1,337 @@
+<project 
+        xmlns="http://maven.apache.org/POM/4.0.0" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    
+    <!-- 
+        Overview:
+        1. example1
+            -jndi by remote access. The main key is to set use-java-context to false, in mysql-ds.xml. reference: http://javahowto.blogspot.hk/2006/08/access-jboss-datasource-remotely-from.html
+            -the lookup object is a mysql datasource, which is further configured by mysql-ds.xml
+
+        Remarks:
+        1.  The plugin "jboss-maven-plugin" seems nothing useful. It only helps starting the jboss 4.2.2 server.
+        2.  To start jboss, type "mvn jboss:start". make sure it shows " Starting JBoss... " even it shows "BUILD SUCCESS" which is nothing about building project
+        3.  To deploy project to jboss, type "mvn jboss:hard-deploy". reference: http://liuwuhen.iteye.com/blog/1681901
+        4.  The jboss 4.2.2 is embedded in this project, placed in ${basedir}/server/jboss-4.2.2.GA. The server is downloaded from http://jbossas.jboss.org/downloads/
+        5.  The deployment of example1 requires two main steps:
+                a) copy from ${basedir}/src/main/resources/javase/jndi/jboss/example1/server/mysql-ds.xml (orginal file located at ${basedir}/jboss/jboss-4.2.2.GA/docs/examples/jca/mysql-ds.xml)
+                        to ${basedir}/server/jboss-4.2.2.GA/server/default/deploy
+                b) copy from ${basedir}/mysql/mysql-connector-java-5.1.9.jar  
+                        to ${basedir}/server/jboss-4.2.2.GA/server/default/lib
+        6.  These two main steps can be automated by maven-resources-plugin. In this project, it's bound to "initialize" phase
+            reference: http://antoniogoncalves.org/2009/06/19/copying-resources-to-jboss-with-maven/                    
+        7.  In example1, there's no server side program required to deploy to jboss
+        
+        Environment:
+        1.  Windows 7 64 bit (assume OS installed in C:\Windows)
+        2.  Eclipse 4.4
+        3.  JDK 8.0
+        4.  zwamp-1.1.2 (mysql)   //to do: launch it wih antrun-maven-plugin
+        5.  Jboss 4.2 (embedded as project, located in ${basedir}\server\jboss-4.2.2.GA, downloaded from http://jbossas.jboss.org/downloads/)
+       
+        Approach1 - all automate
+        1.  for server, "mvn clean initialize", as prerequisite, to copy mysql-ds.xml and mysql driver to jboss server 
+        2.  for server, "mvn jboss:start", to start jboss. It will launch a new JVM
+        3.  for client, "mvn clean install", either in a new command prompt, because in step2, the command prompt 
+            will not be held up (after it shows "Starting JBoss, it will then "BUILD SUCESS", and it will get finished, 
+            and free up the command prompt") to run integration test
+        4.  for server, "mvn jboss:stop"
+
+
+        General Reference:
+        https://docs.jboss.org/jbossas/docs/Server_Configuration_Guide/4/html-single/
+    -->
+        
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>jndi-jboss422-snippets</groupId>
+    <artifactId>jndi-jboss422-snippets</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    
+    
+    
+    <build>  
+
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.eclipse.m2e</groupId>
+                    <artifactId>lifecycle-mapping</artifactId>
+                    <version>1.0.0</version>
+                    <configuration>
+                        <lifecycleMappingMetadata>
+                            <pluginExecutions>   
+
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.codehaus.mojo</groupId>
+                                        <artifactId>sql-maven-plugin</artifactId>
+                                        <versionRange>[1.5,)</versionRange>
+                                        <goals>
+                                            <goal>execute</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    
+                                    <action>
+                                        <execute>  
+                                            <runOnIncremental>false</runOnIncremental>  
+                                        </execute>  
+                                    </action>
+                                </pluginExecution>
+                                                 
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.apache.maven.plugins</groupId>
+                                        <artifactId>maven-resources-plugin</artifactId>
+                                        <versionRange>[2.4,)</versionRange>
+                                        <goals>
+                                            <goal>execute</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    
+                                    <action>
+                                        <execute>  
+                                            <runOnIncremental>false</runOnIncremental>  
+                                        </execute>  
+                                    </action>
+                                </pluginExecution>
+                                                                                                          
+                            </pluginExecutions>
+                        </lifecycleMappingMetadata>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        
+        
+        <plugins>                      
+            
+            <!-- compile -->                  
+            <plugin>                                   
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.0</version>
+                <configuration>
+                    <source>1.7</source>     <!-- no specify -->
+                    <target>1.7</target>
+                </configuration>                         
+            </plugin>  
+            
+            
+            
+            <!-- initialize -->             
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>sql-maven-plugin</artifactId>
+                <version>1.5</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>mysql</groupId>
+                        <artifactId>mysql-connector-java</artifactId>
+                        <version>5.1.9</version>
+                    </dependency>
+                </dependencies>
+                
+                <executions>
+                    <execution>
+                        <id>drop-db-before-test-if-any (mysql)</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>com.mysql.jdbc.Driver</driver>
+                            <url>jdbc:mysql://localhost:3306</url>
+                            <username>root</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <skip>${maven.test.skip}</skip>
+                            <autocommit>true</autocommit>
+                            <sqlCommand>                                                                
+                                drop database if exists javase_jndi_jboss422_example1;                                                        
+                            </sqlCommand>
+                            <onError>continue</onError>
+                        </configuration>
+                    </execution>
+                    
+
+                    <execution>
+                        <id>create-db (mysql)</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>com.mysql.jdbc.Driver</driver>
+                            <url>jdbc:mysql://localhost:3306</url>
+                            <username>root</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <skip>${maven.test.skip}</skip>
+                            <autocommit>true</autocommit>
+                            <sqlCommand>                                                                        
+                                create database if not exists javase_jndi_jboss422_example1;                                                 
+                            </sqlCommand>
+                        </configuration>
+                    </execution>
+                                       
+                                      
+                    <execution>
+                        <id>create-schema (mysql)</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>com.mysql.jdbc.Driver</driver>
+                            <url>jdbc:mysql://localhost:3306</url>
+                            <username>root</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <skip>${maven.test.skip}</skip>
+                            <autocommit>true</autocommit>
+                            <srcFiles>
+                                <srcFile>src/main/resources/javase/jndi/jboss422/example1/create-schema.sql</srcFile>
+                            </srcFiles>
+                        </configuration>
+                    </execution>
+
+
+                    <execution>
+                        <id>create-data (mysql)</id>
+                        <phase>process-test-classes</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>com.mysql.jdbc.Driver</driver>
+                            <url>jdbc:mysql://localhost:3306</url>
+                            <username>root</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <autocommit>true</autocommit>
+                            <srcFiles>                                            
+                                <srcFile>src/test/resources/javase/jndi/jboss422/example1/insert-record.sql</srcFile>
+                            </srcFiles>
+                        </configuration>
+                                               
+                    </execution>
+                    
+                </executions>
+            </plugin>
+
+            <!-- integration-test -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.12</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+                 
+           
+           
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.4</version>
+                <executions>
+                    <execution>
+                        <id>copy-datasource</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${basedir}/server/jboss-4.2.2.GA/server/default/deploy</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${basedir}/src/main/resources/javase/jndi/jboss422/example1/server</directory>
+                                    <includes>
+                                        <include>mysql-ds.xml</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    
+                    <execution>
+                        <id>copy-mysql-driver</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${basedir}/server/jboss-4.2.2.GA/server/default/lib</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${basedir}/mysql-driver</directory>
+                                    <includes>
+                                        <include>mysql-connector-java-5.1.9.jar</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+            
+                </executions>
+            </plugin>
+               
+           
+           
+           
+                 
+                   
+            <!-- jboss 4.2.2 -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>jboss-maven-plugin</artifactId>
+                <version>1.5.0</version>
+                <configuration>
+                    <jbossHome>${basedir}/server/jboss-4.2.2.GA</jbossHome>
+                    <!-- this is equal to jboss/jboss-4.2.2.GA/server/default -->
+                    <serverName>default</serverName>
+                </configuration>
+            </plugin>       
+                       
+        </plugins>    
+    </build>     
+        
+
+    <dependencies>
+           
+        <!-- junit -->                
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.10</version>
+            <type>jar</type>
+            <scope>compile</scope>
+        </dependency>
+        
+         <!-- mysql -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>5.1.9</version>
+        </dependency>
+        
+        <!-- jboss client, used in example1 -->
+        <dependency>
+            <groupId>jboss</groupId>
+            <artifactId>jbossall-client</artifactId>
+            <version>4.2.2.GA</version>            
+        </dependency>       
+    </dependencies>             
+</project>

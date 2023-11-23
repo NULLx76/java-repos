@@ -1,0 +1,593 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                      http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>it.freedomotic</groupId>
+    <artifactId>freedomotic</artifactId>
+    <name>Freedomotic</name>
+    <description>Distributed Building and Home Automation Framework</description>
+    <url>http://freedomotic.com</url>
+    <version>5.5.0</version>
+    <inceptionYear>2009</inceptionYear>
+    <packaging>pom</packaging>
+    
+    <profiles>
+        <profile>
+            <id>framework</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <modules>
+                <module>framework/freedomotic-model</module>
+                <module>framework/freedomotic-core</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>plugins</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <modules>
+                <module>tools/freedomotic-marketplace</module>
+                <module>plugins/objects/base-objects</module>
+                <module>plugins/devices/frontend-java</module>
+                <module>plugins/devices/test</module>
+                <module>plugins/devices/hello-world</module>
+                <module>tools/freedomotic-restapi-interfaces</module>
+                <module>plugins/devices/restapi</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>market</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>1.7</version>
+                        <executions>
+                            <execution>
+                                <phase>deploy</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <echo>Uploading file target/market-dist/${freedomotic.marketplace.file} to marketplace</echo>
+                                        <!-- create a temp folder in which constructing the archive, then compress it-->
+                                        <delete dir="target/market-dist/${project.artifactId}"/>
+                                        <mkdir dir="target/market-dist/${project.artifactId}/${project.artifactId}"/>
+                                        <copy todir="target/market-dist/${project.artifactId}/${project.artifactId}" includeEmptyDirs="false">
+                                            <fileset dir="target/${project.artifactId}">
+                                            </fileset>
+                                        </copy>
+                                        <zip destfile="target/market-dist/${freedomotic.marketplace.file}"
+                                             basedir="target/market-dist/${project.artifactId}" />
+                                        <property name="workspace-base" value="../../../"/>
+                                        <taskdef
+                                            name="marketplace"
+                                            classname="it.freedomotic.marketplace.AntUploader" >
+                                            <classpath>
+                                                <pathelement location="../../../tools/freedomotic-marketplace/target/freedomotic-marketplace-3.0-jar-with-dependencies.jar"/>
+                                                <pathelement location="../../../framework/freedomotic-core/target/freedomotic-core/freedomotic.jar"/>
+                                            </classpath>
+                                        </taskdef>
+                                        <!-- If the username or the password are not passed as parameters, ask for them -->
+                                        <marketplace
+                                            username="${username}"
+                                            password="${password}"
+                                            nodeid="${freedomotic.nodeid}"
+                                            attachment="target/market-dist/"
+                                        />
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>deb</id>
+            <build>
+                <plugins>
+                    <!-- jdeb -->
+                    <plugin>
+                        <artifactId>jdeb</artifactId>
+                        <groupId>org.vafer</groupId>
+                        <version>1.0.1</version>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jdeb</goal>
+                                </goals>
+                                <configuration>
+                                    <verbose>true</verbose>
+                                    <deb>${freedomotic.basedir}/target/freedomotic_${version}.deb</deb>
+                                    <controlDir>${freedomotic.basedir}/scripts/debian/control/</controlDir>
+                                    <dataSet>
+                                        <data>
+                                            <src>${freedomotic.basedir}/data-example</src>
+                                            <type>directory</type>
+                                            <excludes>**/*~</excludes>
+                                            <mapper>
+                                                <type>perm</type>
+                                                <prefix>/var/lib/freedomotic</prefix>
+                                                <user>freedomotic</user>
+                                                <group>freedomotic</group>
+                                                <filemode>664</filemode>
+                                                <dirmode>775</dirmode>
+                                            </mapper>
+                                        </data>
+                                        <data>
+                                            <src>framework/freedomotic-core/plugins</src>
+                                            <type>directory</type>
+                                            <excludes>**/*~</excludes>
+                                            <mapper>
+                                                <type>perm</type>
+                                                <prefix>/usr/share/freedomotic/plugins</prefix>
+                                                <user>freedomotic</user>
+                                                <group>freedomotic</group>
+                                                <filemode>664</filemode>
+                                                <dirmode>775</dirmode>
+                                            </mapper>
+                                        </data>
+                                        <data>
+                                            <src>framework/freedomotic-core/target/freedomotic-core/lib</src>
+                                            <type>directory</type>
+                                            <mapper>
+                                                <type>perm</type>
+                                                <prefix>/usr/share/freedomotic/lib</prefix>
+                                                <user>freedomotic</user>
+                                                <group>freedomotic</group>
+                                                <filemode>664</filemode>
+                                            </mapper>
+                                        </data>
+                                        <data>
+                                            <src>framework/freedomotic-core/config</src>
+                                            <type>directory</type>
+                                            <excludes>**/*~,serial/**</excludes>
+                                            <mapper>
+                                                <type>perm</type>
+                                                <prefix>/etc/freedomotic</prefix>
+                                                <user>freedomotic</user>
+                                                <group>freedomotic</group>
+                                                <filemode>664</filemode>
+                                            </mapper>
+                                        </data>
+                                        <data>
+                                            <src>framework/freedomotic-core/i18n</src>
+                                            <type>directory</type>
+                                            <excludes>**/*~</excludes>
+                                            <mapper>
+                                                <type>perm</type>
+                                                <prefix>/usr/share/freedomotic/i18n</prefix>
+                                                <user>freedomotic</user>
+                                                <group>freedomotic</group>
+                                                <filemode>664</filemode>
+                                            </mapper>
+                                        </data>
+                                        <data>
+                                            <src>framework/freedomotic-core/target/freedomotic-core/freedomotic.jar</src>
+                                            <type>file</type>
+                                            <mapper>
+                                                <type>perm</type>
+                                                <prefix>/usr/share/freedomotic</prefix>
+                                                <user>freedomotic</user>
+                                                <group>freedomotic</group>
+                                                <filemode>664</filemode>
+                                            </mapper>
+                                        </data>
+                                        <data>
+                                            <src>${freedomotic.basedir}/scripts/debian/freedomotic.default</src>
+                                            <type>file</type>
+                                            <dst>etc/default/freedomotic</dst>
+                                            <mapper>
+                                                <type>perm</type>
+                                                <filemode>644</filemode>
+                                            </mapper>
+                                        </data>
+                                        <data>
+                                            <src>${freedomotic.basedir}/scripts/debian/init.d</src>
+                                            <type>file</type>
+                                            <dst>etc/init.d/freedomotic</dst>
+                                            <mapper>
+                                                <type>perm</type>
+                                                <filemode>755</filemode>
+                                            </mapper>
+                                        </data>
+                                        <data>
+                                            <src>${freedomotic.basedir}/scripts/shared/freedomotic.sh</src>
+                                            <type>file</type>
+                                            <mapper>
+                                                <type>perm</type>
+                                                <prefix>/usr/share/freedomotic</prefix>
+                                                <user>freedomotic</user>
+                                                <group>freedomotic</group>
+                                                <filemode>755</filemode>
+                                            </mapper>
+                                        </data>
+                                        <data>
+                                            <src>${freedomotic.basedir}/scripts/shared/freedomotic-icon.png</src>
+                                            <type>file</type>
+                                            <mapper>
+                                                <type>perm</type>
+                                                <prefix>/usr/share/pixmaps</prefix>
+                                                <user>freedomotic</user>
+                                                <group>freedomotic</group>
+                                            </mapper>
+                                        </data>
+                                        <data>
+                                            <src>${freedomotic.basedir}/scripts/shared/splash.png</src>
+                                            <type>file</type>
+                                            <mapper>
+                                                <type>perm</type>
+                                                <prefix>/usr/share/freedomotic</prefix>
+                                                <user>freedomotic</user>
+                                                <group>freedomotic</group>
+                                            </mapper>
+                                        </data>
+                                        <data>
+                                            <src>${freedomotic.basedir}/scripts/shared/freedomotic.desktop</src>
+                                            <type>file</type>
+                                            <mapper>
+                                                <type>perm</type>
+                                                <prefix>/usr/share/applications</prefix>
+                                                <user>freedomotic</user>
+                                                <group>freedomotic</group>
+                                            </mapper>
+                                        </data>
+                                        <data>
+                                            <src>${freedomotic.basedir}/scripts/debian/copyright</src>
+                                            <type>file</type>
+                                            <mapper>
+                                                <type>perm</type>
+                                                <prefix>/usr/share/doc/freedomotic</prefix>
+                                            </mapper>
+                                        </data>
+                                        <data>
+                                            <src>${freedomotic.basedir}/scripts/debian/changelog.gz</src>
+                                            <type>file</type>
+                                            <mapper>
+                                                <type>perm</type>
+                                                <prefix>/usr/share/doc/freedomotic</prefix>
+                                            </mapper>
+                                        </data>
+                                        <data>
+                                            <type>template</type>
+                                            <paths>
+                                                <path>/etc/freedomotic</path> -->
+                                                <path>/var/lib/freedomotic</path>
+                                                <path>/var/log/freedomotic</path>
+                                                <path>/usr/share/freedomotic</path>
+                                            </paths>
+                                        </data>
+                                        <data>
+                                            <type>link</type>
+                                            <linkName>/usr/bin/freedomotic</linkName>
+                                            <linkTarget>/usr/share/freedomotic/freedomotic.sh</linkTarget>
+                                            <symlink>true</symlink>
+                                        </data>
+                                        <data>
+                                            <type>link</type>
+                                            <linkName>/usr/share/freedomotic/config</linkName>
+                                            <linkTarget>/etc/freedomotic</linkTarget>
+                                            <symlink>true</symlink>
+                                        </data>
+                                        <data>
+                                            <type>link</type>
+                                            <linkName>/usr/share/freedomotic/data</linkName>
+                                            <linkTarget>/var/lib/freedomotic</linkTarget>
+                                            <symlink>true</symlink>
+                                        </data>
+                                        <data>
+                                            <type>link</type>
+                                            <linkName>/usr/share/freedomotic/log</linkName>
+                                            <linkTarget>/var/log/freedomotic</linkTarget>
+                                            <symlink>true</symlink>
+                                        </data>
+                                    </dataSet>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+      
+    <organization>
+        <name>Freedomotic</name>
+        <url>http://www.freedomotic.com</url>
+    </organization>
+    
+    <properties>
+        <freedomotic.basedir>${project.basedir}</freedomotic.basedir>
+    </properties>
+       
+    <licenses>
+        <license>
+            <name>GNU GPL2</name>
+            <url>http://www.gnu.org/licenses/old-licenses/gpl-2.0.html</url>
+            <distribution>repo</distribution>
+            <comments>Every project hosted on official freedomotic repository inherits this license</comments>
+        </license>
+    </licenses>
+    
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>4.11</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- remove the real commons-logging from classpath -->
+            <!-- declare as provided or exclude from spring jars -->
+            <dependency>
+                <artifactId>commons-logging</artifactId>
+                <groupId>commons-logging</groupId>
+                <version>1.0</version>
+                <scope>provided</scope>
+            </dependency>
+	
+            <!-- add slf4j interfaces to classpath -->
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>1.6.5</version>
+                <scope>compile</scope>
+            </dependency>
+	
+            <!-- add util logging to slf4j bridge to classpath -->
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>jul-to-slf4j</artifactId>
+                <version>1.6.5</version>
+                <scope>compile</scope>
+            </dependency>
+	
+            <!-- add log4j binding to classpath -->
+            <!-- routes slf4j calls to log4j -->
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-log4j12</artifactId>
+                <version>1.6.5</version>
+                <scope>runtime</scope>
+            </dependency>
+	
+            <!-- add log4j to classpath -->
+            <!-- does the logging -->
+            <dependency>
+                <groupId>log4j</groupId>
+                <artifactId>log4j</artifactId>
+                <version>1.2.16</version>
+            </dependency>
+        </dependencies>
+		
+    </dependencyManagement>
+    
+ 
+    <repositories>
+        <repository>
+            <id>maven-ftp-official</id>
+            <url>ftp://maven.freedomotic.com</url>
+        </repository>
+    </repositories>
+    <distributionManagement>
+        <repository>
+            <id>maven-ftp-official</id>
+            <url>ftp://maven.freedomotic.com</url>
+        </repository>
+    </distributionManagement>
+        
+    <!-- Build Configuration -->
+    <build>
+        <extensions>
+            <extension>
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-ftp</artifactId>
+                <version>1.0</version>
+            </extension>
+        </extensions>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+            <!-- format source code at build time -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>jalopy-maven-plugin</artifactId>
+                <version>1.0-alpha-1</version>
+            </plugin>
+            <!-- copy plugins dependencies when a plugin is installed -->
+            <plugin>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                            <!-- exclude dependencies already specified in freedomotic-core -->
+                            <excludeScope>provided</excludeScope>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+           
+        </plugins>   
+        <!-- executes only on childs (if the child have specified it in its pom)-->
+        <pluginManagement>
+            <plugins>
+                <!-- Special resources processing for plugins -->
+                <plugin>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>2.6</version>
+                    <executions>
+                        <execution>
+                            <id>copy-resources</id>
+                            <!-- here the phase you need -->
+                            <phase>validate</phase>
+                            <goals>
+                                <goal>copy-resources</goal>
+                            </goals>
+                            <configuration>
+                                <outputDirectory>${basedir}/target/${project.artifactId}</outputDirectory>
+                                <resources>
+                                    <!-- regular resource processsing for everything except data.xml, README and PACKAGE -->
+                                    <resource>
+                                        <directory>src/main/resources</directory>
+                                        <excludes>
+                                            <exclude>data/**</exclude>
+                                            <exclude>*.xml</exclude>
+                                            <exclude>README</exclude>
+                                            <exclude>PACKAGE</exclude>
+                                        </excludes>
+                                    </resource>
+                                    <!-- resource processsing with a different output directory
+                                    for everything except data.xml, README and PACKAGE -->
+                                    <resource>
+                                        <directory>src/main/resources</directory>
+                                        <includes>
+                                            <include>data/**</include>
+                                            <include>*.xml</include>
+                                        </includes>
+                                        <!-- relative to target/classes
+                                        i.e. ${project.build.outputDirectory} -->
+                                        <targetPath>../${project.artifactId}</targetPath>
+                                    </resource>
+                                    <resource>
+                                        <directory>${freedomotic.basedir}/plugins/resources</directory>
+                                        <includes>
+                                            <include>README</include>
+                                            <include>PACKAGE</include>
+                                        </includes>
+                                        <filtering>true</filtering>
+                                        <!-- relative to target/classes
+                                        i.e. ${project.build.outputDirectory} -->
+                                        <targetPath>../${project.artifactId}</targetPath>
+                                    </resource>
+                                </resources>            
+                            </configuration>            
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <configuration>
+                        <outputDirectory>${project.build.directory}/${project.artifactId}</outputDirectory>
+                        <archive>
+                            <manifest>
+                                <addClasspath>true</addClasspath>
+                                <classpathPrefix>lib/</classpathPrefix>
+                            </manifest>
+                        </archive>
+                    </configuration>
+                </plugin>
+                <!-- copy plugins dependencies when a plugin is installed -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>2.8</version>
+                    <executions>
+                        <execution>
+                            <id>copy-dependencies</id>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>copy-dependencies</goal>
+                            </goals>
+                            <configuration>
+                                <outputDirectory>${project.build.directory}/${project.artifactId}/lib</outputDirectory>
+                                <excludeTransitive>true</excludeTransitive>
+                                <excludeScope>provided</excludeScope>
+                                <overWriteReleases>false</overWriteReleases>
+                                <overWriteSnapshots>false</overWriteSnapshots>
+                                <overWriteIfNewer>true</overWriteIfNewer>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+                <!--license management -->
+                <plugin>
+                    <groupId>com.mycila.maven-license-plugin</groupId>
+                    <artifactId>maven-license-plugin</artifactId>
+                    <version>1.10.b1</version>
+                    <configuration>
+                        <header>LICENSE_HEADER.txt</header>
+                        <properties>
+                            <name>${project.name}</name>
+                            <inceptionyear>${project.inceptionYear}</inceptionyear>
+                            <!-- TODO: use current year -->
+                            <year>2013</year>
+                            <holder>Freedomotic team</holder>
+                            <contact>info@freedomotic.com</contact>
+                        </properties>
+                        <excludes>
+                            <exclude>**/*.xml</exclude>
+                            <exclude>**/*.properties</exclude>
+                            <exclude>**/*.xtrg</exclude>
+                            <exclude>**/*.xcmd</exclude>
+                            <exclude>**/*.xrea</exclude>
+                            <exclude>**/*.xobj</exclude>
+                            <exclude>**/*.png</exclude>
+                            <exclude>**/*.jpg</exclude>
+                            <exclude>**/*.PNG</exclude>
+                            <exclude>**/*.options</exclude>
+                        </excludes>
+                        <includes>
+                            <include>**/freedomotic-core/**</include>
+                            <include>**/freedomotic-model/**</include>
+                        </includes>
+                        <strictCheck>true</strictCheck>
+                        <aggregate>true</aggregate>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>format</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-antrun-plugin</artifactId>
+                    <version>1.7</version>
+                    <executions>
+                        <execution>
+                            <id>id.install</id>
+                            <phase>install</phase>
+                            <goals>
+                                <goal>run</goal>
+                            </goals>
+                            <configuration>
+                                <target>
+                                    <echo>Phase install goal run</echo>
+                                    <!--clean up the installation folder-->
+                                    <delete quiet="true">
+                                        <fileset dir="${freedomotic.synch.dist.path}/${freedomotic.package.type}s/${project.artifactId}"/>
+                                    </delete>
+                                    <!--copy the plugin-->
+                                    <copydir src ="target/${project.artifactId}"
+                                             dest="${freedomotic.synch.dist.path}/${freedomotic.package.type}s/${project.artifactId}">
+                                    </copydir>
+                                </target>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>

@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.github.jcooky</groupId>
+  <artifactId>jaal</artifactId>
+  <version>0.2.3-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>Jaal</name>
+  <description>JAva Agent Library - help to make javaagent easy</description>
+  <inceptionYear>2015</inceptionYear>
+  <contributors>
+    <contributor>
+      <name>JCooky</name>
+      <email>bak723@gmail.com</email>
+      <url>https://github.com/jcooky</url>
+      <roles>
+        <role>Developer</role>
+      </roles>
+    </contributor>
+  </contributors>
+  <scm>
+    <connection>scm:git:https://github.com/jcooky/jaal.git</connection>
+    <developerConnection>scm:git:https://github.com/jcooky/jaal.git</developerConnection>
+    <url>https://github.com/jcooky/jaal</url>
+  </scm>
+  <ciManagement>
+    <system>Travis-CI</system>
+    <url>https://travis-ci.org/jcooky/jaal</url>
+  </ciManagement>
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+      <comments>A business-friendly OSS license</comments>
+    </license>
+  </licenses>
+  <issueManagement>
+    <system>Github</system>
+    <url>https://github.com/jcooky/jaal/issues</url>
+  </issueManagement>
+  <organization>
+    <name>JCooky</name>
+    <url>https://github.com/jcooky</url>
+  </organization>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <java.version>1.6</java.version>
+    <license.licenseName>apache_v2</license.licenseName>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.12</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>1.10.19</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>2.4</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.ow2.asm</groupId>
+      <artifactId>asm-all</artifactId>
+      <version>[5.0, )</version>
+      <classifier>sources</classifier>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>2.10</version>
+        <executions>
+          <execution>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>copy-dependencies</goal>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <includeClassifiers>sources</includeClassifiers>
+              <outputDirectory>${project.build.directory}/dependency-sources</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.4</version>
+        <executions>
+          <execution>
+            <id>generate-sources</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <tasks>
+                <copy todir="${project.build.directory}/dependency-sources">
+                  <fileset dir="${project.build.directory}/dependency-sources">
+                    <include name="**/*.java" />
+                  </fileset>
+                  <globmapper from="*.java" to="*.java.new" />
+                  <filterchain>
+                    <replacestring from="org.objectweb.asm" to="com.github.jcooky.jaal.org.objectweb.asm" />
+                  </filterchain>
+                </copy>
+                <move todir="${project.build.directory}/generated-sources/java/com/github/jcooky/jaal">
+                  <fileset dir="${project.build.directory}/dependency-sources">
+                    <include name="**/*.java.new" />
+                    <include name="**/*.dtd" />
+                  </fileset>
+                  <globmapper from="*.java.new" to="*.java" />
+                </move>
+              </tasks>
+            </configuration>
+          </execution>
+          <execution>
+            <id>package</id>
+            <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <tasks>
+                <echo message="${project.version}" file="${project.build.directory}/VERSION.txt" />
+              </tasks>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>1.9.1</version>
+        <executions>
+          <execution>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${project.build.directory}/generated-sources/java</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-gpg-plugin</artifactId>
+        <version>1.4</version>
+        <configuration>
+          <passphrase>${gpg.passphrase}</passphrase>
+        </configuration>
+        <executions>
+          <execution>
+            <id>sign-artifacts</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>sign</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+        <version>2.2.2</version>
+        <configuration>
+          <arguments>-Dgpg.passphrase=${gpg.passphrase}</arguments>
+          <tagNameFormat>v@{project.version}</tagNameFormat>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.3</version>
+        <configuration>
+          <source>${java.version}</source>
+          <target>${java.version}</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.10.3</version>
+        <configuration>
+          <excludePackageNames>com.github.jcooky.jaal.org.objectweb.asm</excludePackageNames>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <distributionManagement>
+    <snapshotRepository>
+      <id>sonatype-nexus-snapshots</id>
+      <name>Sonatype Nexus snapshot repository</name>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    </snapshotRepository>
+    <repository>
+      <id>sonatype-nexus-staging</id>
+      <name>Sonatype Nexus release repository</name>
+      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+    </repository>
+  </distributionManagement>
+
+</project>

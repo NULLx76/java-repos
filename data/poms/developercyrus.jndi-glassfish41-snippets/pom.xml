@@ -1,0 +1,536 @@
+<project 
+        xmlns="http://maven.apache.org/POM/4.0.0" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    
+    <!-- 
+        Comment:
+        1.  Originally plan glassfish as a JDNI server for client remoting 
+        2.  glassfish does not support remote jndi to datasource ?
+ 
+        
+        Overview:
+        1.  example1 uses local jndi
+        2.      
+               
+        Environment:
+        1.  Windows 7 64 bit (assume OS installed in C:\Windows)
+        2.  Eclipse 4.4
+        3.  JDK 8.0 
+        4.  zwamp-1.1.2 (mysql)   //to do: launch it wih antrun-maven-plugin
+        5.  Glassfish 4.1 (embedded as project, located in ${basedir}\server\wildfly-8.2.0.Final, downloaded from http://wildfly.org/downloads/)
+        6.  mysql account: root1/password
+
+        Remarks:       
+        1.  run ${basedir}\server\glassfish-4.1\glassfish4\bin\asadmin.bat, to launch glassfish. after, the command prompt will not be used held up
+        2.  go to http://localhost:4848, for web admin console (seem no need password)
+        3.  in Windows plaform, when executing "mvn glassfish:start-domain", requires to change 
+            from ${basedir}\server\glassfish-4.1\glassfish4\bin\asadmin
+            to ${basedir}\server\glassfish-4.1\glassfish4\bin\asadmin.archive
+            so that asadmin.bat can function propertly, otherwise it throws error:
+            "CreateProcess error=193, %1 is not a valid Win32 application"
+            after, it will show "BUILD SUCCESSFULLY", no command prompt is held-up.
+        4.  to register datasource, mysql driver is required to place in ${basedir}\server\glassfish-4.1\glassfish4\domains\jndi-glassfish41-snippets\lib
+            reference: http://dev.mysql.com/doc/connector-j/en/connector-j-usagenotes-glassfish-config.html    
+        5.  deploy mysql driver, in this project, is done by ">maven-resources-plugin"
+        6.  the plugin doesn't allow empty value for property "password", otherwise it throws error:
+             "[ERROR] remote failure: Invalid property syntax, missing property value: password="
+        7.  however, its subsequent bring error 
+            "javax.resource.spi.SecurityException: No password credential found" 
+            when accessing http://localhost:8080/jndi-glassfish41-snippets/getServlet, because
+            there's no such password property in ${basedir}\server\glassfish-4.1\glassfish4\domains\jndi-glassfish41-snippets\config\domain.xml
+            So this project specifically creates account "root1/password" by          
+                grant all privileges on *.* to root1@localhost identified by 'passwprd' with grant option;             
+        8.  application context path is defined by /WEB-INF/glassfish-web.xml   
+            reference:
+                http://stackoverflow.com/questions/27093387/cant-create-glassfish-web-xml-in-my-web-project-glassfish-netbeans
+        9.  check server log in ${basedir}\server\glassfish-4.1\glassfish4\domains\jndi-glassfish41-snippets\logs\server.log
+        10. because glassfish is embedded in this project, eclipse will validate all file inside. It will throws
+            error for xml, xsd, dtd, in 
+                ${basedir}\server\glassfish-4.1\glassfish4\glassfish\lib\install\applications\__admingui\WEB-INF\sun-web.xml
+                ${basedir}\server\glassfish-4.1\glassfish4\mq\lib\help\en\MasterTOC.xml
+                ${basedir}\server\glassfish-4.1\glassfish4\glassfish\lib\schemas\
+                ${basedir}\server\glassfish-4.1\glassfish4\glassfish\lib\datatypes.dtd
+            To avoid these error, I disable this feature specically for this project by 
+               -Properties > Validation
+               -Check enable project specific settings 
+                   -uncheck the manual and build for: XML Validator
+                   -uncheck the manual and build for: XML Schema Validator
+                   -uncheck the manual and build for: DTD Validator
+               -Right-click on the project and select Validate to make the errors disappear
+            referece: http://stackoverflow.com/questions/7489510/disable-xml-validation-in-eclipse
+               
+        
+        Approach1 - all automate (used in this project)
+        1.  "mvn install"
+                -initialize mysql                               at initialize
+                -create a new domain (delete existing if any)   at pre-integration-test
+                -stop domain                                    at pre-integration-test (tweaked, for deploying mysql driver)
+                -deploy mysql driver                            at integration-test     (tweaked, for deploying mysql driver)
+                -start domain                                   at integration-test     (tweaked, for deploying mysql driver)
+                -deploy application                             at integration-test     (tweaked, for deploying mysql driver)
+                -run integration test                           at integration-test
+                -undeploy application                           at post-integration-test
+                -stop glassfish                                 at post-integration-test
+        
+        
+        Approach2 
+        1.  for server, in one dos prompt, in a jvm, "mvn glassfish:create-domain", to start glassfish. It will be NOT held up, so this dos prompt can be re-used.
+        2.  for server, in one dos prompt, in a jvm, "mvn glassfish:stop-domain", to stop glassfish.
+        3   copy mysql driver  
+            from /mysql-driver/mysql-connector-java-5.1.9.jar
+            to /server/glassfish-4.1/glassfish4/domains/jndi-glassfish41-snippets/lib
+        4   for server, in one dos prompt, in a jvm, "mvn glassfish:start-domain", to start glassfish.
+        5.  for server, in one dos prompt, in a jvm, "mvn package"
+        6.  for server, in one dos prompt, in a jvm, "mvn glassfish:deploy", to start glassfish.
+        7.  for client, open browser, access http://local:8080/jndi-glassfish41-snippets/getServlet
+        8.  for server, in one dos prompt, in a jvm, "mvn glassfish:undeploy", to start glassfish.
+        9.  for server, in one dos prompt, in a jvm, "mvn glassfish:stop-domain", to start glassfish.
+        
+                
+        General Reference:
+        https://maven-glassfish-plugin.java.net/
+        https://maven-glassfish-plugin.java.net/examples/complete.html
+        
+    -->
+        
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding> 
+    </properties>
+    
+
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>jndi-glassfish41-snippets</groupId>
+    <artifactId>jndi-glassfish41-snippets</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>war</packaging>
+
+
+    <build>     
+    
+    
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.eclipse.m2e</groupId>
+                    <artifactId>lifecycle-mapping</artifactId>
+                    <version>1.0.0</version>
+                    <configuration>
+                        <lifecycleMappingMetadata>
+                            <pluginExecutions>   
+                               <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.codehaus.mojo</groupId>
+                                        <artifactId>sql-maven-plugin</artifactId>
+                                        <versionRange>[1.5,)</versionRange>
+                                        <goals>
+                                            <goal>execute</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    
+                                    <action>
+                                        <execute>  
+                                            <runOnIncremental>false</runOnIncremental>  
+                                        </execute>  
+                                    </action>
+                                </pluginExecution>  
+                                
+                                
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.apache.maven.plugins</groupId>
+                                        <artifactId>maven-resources-plugin</artifactId>
+                                        <versionRange>[2.4,)</versionRange>
+                                        <goals>
+                                            <goal>execute</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    
+                                    <action>
+                                        <execute>  
+                                            <runOnIncremental>false</runOnIncremental>  
+                                        </execute>  
+                                    </action>
+                                </pluginExecution>   
+                            </pluginExecutions>
+                        </lifecycleMappingMetadata>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>    
+                  
+                  
+        <plugins>   
+        
+        
+        
+             <!-- initialize -->             
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>sql-maven-plugin</artifactId>
+                <version>1.5</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>mysql</groupId>
+                        <artifactId>mysql-connector-java</artifactId>
+                        <version>5.1.9</version>
+                    </dependency>
+                </dependencies>
+                
+                <executions>
+                    <execution>
+                        <id>drop-db-before-test-if-any (mysql)</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>com.mysql.jdbc.Driver</driver>
+                            <url>jdbc:mysql://localhost:3306</url>
+                            <username>root</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <skip>${maven.test.skip}</skip>
+                            <autocommit>true</autocommit>
+                            <sqlCommand>                                                                
+                                drop database if exists javase_jndi_glassfish41_example1;                                                        
+                            </sqlCommand>
+                            <onError>continue</onError>
+                        </configuration>
+                    </execution>
+                    
+
+                    <execution>
+                        <id>create-db (mysql)</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>com.mysql.jdbc.Driver</driver>
+                            <url>jdbc:mysql://localhost:3306</url>
+                            <username>root</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <skip>${maven.test.skip}</skip>
+                            <autocommit>true</autocommit>
+                            <sqlCommand>                                                                        
+                                create database if not exists javase_jndi_glassfish41_example1;                                                 
+                            </sqlCommand>
+                        </configuration>
+                    </execution>
+                                       
+                                      
+                    <execution>
+                        <id>create-schema (mysql)</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>com.mysql.jdbc.Driver</driver>
+                            <url>jdbc:mysql://localhost:3306</url>
+                            <username>root</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <skip>${maven.test.skip}</skip>
+                            <autocommit>true</autocommit>
+                            <srcFiles>
+                                <srcFile>src/main/resources/javase/jndi/glassfish41/example1/create-schema.sql</srcFile>
+                            </srcFiles>
+                        </configuration>
+                    </execution>
+
+
+                    <execution>
+                        <id>create-data (mysql)</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>com.mysql.jdbc.Driver</driver>
+                            <url>jdbc:mysql://localhost:3306</url>
+                            <username>root</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <autocommit>true</autocommit>
+                            <srcFiles>                                            
+                                <srcFile>src/main/resources/javase/jndi/glassfish41/example1/insert-record.sql</srcFile>
+                            </srcFiles>
+                        </configuration>
+                                               
+                    </execution>
+                    
+                </executions>
+            </plugin>
+            
+            
+            
+            <!-- compile -->                  
+            <plugin>                                   
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.0</version>
+                <configuration>
+                    <source>1.7</source>     <!-- no specific -->
+                    <target>1.7</target>
+                </configuration>                         
+            </plugin>  
+            
+            
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.4</version>
+                <executions>
+                    <execution>
+                        <id>copy-mysql-driver</id>
+                        <phase>integration-test</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${basedir}/server/glassfish-4.1/glassfish4/domains/jndi-glassfish41-snippets/lib</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${basedir}/mysql-driver</directory>
+                                    <includes>
+                                        <include>mysql-connector-java-5.1.9.jar</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+            
+                </executions>
+            </plugin>
+            
+            
+            
+            
+            
+            <plugin>
+                <groupId>org.glassfish.maven.plugin</groupId>
+                <artifactId>maven-glassfish-plugin</artifactId>
+                <version>2.1</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>mysql</groupId>
+                        <artifactId>mysql-connector-java</artifactId>
+                        <version>5.1.9</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <glassfishDirectory>${basedir}/server/glassfish-4.1/glassfish4</glassfishDirectory>
+                    <user>admin</user>
+                    <adminPassword>adminadmin</adminPassword>
+                    <autoCreate>true</autoCreate>
+                    <debug>true</debug>
+                    <echo>true</echo>
+                    <terse>true</terse>
+                    <domain>
+                        <name>${project.artifactId}</name>
+                        <adminPort>4848</adminPort>
+                        <httpPort>8080</httpPort>
+                        <httpsPort>8443</httpsPort>
+                        <iiopPort>3700</iiopPort>
+                        <jmsPort>7676</jmsPort>
+                        <reuse>false</reuse>                                    
+                        <!-- <resourceDescriptor>path/to/resources.xml</resourceDescriptor> --> 
+                        <resources>                          
+                            <jdbcDataSource>
+                                <!-- 
+                                    [ERROR] Constraints for this JdbcResource configuration have been violated: on property [  ] violation reason [ resource name cannot contain ':' character ]
+                                    [ERROR] Unable to create JDBC datasource java:app/mysql.
+                                 -->
+                                <name>glassfish/mysql</name>
+                                <type>connectionPoolDataSource</type>
+                                <poolName>mysqlPool</poolName>
+                                <className>com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource</className>
+                                <description>MySQL JDBC Connection Pool</description>
+                                <allowNonComponentCallers>false</allowNonComponentCallers>
+                                <validateConnections>true</validateConnections>
+                                <validationMethod>metaData</validationMethod>
+                                <properties>
+                                    <property>
+                                        <name>portNumber</name>
+                                        <value>3306</value>
+                                    </property>      
+                                    <property>
+                                        <name>user</name>
+                                        <value>root1</value>
+                                    </property>                              
+                                    <!--
+                                        Empty the node, if there's no password.
+                                        cannot use empty value, otherwise it will throw error:
+                                        
+                                        [ERROR] remote failure: Invalid property syntax, missing property value: password=
+                                    -->
+                                    <!-- 
+                                    <property>
+                                        <name>password</name>     
+                                        <value></value>
+                                    </property>
+                                    -->
+                                    <property>
+                                        <name>password</name>     
+                                        <value>password</value>
+                                    </property>
+                                    <property>
+                                        <name>serverName</name>
+                                        <value>localhost</value>
+                                    </property>
+                                    <property>
+                                        <name>databaseName</name>
+                                        <value>javase_jndi_glassfish41_example1</value>
+                                    </property>
+                                </properties>
+                            </jdbcDataSource>
+                        </resources>
+                    </domain>
+                    <components>
+                        <component>
+                            <name>${project.artifactId}</name>
+                            <artifact>${project.build.directory}/${project.build.finalName}.war</artifact>
+                        </component>
+                    </components>
+                </configuration>
+                
+                
+                <executions>   
+                    
+                    
+                    <!-- start glassfish -->
+                    <execution>
+                        <id>create-domain</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>create-domain</goal>
+                        </goals>
+                    </execution>
+                    
+                    <!-- start glassfish -->
+                    <execution>
+                        <id>stop-domain</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>stop-domain</goal>
+                        </goals>
+                    </execution>
+                    
+                    
+                    <!-- start glassfish -->
+                    <execution>
+                        <id>start-domain</id>
+                        <phase>integration-test</phase>
+                        <goals>
+                            <goal>start-domain</goal>
+                        </goals>
+                    </execution>
+
+                    <!-- deploy the application on install -->
+                    <execution>
+                        <id>deploy-application</id>
+                        <phase>integration-test</phase>
+                        <goals>
+                            <goal>deploy</goal>
+                        </goals>
+                    </execution>
+                                       
+                    
+                    <!-- undeploy the application on install -->
+                    <execution>
+                        <id>undeploy-application</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>undeploy</goal>
+                        </goals>
+                    </execution>
+
+                    
+                    <!-- stop glassfish -->
+                    <execution>
+                        <id>stop-glassfish</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>stop-domain</goal>
+                        </goals>
+                    </execution>
+
+                    
+                </executions>                       
+            </plugin> 
+            
+            
+            <!-- 
+                assume the domain "jndi-glassfish41-snippets" in ${basedir}server\glassfish-4.1\glassfish4\domains\jndi-glassfish41-snippets" 
+                has been created
+            
+             -->
+             
+
+           
+           
+           
+            
+            
+            <!-- integration-test -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.12</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            
+            
+        </plugins>    
+    </build>     
+
+    <dependencies>
+
+        <!-- javax -->
+        <dependency>
+            <groupId>javax</groupId>
+            <artifactId>javaee-api</artifactId>
+            <version>6.0</version>
+        </dependency>
+        
+        <!-- mysql -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>5.1.9</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        
+        
+        <!-- junit -->                
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.10</version>
+            <type>jar</type>
+            <scope>compile</scope>
+        </dependency>
+        
+
+        
+        <!-- jsoup, for integration test -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.6.2</version>
+        </dependency>
+        
+        
+        
+    </dependencies>             
+</project>

@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<!-- Current project definition -->
+	<groupId>eu.daxiongmao</groupId>
+	<artifactId>tutorial</artifactId>
+	<version>1.0-SNAPSHOT</version>
+	<packaging>pom</packaging>
+
+	<name>tutorial</name>
+	<description>This is a demonstration of how to use Java EE 7. These samples can be re-use later in other project.</description>
+
+	<properties>
+        <!-- ## Project overall settings ## -->
+        <!-- Each project base directory -->
+		<main.dir>${project.basedir}</main.dir>
+		<!-- Parent (current) project = root. This is required as the IT report must be shared by all children and grand-children -->
+	    <parent.target.path>${session.executionRootDirectory}</parent.target.path>	    
+	    <!-- Web directory -->
+		<endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
+
+
+	    <!-- ## JVM settings ## -->
+		<java.version>1.7</java.version>        
+		<default.encoding>UTF-8</default.encoding>
+		<project.build.sourceEncoding>${default.encoding}</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>${default.encoding}</project.reporting.outputEncoding>
+        <project.report.outputEncoding>${default.encoding}</project.report.outputEncoding>
+		
+		
+		<!-- ## Java EE settings ## -->
+		<javaee.version>7.0</javaee.version>
+
+
+		<!-- ## Build settings ## -->
+		<maven.compiler.plugin>3.1</maven.compiler.plugin>
+		<maven-dependency.plugin>2.8</maven-dependency.plugin>
+        <maven.builder.helper.plugin>1.8</maven.builder.helper.plugin>
+        <maven.surefire-failsafe.plugin>2.16</maven.surefire-failsafe.plugin>
+		
+		
+		<!-- ## Dependencies ## -->
+		<org.apache.commons.version>3.2.1</org.apache.commons.version>
+		
+
+		<!-- ## Testing frameworks / libraries ## -->
+		<junit.version>4.11</junit.version>
+		<glassfish.version>4.0</glassfish.version>
+		<weld-se.version>2.1.2.Final</weld-se.version>
+		
+		
+        <!-- ## Continuous integration and quality ## -->
+	    <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
+	    <sonar.core.codeCoveragePlugin>jacoco</sonar.core.codeCoveragePlugin>
+        <maven.jacoco.version>0.6.4.201312101107</maven.jacoco.version>
+        <jacoco.lib.path>${settings.localRepository}/org/jacoco/org.jacoco.agent/${maven.jacoco.version}/org.jacoco.agent-${maven.jacoco.version}-runtime.jar</jacoco.lib.path>	    		
+	    
+		<sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
+		<sonar.surefire.reportsPath>${project.build.directory}/surefire-reports</sonar.surefire.reportsPath>    	
+    	<sonar.jacoco.reportPath>${project.basedir}/target/reports/jacoco-unit.exec</sonar.jacoco.reportPath>
+    	<sonar.jacoco.gwtReportPath>${project.basedir}/target/reports/jacoco-gwt.exec</sonar.jacoco.gwtReportPath>
+    	<sonar.jacoco.itReportPath>${session.executionRootDirectory}/target/reports/jacoco-it.exec</sonar.jacoco.itReportPath>
+		
+	</properties>
+	
+	
+	
+	<build>
+		<!-- Tests resources : unit + integration tests directory  -->
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+            </testResource>
+            <testResource>
+                <directory>src/it/resources</directory>
+            </testResource>
+        </testResources>
+	
+		<plugins>
+			<!-- Compilation settings. Java EE 7 requires min Java 7 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${maven.compiler.plugin}</version>
+				<configuration>
+					<source>${java.version}</source>
+					<target>${java.version}</target>
+					<compilerArguments>
+						<endorseddirs>${endorsed.dir}</endorseddirs>
+					</compilerArguments>
+				</configuration>
+			</plugin>
+
+			<!-- Required to build both EJB and war. This will build the JavaEE7 output directory -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<version>${maven-dependency.plugin}</version>
+				<executions>
+					<execution>
+						<phase>validate</phase>
+						<goals>
+							<goal>copy</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${endorsed.dir}</outputDirectory>
+							<silent>true</silent>
+							<artifactItems>
+								<artifactItem>
+									<groupId>javax</groupId>
+									<artifactId>javaee-endorsed-api</artifactId>
+									<version>${javaee.version}</version>
+									<type>jar</type>
+								</artifactItem>
+							</artifactItems>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+
+            <!-- Tests plugins -->
+            <!-- 		
+            Quick info:
+					* JACOCO = plug-in to build tests report for SONAR				
+					* BUILD-HELPER = plug-in to declare the 'src/it' test folder							
+            		* SUREFIRE = plug-in to run Unit Tests [UT]
+            					 This exclude Integration Tests of the basic 'package' phase            		
+            		* FAILSAFE = plug-in to run Integration Tests [IT]
+            					 Integration tests will be run on 'integration-test', 'verify', 'install' & 'deploy' goals
+			-->
+			
+			<!-- == JaCoCo, SONAR plug-in == -->
+			<!-- The report configurations are generate and manage by Surefire & Failsafe plug-ins -->
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>${maven.jacoco.version}</version>
+				<executions>
+					<execution>
+						<id>pre-test</id>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>		
+						<configuration>
+							<skip>true</skip>
+						</configuration>
+					</execution>
+					<execution>
+						<id>post-test</id>
+						<phase>test</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>								
+						<configuration>
+							<skip>true</skip>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			
+            <!-- == Build-helper, to declare Integration Test structure 'src/it' == -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>${maven.builder.helper.plugin}</version>
+                <executions>
+                    <execution>
+                        <id>add-test-source</id>
+                        <phase>generate-test-sources</phase>
+                        <goals>
+                            <goal>add-test-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>src/it/java</source>
+                            </sources>                            
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            
+             <!-- == process UNIT tests == -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven.surefire-failsafe.plugin}</version>
+                <configuration>
+                	<!-- 
+				    <argLine>-Xms512m -Xmx2048m -XX:MaxPermSize=1024m</argLine>
+                	 -->
+                	<argLine>-javaagent:${jacoco.lib.path}=destfile=${sonar.jacoco.reportPath}</argLine>
+					<forkCount>1</forkCount>
+					<reuseForks>false</reuseForks>
+                    <excludes>
+                    	<!-- Exclude integration tests when unit tests are run -->						
+                        <exclude>**/*IT.java</exclude>
+                        <exclude>src/it/java/**</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+
+			<!-- Integration tests plugin -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<version>${maven.surefire-failsafe.plugin}</version>
+				<executions>
+					<execution>
+						<id>integration-test</id>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+		</plugins>
+		<pluginManagement>
+			<plugins>
+				<!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>org.apache.maven.plugins</groupId>
+										<artifactId>maven-dependency-plugin</artifactId>
+										<versionRange>[2.8,)</versionRange>
+										<goals>
+											<goal>copy</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore></ignore>
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+	
+	
+
+	<dependencies>
+
+		<!-- NOTE : Please avoid to add much dependencies at parent level, as it adds them for each module ! -->
+
+		<!-- Java EE 7 specifications. This will be provided by the application server -->
+		<dependency>
+			<groupId>javax</groupId>
+			<artifactId>javaee-web-api</artifactId>
+			<version>${javaee.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Apache commons: set of utilities -->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>${org.apache.commons.version}</version>
+		</dependency>
+
+		<!-- ###################### -->
+		<!-- # Tests dependencies # -->
+		<!-- ###################### -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>${junit.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Lightweight IoC container (this is the heart of JBoss, Glassfish, etc.)  -->
+		<!-- See: http://weld.cdi-spec.org -->
+		<dependency>
+			<groupId>org.jboss.weld.se</groupId>
+			<artifactId>weld-se</artifactId>
+			<version>${weld-se.version}</version>
+			<!-- In order to use a main(...) method, do NOT use scope "test" -->
+			<!-- scope>test</scope -->
+		</dependency>
+
+		<!-- Embedded J2EE server -->
+		<dependency>
+			<groupId>org.glassfish.main.extras</groupId>
+			<artifactId>glassfish-embedded-all</artifactId>
+			<version>${glassfish.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+	</dependencies>
+
+
+	<!-- ## Children ## -->
+	<modules>
+		<module>backend</module>
+		<module>frontend</module>
+		<module>deployment</module>
+	</modules>
+
+
+</project>

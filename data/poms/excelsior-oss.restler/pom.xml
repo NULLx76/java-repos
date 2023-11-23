@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.restler</groupId>
+    <artifactId>restler</artifactId>
+    <version>0.5.2-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <!--
+        For a clean build passing all the tests use
+
+            mvn clean install
+
+        To release use
+
+            mvn release:prepare
+            mvn release:perform
+
+        The first above will pass all tests change version/tag/commit
+        The second will pass only unit tests and deploy as below
+
+        If you need just to build and deploy what you have, use
+
+            mvn deploy -P release
+
+        Before releasing/deploying make sure that
+            1) GPG is correctly installed and configured
+            2) .m2\settings.xml contains your ossrh credentials
+
+    -->
+
+    <name>restler</name>
+    <description>Restler is a library that generates a client of a web service by its annotated Spring controller
+        interface at runtime.
+    </description>
+    <url>http://www.restler.org</url>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <scm>
+        <connection>scm:git:https://github.com/${github-repo-owner}/${github-repo}.git</connection>
+        <developerConnection>scm:git:https://github.com/${github-repo-owner}/${github-repo}.git</developerConnection>
+        <url>https://github.com/${github-repo-owner}/${github-repo}</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <developers>
+        <developer>
+            <name>Aleksey Zhidkov</name>
+        </developer>
+        <developer>
+            <name>Pavel Salimov</name>
+        </developer>
+        <developer>
+            <name>Oleg Rudenko</name>
+        </developer>
+    </developers>
+
+    <properties>
+        <jdk.version>1.8</jdk.version>
+        <slf4j.version>1.7.5</slf4j.version>
+        <kotlin.version>1.0.5-3</kotlin.version>
+        <spring.version>4.3.4.RELEASE</spring.version>
+        <spring.data-rest.version>2.5.6.RELEASE</spring.data-rest.version>
+        <jcl.slf4j.version>1.7.12</jcl.slf4j.version>
+        <jackson.version>2.8.5</jackson.version>
+        <github-repo-owner>excelsior-oss</github-repo-owner>
+        <github-repo>restler</github-repo>
+    </properties>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+    <profiles>
+        <profile>
+            <id>default</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <modules>
+                <module>jar-executor-plugin</module>
+                <module>restler-core</module>
+                <module>restler-spring-mvc</module>
+                <module>restler-spring-data-rest</module>
+                <module>test-api</module>
+                <module>restler-integration-tests</module>
+                <module>restler-sdr-integration-tests</module>
+                <module>test-client</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>release</id>
+            <!-- Due to the skip-deployment bug in the Nexus Staging plugin, we have to exclude the module to not deploy it  -->
+            <modules>
+                <module>restler-core</module>
+                <module>restler-spring-mvc</module>
+            </modules>
+            <build>
+                <plugins>
+
+                    <!-- Produces sources -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>2.2.1</version>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Produces docs -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>2.9.1</version>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Signs resulting artifacts -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.6</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Deploys results -->
+                    <plugin>
+                        <groupId>org.sonatype.plugins</groupId>
+                        <artifactId>nexus-staging-maven-plugin</artifactId>
+                        <version>1.6.3</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <serverId>ossrh</serverId>
+                            <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                            <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+            </plugin>
+
+            <!-- Defines custom JDK -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
+                <configuration>
+                    <source>${jdk.version}</source>
+                    <target>${jdk.version}</target>
+                </configuration>
+            </plugin>
+
+            <!-- Compiles Groovy tests -->
+            <plugin>
+                <groupId>org.codehaus.gmavenplus</groupId>
+                <artifactId>gmavenplus-plugin</artifactId>
+                <version>1.4</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>testCompile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Interacts with VCS -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>2.5</version>
+                <configuration>
+                    <autoVersionSubmodules>true</autoVersionSubmodules>
+                    <useReleaseProfile>false</useReleaseProfile>
+                    <allowTimestampedSnapshots>true</allowTimestampedSnapshots>
+                    <releaseProfiles>release</releaseProfiles>
+                    <goals>deploy</goals>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>cglib</groupId>
+            <artifactId>cglib-nodep</artifactId>
+            <version>3.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.objenesis</groupId>
+            <artifactId>objenesis</artifactId>
+            <version>2.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>org.codehaus.groovy.maven.runtime</groupId>
+            <artifactId>gmaven-runtime-api</artifactId>
+            <version>1.0</version>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.codehaus.groovy</groupId>
+                    <artifactId>groovy-all-minimal</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-all</artifactId>
+            <version>2.4.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.spockframework</groupId>
+            <artifactId>spock-core</artifactId>
+            <version>1.0-groovy-2.4</version>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+</project>

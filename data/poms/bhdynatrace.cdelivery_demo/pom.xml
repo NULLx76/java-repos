@@ -1,0 +1,178 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.dynatrace</groupId>
+  <artifactId>cdelivery_demo</artifactId>
+  <packaging>war</packaging>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>cdelivery_demo Maven Webapp</name>
+  <url>http://maven.apache.org</url>
+  <properties>  
+  	  <!-- Set the version of Dynatrace we are working with -->
+	  <dynaTrace.version>6.2</dynaTrace.version>
+	  
+	  <!-- Setting default values for Dynatrace Maven goals that operate on a system profile -->
+	  <dynaTrace.username>admin</dynaTrace.username>  
+	  <dynaTrace.password>admin</dynaTrace.password>  
+	  <dynaTrace.serverUrl>http://localhost:8020</dynaTrace.serverUrl>
+	  <dynaTrace.profileName>monitor_cdelivery_demo</dynaTrace.profileName>
+	  <dynaTrace.collector>devserver</dynaTrace.collector>
+	  <dynaTrace.versionBuild>${BUILD_ID}</dynaTrace.versionBuild>
+	  <dynaTrace.systemProfile>Monitoring</dynaTrace.systemProfile>
+	  
+	  <!-- Establish what category we plan on testing, environmentally aware -->
+	  <dynaTrace.testCategory>unit</dynaTrace.testCategory>
+	  
+	  <!-- goal properties for dtAutomation: startRecording -->
+	  <dynatrace.sessionName>Stored Testing Session</dynatrace.sessionName>
+	  <dynatrace.sessionDescription>Testing Session for Performance Analysis</dynatrace.sessionDescription>
+	  <dynatrace.recordingOption>all</dynatrace.recordingOption>
+	  <dynatrace.sessionLocked>false</dynatrace.sessionLocked> <!-- Let's keep the testing sessions deletable -->
+	  <dynatrace.appendTimestamp>false</dynatrace.appendTimestamp>
+	  
+	  <!-- goal properties for dtAutomation: stopRecording -->
+	  <dynatrace.doReanalyzeSession>true</dynatrace.doReanalyzeSession>
+	  <dynatrace.reanalyzeSessionTimeout>60000</dynatrace.reanalyzeSessionTimeout>
+	  <dynatrace.reanalyzeSessionPollingInterval>5000</dynatrace.reanalyzeSessionPollingInterval>
+	  <dynatrace.reanalyzeStatusProperty>dynatrace.status</dynatrace.reanalyzeStatusProperty>   
+	  
+	  <!-- This property will be used to store the actual Session Name for e.g.: Start/Stop Recording -->  
+	  <dynaTrace.sessionNameProperty>dynaTrace.sessionName</dynaTrace.sessionNameProperty>   
+  </properties>
+  
+  <pluginRepositories> 
+  <pluginRepository> <id>sonatype-nexus-snapshots</id> 
+  <name>Sonatype Nexus Snapshots</name> 
+  <url>https://repository.sonatype.org/content/groups/public/</url> 
+  <snapshots> <enabled>true</enabled> </snapshots> 
+  </pluginRepository> 
+  </pluginRepositories> 
+  
+ 
+  <repositories> 
+  
+  <repository> <id>sonatype-nexus-snapshots</id> 
+  <name>Sonatype Nexus Snapshots</name> 
+  <url>https://oss.sonatype.org/content/repositories/snapshots</url> 
+  <releases> <enabled>false</enabled> </releases> 
+  <snapshots> <enabled>true</enabled> </snapshots> 
+  </repository>
+  
+  <repository>
+         <id>local-maven-repository</id> 
+  		 <name>Local Maven Repository</name> 
+         <url>file://home/dynatrace/Development/maven</url>
+         <releases> <enabled>false</enabled> </releases> 
+  		 <snapshots> <enabled>true</enabled> </snapshots> 
+  </repository>
+   
+  
+  </repositories>
+  
+  <profiles>
+    <profile>
+            <id>sonar</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <!-- Example for MySQL-->
+                <sonar.jdbc.url>
+                  jdbc:mysql://devserver:3306/sonar?useUnicode=true&amp;characterEncoding=utf8
+                </sonar.jdbc.url>
+                <sonar.jdbc.username>sonar</sonar.jdbc.username>
+                <sonar.jdbc.password>sonar</sonar.jdbc.password>
+ 
+                <!-- Optional URL to server. Default value is http://localhost:9000 -->
+                <sonar.host.url>
+                  http://devserver:9000
+                </sonar.host.url>
+            </properties>
+    </profile>
+  	<profile><id>development</id></profile>
+  	<profile><id>stage</id></profile>
+  	<profile><id>production</id></profile> 
+  </profiles>
+  
+  <dependencies>
+    <dependency>
+      	<groupId>junit</groupId>
+      	<artifactId>junit</artifactId>
+      	<version>4.12</version>
+      	<scope>test</scope>
+    </dependency>
+    <dependency>
+      	<groupId>mysql</groupId>
+      	<artifactId>mysql-connector-java</artifactId>
+      	<version>5.1.36</version>
+    </dependency>
+  </dependencies>
+  <build>
+    <finalName>cdelivery_demo</finalName>
+    <pluginManagement>
+    <plugins>
+        <plugin>
+        	<groupId>org.codehaus.mojo</groupId>
+	        <artifactId>sonar-maven-plugin</artifactId>
+    	    <version>2.3</version>
+        </plugin>
+    	<plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <version>2.17</version>
+            <configuration>               
+             <!-- launch a new JVM for all tests -->
+                <forkMode>once</forkMode> 
+                                
+ 			<!-- load the Java agent in the new JVM and also pass the test run id (dtTestrunID property) to the agent -->                
+ 				<argLine>-agentpath:/opt/dynatrace/agent/lib64/libdtagent.so=name=demo_app,server=${dynaTrace.collector},optionTestRunIdJava=${BUILD_ID}</argLine>            
+ 			</configuration>
+    	</plugin>
+    	      
+    	 <plugin>            
+    	 	<groupId>dynaTrace</groupId>            
+    	 	<artifactId>dtAutomation</artifactId>            
+    	 	<version>${dynaTrace.version}</version>
+    	 	            
+    	 	<executions>                
+    	 		<execution>                    
+    	 		<id>DT_StartTest_UnitTest</id>                   
+    	  		<configuration>                        
+    	  				<!-- overwrite configuration properties if necessary -->
+                       	<versionMajor>1</versionMajor>                        
+                       	<versionMinor>0</versionMinor>                        
+                       	<versionRevision>0</versionRevision>                  
+                       	<versionMilestone>1</versionMilestone>   
+                       	<versionBuild>${BUILD_ID}</versionBuild> 
+                       	<category>unit</category>
+                       	<profileName>Monitoring</profileName>
+                              <username>${dynaTrace.username}</username>  
+                              <password>${dynaTrace.password}</password>  
+                       	<serverUrl>${dynaTrace.serverUrl}</serverUrl>
+                       	<additionalProperties></additionalProperties> 
+           		</configuration> 
+                                                             
+            	<phase>process-test-classes</phase>                    
+            	<goals>                       
+	             	<goal>startTest</goal>                    
+    	        </goals>                
+        	    </execution>             
+           </executions>        
+        </plugin>
+        </plugins>
+        </pluginManagement>
+  </build>
+  <organization>
+  	<name>Dynatrace</name>
+  	<url>www.dynatrace.com</url>
+  </organization>
+  <scm>
+  	<url>https://github.com/bhdynatrace/cdelivery_demo</url>
+  	<connection>scm:bhdynatrace:!Dynatrace1@github.com:bhdynatrace/cdelivery_demo.git</connection>
+  	<developerConnection>scm:bhdynatrace:!Dynatrace1@github.com:bhdynatrace/cdelivery_demo.git</developerConnection>
+  </scm>
+  <ciManagement>
+  	<system>Jenkins</system>
+  	<url>dynatrace_server:8080</url>
+  </ciManagement>
+</project>

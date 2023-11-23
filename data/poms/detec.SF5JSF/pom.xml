@@ -1,0 +1,630 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<modelVersion>4.0.0</modelVersion>
+<groupId>SF5JSF</groupId>
+<artifactId>SF5JSF</artifactId>
+<version>0.0.1-SNAPSHOT</version>
+<packaging>war</packaging>
+<name>Openbox SF5 settings editor</name>
+<description>Openbox SF5 settings editor JSF</description>
+<properties>
+  		<mojarra-version>2.2.12</mojarra-version>
+  		<hibernate.version>4.3.11.Final</hibernate.version>
+<!--   		<hibernate.version>5.0.7.Final</hibernate.version> -->
+  		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  		<jersey.version>2.22.1</jersey.version>
+  		<jackson.version>2.6.4</jackson.version>
+  		<resteasy.version>3.0.14.Final</resteasy.version>
+  		<moxy.version>2.6.2</moxy.version>
+</properties>	
+  	<build>
+<!--     	<sourceDirectory>src</sourceDirectory> This excludes webapp resources from copying to classes! -->
+    		<resources>
+      			<resource>
+        			<directory>src/main/java</directory> <!-- This excludes webapp resources from copying to classes! -->
+        			<excludes>
+          			<exclude>**/*.java</exclude> 
+          			<!-- exclude default, unchanged hibernate.cfg.xml -->
+<!--           			<exclude>**/hibernate.cfg.xml</exclude> -->
+        			</excludes>
+      			</resource>
+      			<!-- Explicitly filter resource -->
+      			<resource>
+        			<directory>src/main/resources</directory>
+        			<filtering>true</filtering>
+      			 <includes>
+          			<include>**/hibernate.cfg.xml</include>
+          			<include>**/persistence.xml</include>
+        		</includes>
+      			</resource>
+      			<resource>
+        			<directory>src/main/resources</directory>
+        			<filtering>true</filtering>
+      			 <!-- <includes>
+      			 	<include>**web-inf-filter/jboss-web.xml</include>
+      			 </includes> -->
+      			 <excludes>
+      			 	<exclude>**web-inf-filter/jboss-web.xml</exclude>
+      			 </excludes>
+      			</resource>
+      		</resources>
+    		
+    	<defaultGoal>install</defaultGoal>
+		<testResources>
+		<!-- Test hibernate.cfg is copied. -->
+<!-- 			<testResource>
+		    	<directory>${project.basedir}/src/test/java</directory>
+		  	</testResource> -->
+		  	<testResource>
+		    	<directory>${project.basedir}/src/test/resources</directory>
+		    	<filtering>true</filtering>
+		   	</testResource>
+		</testResources>  
+		
+    	<plugins>
+		<plugin>
+        	<artifactId>maven-compiler-plugin</artifactId>
+        	<version>3.7.0</version>
+        	<configuration>
+          	<source>1.8</source>
+          	<target>1.8</target>
+        	</configuration>
+		</plugin>
+		
+		<!-- Filtering is done now at resources tag -->
+		<plugin>
+        	<artifactId>maven-war-plugin</artifactId>
+        	<version>3.1.0</version>
+        	<configuration>
+          		<warSourceDirectory>src/main/webapp</warSourceDirectory>
+          		<failOnMissingWebXml>false</failOnMissingWebXml>
+				<packagingExcludes>WEB-INF/web.xml</packagingExcludes>
+				<warName>${rp.build.warname}</warName>
+<!-- 			<webResources>
+				<resource>
+                <filtering>true</filtering>
+				<directory>src/main/resources</directory>
+                <targetPath>WEB-INF/classes/</targetPath>
+                <includes>
+                <include>**/hibernate.cfg.xml</include>
+                </includes>
+            	</resource>
+        	</webResources> -->
+        	<webResources>
+        		<resource>
+                	<filtering>true</filtering>
+                	<directory>src/main/resources/web-inf-filter/</directory>
+                	<targetPath>WEB-INF/</targetPath>
+                	<includes>
+		                <include>**/jboss-web.xml</include>
+        	        </includes>
+              	</resource> 
+        	</webResources>
+        	</configuration>
+      	</plugin>
+		<plugin>
+			<groupId>org.apache.maven.plugins</groupId>
+			<artifactId>maven-surefire-plugin</artifactId>	
+			<version>2.20.1</version>
+			<configuration>
+				<includes>
+					<include>**/*Tests.java</include>
+				</includes>
+				<excludes>
+            		<exclude>**/*IT.java</exclude>
+            	</excludes>
+			</configuration>
+		</plugin>
+		
+		    <!-- The WildFly plugin deploys your war to a local WildFly container -->
+            <!-- To use, run: mvn package wildfly:deploy -->
+           <!--  <plugin>
+                <groupId>org.wildfly.plugins</groupId>
+                <artifactId>wildfly-maven-plugin</artifactId>
+                <version>${version.wildfly.maven.plugin}</version>
+                <configuration>
+                    <hostname>${wildfly-hostname}</hostname>
+                    <port>${wildfly-port}</port>
+                    <username>${wildfly-username}</username>
+                    <password>${wildfly-password}</password>
+                </configuration>
+            </plugin> -->
+		
+        	
+        	<!-- https://github.com/javaee-samples/javaee7-samples/blob/master/jaxws/jaxws-client/pom.xml 
+        	
+        	for error because 'http' access is not allowed due to restriction set by the accessExternalSchema property. 
+  			line 4 of file:/F:/My/Java/SF5JSF/src/test/resources/wsdl/SatellitesService.wsdl#types?schema1
+  
+        	http://stackoverflow.com/questions/23011547/webservice-client-generation-error-with-jdk8
+        	
+        	-->
+        	 <!-- wsimport for web service classes generation
+        	  https://jax-ws-commons.java.net/jaxws-maven-plugin/wsimport-mojo.html
+        	  
+        	  https://java.net/jira/browse/JAX_WS_COMMONS-129
+        	  
+        	  wsimport -keep -s "E:\Java\MyClasses\SF5JSF\src\test\java" -d "E:\Java\MyClasses\SF5JSF\target\classes" -verbose -encoding UTF-8 -Xnocompile -target 2.2 "http://localhost:8080/SF5JSF-test/OpenboxSF5Service?wsdl"
+        	  -->
+	<!-- 		<plugin>
+               
+                <groupId>org.jvnet.jax-ws-commons</groupId>
+                <artifactId>jaxws-maven-plugin</artifactId>
+                <version>2.3.1-b20150201.1248</version>
+                <executions>
+                    <execution>
+                    <id>generate-client</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>wsimport</goal>
+                        </goals>
+                        <configuration>
+                           <wsdlUrls>
+                            	 <wsdlUrl>http://localhost:8080/${rp.build.warname}/OpenboxSF5Service?wsdl</wsdlUrl>
+                            </wsdlUrls>
+					        <verbose>true</verbose>
+                            <sourceDestDir>${basedir}/src/test/java</sourceDestDir>
+                            <target>2.2</target>
+	
+                        </configuration>
+                    </execution>
+                    
+                </executions>
+            </plugin> -->
+
+
+
+
+<!-- It seems not to be used. -->
+                            <!-- We do not need this section if wsdlDirectory is specified -->
+                            <!-- <wsdlFiles>
+                                <wsdlFile>SatellitesService.wsdl</wsdlFile>
+                                <wsdlFile>TranspondersService.wsdl</wsdlFile>
+                            </wsdlFiles> -->
+<!--                             <wsdlLocation>http://localhost:8080/${rp.build.warname}/SatellitesService?wsdl</wsdlLocation> -->
+<!--                             <wsdlLocation>http://localhost:8080/${rp.build.warname}/TranspondersService?wsdl</wsdlLocation> -->
+
+								<!-- Perhaps this shouldn't be used with bindings.
+								See examples https://jax-ws-commons.java.net/jaxws-maven-plugin/examples/using-binding-files.html
+								 -->
+<!--                             <wsdlLocation>http://localhost:8080/${rp.build.warname}/*</wsdlLocation> -->
+
+<!--                             <packageName>org.openbox.sf5.jaxws.client.gen</packageName> -->
+<!--                             <wsdlDirectory>src/test/resources/wsdl</wsdlDirectory> -->
+                    <!-- http://illegalargumentexception.blogspot.com/2011/04/java-jax-ws-web-services-and-clients.html#ws_bindings -->	
+        	
+	</plugins>
+	<!--   			This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself. -->
+<!--     	<pluginManagement>
+    		<plugins>
+      			<plugin>
+    				<groupId>org.eclipse.m2e</groupId>
+    				<artifactId>lifecycle-mapping</artifactId>
+    				<version>1.0.0</version>
+    				<configuration>
+    					<lifecycleMappingMetadata>
+    						<pluginExecutions>
+    							<pluginExecution>
+    								<pluginExecutionFilter>
+    									<groupId>
+    										org.jvnet.jax-ws-commons
+    									</groupId>
+    									<artifactId>
+    										jaxws-maven-plugin
+    									</artifactId>
+    									<versionRange>
+    										[2.3,)
+    									</versionRange>
+    									<goals>
+    										<goal>wsimport</goal>
+    									</goals>
+    								</pluginExecutionFilter>
+    								<action>
+    									<ignore></ignore>
+    								</action>
+    							</pluginExecution>
+    						</pluginExecutions>
+    					</lifecycleMappingMetadata>
+    				</configuration>
+    			</plugin>
+    		</plugins>
+    	</pluginManagement> -->
+  	</build>
+		
+	<profiles>
+   		<profile>
+       		<id>test</id>
+        <activation>
+            <activeByDefault>false</activeByDefault>
+        </activation>  
+       		<properties>
+           		<db.jdbcUrl>jdbc:h2:mem:test;DB_CLOSE_DELAY=-1</db.jdbcUrl>
+           		<db.driver>org.h2.Driver</db.driver>
+           		<db.user>sa</db.user>
+           		<db.password></db.password>
+           		<db.dialect>H2Dialect</db.dialect>
+           		<rp.build.warname>SF5JSF-test</rp.build.warname>
+           		<db.hbm2ddl>update</db.hbm2ddl>
+       		</properties>
+       		<build>
+    		<plugins>
+	
+			<!-- http://stackoverflow.com/questions/20916581/how-to-do-in-container-testing-of-a-web-app-in-spring -->
+				<plugin>
+	        		<groupId>org.codehaus.cargo</groupId>
+	            	<artifactId>cargo-maven2-plugin</artifactId>
+	            	<version>1.6.4</version>
+	             	<configuration>
+	                    <!--  <container>
+	                         <containerId>glassfish4x</containerId>
+							      <zipUrlInstaller>
+							        <url>http://download.java.net/glassfish/4.1.1/release/glassfish-4.1.1.zip</url>
+							      </zipUrlInstaller>
+	                     </container> -->
+	                     <!-- Switching to WildFly 10 -->
+	                     <container>
+	                     	<containerId>wildfly9x</containerId>
+	                     	<zipUrlInstaller>
+<!-- 								<url>http://download.jboss.org/wildfly/10.0.0.Final/wildfly-10.0.0.Final.zip</url> -->
+								<url>http://download.jboss.org/wildfly/9.0.2.Final/wildfly-9.0.2.Final.zip</url>
+							</zipUrlInstaller>
+											
+							 <dependencies>
+                				<dependency>
+                    				<groupId>org.postgresql</groupId>
+                    				<artifactId>postgresql</artifactId>
+                 				</dependency>
+                 				<dependency>
+                 					<groupId>com.h2database</groupId>
+                 					<artifactId>h2</artifactId>
+                 				</dependency>
+            				</dependencies>
+	                     </container>
+	                     <configuration>
+	                     	<properties>
+	                             <cargo.servlet.port>8080</cargo.servlet.port>
+	                             <cargo.protocol>http</cargo.protocol>
+<!-- 	                             <cargo.logging>high</cargo.logging> -->
+	                             
+<!-- 	                             <cargo.datasource.datasource.ds1>
+                             		cargo.datasource.url=jdbc:postgresql://localhost:5432/sf5jsftest|
+                             		cargo.datasource.driver=org.postgresql.Driver|
+                             		cargo.datasource.username=sf5jsf|
+                             		cargo.datasource.password=1|
+                             		cargo.datasource.jndi=jboss/datasources/PostgreSQLDS
+                             		</cargo.datasource.datasource.ds1> -->
+                             <!-- We will use H2 in-memory datasource 
+                             It seems, that current version does not support ommitting cargo.datasource.password
+                             -->
+ <!--                             cargo.datasource.url=jdbc:h2:mem:test;DB_CLOSE_DELAY=-1|
+                             cargo.datasource.driver=org.h2.Driver|
+                             cargo.datasource.username=sa|
+                             cargo.datasource.jndi=Oracle -->
+                             	<cargo.datasource.datasource.ds1>
+                             		cargo.datasource.url=jdbc:h2:mem:test;DB_CLOSE_DELAY=-1|
+                             		cargo.datasource.driver=org.h2.Driver|
+                             		cargo.datasource.username=sa|
+                             		cargo.datasource.password=''|
+                             		cargo.datasource.jndi=jboss/datasources/PostgreSQLDS
+                             	</cargo.datasource.datasource.ds1>	
+	                        	</properties>
+	                        </configuration>
+	
+						<!-- Wildfly ignores this entry and theoretically it needs jboss-web.xml with context-root entry -->
+	                		<deployables>
+	                		<deployable>
+	                			<pingURL>http://localhost:8080/${rp.build.warname}/</pingURL>
+	                			 <pingTimeout>120000</pingTimeout> <!-- 2 min -->
+	                		 	<properties>
+	                		     	<context>${rp.build.warname}</context>
+	              				</properties> 
+	                		</deployable>
+	                		</deployables>
+	                </configuration>
+	                <executions>
+	                     <execution>
+	                        <id>start-container</id>
+	                        <phase>pre-integration-test</phase>
+	                        <goals>
+	                        <goal>start</goal>
+	                    </goals>
+	                    </execution>
+	                    <execution>
+	                    	<id>stop-container</id>
+	                    	<phase>post-integration-test</phase>
+	                    	<goals>
+	                    		<goal>stop</goal>
+	                    	</goals>
+	                	</execution>
+	            	</executions>
+	        	</plugin>
+	        	<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-surefire-plugin</artifactId>	
+					<version>2.20.1</version>
+					<executions>
+ 				       	<execution>
+            			<phase>integration-test</phase>
+            			<goals>
+               				<goal>test</goal>
+            			</goals>
+            			<configuration>
+               				<excludes>
+                  				<exclude>**/*Tests.java</exclude>
+               				</excludes>
+            				<includes>
+								<include>**/*IT.java</include>
+							</includes>
+            			</configuration>
+        		</execution> 
+        		
+      		</executions>
+				</plugin>
+    		</plugins>
+    		</build>
+   		</profile>
+   		<profile>
+       		<id>prod</id>
+       		<activation>
+            	<activeByDefault>false</activeByDefault>
+        	</activation> 
+       		<properties>
+           		<db.jdbcUrl>jdbc:postgresql://localhost:5432/sf5jsf</db.jdbcUrl>
+           		<db.driver>org.postgresql.Driver</db.driver>
+           		<db.user>sf5jsf</db.user>
+           		<db.password>1</db.password>
+           		<db.dialect>ProgressDialect</db.dialect>
+           		<rp.build.warname>SF5JSF</rp.build.warname>
+           		<db.hbm2ddl>update</db.hbm2ddl>
+       		</properties>
+   		</profile>
+   		<profile>
+       		<id>dev</id> 
+       	<activation>
+            <activeByDefault>false</activeByDefault>
+        </activation> 
+       		<properties>
+           		<db.jdbcUrl>jdbc:postgresql://localhost:5432/sf5jsfdev</db.jdbcUrl>
+           		<db.driver>org.postgresql.Driver</db.driver>
+           		<db.user>sf5jsf</db.user>
+           		<db.password>1</db.password>
+           		<db.dialect>ProgressDialect</db.dialect>
+           		<rp.build.warname>SF5JSF-test</rp.build.warname>
+           		<db.hbm2ddl>update</db.hbm2ddl>
+       		</properties>
+   		</profile>
+   		
+   			 <profile>
+         <!-- When built in OpenShift the 'openshift' profile will be used when invoking mvn. -->
+         <!-- Use this profile for any OpenShift specific customization your app will need. -->
+         <!-- By default that is to put the resulting archive into the 'deployments' folder. -->
+         <!-- http://maven.apache.org/guides/mini/guide-building-for-different-environments.html -->
+         	<id>openshift</id>
+         	<activation>
+            	<activeByDefault>true</activeByDefault>
+        	</activation>
+        	<properties>
+        		<rp.build.warname></rp.build.warname> <!-- For jboss-web.xml -->
+        		<db.dialect>ProgressDialect</db.dialect>
+        		<db.hbm2ddl>update</db.hbm2ddl>
+        	</properties>
+         <build>
+            <plugins>
+               <plugin>
+                  <artifactId>maven-war-plugin</artifactId>
+                  <version>3.1.0</version>
+                  <configuration>
+                     <outputDirectory>deployments</outputDirectory>
+                     <warName>ROOT</warName>
+                  </configuration>
+               </plugin>
+            </plugins>
+         </build>
+      </profile>
+   		
+	</profiles>
+		
+		 
+<dependencies>
+<dependency>
+	<groupId>javax.enterprise</groupId>
+	<artifactId>cdi-api</artifactId>
+	<version>1.2</version>
+	<scope>provided</scope>
+</dependency>
+<dependency>
+	<groupId>javax.servlet</groupId>
+	<artifactId>javax.servlet-api</artifactId>
+	<version>3.1.0</version>
+	<scope>provided</scope>
+</dependency>
+<!--  or we get package javax.ws.rs does not exist -->
+<dependency>
+    <groupId>javax</groupId>
+    <artifactId>javaee-web-api</artifactId>
+    <version>7.0</version>
+    <scope>provided</scope>
+</dependency>
+<dependency>
+	<groupId>com.h2database</groupId>
+	<artifactId>h2</artifactId>
+	<version>1.4.196</version>
+</dependency>
+<dependency>
+	<groupId>org.postgresql</groupId>
+	<artifactId>postgresql</artifactId>
+	<version>9.4.1207.jre7</version>
+	<scope>provided</scope>
+</dependency>
+
+
+<!--  Left for compatibility -->
+<dependency>
+	<groupId>com.fasterxml.jackson.core</groupId>
+	<artifactId>jackson-annotations</artifactId>
+	<version>${jackson.version}</version>
+</dependency>
+<dependency>
+	<groupId>org.hibernate</groupId>
+	<artifactId>hibernate-core</artifactId>
+	<version>${hibernate.version}</version>
+	<scope>provided</scope>
+</dependency>
+
+	 <!--      <exclusions>
+        <exclusion>
+         <groupId>dom4j</groupId>
+          <artifactId>dom4j</artifactId>
+        </exclusion>
+      </exclusions>  -->
+<!-- <dependency>
+	<groupId>dom4j</groupId>
+	<artifactId>dom4j</artifactId>
+	<version>1.6.1</version>
+	<scope>test</scope>
+</dependency> -->
+
+
+<!-- <dependency>
+	<groupId>org.hibernate.javax.persistence</groupId>
+	<artifactId>hibernate-jpa-2.1-api</artifactId>
+	<version>1.0.0.Final</version>
+	<scope>provided</scope>
+</dependency> -->
+
+<dependency>
+    <groupId>org.reflections</groupId>
+    <artifactId>reflections</artifactId>
+    <version>0.9.11</version>
+</dependency>
+
+<dependency>
+	<groupId>javax.validation</groupId>
+	<artifactId>validation-api</artifactId>
+	<version>1.1.0.Final</version>
+	<scope>provided</scope>
+</dependency>
+<dependency>
+	<groupId>javax.ejb</groupId>
+	<artifactId>javax.ejb-api</artifactId>
+	<version>3.2</version>
+	<scope>provided</scope>
+</dependency>
+<dependency>
+    <groupId>org.glassfish</groupId>
+    <artifactId>javax.json</artifactId>
+    <version>1.0.4</version>
+ 	<scope>provided</scope>
+</dependency>
+
+
+<dependency>
+	<groupId>org.hibernate</groupId>
+	<artifactId>hibernate-validator</artifactId>
+	<version>5.2.3.Final</version>
+</dependency>
+<!-- JSF implementation: Mojarra org.glassfish - is the one at org.glassfish and it is working! -->
+<dependency>
+	<groupId>org.glassfish</groupId>
+	<artifactId>javax.faces</artifactId>
+	<version>${mojarra-version}</version>
+	 <scope>provided</scope>
+</dependency>
+
+<!-- Testing -->
+<dependency>
+	<groupId>junit</groupId>
+	<artifactId>junit</artifactId>
+	<version>4.12</version>
+</dependency>
+<dependency>
+	<groupId>org.assertj</groupId>
+	<artifactId>assertj-core</artifactId>
+	<version>3.2.0</version>
+</dependency>
+
+<dependency>
+	<groupId>org.eclipse.persistence</groupId>
+	<artifactId>org.eclipse.persistence.moxy</artifactId>
+	<version>${moxy.version}</version>
+</dependency>
+<dependency>
+	<groupId>org.eclipse.persistence</groupId>
+	<artifactId>org.eclipse.persistence.core</artifactId>
+	<version>${moxy.version}</version>
+</dependency>
+<dependency>
+	<groupId>org.eclipse.persistence</groupId>
+	<artifactId>org.eclipse.persistence.asm</artifactId>
+	<version>${moxy.version}</version>
+</dependency>
+<!-- <dependency>
+	<groupId>org.eclipse.persistence</groupId>
+	<artifactId>eclipselink</artifactId>
+	<version>2.6.2</version>
+</dependency> -->
+
+<dependency>
+	<groupId>org.jboss.resteasy</groupId>
+	<artifactId>resteasy-jaxrs</artifactId>
+	<version>${resteasy.version}</version>
+	<scope>provided</scope>
+</dependency>
+<dependency>
+	<groupId>org.jboss.resteasy</groupId>
+	<artifactId>resteasy-cdi</artifactId>
+	<version>${resteasy.version}</version>
+	<scope>provided</scope>
+</dependency>
+<dependency>
+	<groupId>org.jboss.resteasy</groupId>
+	<artifactId>resteasy-multipart-provider</artifactId>
+	<version>${resteasy.version}</version>
+	<scope>provided</scope>
+</dependency>
+<!-- <dependency>
+	<groupId>org.jboss.resteasy</groupId>
+	<artifactId>resteasy-jackson-provider</artifactId>
+	<version>${resteasy.version}</version>
+	<scope>provided</scope>
+</dependency> -->
+<dependency>
+	<groupId>org.jboss.resteasy</groupId>
+	<artifactId>resteasy-jaxb-provider</artifactId>
+	<version>${resteasy.version}</version>
+		<exclusions>
+        	<exclusion>
+				<groupId>javax.xml.bind</groupId>
+				<artifactId>jaxb-api</artifactId>
+        	</exclusion>
+        	<exclusion>
+				<groupId>com.sun.xml.bind</groupId>
+				<artifactId>jaxb-core</artifactId>
+        	</exclusion>
+        	<exclusion>
+				<groupId>com.sun.xml.bind</groupId>
+				<artifactId>jaxb-impl</artifactId>
+        	</exclusion>        	
+      </exclusions> 
+</dependency>
+<dependency>
+	<groupId>org.jboss.resteasy</groupId>
+	<artifactId>jaxrs-api</artifactId>
+	<version>3.0.12.Final</version>
+	<scope>provided</scope>
+</dependency>
+<dependency>
+	<groupId>org.jboss.resteasy</groupId>
+	<artifactId>resteasy-client</artifactId>
+	<version>${resteasy.version}</version>
+	<scope>test</scope>
+</dependency>
+
+<dependency>
+	<groupId>commons-io</groupId>
+	<artifactId>commons-io</artifactId>
+	<version>2.4</version>
+</dependency>
+
+
+</dependencies>
+</project>

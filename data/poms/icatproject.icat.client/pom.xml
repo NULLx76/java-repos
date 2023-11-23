@@ -1,0 +1,301 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>org.icatproject</groupId>
+	<artifactId>icat.client</artifactId>
+	<version>6.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+	<name>ICAT Clients</name>
+	<description>Provides facilities to login to an ICAT instance after which one can create, read, update or delete entities according to your permissions. This includes a Java client using SOAP access and a Java client using the REST interface of the icat.server.</description>
+
+	<properties>
+		<wsdl>${basedir}/ICAT.wsdl</wsdl>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<project.scm.id>github</project.scm.id>
+		<repoUrl>https://repo.icatproject.org/repo/</repoUrl>
+		<luceneVersion>5.3.0</luceneVersion>
+	</properties>
+
+	<repositories>
+		<repository>
+			<id>ICAT Repo</id>
+			<url>https://repo.icatproject.org/repo</url>
+		</repository>
+	</repositories>
+
+	<scm>
+		<connection>scm:git:https://github.com/icatproject/icat.client.git</connection>
+		<developerConnection>scm:git:https://github.com/icatproject/icat.client.git</developerConnection>
+		<url>https://github.com/icatproject/icat.client</url>
+		<tag>HEAD</tag>
+	</scm>
+
+	<issueManagement>
+		<url>https://github.com/icatproject/icat.client/issues</url>
+		<system>GitHub</system>
+	</issueManagement>
+
+	<licenses>
+		<license>
+			<name>Apache License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0</url>
+		</license>
+	</licenses>
+
+	<organization>
+		<name>The ICAT Collaboration</name>
+		<url>http://icatproject.org</url>
+	</organization>
+
+	<distributionManagement>
+		<downloadUrl>https://repo.icatproject.org/repo</downloadUrl>
+		<site>
+			<id>repo.icatproject.org</id>
+			<url>dav:https://repo.icatproject.org/site/icat/client/${project.version}</url>
+		</site>
+		<repository>
+			<id>repo.icatproject.org</id>
+			<url>dav:https://repo.icatproject.org/repo</url>
+		</repository>
+	</distributionManagement>
+
+	<dependencies>
+
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-core</artifactId>
+			<version>${luceneVersion}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>jakarta.platform</groupId>
+			<artifactId>jakarta.jakartaee-api</artifactId>
+			<version>10.0.0</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>4.5.13</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpmime</artifactId>
+			<version>4.5.13</version>
+		</dependency>
+
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.13.2</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.eclipse.parsson</groupId>
+			<artifactId>parsson</artifactId>
+			<version>1.1.0</version>
+			<scope>test</scope>
+		</dependency>
+
+	</dependencies>
+
+	<build>
+
+		<extensions>
+			<extension>
+				<groupId>org.apache.maven.wagon</groupId>
+				<artifactId>wagon-webdav-jackrabbit</artifactId>
+				<version>2.10</version>
+			</extension>
+		</extensions>
+
+		<plugins>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.10.1</version>
+				<configuration>
+					<encoding>${project.build.sourceEncoding}</encoding>
+					<release>11</release>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.2.1</version>
+				<executions>
+					<execution>
+						<id>Hack the wsdl</id>
+						<phase>initialize</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<executable>sh</executable>
+							<arguments>
+								<argument>wsdl.sh</argument>
+								<argument>${serverUrl}</argument>
+							</arguments>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>com.sun.xml.ws</groupId>
+				<artifactId>jaxws-maven-plugin</artifactId>
+				<version>4.0.0</version>
+				<executions>
+					<execution>
+						<id>execution1</id>
+						<goals>
+							<goal>wsimport</goal>
+						</goals>
+						<configuration>
+							<wsdlUrls>
+								<wsdlUrl>${wsdl}</wsdlUrl>
+							</wsdlUrls>
+							<sourceDestDir>
+								src/main/java
+							</sourceDestDir>
+							<!-- Hack for JDK8 because of bug in plugin? -->
+							<vmArgs>
+								<vmArg>-Djavax.xml.accessExternalSchema=all</vmArg>
+							</vmArgs>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>2.1.2</version>
+
+				<executions>
+					<execution>
+						<phase>verify</phase>
+						<goals>
+							<goal>jar-no-fork</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-site-plugin</artifactId>
+				<version>3.3</version>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-deploy-plugin</artifactId>
+				<version>2.7</version>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.16</version>
+				<configuration>
+					<systemPropertyVariables>
+						<javax.net.ssl.trustStore>${javax.net.ssl.trustStore}</javax.net.ssl.trustStore>
+						<serverUrl>${serverUrl}</serverUrl>
+					</systemPropertyVariables>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-release-plugin</artifactId>
+				<version>2.5.3</version>
+				<configuration>
+					<tagNameFormat>v@{project.version}</tagNameFormat>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>2.10.4</version>
+				<configuration>
+					<sourcepath>src/main/java</sourcepath>
+					<failOnError>false</failOnError>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.6</version>
+				<configuration>
+					<descriptors>
+						<descriptor>${project.basedir}/src/distribution.xml</descriptor>
+					</descriptors>
+				</configuration>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+		</plugins>
+	</build>
+
+	<reporting>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>2.10.4</version>
+				<reportSets>
+					<reportSet>
+						<reports>
+							<report>javadoc-no-fork</report>
+						</reports>
+					</reportSet>
+				</reportSets>
+				<configuration>
+					<sourcepath>src/main/java</sourcepath>
+					<failOnError>false</failOnError>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-project-info-reports-plugin</artifactId>
+				<version>2.7</version>
+				<configuration>
+					<dependencyLocationsEnabled>false</dependencyLocationsEnabled>
+				</configuration>
+				<reportSets>
+					<reportSet>
+						<reports>
+							<report>index</report>
+							<report>summary</report>
+							<report>dependencies</report>
+							<report>issue-tracking</report>
+							<report>license</report>
+							<report>plugins</report>
+							<report>scm</report>
+						</reports>
+					</reportSet>
+				</reportSets>
+			</plugin>
+
+		</plugins>
+	</reporting>
+
+</project>
+

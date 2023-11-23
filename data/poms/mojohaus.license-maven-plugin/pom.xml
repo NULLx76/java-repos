@@ -1,0 +1,579 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  #%L
+  License Maven Plugin
+  %%
+  Copyright (C) 2011-2012 CodeLutin, Codehaus, tony Chzemit
+  %%
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Lesser General Public License as
+  published by the Free Software Foundation, either version 3 of the
+  License, or (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Lesser Public License for more details.
+
+  You should have received a copy of the GNU General Lesser Public
+  License along with this program.  If not, see
+  <http://www.gnu.org/licenses/lgpl-3.0.html>.
+  #L%
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.codehaus.mojo</groupId>
+    <artifactId>mojo-parent</artifactId>
+    <version>77</version>
+  </parent>
+
+  <artifactId>license-maven-plugin</artifactId>
+  <version>2.3.1-SNAPSHOT</version>
+  <packaging>maven-plugin</packaging>
+
+  <name>License Maven Plugin</name>
+  <description>Maven plugin to download and collect license files from project dependencies.</description>
+  <url>https://www.mojohaus.org/license-maven-plugin</url>
+  <inceptionYear>2010</inceptionYear>
+
+  <licenses>
+    <license>
+      <name>The GNU Lesser General Public License, Version 3.0</name>
+      <url>https://www.gnu.org/licenses/lgpl-3.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <name>Tony Chemit</name>
+      <email>dev@tchemit.fr</email>
+      <organization>Ultreia.io</organization>
+      <organizationUrl>https://www.ultreia.io</organizationUrl>
+      <roles>
+        <role>Lead Developer</role>
+      </roles>
+      <timezone>Europe/Paris</timezone>
+    </developer>
+    <developer>
+      <name>Paul Gier</name>
+      <email>pgier at redhat</email>
+      <roles>
+        <role>Developer</role>
+      </roles>
+    </developer>
+    <developer>
+      <name>Slawomir Jaranowski</name>
+      <email>sjaranowski@apache.org</email>
+      <roles>
+        <role>Developer</role>
+      </roles>
+      <timezone>Europe/Warsaw</timezone>
+    </developer>
+  </developers>
+
+  <contributors>
+    <contributor>
+      <name>Curtis Rueden</name>
+    </contributor>
+    <contributor>
+      <name>Chris Manning</name>
+    </contributor>
+    <contributor>
+      <name>Jérôme Joslet</name>
+    </contributor>
+    <contributor>
+      <name>Benson Margulies</name>
+      <email>bimargulies at apache</email>
+    </contributor>
+    <contributor>
+      <name>Cedric Pronzato</name>
+    </contributor>
+  </contributors>
+
+  <prerequisites>
+    <maven>${mavenVersion}</maven>
+  </prerequisites>
+
+  <scm>
+    <connection>scm:git:https://github.com/mojohaus/license-maven-plugin.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/mojohaus/license-maven-plugin.git</developerConnection>
+    <tag>HEAD</tag>
+    <url>https://github.com/mojohaus/license-maven-plugin/tree/master</url>
+  </scm>
+
+  <issueManagement>
+    <system>github</system>
+    <url>https://github.com/mojohaus/license-maven-plugin/issues/</url>
+  </issueManagement>
+
+  <ciManagement>
+    <system>github</system>
+    <url>https://github.com/mojohaus/license-maven-plugin/actions</url>
+  </ciManagement>
+
+  <properties>
+    <mavenVersion>3.5.4</mavenVersion>
+    <recommendedJavaBuildVersion>11</recommendedJavaBuildVersion>
+    <mojo.java.target>8</mojo.java.target>
+
+    <processorVersion>1.3</processorVersion>
+
+    <doxiaVersion>1.12.0</doxiaVersion>
+    <!-- ASF project maven-doxia-sitetools:1.8.1 has different release cycle and it is dependent on maven-doxia:1.8 -->
+    <doxiaRendererVersion>1.11.1</doxiaRendererVersion>
+    <it.debug>true</it.debug>
+
+    <version.httpcomponents.httpclient>4.5.14</version.httpcomponents.httpclient>
+    <version.httpcomponents.httpcore>4.4.16</version.httpcomponents.httpcore>
+
+    <build-helper-maven-plugin.version>3.4.0</build-helper-maven-plugin.version>
+
+    <!-- license configuration -->
+    <license.useMissingFile>true</license.useMissingFile>
+    <license.failOnMissing>true</license.failOnMissing>
+    <license.licenseName>lgpl_v3</license.licenseName>
+
+    <plexusComponentVersion>2.1.1</plexusComponentVersion>
+    <maven-resolver.version>1.3.3</maven-resolver.version>
+    <project.build.outputTimestamp>2023-10-24T21:30:44Z</project.build.outputTimestamp>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.apache.httpcomponents</groupId>
+        <artifactId>httpclient</artifactId>
+        <version>${version.httpcomponents.httpclient}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.httpcomponents</groupId>
+        <artifactId>httpcore</artifactId>
+        <version>${version.httpcomponents.httpcore}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>1.7.36</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-plugin-api</artifactId>
+      <version>${mavenVersion}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-artifact</artifactId>
+      <version>${mavenVersion}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven.resolver</groupId>
+      <artifactId>maven-resolver-api</artifactId>
+      <version>${maven-resolver.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-model</artifactId>
+      <version>${mavenVersion}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-core</artifactId>
+      <version>${mavenVersion}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.maven.reporting</groupId>
+      <artifactId>maven-reporting-api</artifactId>
+      <version>3.1.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven.reporting</groupId>
+      <artifactId>maven-reporting-impl</artifactId>
+      <version>3.2.0</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.codehaus.plexus</groupId>
+          <artifactId>plexus-container-default</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <!-- Doxia -->
+    <dependency>
+      <groupId>org.apache.maven.doxia</groupId>
+      <artifactId>doxia-core</artifactId>
+      <version>${doxiaVersion}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.codehaus.plexus</groupId>
+          <artifactId>plexus-container-default</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven.doxia</groupId>
+      <artifactId>doxia-sink-api</artifactId>
+      <version>${doxiaVersion}</version>
+    </dependency>
+
+    <!-- Doxia-sitetools -->
+    <dependency>
+      <groupId>org.apache.maven.doxia</groupId>
+      <artifactId>doxia-site-renderer</artifactId>
+      <version>${doxiaRendererVersion}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.codehaus.plexus</groupId>
+          <artifactId>plexus-container-default</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.codehaus.plexus</groupId>
+          <artifactId>plexus-component-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>antlr</groupId>
+          <artifactId>antlr</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <!-- dependencies to annotations -->
+    <dependency>
+      <groupId>org.apache.maven.plugin-tools</groupId>
+      <artifactId>maven-plugin-annotations</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.codehaus.plexus</groupId>
+      <artifactId>plexus-utils</artifactId>
+      <version>4.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.plexus</groupId>
+      <artifactId>plexus-xml</artifactId>
+      <version>3.0.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.nuiton.processor</groupId>
+      <artifactId>nuiton-processor</artifactId>
+      <version>${processorVersion}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>3.13.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>commons-logging</groupId>
+      <artifactId>commons-logging</artifactId>
+      <version>1.2</version>
+    </dependency>
+
+    <dependency>
+      <groupId>commons-collections</groupId>
+      <artifactId>commons-collections</artifactId>
+      <version>3.2.2</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>2.15.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.freemarker</groupId>
+      <artifactId>freemarker</artifactId>
+      <version>2.3.32</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <configuration>
+            <doclint>none</doclint>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.gmaven</groupId>
+          <artifactId>groovy-maven-plugin</artifactId>
+          <version>2.1.1</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <configuration>
+          <!-- TODO enable with spotless -->
+          <skip>true</skip>
+          <headerLocation>config/checkstyle-header.txt</headerLocation>
+          <excludes>**/HelpMojo.java,**/SpdxLicenseListData.java</excludes>
+          <!-- these are generated -->
+        </configuration>
+        <executions>
+          <execution>
+            <id>checkstyle-check</id>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <phase>verify</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>animal-sniffer-maven-plugin</artifactId>
+        <configuration>
+          <signature>
+            <groupId>org.codehaus.mojo.signature</groupId>
+            <artifactId>java17</artifactId>
+            <version>1.0</version>
+          </signature>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.eclipse.sisu</groupId>
+        <artifactId>sisu-maven-plugin</artifactId>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.gmaven</groupId>
+        <artifactId>groovy-maven-plugin</artifactId>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>${version.httpcomponents.httpclient}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <!-- Not bound to any phase. Invoke manually using -->
+            <!--   mvn groovy:execute@GenerateSpdxLicenseList -->
+            <!-- to re-generate SpdxLicenseListData -->
+            <id>GenerateSpdxLicenseList</id>
+            <goals>
+              <goal>execute</goal>
+            </goals>
+            <configuration>
+              <source>${project.basedir}/src/build/scripts/GenerateSpdxLicenseList.groovy</source>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>run-its</id>
+      <build>
+        <defaultGoal>verify</defaultGoal>
+        <plugins>
+          <!--
+         To test reading third party data from an artifact, we need an artifact.
+         In the aggregate case, we can't depend on it in the reactor, since
+         there's no way to get any other reactor execution to create it
+         in the forked execution of aggregate-add-third-party, not unless
+         we want involved in a custom lifecycle. So this barnicle exists
+         so that the tests can use it. It's a pity it will end up on Central.
+        -->
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>attach-artifacts</id>
+                <goals>
+                  <goal>attach-artifact</goal>
+                </goals>
+                <phase>package</phase>
+                <configuration>
+                  <artifacts>
+                    <artifact>
+                      <file>src/license-test/test.license.properties</file>
+                      <type>license.properties</type>
+                      <classifier>test-third-party</classifier>
+                    </artifact>
+                  </artifacts>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
+            <groupId>org.codehaus.gmaven</groupId>
+            <artifactId>groovy-maven-plugin</artifactId>
+            <dependencies>
+              <dependency>
+                <groupId>org.littleshoot</groupId>
+                <artifactId>littleproxy</artifactId>
+                <version>1.1.2</version>
+              </dependency>
+            </dependencies>
+            <executions>
+              <execution>
+                <id>LittleProxyStart</id>
+                <goals>
+                  <goal>execute</goal>
+                </goals>
+                <phase>pre-integration-test</phase>
+                <configuration>
+                  <source>${project.basedir}/src/build/scripts/LittleProxyStart.groovy</source>
+                </configuration>
+              </execution>
+              <execution>
+                <id>LittleProxyStop</id>
+                <goals>
+                  <goal>execute</goal>
+                </goals>
+                <phase>post-integration-test</phase>
+                <configuration>
+                  <source>System.setProperty('LittleProxy.stop', 'true'); Thread.sleep(250)</source>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>maven-invoker-plugin</artifactId>
+            <configuration>
+              <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
+              <settingsFile>src/it/settings.xml</settingsFile>
+              <localRepositoryPath>${project.build.directory}/local-repo</localRepositoryPath>
+              <environmentVariables>
+                <MAVEN_OPTS>-Duser.country=US -Duser.language=en</MAVEN_OPTS>
+              </environmentVariables>
+              <scriptVariables>
+                <projectVersion>${project.version}</projectVersion>
+              </scriptVariables>
+            </configuration>
+            <executions>
+              <execution>
+                <id>all-integration-test</id>
+                <goals>
+                  <goal>install</goal>
+                  <goal>integration-test</goal>
+                  <goal>verify</goal>
+                </goals>
+                <configuration>
+                  <skipInvocation />
+                  <extraArtifacts>
+                    <extraArtifact>${project.groupId}:${project.artifactId}:${project.version}:license.properties:test-third-party</extraArtifact>
+                  </extraArtifacts>
+                  <pomExcludes>
+                    <!-- failed test on GH use remote resources -->
+                    <pomExclude>download-licenses-basic/pom.xml</pomExclude>
+                    <pomExclude>download-licenses-force/pom.xml</pomExclude>
+                  </pomExcludes>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>mojo-release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>license-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>add-third-party</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>reporting</id>
+      <activation>
+        <property>
+          <name>skipReports</name>
+          <value>!true</value>
+        </property>
+      </activation>
+
+      <reporting>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>license-maven-plugin</artifactId>
+            <reportSets>
+              <reportSet>
+                <reports>
+                  <report>third-party-report</report>
+                </reports>
+              </reportSet>
+            </reportSets>
+          </plugin>
+        </plugins>
+      </reporting>
+    </profile>
+    <profile>
+      <id>java11+</id>
+      <activation>
+        <jdk>[11,)</jdk>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>com.diffplug.spotless</groupId>
+            <artifactId>spotless-maven-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

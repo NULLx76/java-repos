@@ -1,0 +1,406 @@
+<project 
+        xmlns="http://maven.apache.org/POM/4.0.0" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    
+    <!-- 
+        Comment:
+        1.  Originally plan wildfly as a JDNI server for client remoting 
+        2.  Jboss as 7.1.1 / Wildfly 8.2.0 does not support remote jndi to datasource 
+        3.  Quote from: 
+        
+                WildFly (and AS7) don't support remote datasource lookup, which I believe is a deliberate decision. If you used it on older versions where it worked, it was incredibly easy to create terrible performance problems, large server-side memory leaks, and more.
+                What was the use case for having one? The best option is usually to encapsulate the data logic in an EJB which does the DB work server-side, and then call it from the client.
+     
+            https://developer.jboss.org/thread/196876    
+            https://developer.jboss.org/thread/241500
+        
+        
+        Overview:
+        1.  example1 uses local jndi
+        2.      
+               
+        Environment:
+        1.  Windows 7 64 bit (assume OS installed in C:\Windows)
+        2.  Eclipse 4.4
+        3.  JDK 8.0 
+        4.  zwamp-1.1.2 (mysql)   //to do: launch it wih antrun-maven-plugin
+        5.  Wildfly 8.2.0 Final (embedded as project, located in ${basedir}\server\wildfly-8.2.0.Final, downloaded from http://wildfly.org/downloads/)
+
+
+        Remarks:
+        1.  initialize the wildfly server by running ${basedir}\server\wildfly-8.2.0.Final\bin\add-user.bat, reference: https://docs.jboss.org/author/display/WFLY8/add-user+utility
+        2.  create user with "admin/Passw0rd"
+        3.  start wildfly server manually by running ${basedir}\server\wildfly-8.2.0.Final\bin\standalone.bat
+        4.  or "mvn wildfly:run"
+        5.  access the web admin console http://localhost:9990/
+        6.  don't use mysql driver larger than mysql-connector-java-5.1.18. Although it is designed to be a Type 4 driver, its jdbcCompliant() method always return false.
+            So it will throws error. Workaround is to deploy as module. But this project simply to use mysql-connector-java-5.1.9
+            reference: 
+                https://developer.jboss.org/thread/254169
+                http://stackoverflow.com/questions/18980631/how-to-deploy-mysql-datasource-using-jboss-as-maven-plugin
+                https://developer.jboss.org/wiki/DataSourceConfigurationInAS7
+                http://bugs.mysql.com/bug.php?id=62038
+        7.  application context path is defined by /WEB-INF/jboss-web.xml   
+            reference:
+                http://stackoverflow.com/questions/28470872/how-to-define-context-path-in-wildfly     
+        8.  check server log in ${basedir}\server\wildfly-8.2.0.Final\standalone\log\server.log
+        9.  because wildfly is embedded in this project, eclipse will validate all file inside. It will throws
+            error for some xsd in ${basedir}\server\wildfly-8.2.0.Final\docs\schema\
+            To avoid these error, I disable this feature specically for this project by 
+               -Properties > Validation
+               -Check enable project specific settings 
+               -uncheck the manual and build for: XML Schema Validator
+               -Right-click on the project and select Validate to make the errors disappear
+            referece: http://stackoverflow.com/questions/7489510/disable-xml-validation-in-eclipse
+               
+        
+        Approach1 - all automate (used in this project)
+        1.  "mvn install"
+        
+        
+        Approach2 
+        1.  for server, in one dos prompt, in a jvm, "mvn wildfly:run", to start wildfly. It will be held up, until Ctrl-C, so this dos prompt cannot be re-used. 
+        2.  for server, in one dos prompt, in the jvm, "mvn clean install", to install mysql driver, and deploy application
+        3.  for client, open browser, access http://local:8080/jndi-wildfly820-snippets/getServlet
+        
+                
+        General Reference:
+        http://docs.jboss.org/wildfly/plugins/maven/latest/examples/complex-example.html
+        https://docs.jboss.org/wildfly/plugins/maven/latest/index.html
+        
+    -->
+        
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding> 
+    </properties>
+    
+
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>jndi-wildfly820-snippets</groupId>
+    <artifactId>jndi-wildfly820-snippets</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>war</packaging>
+
+
+    <build>     
+    
+    
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.eclipse.m2e</groupId>
+                    <artifactId>lifecycle-mapping</artifactId>
+                    <version>1.0.0</version>
+                    <configuration>
+                        <lifecycleMappingMetadata>
+                            <pluginExecutions>   
+                               <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.codehaus.mojo</groupId>
+                                        <artifactId>sql-maven-plugin</artifactId>
+                                        <versionRange>[1.5,)</versionRange>
+                                        <goals>
+                                            <goal>execute</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    
+                                    <action>
+                                        <execute>  
+                                            <runOnIncremental>false</runOnIncremental>  
+                                        </execute>  
+                                    </action>
+                                </pluginExecution>     
+                            </pluginExecutions>
+                        </lifecycleMappingMetadata>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>    
+                  
+                  
+        <plugins>   
+        
+        
+        
+             <!-- initialize -->             
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>sql-maven-plugin</artifactId>
+                <version>1.5</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>mysql</groupId>
+                        <artifactId>mysql-connector-java</artifactId>
+                        <version>5.1.9</version>
+                    </dependency>
+                </dependencies>
+                
+                <executions>
+                    <execution>
+                        <id>drop-db-before-test-if-any (mysql)</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>com.mysql.jdbc.Driver</driver>
+                            <url>jdbc:mysql://localhost:3306</url>
+                            <username>root</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <skip>${maven.test.skip}</skip>
+                            <autocommit>true</autocommit>
+                            <sqlCommand>                                                                
+                                drop database if exists javase_jndi_wildfly820_example1;                                                        
+                            </sqlCommand>
+                            <onError>continue</onError>
+                        </configuration>
+                    </execution>
+                    
+
+                    <execution>
+                        <id>create-db (mysql)</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>com.mysql.jdbc.Driver</driver>
+                            <url>jdbc:mysql://localhost:3306</url>
+                            <username>root</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <skip>${maven.test.skip}</skip>
+                            <autocommit>true</autocommit>
+                            <sqlCommand>                                                                        
+                                create database if not exists javase_jndi_wildfly820_example1;                                                 
+                            </sqlCommand>
+                        </configuration>
+                    </execution>
+                                       
+                                      
+                    <execution>
+                        <id>create-schema (mysql)</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>com.mysql.jdbc.Driver</driver>
+                            <url>jdbc:mysql://localhost:3306</url>
+                            <username>root</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <skip>${maven.test.skip}</skip>
+                            <autocommit>true</autocommit>
+                            <srcFiles>
+                                <srcFile>src/main/resources/javase/jndi/wildfly820/example1/create-schema.sql</srcFile>
+                            </srcFiles>
+                        </configuration>
+                    </execution>
+
+
+                    <execution>
+                        <id>create-data (mysql)</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>com.mysql.jdbc.Driver</driver>
+                            <url>jdbc:mysql://localhost:3306</url>
+                            <username>root</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <autocommit>true</autocommit>
+                            <srcFiles>                                            
+                                <srcFile>src/main/resources/javase/jndi/wildfly820/example1/insert-record.sql</srcFile>
+                            </srcFiles>
+                        </configuration>
+                                               
+                    </execution>
+                    
+                </executions>
+            </plugin>
+            
+            
+            
+            <!-- compile -->                  
+            <plugin>                                   
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.0</version>
+                <configuration>
+                    <source>1.7</source>     <!-- no specific -->
+                    <target>1.7</target>
+                </configuration>                         
+            </plugin>  
+            
+        
+            <plugin>
+                <groupId>org.wildfly.plugins</groupId>
+                <artifactId>wildfly-maven-plugin</artifactId>
+                <version>1.1.0.Alpha2</version>
+                <configuration>
+                    <jbossHome>${basedir}/server/wildfly-8.2.0.Final</jbossHome>
+                    <hostname>localhost</hostname>
+                    <port>9990</port>
+                    <username>admin</username>
+                    <password>Passw0rd</password>                   
+                </configuration>
+                <executions>   
+                    
+                    
+                    <!-- start wildfly -->
+                    <execution>
+                        <id>start wildfly</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>start</goal>
+                        </goals>
+                    </execution>
+                    
+                    <!-- Undeploy the application on clean -->
+                    <execution>
+                        <id>undeploy-application</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>undeploy</goal>
+                        </goals>
+                        <configuration>
+                            <ignoreMissingDeployment>true</ignoreMissingDeployment>
+                        </configuration>
+                    </execution>
+                
+                    <!-- deploy mysql driver -->
+                    <execution>
+                        <id>deploy-mysql-driver</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>deploy-artifact</goal>
+                        </goals>
+                        <configuration>
+                            <groupId>mysql</groupId>
+                            <artifactId>mysql-connector-java</artifactId>
+                            <version>5.1.9</version>
+                            <name>mysql-connector-java-5.1.9.jar</name>
+                        </configuration>
+                    </execution>
+                    
+                    
+                    <!-- register a datasource -->
+                    <execution>
+                        <id>add-datasource</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>add-resource</goal>
+                        </goals>
+                        <configuration>
+                            <address>subsystem=datasources,data-source=java:jboss/mysql</address>
+                            <resources>
+                                <resource>
+                                    <properties>
+                                        <jndi-name>java:jboss/mysql</jndi-name>
+                                        <connection-url>jdbc:mysql://localhost:3306/javase_jndi_wildfly820_example1</connection-url>                                        
+                                        <driver-name>mysql-connector-java-5.1.9.jar</driver-name>
+                                        <driver-class>com.mysql.jdbc.Driver</driver-class>
+                                        <user-name>root</user-name>
+                                        <!--
+                                            Empty the node, if there's no password.
+                                            cannot use empty value, otherwise it will throw error:
+                                            
+                                            Steps that failed:" => {"Operation step-1" => "JBAS014704: '' is an invalid value for parameter password. Values must have a minimum length of 1 characters"}} -> [Help 1]
+                                         -->
+                                        <!-- 
+                                        <password></password> 
+                                        -->
+                                        <enabled>true</enabled>
+                                        <enable>true</enable>
+                                    </properties>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution> 
+                    
+                    <!-- Deploy the application on install -->
+                    <execution>
+                        <id>deploy application</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>deploy-only</goal>
+                        </goals>
+                    </execution>
+                           
+                </executions>  
+            </plugin>
+            
+            
+            
+            <!-- integration-test -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.12</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            
+            
+        </plugins>    
+    </build>     
+
+    <dependencies>
+
+        <!-- javax -->
+        <dependency>
+            <groupId>javax</groupId>
+            <artifactId>javaee-api</artifactId>
+            <version>6.0</version>
+        </dependency>
+        
+        <!-- mysql -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>5.1.9</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        
+        
+        <!-- junit -->                
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.10</version>
+            <type>jar</type>
+            <scope>compile</scope>
+        </dependency>
+        
+        
+        <!-- wildfly jndi client -->
+        <dependency>
+            <groupId>org.wildfly</groupId>
+            <artifactId>wildfly-ejb-client-bom</artifactId>
+            <version>8.1.0.Final</version>
+            <type>pom</type>
+            <scope>compile</scope>
+        </dependency>
+        
+        <!-- jsoup, for integration test -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.6.2</version>
+        </dependency>
+        
+        
+        
+    </dependencies>             
+</project>

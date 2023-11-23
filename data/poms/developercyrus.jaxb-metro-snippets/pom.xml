@@ -1,0 +1,225 @@
+<project 
+        xmlns="http://maven.apache.org/POM/4.0.0" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    
+    <!-- 
+        Comment:
+        1.  in example2, the steps are in this sequence: 1. jaxb object > 2. DOM object > 3. soap request > 4. soap response > 5. DOM object > 6. jaxb object
+            although maven-jaxb2-plugin can allow to generate jaxb object (1, 6) by jaxb from wsdl file (not live URL!), you 
+            have to construct soap request (2, 3) and extract soap response (4, 5) by yourself. 
+            soap client, reference: https://github.com/developercyrus/saaj-metro-snippets                                    
+        2.  In 3 and 4, the soap body must involve namespace, therefore the dom object attached/ extracted in 2, 5 must 
+            be involved with namespace, and in turn, the jaxb object in 1 and 6 must be generated with namespace (able to do by extra arg -npa)
+        3.  unlike example1 tweaking by annotation, the generated jaxb in example2 from wsdl already comes with @XmlRootElement, which allows cleaner code to marshall/ unmarshall
+        4.  example2 is inspired from http://myshittycode.com/category/maven/jaxb-2-maven-plugin/, but it uses Spring WebServiceTemplate as soap client 
+            which is more handy. Mine is manually constructed, which is more troublesome.    
+        5.  Besides XML string, just learnt that jaxb object can be unmarshalled from belows. Example2 used (2)
+                1.  URL
+                2.  org.w3c.dom.Node         
+            Reference: https://jaxb.java.net/nonav/2.2.4/docs/api/javax/xml/bind/Unmarshaller.html
+        6.  remember to use soapUI to debug    
+            
+            
+        Environment:
+        1.  Windows 7 64 bit (assume OS installed in C:\Windows)
+        2.  Eclipse 4.4
+        3.  JDK 8.0
+
+
+        Approach1 - all automate
+        1.  "mvn install". This will include 
+                example1
+                a) generate java object from xsd with xjc by plugin                     
+                b) without additional annotation (by another plugin jaxb2-basics-annotate, arguement -Xannotate, and the binding file: expense.xjb), the generated 
+                    jaxb object do not have @XmlRootElement, which will cause error in marshalling/ unmarshalling the root node if simply use
+                    JAXBContext c = JAXBContext.newInstance(ExpenseT.class); 
+                    
+                example2
+                a) generate java object from wsdl file 
+                b) with additional argument -npa, it generates namespace (also with @XmlRootElement)  
+        2.  this project includes integration test 
+        3.  with maven-failsafe-plugin, any java file name with "IT" will be treated as 
+            intergration test (by maven, the phase is integration-test). 
+        4)  the integration test report can be found in \target\failsafe-reports
+       
+       
+        Reference:
+        1.  example2: http://myshittycode.com/category/maven/jaxb-2-maven-plugin/
+
+    -->
+        
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding> 
+    </properties>
+    
+
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>jaxb-metro-snippets</groupId>
+    <artifactId>jaxb-metro-snippets</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    
+    
+    <build>   
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.eclipse.m2e</groupId>
+                    <artifactId>lifecycle-mapping</artifactId>
+                    <version>1.0.0</version>
+                    <configuration>
+                        <lifecycleMappingMetadata>
+                            <pluginExecutions>   
+                                
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.jvnet.jaxb2.maven2</groupId>
+                                        <artifactId>maven-jaxb2-plugin</artifactId>                                       
+                                        <versionRange>[0.12.3]</versionRange>                                                                                                                     
+                                        <goals>
+                                            <goal>generate</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <execute>  
+                                            <runOnIncremental>false</runOnIncremental>  
+                                        </execute>  
+                                    </action>
+                                </pluginExecution>                                                 
+                                                                                                         
+                            </pluginExecutions>
+                        </lifecycleMappingMetadata>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    
+        <plugins>   
+            
+            <!-- initialize -->            
+            
+
+            <!-- compile -->                  
+            <plugin>                                   
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.0</version>
+                <configuration>
+                    <source>1.6</source>     <!-- jaxb2 requires JDK 1.6 -->
+                    <target>1.6</target>
+                </configuration>                         
+            </plugin>  
+            
+
+            <!-- generate-sources -->
+            <plugin>
+                <groupId>org.jvnet.jaxb2.maven2</groupId>
+                <artifactId>maven-jaxb2-plugin</artifactId>
+                <version>0.12.3</version>
+                <executions>
+                    <execution>
+                        <id>javase.jaxb.metro.example1 | generate jaxb </id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <extension>true</extension>
+                            <!-- it's deprecated by plugin warning message  -->
+                            <!-- <forceRegenerate>true</forceRegenerate> -->
+                            <schemaDirectory>src/main/resources/javase/jaxb/metro/example1/schema</schemaDirectory>
+                            <bindingDirectory>src/main/resources/javase/jaxb/metro/example1/binding</bindingDirectory>
+                            <schemaIncludes>
+                                <include>expense.xsd</include>
+                            </schemaIncludes>
+                            <bindingIncludes>
+                                <include>expense.xjb</include>
+                            </bindingIncludes>
+                            <!-- for adding @XmlRootElement  -->
+                            <args>
+                                <arg>-Xannotate</arg>
+                            </args>
+                            <plugins>
+                                <plugin>
+                                    <groupId>org.jvnet.jaxb2_commons</groupId>
+                                    <artifactId>jaxb2-basics</artifactId>
+                                    <version>0.9.4</version>
+                                </plugin>
+                                <plugin>
+                                    <groupId>org.jvnet.jaxb2_commons</groupId>
+                                    <artifactId>jaxb2-basics-annotate</artifactId>
+                                    <version>1.0.1</version>
+                                </plugin>
+                            </plugins>
+                            <generateDirectory>src/main/java</generateDirectory>
+                            <generatePackage>javase.jaxb.metro.example1.gen</generatePackage>
+                        </configuration>
+                    </execution>
+                    
+                    <execution>
+                        <id>javase.jaxb.metro.example2 | generate jaxb </id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Treat the input as WSDL -->
+                            <wsdl>true</wsdl>
+                            <!-- Input is not XML schema -->
+                            <xmlschema>false</xmlschema>
+                            <schemaDirectory>src/main/resources/javase/jaxb/metro/example2/schema</schemaDirectory>
+                            <!-- save from http://www.webservicex.net/CurrencyConvertor.asmx?WSDL -->
+                            <schemaIncludes>
+                                <include>currency.wsdl</include>
+                            </schemaIncludes>  
+                            <extension>true</extension> 
+                            <!-- 
+                                1. package-info.java contains namespace, which can be further used in constructing SOAPBody 
+                                2. without -npa, it will generate package-info.java in /src/main/java/javase/jaxb/metro/example2/gen
+                                3. with -npa, it will be embedded in every java file in /src/main/java/javase/jaxb/metro/example2/gen
+                                4. -npa reference: http://hwellmann.blogspot.hk/2011/03/jaxb-marshalling-with-custom-namespace.html
+                             -->                         
+                            <args>
+                                <arg>-npa</arg>
+                            </args>                            
+                            <generateDirectory>src/main/java</generateDirectory>
+                            <generatePackage>javase.jaxb.metro.example2.gen</generatePackage>
+                        </configuration>
+                    </execution>
+                </executions>                
+            </plugin>
+
+
+
+            <!-- integration-test -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.12</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+                   
+        </plugins>    
+    </build>     
+
+    <dependencies>
+           
+        <!-- junit -->                
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.10</version>
+            <type>jar</type>
+            <scope>compile</scope>
+        </dependency>
+        
+
+    </dependencies>             
+</project>

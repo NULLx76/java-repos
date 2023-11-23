@@ -1,0 +1,356 @@
+<project 
+        xmlns="http://maven.apache.org/POM/4.0.0" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    
+    <!-- 
+        Overview
+        1.  use jetty as jndi, LOCALLY access datasource 
+        2.  jetty itself does not support jndi for remote access
+        
+        Remark:
+        1.  jndi scope, http://eclipse.org/jetty/documentation/current/using-jetty-jndi.html
+            a)  src/main/resources/jetty.xml            at either the JVM level or the Server level
+            b)  src/main/webapp/WEB-INF/jetty-env.xml   to the webapp in which the file resides
+             
+        
+        Environment:
+        1.  Windows 7 64 bit (assume OS installed in C:\Windows)
+        2.  Eclipse 4.4
+        3.  JDK 8.0
+        4.  zwamp-1.1.2 (mysql)   //to do: launch it wih antrun-maven-plugin
+       
+       
+        Approach1 - all automate
+        1.  "mvn install". This will include      
+                a.  initialize mysql
+                b.  start jetty, by deploying the whole project, and config jndi by mounting the datasource to mysql
+                c.  run integeration test
+                d.  stop jetty
+                           
+        2.  with maven-failsafe-plugin, any java file name with "IT" will be treated as 
+            intergration test (by maven, the phase is integration-test). 
+        3.  the integration test report can be found in \target\failsafe-reports
+       
+        Approach2
+        1.  "mvn clean initialize jetty:run"
+        2.  access manually by broswer, "http://localhost:8080/jndi-jetty-snippets/getServlet", expected to see the word "EN"
+
+
+
+        Reference:
+        jetty-maven-plugin:     http://www.eclipse.org/jetty/documentation/current/jetty-maven-plugin.html
+        jetty.xml               http://www.eclipse.org/jetty/documentation/current/jetty-xml-config.html
+        jetty-web.xml           http://www.eclipse.org/jetty/documentation/current/jetty-web-xml-config.html
+        jetty-env.xml           http://www.eclipse.org/jetty/documentation/current/jetty-env-xml.html
+        
+
+    -->
+        
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <jetty.version>9.3.0.M2</jetty.version>      
+    </properties>
+
+    
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>jetty-snippets</groupId>
+    <artifactId>jetty-snippets</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    
+    
+    <build>   
+
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.eclipse.m2e</groupId>
+                    <artifactId>lifecycle-mapping</artifactId>
+                    <version>1.0.0</version>
+                    <configuration>
+                        <lifecycleMappingMetadata>
+                            <pluginExecutions>   
+                               <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.codehaus.mojo</groupId>
+                                        <artifactId>sql-maven-plugin</artifactId>
+                                        <versionRange>[1.5,)</versionRange>
+                                        <goals>
+                                            <goal>execute</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    
+                                    <action>
+                                        <execute>  
+                                            <runOnIncremental>false</runOnIncremental>  
+                                        </execute>  
+                                    </action>
+                                </pluginExecution>     
+                                
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.eclipse.jetty</groupId>
+                                        <artifactId>jetty-maven-plugin</artifactId>
+                                        <versionRange>[9.3.0.M2]</versionRange>
+                                        <goals>
+                                            <goal>start</goal>
+                                            <goal>stop</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <execute>  
+                                            <runOnIncremental>false</runOnIncremental>  
+                                        </execute>                                            
+                                    </action>
+                                </pluginExecution>  
+                                                 
+                      
+                            </pluginExecutions>
+                        </lifecycleMappingMetadata>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+                
+        <plugins>       
+               
+ 
+            <!-- initialize -->             
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>sql-maven-plugin</artifactId>
+                <version>1.5</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>mysql</groupId>
+                        <artifactId>mysql-connector-java</artifactId>
+                        <version>5.1.9</version>
+                    </dependency>
+                </dependencies>
+                
+                <executions>
+                    <execution>
+                        <id>drop-db-before-test-if-any (mysql)</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>com.mysql.jdbc.Driver</driver>
+                            <url>jdbc:mysql://localhost:3306</url>
+                            <username>root</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <skip>${maven.test.skip}</skip>
+                            <autocommit>true</autocommit>
+                            <sqlCommand>                                                                
+                                drop database if exists javase_jndi_jetty_example1;                                                        
+                            </sqlCommand>
+                            <onError>continue</onError>
+                        </configuration>
+                    </execution>
+                    
+
+                    <execution>
+                        <id>create-db (mysql)</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>com.mysql.jdbc.Driver</driver>
+                            <url>jdbc:mysql://localhost:3306</url>
+                            <username>root</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <skip>${maven.test.skip}</skip>
+                            <autocommit>true</autocommit>
+                            <sqlCommand>                                                                        
+                                create database if not exists javase_jndi_jetty_example1;                                                 
+                            </sqlCommand>
+                        </configuration>
+                    </execution>
+                                       
+                                      
+                    <execution>
+                        <id>create-schema (mysql)</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>com.mysql.jdbc.Driver</driver>
+                            <url>jdbc:mysql://localhost:3306</url>
+                            <username>root</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <skip>${maven.test.skip}</skip>
+                            <autocommit>true</autocommit>
+                            <srcFiles>
+                                <srcFile>src/main/resources/javase/jndi/jetty/example1/create-schema.sql</srcFile>
+                            </srcFiles>
+                        </configuration>
+                    </execution>
+
+
+                    <execution>
+                        <id>create-data (mysql)</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>com.mysql.jdbc.Driver</driver>
+                            <url>jdbc:mysql://localhost:3306</url>
+                            <username>root</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <autocommit>true</autocommit>
+                            <srcFiles>                                            
+                                <srcFile>src/main/resources/javase/jndi/jetty/example1/insert-record.sql</srcFile>
+                            </srcFiles>
+                        </configuration>
+                                               
+                    </execution>
+                    
+                </executions>
+            </plugin>
+                       
+            <!-- compile -->                  
+            <plugin>                                   
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.0</version>
+                <configuration>
+                    <source>1.7</source>     <!-- jetty-maven-plugin 9 requires 1.7 -->
+                    <target>1.7</target>
+                </configuration>                         
+            </plugin>  
+            
+
+            <!-- pre-integration-test -->
+            <plugin>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-maven-plugin</artifactId>
+                <version>${jetty.version}</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>mysql</groupId>
+                        <artifactId>mysql-connector-java</artifactId>
+                        <version>5.1.9</version>
+                    </dependency>                                                                  
+                </dependencies>
+
+                <configuration>
+                    <scanIntervalSeconds>10</scanIntervalSeconds>    
+                    <stopKey>foo</stopKey>
+                    <stopPort>9999</stopPort>                                                                                                     
+                    <!--                     
+                        use with /WEB-INF/web.xml
+                        http://www.eclipse.org/jetty/documentation/current/jetty-maven-plugin.html#jetty-run-goal
+                     -->  
+                    <webApp>
+                       <contextPath>/jndi-jetty-snippets</contextPath>
+                       <jettyEnvXml>src/main/webapp/WEB-INF/jetty-env.xml</jettyEnvXml>
+                    </webApp>               
+                </configuration>
+                
+                <executions>
+                    <execution>
+                        <id>start-jetty for JNDI server</id>
+                        <phase>pre-integration-test</phase>
+                        <!-- 
+                            allow plugin go on running without interrupt                            
+                            http://www.eclipse.org/jetty/documentation/current/jetty-maven-plugin.html#jetty-run-forked-goal                        
+                         -->                        
+                        <goals>
+                            <goal>start</goal>
+                        </goals>
+                        <configuration>                            
+                            <scanIntervalSeconds>0</scanIntervalSeconds>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>stop-jetty</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            
+
+            <!-- integration-test -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.12</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+                   
+        </plugins>    
+    </build>     
+        
+
+    <dependencies>
+           
+        <!-- junit -->                
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.10</version>
+            <type>jar</type>
+            <scope>compile</scope>
+        </dependency>
+        
+                 
+        <!-- mysql -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>5.1.9</version>
+        </dependency>
+                
+        
+        <!-- 
+            1.  without scope = provide, it hit error
+                    java.lang.IllegalArgumentException: Object of class 'org.eclipse.jetty.maven.plugin.JettyWebAppContext'
+            2.  seems as if there are multiple class loaders conflicting.                    
+            3.  reference: 
+                    http://stackoverflow.com/a/10812220        
+         -->
+                
+        <!-- instantiate jetty jndi -->    
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-jndi</artifactId>
+            <version>${jetty.version}</version>
+            <scope>provided</scope>
+        </dependency>
+                
+        <!-- for import org.eclipse.jetty.plus.webapp.EnvConfiguration; -->
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-plus</artifactId>
+            <version>${jetty.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+
+        <!-- jsoup, for integration test -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.6.2</version>
+        </dependency>
+
+    </dependencies>             
+</project>

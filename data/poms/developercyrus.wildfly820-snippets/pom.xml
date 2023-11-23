@@ -1,0 +1,166 @@
+<project 
+        xmlns="http://maven.apache.org/POM/4.0.0" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    
+    <!-- 
+        Comment:
+        1.  Originally plan wildfly as a JDNI server for client remoting 
+        2.  Jboss as 7.1.1 / Wildfly 8.2.0 does not support remote jndi to datasource 
+        3.  Quote from: 
+        
+                WildFly (and AS7) don't support remote datasource lookup, which I believe is a deliberate decision. If you used it on older versions where it worked, it was incredibly easy to create terrible performance problems, large server-side memory leaks, and more.
+                What was the use case for having one? The best option is usually to encapsulate the data logic in an EJB which does the DB work server-side, and then call it from the client.
+     
+            https://developer.jboss.org/thread/196876    
+            https://developer.jboss.org/thread/241500
+        
+               
+        Environment:
+        1.  Windows 7 64 bit (assume OS installed in C:\Windows)
+        2.  Eclipse 4.4
+        3.  JDK 8.0 
+        4.  Wildfly 8.2.0 Final (embedded as project, located in \server\wildfly-8.2.0.Final, downloaded from http://wildfly.org/downloads/)
+
+        Remarks
+        1.  initialize the wildfly server by running \server\wildfly-8.2.0.Final\bin\add-user.bat, reference: https://docs.jboss.org/author/display/WFLY8/add-user+utility
+        2.  create user with "admin/Passw0rd"
+        3.  start wildfly server by running \server\wildfly-8.2.0.Final\bin\standalone.bat
+        4.  access the web admin console http://localhost:9990/
+        
+        Approach1 - all automate
+        1.  "mvn wildflys:start". This will include   
+        2.  Plan as: "mvn install"
+                a.  start the server
+                b.  register mysql as datasource for client remoting
+                c.  client connect to datasource by jndi
+                
+        Reference:
+        http://docs.jboss.org/wildfly/plugins/maven/latest/examples/complex-example.html
+        
+    -->
+        
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding> 
+    </properties>
+    
+
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>wildfly820-snippets</groupId>
+    <artifactId>wildfly820-snippets</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+
+    <build>           
+        <plugins>   
+            <plugin>
+                <groupId>org.wildfly.plugins</groupId>
+                <artifactId>wildfly-maven-plugin</artifactId>
+                <version>1.1.0.Alpha2</version>
+                <configuration>
+                    <jbossHome>${basedir}\server\wildfly-8.2.0.Final</jbossHome>
+                    <hostname>localhost</hostname>
+                    <port>9990</port>
+                    <name>admin</name>
+                    <password>Passw0rd</password>                   
+                </configuration>
+                
+                <executions>   
+                
+                    <!-- pakcage -->             
+                    <execution>
+                        <id>start the server</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>start</goal>
+                        </goals>
+                        <configuration>
+                        </configuration>
+                    </execution>
+
+                    
+                    <!-- isntall -->
+                    <execution>
+                        <id>add-datasource</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>add-resource</goal>
+                        </goals>
+                        <configuration>
+                            <address>subsystem=datasources,data-source=java:jboss/mysql</address>
+                            <resources>
+                                <resource>
+                                    <properties>
+                                        <jndi-name>java:jboss/mysql</jndi-name>
+                                        <connection-url>jdbc:mysql://localhost:3306/orm_hibernate_one2many_example1</connection-url>                                        
+                                        <driver-name>mysql-connector-java-5.1.9.jar</driver-name>
+                                        <driver-class>com.mysql.jdbc.Driver</driver-class>
+                                        <user-name>root</user-name>
+                                        <enabled>true</enabled>
+                                    </properties>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>            
+                </executions>  
+            </plugin>
+            
+            
+            
+            <!-- integration-test -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.12</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            
+            
+        </plugins>    
+    </build>     
+
+    <dependencies>
+
+        <!-- javax -->
+        <dependency>
+            <groupId>javax</groupId>
+            <artifactId>javaee-api</artifactId>
+            <version>6.0</version>
+        </dependency>
+        
+        
+         <!-- mysql -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>5.1.9</version>
+        </dependency>
+        
+        
+        <!-- junit -->                
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.10</version>
+            <type>jar</type>
+            <scope>compile</scope>
+        </dependency>
+        
+        
+        <!-- wildfly jndi client -->
+        <dependency>
+            <groupId>org.wildfly</groupId>
+            <artifactId>wildfly-ejb-client-bom</artifactId>
+            <version>8.1.0.Final</version>
+            <type>pom</type>
+            <scope>compile</scope>
+        </dependency>
+    </dependencies>             
+</project>

@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>bo_ihm</groupId>
+	<artifactId>test_omnifaces</artifactId>
+	<version>1.1.5-SNAPSHOT</version>
+	<packaging>war</packaging>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<jsf.version>2.2.8</jsf.version>
+		<java.version>1.7</java.version>
+	</properties>
+
+	<dependencies>
+
+		<!-- JSF 2.2 -->
+		<dependency>
+			<groupId>org.glassfish</groupId>
+			<artifactId>javax.faces</artifactId>
+			<version>${jsf.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>3.0.1</version>
+			<scope>provided</scope>
+		</dependency>
+		
+		<dependency>
+		    <groupId>org.omnifaces</groupId>
+		    <artifactId>omnifaces</artifactId>
+		    <version>1.11</version>
+		</dependency>
+
+		<!-- EL 2.2 -->
+		<dependency>
+			<groupId>org.glassfish.web</groupId>
+			<artifactId>javax.el</artifactId>
+			<version>2.2.6</version>
+		</dependency>
+		
+		<!-- (JSR 303)  -->
+		<dependency>
+			<groupId>javax.validation</groupId>
+			<artifactId>validation-api	</artifactId>
+			<version>1.1.0.Final</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-validator</artifactId>
+			<version>5.0.1.Final</version>
+		</dependency>
+		
+		<!-- Logging -->
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>1.6.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.6.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.16</version>
+		</dependency>
+
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.16</version>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<version>2.16</version>
+			</plugin>
+			<plugin>
+				<groupId>org.eclipse.jetty</groupId>
+				<artifactId>jetty-maven-plugin</artifactId>
+				<version>9.0.7.v20131107</version>
+				<configuration>
+					<systemProperties>
+						<systemProperty>
+							<name>catalina.home</name>
+							<value>${basedir}/target</value>
+						</systemProperty>
+						<systemProperty>
+							<name>log4j.configuration</name>
+							<value>file:${basedir}/src/test/resources/log4j.xml</value>
+						</systemProperty>
+					</systemProperties>
+					<!-- Seul run-war fonctionne, à cause de JSF qui ne trouve pas les classes 
+						avec le goal run -->
+					<excludedGoals>
+						<excludedGoal>run</excludedGoal>
+					</excludedGoals>
+					<webApp>
+						<contextPath>/bo_ihm</contextPath>
+						<overrideDescriptor>${basedir}/target/test-classes/context.xml</overrideDescriptor>
+						<throwUnavailableOnStartupException>true</throwUnavailableOnStartupException>
+					</webApp>
+					<stopKey>stop</stopKey>
+					<stopPort>14098</stopPort>
+					<stopWait>10</stopWait>
+					<httpConnector>
+						<port>14080</port>
+						<idleTimeout>60000</idleTimeout>
+					</httpConnector>
+				</configuration>
+				<executions>
+					<execution>
+						<id>clean-jetty</id>
+						<phase>pre-clean</phase>
+						<goals>
+							<goal>stop</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			
+
+			
+				<!-- Spécifier les paramètres source et target permet de conserver le 
+					bon JDK lors de la mise à jour du projet depuis le POM -->
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>3.1</version>
+					<configuration>
+						<compilerVersion>${java.version}</compilerVersion>
+						<source>${java.version}</source>
+						<target>${java.version}</target>
+						<!-- <compilerArgs> <arg>-Xlint:unchecked</arg> </compilerArgs> -->
+					</configuration>
+				</plugin>
+
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-war-plugin</artifactId>
+					<version>2.3</version>
+					<dependencies>
+						<dependency>
+							<groupId>org.codehaus.plexus</groupId>
+							<artifactId>plexus-archiver</artifactId>
+							<version>2.3</version>
+						</dependency>
+					</dependencies>
+				</plugin>
+
+				<!-- 
+					L'utilisation de la version 2.5 de ce plugin affiche le message '[debug] 
+					execute contextualize' dans les logs Maven tandis que la version 2.6 ne prend 
+					pas en compte les paramètres de la ligne de commande au moment du filtrage 
+					des ressources bien que le contraire soit indiqué à l'url suivante : 
+					http://jira.codehaus.org/browse/MRESOURCES-39
+					Seule la version 2.4 fonctionne correctement, si on n'oublie pas le paramètre escapeWindowsPaths
+				-->
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-resources-plugin</artifactId>
+					<version>2.4</version>
+					<configuration>
+						<escapeWindowsPaths>true</escapeWindowsPaths>
+						<encoding>UTF-8</encoding>
+					</configuration>
+				</plugin>
+		</plugins>
+	</build>
+</project>	

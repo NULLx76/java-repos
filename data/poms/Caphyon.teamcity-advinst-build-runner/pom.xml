@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>caphyon.advinst.teamcity</groupId>
+  <artifactId>advinst-teamcity-plugin</artifactId>
+  <version>1.5</version>
+  <packaging>pom</packaging>
+  <name>TeamCity Advanced Installer Plugin</name>
+
+  <properties>
+    <teamcity-version>2017.1</teamcity-version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <plugin.version>${project.version}</plugin.version>
+    <teamcity-dir>.teamcity/${teamcity-version}</teamcity-dir>
+  </properties>
+
+  <repositories>
+    <repository>
+      <id>jetbrains-all</id>
+      <url>https://download.jetbrains.com/teamcity-repository</url>
+    </repository>
+  </repositories>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>JetBrains</id>
+      <url>https://download.jetbrains.com/teamcity-repository</url>
+    </pluginRepository>
+  </pluginRepositories>
+
+  <developers>
+    <developer>
+      <id>advinst</id>
+      <name>Advanced Installer</name>
+      <email>support@advancedinstaller.com</email>
+    </developer>
+  </developers>
+
+  <licenses>
+    <license>
+      <name>MIT license</name>
+      <comments>All source code is under the MIT license.</comments>
+      <url>http://www.opensource.org/licenses/mit-license.php</url>
+    </license>
+  </licenses>
+
+  <distributionManagement>
+    <repository>
+      <id>internal.repo</id>
+      <name>Temporary Staging Repository</name>
+      <url>file://${project.build.directory}/mvn-repo</url>
+    </repository>
+  </distributionManagement>
+
+  <scm>
+    <url>https://github.com/advinst/teamcity-advinst-build-runner</url>
+    <connection>scm:git:https://github.com/advinst/teamcity-advinst-build-runner.git</connection>
+    <developerConnection>scm:git:https://github.com/advinst/teamcity-advinst-build-runner.git</developerConnection>
+    <tag>HEAD</tag>
+  </scm>
+
+  <build>
+
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <configuration>
+            <source>8</source>
+            <target>8</target>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+
+    <plugins>
+
+      <plugin>
+        <groupId>org.jetbrains.teamcity</groupId>
+        <artifactId>teamcity-sdk-maven-plugin</artifactId>
+        <version>0.4.2</version>
+        <inherited>false</inherited>
+        <configuration>
+          <teamcityDir>${teamcity-dir}</teamcityDir>
+          <downloadQuietly>true</downloadQuietly>
+          <pluginPackageName>${project.artifactId}-${project.version}.zip</pluginPackageName>
+        </configuration>
+      </plugin>
+
+      <!-- install server-tools.jar to repo -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-install-plugin</artifactId>
+        <version>3.0.0-M1</version>
+        <inherited>false</inherited>
+        <executions>
+          <execution>
+            <id>org.jetbrains.teamcity:server-tools</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>install-file</goal>
+            </goals>
+            <configuration>
+              <groupId>org.jetbrains.teamcity.internal</groupId>
+              <artifactId>server-tools</artifactId>
+              <version>${teamcity-version}</version>
+              <packaging>jar</packaging>
+              <file>${basedir}/${teamcity-dir}/webapps/ROOT/WEB-INF/lib/server-tools.jar</file>
+              <generatePom>true</generatePom>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+    </plugins>
+
+  </build>
+
+  <profiles>
+    <!-- Install common-tools.jar to repo, if it exists. Newer distributions of TeamCity do not include this file -->
+    <profile>
+      <id>pre-teamcity-2018</id>
+      <activation>
+        <file>
+          <exists>${basedir}/${teamcity-dir}/webapps/ROOT/WEB-INF/lib/common-tools.jar</exists>
+        </file>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-install-plugin</artifactId>
+            <version>3.0.0-M1</version>
+            <inherited>false</inherited>
+            <executions>
+              <execution>
+                <id>org.jetbrains.teamcity:common-tools</id>
+                <phase>validate</phase>
+                <goals>
+                  <goal>install-file</goal>
+                </goals>
+                <configuration>
+                  <groupId>org.jetbrains.teamcity.internal</groupId>
+                  <artifactId>common-tools</artifactId>
+                  <version>${teamcity-version}</version>
+                  <packaging>jar</packaging>
+                  <file>${basedir}/${teamcity-dir}/webapps/ROOT/WEB-INF/lib/common-tools.jar</file>
+                  <generatePom>true</generatePom>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+  <modules>
+    <module>advinst-server</module>
+    <module>advinst-agent</module>
+    <module>advinst-common</module>
+    <module>advinst-build</module>
+  </modules>
+</project>

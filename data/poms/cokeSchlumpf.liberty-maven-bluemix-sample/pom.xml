@@ -1,0 +1,212 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.wellnr</groupId>
+  <artifactId>liberty-maven-bluemix-sample</artifactId>
+  <version>0.1-SNAPSHOT</version>
+  <name>liberty-maven-bluemix-sample</name>
+
+  <description>This sample shows how to deploy liberty applications to IBM Bluemix with Maven.</description>
+
+  <packaging>war</packaging>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <distributionManagement>
+    <repository>
+      <id>internal.repo</id>
+      <name>Temporary Staging Repository</name>
+      <url>file://${project.build.directory}/mvn-repo</url>
+    </repository>
+  </distributionManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>javax</groupId>
+      <artifactId>javaee-api</artifactId>
+      <scope>provided</scope>
+      <version>6.0</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-war-plugin</artifactId>
+        <version>2.6</version>
+        <configuration>
+          <outputDirectory>${project.build.directory}/liberty/wlp/usr/servers/defaultServer/apps</outputDirectory>
+          <warName>${project.name}</warName>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.cloudfoundry</groupId>
+        <artifactId>cf-maven-plugin</artifactId>
+        <version>1.1.1</version>
+
+        <executions>
+          <execution>
+            <phase>deploy</phase>
+            <goals>
+              <goal>push</goal>
+            </goals>
+          </execution>
+        </executions>
+
+        <configuration>
+          <!-- <buildpack>https://github.com/cloudfoundry/ibm-websphere-liberty-buildpack.git</buildpack> -->
+          <path>${project.build.directory}/${project.name}-server.zip</path>
+          <server>bluemix</server>
+          <target>https://api.ng.bluemix.net</target>
+          <org>info@michaelwellner.de</org>
+          <space>dev</space>
+          <appname>wellnr-${project.name}</appname>
+          <memory>512</memory>
+          <diskQuota>1024</diskQuota>
+          <healthCheckTimeout>60</healthCheckTimeout>
+          <!--
+          <env>
+            <IBM_JVM_LICENSE>${ibm.jvm.license}</IBM_JVM_LICENSE>
+            <IBM_LIBERTY_LICENSE>${ibm.liberty.license}</IBM_LIBERTY_LICENSE>
+          </env>
+          -->
+          <services>
+            <service>
+              <name>sqldb</name>
+              <label>sqldb</label>
+              <plan>sqldb_free</plan>
+            </service>
+          </services>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>net.wasdev.wlp.maven.plugins</groupId>
+        <artifactId>liberty-maven-plugin</artifactId>
+        <version>1.1-SNAPSHOT</version>
+
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>package-server</goal>
+            </goals>
+          </execution>
+        </executions>
+
+        <configuration>
+          <install>
+            <!-- license code specified in ~/.m2/settings.xml -->
+            <licenseCode>${ibm.liberty.license}</licenseCode>
+          </install>
+
+          <configFile>src/main/wlp/server.xml</configFile>
+          <packageFile>${project.build.directory}/${project.name}-server.zip</packageFile>
+          <include>usr</include>
+
+          <bootstrapProperties>
+            <Port>9080</Port>
+          </bootstrapProperties>
+
+          <features>
+            <acceptLicense>true</acceptLicense>
+            <whenFileExists>ignore</whenFileExists>
+            <feature>ejbLite-3.1</feature>
+            <feature>jaxws-2.2</feature>
+          </features>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.3</version>
+        <configuration>
+          <source>1.7</source>
+          <target>1.7</target>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>1.4</version>
+        <executions>
+          <execution>
+            <phase>validate</phase>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireJavaVersion>
+                  <version>[1.7,)</version>
+                </requireJavaVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.10.3</version>
+        <configuration>
+          <source>1.7</source>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>install-liberty</id>
+
+      <activation>
+        <file>
+          <missing>target/liberty/wlp/bin</missing>
+        </file>
+      </activation>
+
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>net.wasdev.wlp.maven.plugins</groupId>
+            <artifactId>liberty-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>compile</phase>
+                <goals>
+                  <goal>create-server</goal>
+                  <goal>install-feature</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+  <pluginRepositories>
+    <!-- Configure Sonatype OSS Maven snapshots repository -->
+    <pluginRepository>
+      <id>sonatype-nexus-snapshots</id>
+      <name>Sonatype Nexus Snapshots</name>
+      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+    </pluginRepository>
+  </pluginRepositories>
+
+</project>

@@ -1,0 +1,586 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project
+  xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+  
+  <name>XSLWeb - main</name>  
+  <groupId>nl.armatiek.xslweb</groupId>
+  <artifactId>xslweb</artifactId>
+  <packaging>war</packaging> 
+  <version>4.2.0-SNAPSHOT</version>
+  
+  <inceptionYear>2013</inceptionYear>
+
+  <developers>
+    <developer>
+      <name>Maarten Kroon</name>
+      <id>maartenkroon</id>
+      <organization>Armatiek BV</organization>
+      <roles>
+        <role>Java Developer</role>
+      </roles>
+    </developer>
+    <developer>
+      <name>Arjan Loeffen</name>
+      <id>arjanloeffen</id>
+      <organization>Armatiek BV</organization>
+      <roles>
+        <role>Java Developer</role>
+      </roles>
+    </developer>    
+  </developers>
+
+  <properties>
+    <java.version>11</java.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <saxon.version>10.6</saxon.version>
+    <shiro.version>1.8.0</shiro.version>
+    <pac4j.version>5.2.1</pac4j.version>
+    <fop.version>2.7</fop.version>
+    <ehcache.version>3.9.8</ehcache.version>
+    <logback.version>1.2.8</logback.version>
+    <slf4j.version>1.7.32</slf4j.version>
+    <graaljs.version>22.0.0.2</graaljs.version>
+  </properties>
+  
+  <repositories>
+    <repository>
+      <id>repos-saxonica</id>
+      <name>Saxonica Repository</name>
+      <url>https://dev.saxonica.com/maven</url>
+    </repository>
+    <repository>
+      <id>apache.snapshots</id>
+      <url>https://repository.apache.org/content/repositories/snapshots</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>  
+  </repositories>
+  
+  <pluginRepositories>
+    <pluginRepository>
+      <id>apache.snapshots</id>
+      <name>Apache Snapshots</name>
+      <url>https://repository.apache.org/content/repositories/snapshots</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </pluginRepository>
+  </pluginRepositories>
+  
+  <profiles>
+    <profile>
+      <!-- Saxon Home Edition (HE): -->
+      <id>Saxon-HE</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>net.sf.saxon</groupId>
+          <artifactId>Saxon-HE</artifactId>            
+          <version>${saxon.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <!--
+      Saxon Professional Edition (PE):
+      - Purchase PE license from http://www.saxonica.com/
+      - Add saxon-config:configuration element to webapp.xml with attributes: edition="PE" and licenseFileLocation="<location of .lic>"
+      - Build XSLWeb with Saxon-PE profile:
+          mvn -PSaxon-PE clean install
+      -->
+      <id>Saxon-PE</id>
+      <dependencies>
+        <dependency>
+          <groupId>com.saxonica</groupId>
+          <artifactId>Saxon-PE</artifactId>            
+          <version>${saxon.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.ibm.icu</groupId>
+          <artifactId>icu4j</artifactId>
+          <version>63.1</version>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <!--
+      Saxon Enterprise Edition (EE):
+      - Purchase EE license from http://www.saxonica.com/
+      - Add saxon-config:configuration element to webapp.xml with attributes: edition="PE" and licenseFileLocation="<location of .lic>"
+      - Build XSLWeb with Saxon-EE profile:
+          mvn -PSaxon-EE clean install
+      -->
+      <id>Saxon-EE</id>
+      <dependencies>
+        <dependency>
+          <groupId>com.saxonica</groupId>
+          <artifactId>Saxon-EE</artifactId>            
+          <version>${saxon.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.ibm.icu</groupId>
+          <artifactId>icu4j</artifactId>
+          <version>63.1</version>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <!--
+      Saxon SNAPSHOT (HE):
+      - Build Saxon jar from the latest development sources (svn/trunk, git/master) and rename the jar to Saxon-HE-10.SNAPSHOT.jar 
+      - Register the jar in your local Maven repository:
+      mvn install:install-file -Dfile=Saxon-HE-10.SNAPSHOT.jar -DgroupId=net.sf.saxon -DartifactId=Saxon-HE -Dversion=10.SNAPSHOT -Dpackaging=jar
+      -->
+      <id>Saxon-SNAPSHOT</id>
+      <dependencies>
+        <dependency>
+          <groupId>net.sf.saxon</groupId>
+          <artifactId>Saxon-HE</artifactId>            
+          <version>10.SNAPSHOT</version>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>jetty</id>
+      <dependencies>
+        <dependency>
+          <groupId>ch.qos.logback</groupId>
+          <artifactId>logback-classic</artifactId>
+          <version>${logback.version}</version>
+          <scope>provided</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+          <version>${slf4j.version}</version>
+          <scope>provided</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>graal-js</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.graalvm.js</groupId>
+          <artifactId>js</artifactId>
+          <version>${graaljs.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.graalvm.js</groupId>
+          <artifactId>js-scriptengine</artifactId>
+          <version>${graaljs.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
+  
+  <dependencies>
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>javax.servlet-api</artifactId>
+      <version>3.0.1</version>
+      <scope>provided</scope>
+    </dependency>
+    <!--           
+    <dependency>
+      <groupId>org.codehaus.woodstox</groupId>
+      <artifactId>woodstox-core-asl</artifactId>
+      <version>4.4.1</version>
+    </dependency>
+    -->
+    <dependency>
+      <groupId>net.sf.joost</groupId>
+      <artifactId>joost</artifactId>
+      <version>0.9.1</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-fileupload</groupId>
+      <artifactId>commons-fileupload</artifactId>
+      <version>1.4</version>
+      <exclusions>
+        <exclusion> 
+          <groupId>commons-io</groupId>
+          <artifactId>commons-io</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.ccil.cowan.tagsoup</groupId>
+      <artifactId>tagsoup</artifactId>
+      <version>1.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.squareup.okhttp3</groupId>
+      <artifactId>okhttp</artifactId>
+      <version>4.5.0</version>
+    </dependency>
+    <dependency>
+      <groupId>xml-resolver</groupId>
+      <artifactId>xml-resolver</artifactId>
+      <version>1.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-collections4</artifactId>
+      <version>4.4</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-text</artifactId>
+      <version>1.9</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.james</groupId>
+      <artifactId>apache-mime4j-core</artifactId>
+      <version>0.8.3</version>
+    </dependency>  
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>3.11</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-codec</groupId>
+      <artifactId>commons-codec</artifactId>
+      <version>1.15</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>2.7</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-email</artifactId>
+      <version>1.5</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-exec</artifactId>
+      <version>1.3</version>
+    </dependency>
+    <dependency>
+      <groupId>org.quartz-scheduler</groupId>
+      <artifactId>quartz</artifactId>
+      <version>2.3.2</version>
+      <exclusions>
+        <exclusion> 
+          <groupId>c3p0</groupId> 
+          <artifactId>c3p0</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.quartz-scheduler</groupId>
+      <artifactId>quartz-jobs</artifactId>
+      <version>2.3.2</version>
+    </dependency>
+    <dependency>
+      <groupId>javax.transaction</groupId>
+      <artifactId>jta</artifactId>
+      <version>1.1</version>
+    </dependency>     
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>${logback.version}</version>
+    </dependency> 
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jcl-over-slf4j</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-logging</groupId>
+      <artifactId>commons-logging</artifactId>
+      <version>1.1.3</version>
+      <scope>provided</scope>
+    </dependency>
+    
+    <dependency>
+      <groupId>io.github.classgraph</groupId>
+      <artifactId>classgraph</artifactId>
+      <version>4.8.138</version>
+    </dependency>
+      
+    <dependency>
+      <groupId>de.odysseus.staxon</groupId>
+      <artifactId>staxon</artifactId>
+      <version>1.3</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.ehcache</groupId>
+      <artifactId>ehcache</artifactId>
+      <version>${ehcache.version}</version>
+    </dependency>
+    <!--
+    <dependency>
+      <groupId>org.ehcache.modules</groupId>
+      <artifactId>ehcache-xml</artifactId>
+      <version>${ehcache.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.ehcache.modules</groupId>
+          <artifactId>ehcache-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.ehcache.modules</groupId>
+          <artifactId>ehcache-core</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    -->
+    
+    <!--
+    <dependency>
+      <groupId>jakarta.xml.bind</groupId>
+      <artifactId>jakarta.xml.bind-api</artifactId>
+      <version>3.0.1</version>
+    </dependency>
+    -->
+    
+    <dependency>
+      <groupId>javax.xml.bind</groupId>
+      <artifactId>jaxb-api</artifactId>
+      <version>2.3.1</version>
+      <exclusions>
+      	<exclusion>
+      		<groupId>javax.activation</groupId>
+      		<artifactId>javax.activation-api</artifactId>
+      	</exclusion>
+      </exclusions>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.glassfish.jaxb</groupId>
+      <artifactId>jaxb-runtime</artifactId>
+      <version>2.3.1</version>
+      <exclusions>
+      	<exclusion>
+      		<groupId>javax.activation</groupId>
+      		<artifactId>javax.activation-api</artifactId>
+      	</exclusion>
+      </exclusions>
+    </dependency>
+    
+    <dependency>
+      <groupId>com.mchange</groupId>
+      <artifactId>c3p0</artifactId>
+      <version>0.9.5.5</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.apache.xmlgraphics</groupId>
+      <artifactId>fop-core</artifactId>
+      <version>${fop.version}</version>
+      <exclusions>
+        <exclusion> 
+          <groupId>javax.servlet</groupId>
+          <artifactId>servlet-api</artifactId>
+        </exclusion>
+        <exclusion> 
+          <groupId>xml-apis</groupId>
+	      <artifactId>xml-apis</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    
+    <dependency>
+      <groupId>net.sf.offo</groupId>
+      <artifactId>fop-hyph</artifactId>
+      <version>2.0</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.imgscalr</groupId>
+      <artifactId>imgscalr-lib</artifactId>
+      <version>4.2</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>eu.medsea.mimeutil</groupId>
+      <artifactId>mime-util</artifactId>
+      <version>2.1.3</version>
+      <exclusions>
+        <exclusion> 
+          <groupId>log4j</groupId> 
+          <artifactId>log4j</artifactId>
+        </exclusion>
+        <exclusion> 
+          <groupId>org.slf4j</groupId> 
+          <artifactId>slf4j-log4j12</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+     
+    <dependency>
+      <groupId>org.apache.shiro</groupId>
+      <artifactId>shiro-web</artifactId>
+      <version>${shiro.version}</version>
+      <exclusions>
+        <exclusion> 
+          <groupId>org.apache.shiro</groupId> 
+          <artifactId>shiro-lang</artifactId>
+        </exclusion>
+        <exclusion> 
+          <groupId>org.apache.shiro</groupId> 
+          <artifactId>shiro-cache</artifactId>
+        </exclusion>
+        <exclusion> 
+          <groupId>org.apache.shiro</groupId> 
+          <artifactId>shiro-crypto-hash</artifactId>
+        </exclusion>
+        <exclusion> 
+          <groupId>org.apache.shiro</groupId> 
+          <artifactId>shiro-crypto-cipher</artifactId>
+        </exclusion>
+        <exclusion> 
+          <groupId>org.apache.shiro</groupId> 
+          <artifactId>shiro-config-core</artifactId>
+        </exclusion>
+        <exclusion> 
+          <groupId>org.apache.shiro</groupId> 
+          <artifactId>shiro-config-ogdl</artifactId>
+        </exclusion>
+        <exclusion> 
+          <groupId>org.apache.shiro</groupId> 
+          <artifactId>shiro-event</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <!--  Because of the Shiro exclusions: -->
+    <dependency>
+      <groupId>commons-beanutils</groupId>
+      <artifactId>commons-beanutils</artifactId>
+      <version>1.9.4</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.pac4j</groupId>
+      <artifactId>pac4j-oidc</artifactId>
+      <version>${pac4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.pac4j</groupId>
+      <artifactId>pac4j-http</artifactId>
+      <version>${pac4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.buji</groupId>
+      <artifactId>buji-pac4j</artifactId>
+      <version>6.1.0</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.owasp.encoder</groupId>
+      <artifactId>encoder</artifactId>
+      <version>1.2.3</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>com.github.rwitzel.streamflyer</groupId>
+      <artifactId>streamflyer-core</artifactId>
+      <version>1.2.0</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>info.macias</groupId>
+      <artifactId>jeasse-common</artifactId>
+      <version>0.11.3</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>info.macias</groupId>
+      <artifactId>jeasse-servlet3</artifactId>
+      <version>0.11.3</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.json</groupId>
+      <artifactId>json</artifactId>
+      <version>20201115</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>com.sun.xml.fastinfoset</groupId>
+      <artifactId>FastInfoset</artifactId>
+      <version>2.0.0</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>com.fasterxml.jackson.dataformat</groupId>
+      <artifactId>jackson-dataformat-xml</artifactId>
+      <version>2.13.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.exquery</groupId>
+      <artifactId>exquery-xquery</artifactId>
+      <version>0.2.0</version>
+    </dependency>
+    
+  </dependencies>
+  
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.9.0</version>
+        <configuration>
+          <release>${java.version}</release>
+          <encoding>UTF-8</encoding>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-war-plugin</artifactId>
+        <version>3.3.1</version>
+        <!--
+        <configuration>
+          <archive>
+            <manifest>
+              <addClasspath>true</addClasspath>
+            </manifest>
+          </archive>
+        </configuration>
+        -->
+      </plugin>
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>3.2.0</version>
+      </plugin>
+      <plugin>
+        <artifactId>maven-install-plugin</artifactId>
+        <version>2.5.2</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>3.2</version>
+        <configuration>
+          <outputDirectory>docs</outputDirectory>
+          <show>public</show>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+  
+</project>

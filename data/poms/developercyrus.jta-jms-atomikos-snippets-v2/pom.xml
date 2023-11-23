@@ -1,0 +1,479 @@
+<project 
+        xmlns="http://maven.apache.org/POM/4.0.0" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    
+    <!-- 
+        Comment:
+        1.  This is version 2 of jta-jms-atomikos-snippets
+        2.  simplified, and all automated, without manually launch activemq
+  
+        Remarks:
+        1.  example2 uses javax.transaction.UserTransaction, to serve the following user case    
+            i) same JVM, transfer N amount from saving account in bank A to bank B, for the same client
+            ii) in bank A, withdraw N amount from saving account (in terms of datasource A)
+            iii) in bank A, inform bank B, to deposit N amount (withdraw -N amount) for saving account, from Bank A to Bank B (in terms of jms A to B)
+            iv) commit both, either fail will rollback
+        2.  started version 5.8, maven-activemq-plugin is renamed to activemq-maven-plugin
+        3.  activemq 5.11.1 uses "org.eclipse.jetty.server.nio.SelectChannelConnector" which comes from jetty 8.1.0.v20120127 (last version having with it)    
+    
+        Environment:
+        1.  Windows 7 64 bit (assume OS installed in C:\Windows)
+        2.  Eclipse 4.4
+        3.  JDK 8.0
+        4.  zwamp-1.1.2 (mysql) 
+        5.  postgresql 9.4.1-3  
+                require to set max_prepared_transactions to a nonzero value in postgresql-9.4.1-3\pgsql\data\postgresql.conf                
+                otherwise Caused by: org.postgresql.util.PSQLException: ERROR: prepared transactions are disabled               
+                https://wiki.postgresql.org/wiki/Tuning_Your_PostgreSQL_Server
+                
+        
+        Approach1 - all automate
+        1.  run "mvn install". This will include   
+            i.  initialize 2 datasources
+            ii. start activemq
+            iii.execute integration test   
+            iv. stop activemq                         
+        2.  this project includes integration test 
+        3.  with maven-failsafe-plugin, any java file name with "IT" will be treated as 
+            intergration test (by maven, the phase is integration-test). 
+        4)  the integration test report can be found in \target\failsafe-reports
+       
+    -->
+        
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding> 
+        <activemq.version>5.11.1</activemq.version>
+        <jetty.version>8.1.0.v20120127</jetty.version>  
+    </properties>
+    
+
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>jta-jms-atomikos-snippets</groupId>
+    <artifactId>jta-jms-atomikos-snippets</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    
+    
+    <build>   
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.eclipse.m2e</groupId>
+                    <artifactId>lifecycle-mapping</artifactId>
+                    <version>1.0.0</version>
+                    <configuration>
+                        <lifecycleMappingMetadata>
+                            <pluginExecutions>                                   
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.codehaus.mojo</groupId>
+                                        <artifactId>sql-maven-plugin</artifactId>
+                                        <versionRange>[1.5,)</versionRange>
+                                        <goals>
+                                            <goal>execute</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    
+                                    <action>
+                                        <execute>  
+                                            <runOnIncremental>false</runOnIncremental>  
+                                        </execute>  
+                                    </action>
+                                </pluginExecution>                                                                 
+                            </pluginExecutions>
+                        </lifecycleMappingMetadata>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    
+        <plugins>   
+            
+            <!-- initialize -->            
+            
+
+            <!-- compile -->                  
+            <plugin>                                   
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.0</version>
+                <configuration>
+                    <source>1.7</source>     <!-- align with javax 7.0 -->
+                    <target>1.7</target>
+                </configuration>                         
+            </plugin>  
+                       
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>sql-maven-plugin</artifactId>
+                <version>1.5</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>mysql</groupId>
+                        <artifactId>mysql-connector-java</artifactId>
+                        <version>5.1.9</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>postgresql</groupId>
+                        <artifactId>postgresql</artifactId>
+                        <version>9.1-901.jdbc4</version>
+                    </dependency>
+                </dependencies>
+                
+                <executions>
+                    <execution>
+                        <id>drop-db-before-test-if-any (mysql)</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>com.mysql.jdbc.Driver</driver>
+                            <url>jdbc:mysql://localhost:3306</url>
+                            <username>root</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <skip>${maven.test.skip}</skip>
+                            <autocommit>true</autocommit>
+                            <sqlCommand>                                                                
+                                drop database if exists javaee_jta_jms_atomikos_example2;                                                        
+                            </sqlCommand>
+                            <onError>continue</onError>
+                        </configuration>
+                    </execution>
+                    
+                    <execution>
+                        <id>drop-db-before-test-if-any (postgresql)</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>org.postgresql.Driver</driver>
+                            <url>jdbc:postgresql://localhost:5432</url>
+                            <username>postgres</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <skip>${maven.test.skip}</skip>
+                            <autocommit>true</autocommit>
+                            <sqlCommand>                                                                
+                                drop database if exists javaee_jta_jms_atomikos_example2;                      
+                            </sqlCommand>
+                            <onError>continue</onError>
+                        </configuration>
+                    </execution>
+
+
+                    <execution>
+                        <id>create-db (mysql)</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>com.mysql.jdbc.Driver</driver>
+                            <url>jdbc:mysql://localhost:3306</url>
+                            <username>root</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <skip>${maven.test.skip}</skip>
+                            <autocommit>true</autocommit>
+                            <sqlCommand>                                                                        
+                                create database javaee_jta_jms_atomikos_example2;                                                 
+                            </sqlCommand>
+                        </configuration>
+                    </execution>
+                                                          
+                    <execution>
+                        <id>create-db (postgresql)</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>org.postgresql.Driver</driver>
+                            <url>jdbc:postgresql://localhost:5432</url>
+                            <username>postgres</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <skip>${maven.test.skip}</skip>
+                            <autocommit>true</autocommit>
+                            <sqlCommand>                                
+                                create database javaee_jta_jms_atomikos_example2;                         
+                            </sqlCommand>
+                        </configuration>
+                    </execution>              
+                  
+                  
+                    <execution>
+                        <id>create-schema (mysql)</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>com.mysql.jdbc.Driver</driver>
+                            <url>jdbc:mysql://localhost:3306</url>
+                            <username>root</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <skip>${maven.test.skip}</skip>
+                            <autocommit>true</autocommit>
+                            <srcFiles>
+                                <srcFile>src/main/resources/javaee/jta/jms/atomikos/example2/mysql/create-schema.sql</srcFile>
+                            </srcFiles>
+                        </configuration>
+                    </execution>
+                    
+                    
+                    <execution>
+                        <id>create-schema (postgresql)</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>org.postgresql.Driver</driver>
+                            <url>jdbc:postgresql://localhost:5432/javaee_jta_jms_atomikos_example2</url>
+                            <username>postgres</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <skip>${maven.test.skip}</skip>
+                            <autocommit>true</autocommit>
+                            <srcFiles>
+                                <srcFile>src/main/resources/javaee/jta/jms/atomikos/example2/postgresql/create-schema.sql</srcFile>                                
+                            </srcFiles>
+                        </configuration>
+                    </execution>
+                   
+                   
+                    <execution>
+                        <id>create-data (mysql)</id>
+                        <phase>process-test-resources</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>com.mysql.jdbc.Driver</driver>
+                            <url>jdbc:mysql://localhost:3306</url>
+                            <username>root</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <autocommit>true</autocommit>
+                            <srcFiles>                                            
+                                <srcFile>src/test/resources/javaee/jta/jms/atomikos/example2/mysql/insert-record.sql</srcFile>
+                            </srcFiles>
+                        </configuration>                                               
+                    </execution>
+                    
+                    <execution>
+                        <id>create-data (postgresql)</id>
+                        <phase>process-test-resources</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <driver>org.postgresql.Driver</driver>
+                            <url>jdbc:postgresql://localhost:5432/javaee_jta_jms_atomikos_example2</url>
+                            <username>postgres</username>
+                            <password></password>
+                            <settingsKey>sensibleKey</settingsKey>
+                            <skip>${maven.test.skip}</skip>
+                            <autocommit>true</autocommit>
+                            <srcFiles>                                            
+                                <srcFile>src/test/resources/javaee/jta/jms/atomikos/example2/postgresql/insert-record.sql</srcFile>
+                            </srcFiles>
+                        </configuration>                                               
+                    </execution>
+                </executions>
+            </plugin>
+        
+        
+  
+            <plugin>
+                <!-- 
+                    1.  started 5.8, renamed from maven-activemq-plugin to activemq-maven-plugin
+                    2.  reference.  http://activemq.apache.org/maven2-activemq-broker-plugin.html
+                 -->
+                <groupId>org.apache.activemq.tooling</groupId>
+                <artifactId>activemq-maven-plugin</artifactId>
+                <version>${activemq.version}</version>
+                <dependencies>  
+                    <dependency>
+                        <groupId>org.apache.activemq</groupId>
+                        <artifactId>activemq-spring</artifactId>
+                        <version>${activemq.version}</version>
+                    </dependency>  
+                    
+                    <dependency>
+                        <groupId>org.apache.activemq</groupId>
+                        <artifactId>activemq-web</artifactId>
+                        <version>${activemq.version}</version>
+                    </dependency>  
+                    
+                    <dependency>
+                        <groupId>org.eclipse.jetty</groupId>
+                        <artifactId>jetty-server</artifactId>
+                        <version>${jetty.version}</version>
+                    </dependency>                                        
+                    <dependency>
+                        <groupId>org.eclipse.jetty</groupId>
+                        <artifactId>jetty-webapp</artifactId>
+                        <version>${jetty.version}</version>
+                    </dependency>  
+                    <dependency>
+                        <groupId>org.eclipse.jetty</groupId>
+                        <artifactId>jetty-security</artifactId>
+                        <version>${jetty.version}</version>
+                    </dependency>                  
+                    <dependency>
+                        <groupId>org.eclipse.jetty</groupId>
+                        <artifactId>jetty-rewrite</artifactId>
+                        <version>${jetty.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.eclipse.jetty</groupId>
+                        <artifactId>jetty-util</artifactId>
+                        <version>${jetty.version}</version>
+                    </dependency>
+                                        
+                                          
+                </dependencies>                  
+                                
+                <executions>
+                    <execution>
+                        <id>start activemq</id>
+                        <phase>pre-integration-test</phase>                        
+                        <goals>
+                            <goal>run</goal>
+                        </goals>    
+                        <configuration>  
+                            <!-- 
+                                1.  it has to use forward slash, otherwise throws Illegal character in opaque part at index 13
+                                2.  reference: http://techdiary.bitourea.com/2008/06/activemq-510-tutorial.html
+                             -->
+                            <configUri>xbean:file:src/main/resources/javaee/jta/jms/atomikos/example2/activemq/activemq.xml</configUri>  
+                            <fork>true</fork>  
+                            <systemProperties>  
+                                <property>  
+                                    <name>javax.net.ssl.keyStorePassword</name>  
+                                    <value>password</value>  
+                                </property>  
+                                <property>  
+                                    <name>org.apache.activemq.default.directory.prefix</name>  
+                                    <value>./target/</value>  
+                                </property>  
+                            </systemProperties>  
+                        </configuration>                      
+                    </execution>
+                    
+                    <execution>
+                        <id>stop activemq</id>
+                        <phase>post-integration-test</phase>                        
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>                                              
+                    </execution>
+                </executions>
+            </plugin>
+            
+            
+  
+            <!-- integration-test -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.12</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>    
+    </build>     
+
+    <dependencies>
+           
+        <!-- junit -->                
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.10</version>
+            <type>jar</type>
+            <scope>compile</scope>
+        </dependency>
+        
+        
+        <!-- mysql -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>5.1.9</version>
+        </dependency>
+        
+               
+        <!-- postgresql -->
+        <dependency>
+            <groupId>postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>9.1-901.jdbc4</version>
+        </dependency>
+
+
+
+        <!--  atomikos - jta implementation --> 
+        <dependency>
+            <groupId>com.atomikos</groupId>
+            <artifactId>transactions-jta</artifactId>
+            <version>3.9.3</version>
+        </dependency>
+        
+
+        <dependency>
+            <groupId>com.atomikos</groupId>
+            <artifactId>transactions-jdbc</artifactId>
+            <version>3.9.3</version>
+        </dependency>
+        
+        
+        <!-- atomikos - jms transaction implementation, for AtomikosConnectionFactoryBean -->
+        <dependency>
+            <groupId>com.atomikos</groupId>
+            <artifactId>transactions-jms</artifactId>
+            <version>3.9.3</version>
+        </dependency>
+        
+
+        <!-- jms broker implementation --> 
+        <dependency>
+            <groupId>org.apache.activemq</groupId>
+            <artifactId>activemq-broker</artifactId>
+            <version>${activemq.version}</version>
+        </dependency>
+        
+        <!-- javax -->
+        <dependency>
+            <groupId>javax</groupId>
+            <artifactId>javaee-api</artifactId>
+            <!-- 
+                1.  wihout scope = provided, it hits javax/transaction/SystemException
+                        test1(javaee.jta.atkmikos.example1.ClientIT): Absent Code attribute in method that is not native or abstract in class file javax/transaction/SystemException
+                2.  fix it 
+                        a) by adding scope, 
+                                https://aishwaryavaishno.wordpress.com/tag/javaxtransactionsystemexception/
+                        b) by switch from 6.0 to 7.0, although the quote reference is from 6.0 to 6.0-5, 
+                                http://stackoverflow.com/questions/15386950/classformaterror-absent-code-attribute-in-method-that-is-not-native-or-abstract 
+             -->
+            <version>7.0</version>            
+            <scope>provided</scope>
+        </dependency>
+        
+       
+        
+    </dependencies>             
+</project>

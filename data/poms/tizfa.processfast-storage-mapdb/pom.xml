@@ -1,0 +1,265 @@
+<!--
+  ~
+  ~ *****************
+  ~ Copyright 2015 Tiziano Fagni (tiziano.fagni@isti.cnr.it)
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  ~ *******************
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>it.cnr.isti.hlt</groupId>
+    <artifactId>processfast-storage-mapdb</artifactId>
+
+    <!-- ********** CHANGE THESE PROPERTIES WHEN UPDATE TO A NEW SOFTWARE VERSION.
+        IMPORTANT: IN DEVEL LEAVE "-SNAPSHOT" AT THE END OF VERSION. MAVEN WILL THREAT
+        IT DIFFERENTLY! The version syntax should be the following: (M).(m).(sm)[.(rev)][-SNAPSHOT]
+        where (M) is the major version (int), (m) is the minor version (int), (sm)
+        is the subminor (int) and (rev) is the optional revision (string) ******* -->
+    <version>0.9-SNAPSHOT</version>
+
+
+    <packaging>jar</packaging>
+
+    <name>processfast-storage-mapdb</name>
+    <url>http://maven.apache.org</url>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <timestamp>${maven.build.timestamp}</timestamp>
+        <!--<maven.build.timestamp.format>yyyy-MM-dd HH:mm</maven.build.timestamp.format>-->
+        <maven.build.timestamp.format>ddMMyyyy.HHmm</maven.build.timestamp.format>
+    </properties>
+
+
+    <!-- Profiles configuration -->
+    <!-- Specify to Maven the profile to use when building the library. If you
+        want to build a devel snapshot specify 'mvn package -P devel', if you want
+        to build a release specify 'mvn package -P release'. If you not specify the
+        -P parameter, the profile devel will be used. -->
+    <profiles>
+        <profile>
+            <id>devel</id>
+            <!-- Devel profile is active by default -->
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <!-- Specifies the build profile id, which is used to find out the correct
+                    properties file. -->
+                <build.profile.id>devel</build.profile.id>
+                <processfast-storage-foundationdb.build.generateversion>${project.version}</processfast-storage-foundationdb.build.generateversion>
+                <processfast-storage-foundationdb.build.finalname>
+                    ${project.name}-${processfast-storage-foundationdb.build.generateversion}.${timestamp}
+                </processfast-storage-foundationdb.build.finalname>
+            </properties>
+
+        </profile>
+        <profile>
+            <id>release</id>
+            <properties>
+                <!-- Specifies the build profile id, which is used to find out the correct
+                    properties file. This is not actually necessary for this example, but it
+                    can be used for other purposes. -->
+                <build.profile.id>release</build.profile.id>
+                <processfast-storage-foundationdb.build.generateversion>${project.version}</processfast-storage-foundationdb.build.generateversion>
+                <processfast-storage-foundationdb.build.finalname>${project.name}-${processfast-storage-foundationdb.build.generateversion}
+                </processfast-storage-foundationdb.build.finalname>
+            </properties>
+        </profile>
+    </profiles>
+
+    <build>
+        <finalName>${processfast-storage-foundationdb.build.finalname}</finalName>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+
+        <plugins>
+
+            <plugin>
+                <groupId>pl.project13.maven</groupId>
+                <artifactId>git-commit-id-plugin</artifactId>
+                <version>2.1.11</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>revision</goal>
+                        </goals>
+                    </execution>
+                </executions>
+
+                <configuration>
+                    <!-- that's the default value, you don't have to set it -->
+                    <prefix>processfast-storage-foundationdb</prefix>
+
+                    <!-- that's the default value -->
+                    <dateFormat>ddMMyyyy'.'HHmmss</dateFormat>
+
+                    <generateGitPropertiesFile>false</generateGitPropertiesFile>
+
+                    <!-- true is default here, it prints some more information during the
+                        build -->
+                    <verbose>true</verbose>
+
+                    <!-- If you'd like to tell the plugin where your .git directory is,
+                        use this setting, otherwise we'll perform a search trying to figure out the
+                        right directory. It's better to add it explicite IMHO. -->
+                    <dotGitDirectory>${project.basedir}/.git</dotGitDirectory>
+
+
+                </configuration>
+
+            </plugin>
+            <!-- END OF GIT COMMIT ID PLUGIN CONFIGURATION -->
+
+            <!-- Used to build a bundle containing the code of processfast-storage-foundationdb and all
+                its library dependencies -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>2.0</version>
+                <configuration>
+                    <shadedArtifactAttached>true</shadedArtifactAttached>
+                    <finalName>
+                        ${processfast-storage-foundationdb.build.finalname}-bundle
+                    </finalName>
+                    <createDependencyReducedPom>false</createDependencyReducedPom>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Used to pack the source code -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>2.2.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+           
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <!-- if including source jars, use the no-fork goals
+                     otherwise both the Groovy sources and Java stub sources will get included in your jar -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <!-- source plugin \> = 2.1 is required to use the no-fork goals -->
+                <version>2.4</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                            <goal>test-jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+
+
+        <pluginManagement>
+            <plugins>
+                <!--This plugin's configuration is used to store Eclipse m2e settings
+                    only. It has no influence on the Maven build itself. -->
+                <plugin>
+                    <groupId>org.eclipse.m2e</groupId>
+                    <artifactId>lifecycle-mapping</artifactId>
+                    <version>1.0.0</version>
+                    <configuration>
+                        <lifecycleMappingMetadata>
+                            <pluginExecutions>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>pl.project13.maven</groupId>
+                                        <artifactId>git-commit-id-plugin</artifactId>
+                                        <versionRange>2.1.0</versionRange>
+                                        <goals>
+                                            <goal>revision</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <execute/>
+                                    </action>
+                                </pluginExecution>
+                            </pluginExecutions>
+                        </lifecycleMappingMetadata>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+
+    <dependencies>
+        
+        <dependency>
+            <groupId>it.cnr.isti.hlt</groupId>
+            <artifactId>processfast-api</artifactId>
+            <version>0.9-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <groupId>it.cnr.isti.hlt</groupId>
+            <artifactId>processfast-api</artifactId>
+            <version>0.9-SNAPSHOT</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.10</version>
+            <scope>test</scope>
+        </dependency>
+
+		<dependency>
+			<groupId>org.mapdb</groupId>
+			<artifactId>mapdb</artifactId>
+			<version>1.0.7</version>
+		</dependency>
+
+    </dependencies>
+
+</project>

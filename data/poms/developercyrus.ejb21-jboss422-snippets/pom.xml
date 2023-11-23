@@ -1,0 +1,141 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    
+    <!-- 
+    
+        EJB:
+        1. in this project, message-driven bean is used to serve as JMS message consumer.
+        2  MDB itself is stateless
+        3. while the message is consumed by MDB, its success is verified if it can be inserted in database or not.
+        4. in this project, BMP is used for entity bean
+        5. for BMP, two methods (EntityBean) are required to code by developers. Both returns primary key
+                ejbCreate
+                findByPrimaryKey 
+           reference: 
+                http://www.conceptgo.com/gsejb/eb01.html
+                http://docs.oracle.com/cd/E16439_01/doc.1013/e13981/ent21imp002.htm
+                http://j2eetutorials.50webs.com/ejb_example4.html
+        6. the configure of mysql datasource is similar to https://github.com/developercyrus/jndi-jboss422-snippets     
+                 
+
+        Flow
+        1. initialize database (drop database, create database, create table)
+        2. copy mysql-ds.xml to jboss server
+        3. copy mysql driver to jboss server
+        4. compile ejb to jar, servlet to war, and both to ear
+        5. start jboss
+        6. #wait for jboss to launch completely for 10 seconds (this is originally done by maven-antrun-plugin, but replaced by jboss-maven-plugin:start-and-wait)
+        7. deploy ear to jboss
+        8. jms client producers 10 message to jbossmq of a queue "consumingQueue"
+        9. run integration test:
+                -MDB consumes message from the queue
+                -for each, message, BMP saves the text into database
+                -web client call servlet, in turn local call to stateful session bean
+                -console client remote call to stateless session bean
+        10. stop the jboss         
+        
+
+        Multi module project creation by elipse
+        1. Create a parent project by File > New > Other > Maven > Maven Project
+        2. Click "Create a simple project (skip archetype selection)"
+        3. Select "pom" for Packaging
+        4. Create a child project by File > New > Other > Maven > Maven Module
+        5. Click "Create a simple project (skip archetype selection)"
+        6. Make sure the Parent Project set as "ejb21-jboss422-snippets"             
+        reference: https://www.youtube.com/watch?v=obHce3gvgec        
+    
+        
+        Project creation sequence:
+        1. ejb21-jboss422-snippets
+        2. ejb21-jboss422-snippets-ejb
+        3. ejb21-jboss422-snippets-web
+        4. ejb21-jboss422-snippets-ear
+        5. ejb21-jboss422-snippets-client
+    
+        Environment:
+        1.  Windows 7 64 bit (assume OS installed in C:\Windows)
+        2.  Eclipse 4.4
+        3.  JDK 8.0        
+        4.  Jboss 4.2 (embedded as project, located in ${basedir}\server\jboss-4.2.2.GA, downloaded from http://jbossas.jboss.org/downloads/)
+       
+       
+        Plugin:
+        1.  "mvn jboss:start" will not be used up the command prompt, it will launch a VM separately, and can be used to type another command. 
+        
+        
+        Logging:
+        1.  \ejb-jboss422-snippets-client\server\jboss-4.2.2.GA\server\default\log\server.log
+                   
+        JBoss MQ:
+        1 .JBoss AS 4 ships with JBossMQ as default JMS provider, reference: http://docs.jboss.org/jbossmessaging/docs/userguide-1.4.1.Beta1/html/installation.html
+        2. JBoss Messaging supersedes JBoss MQ as the default JMS provider in JBoss AS 5.
+        3. The example use of message driven bean in this project is based on https://docs.jboss.org/jbossas/docs/Server_Configuration_Guide/4/html/JMS_Examples-A_Point_To_Point_With_MDB_Example.html
+              
+        
+        Jboss is embedded in this project, eclipse will validate all file inside. It will throws error for 
+            dtd: \ejb-jboss422-snippets-ear\server\jboss-4.2.2.GA\dtd
+            xml: \ejb-jboss422-snippets-ear\server\jboss-4.2.2.GA\examples\jmx\logging-monitor-deploy\
+            xsd: \ejb-jboss422-snippets-ear\server\jboss-4.2.2.GA\schema
+            jsp: \ejb-jboss422-snippets-ear\server\jboss-4.2.2.GA\server\all\deploy\jmx-console.war
+            
+            To avoid these error, I disable this feature specically for this project by 
+               -Properties > Validation
+               -Check enable project specific settings 
+               -uncheck the manual and build for: XML Schema Validator
+               -Right-click on the project and select Validate to make the errors disappear
+            referece: http://stackoverflow.com/questions/7489510/disable-xml-validation-in-eclipse
+    
+        Approach1 - all automate (this project uses this)       
+        1. in ${basedir}\ejb21-jboss422-snippets, "mvn clean install" 
+            a) build the projects in this order:
+               ejb21-jboss422-snippets
+               ejb21-jboss422-snippets-ejb
+               ejb21-jboss422-snippets-web
+               ejb21-jboss422-snippets-ear
+               ejb21-jboss422-snippets-client
+            b) build ejb21-jboss422-snippets        into jar    
+            c) build ejb21-jboss422-snippets-web    into war
+            d) build ejb21-jboss422-snippets-ear    into ear with (b) and (c)
+            e) at ejb21-jboss422-snippets-client, start jboss:start, by jboss-maven-plugin, at initialize phase
+            f) #at ejb21-jboss422-snippets-client, sleep 10 seconds to wait for jboss completely launch, by maven-antrun-plugin, at initialize phase (this is replaced by
+                jboss-maven-plugin:start-and-wait)
+            g) at ejb21-jboss422-snippets-client, deploy ear to jboss, by jboss-maven-plugin, at pre-integration-test phase 
+            h) at ejb21-jboss422-snippets-client, run intergration test, for remote client, at integration-test phase 
+            i) at ejb21-jboss422-snippets-client, run intergration test, for local servlet, at integration-test phase  
+            j) at ejb21-jboss422-snippets-client, stop jboss:stop, by jboss-maven-plugin, at post-integration phase
+        2. while jboss is still running, the server can be manually accessed without using integration test by going to 
+            http://localhost:8080/ejb21-jboss422-snippets-web/HelloWorldLocalClientServlet  
+        
+        
+        JNDI
+        1. for JMS,  use "queue/consumingQueue"
+        2. for JDBC, use "jdbc/mysql"
+        3. for EJB,  use "HelloWorldStatefulLocal"
+        
+        
+        Remark:
+        This is re-development + MDB + BMP of j2ee14-jboss422-snippets. Most of codes are the same, but configuration of maven is more clearer
+        
+        
+        refenence:
+        https://developer.jboss.org/wiki/JBossMQ
+        
+     -->
+    
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>ejb21-jboss422-snippets</groupId>
+    <artifactId>ejb21-jboss422-snippets</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    
+    <modules>
+        <module>ejb21-jboss422-snippets-ejb</module>
+        <module>ejb21-jboss422-snippets-web</module>
+        <module>ejb21-jboss422-snippets-ear</module>
+        <module>ejb21-jboss422-snippets-client</module>
+    </modules>
+    
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+</project>

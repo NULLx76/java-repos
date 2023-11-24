@@ -1,0 +1,504 @@
+<?xml version="1.0"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>eu.isas.reporter</groupId>
+    <artifactId>Reporter</artifactId>
+    <packaging>jar</packaging>
+    <version>0.12.0</version>
+    <name>Reporter</name>
+    <url>https://github.com/compomics/reporter</url>
+    <description>Protein quantification based on reporter ions</description>
+
+    <!-- Licence -->
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
+
+    <!-- Developers -->
+    <developers>
+        <developer>
+            <name>Marc Vaudel</name>
+            <id>Marc</id>
+            <email>marc.vaudel AT uib.no</email>
+            <organization>University of Bergen, Norway</organization>
+            <roles>
+                <role>Java Developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>Harald Barsnes</name>
+            <id>harald</id>
+            <email>harald.barsnes AT uib.no</email>
+            <organization>University of Bergen, Norway</organization>
+            <roles>
+                <role>Java Developer</role>
+            </roles>
+        </developer>
+    </developers>
+
+
+    <!-- Build -->
+    <build>
+        <!-- Copy the resources required during building -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>reporter.properties</include>
+                    <include>reporter-splash.svg</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>reporter.properties</exclude>
+                    <exclude>reporter-splash.svg</exclude>
+                </excludes>
+            </resource>
+        </resources>
+
+        
+        <!-- Extensions -->
+        <extensions>
+            <extension>
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-ssh</artifactId>
+                <version>1.0-beta-2</version>
+            </extension>
+        </extensions>
+
+
+        <!-- Plugins -->
+        <plugins>
+ 
+            <!-- SVG to PNG converter plugin -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.2.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <argument>-Dmyproperty=myvalue</argument>
+                    <argument>-classpath</argument>
+                    <!-- automatically creates the classpath using all project dependencies,
+                    also adding the project build directory -->
+                    <classpath/>
+                    <argument>com.compomics.software.SplashScreen</argument>
+                    <mainClass>com.compomics.software.SplashScreen</mainClass>
+                    <arguments>
+                        <argument>${project.build.directory}</argument>
+                        <argument>${project.build.directory}/${project.name}-${project.version}</argument>
+                        <argument>reporter-splash</argument>
+                    </arguments>
+                </configuration>
+            </plugin>
+            
+            <!-- Compiler plugin -->
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.5</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                    <showDeprecation>true</showDeprecation>
+                    <debug>true</debug>
+                </configuration>
+            </plugin>
+
+            <!-- Jar plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.4</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                            <mainClass>eu.isas.reporter.ReporterZipFileChecker</mainClass>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib</classpathPrefix>
+                        </manifest>
+                    </archive>
+                    <outputDirectory>${project.build.directory}/${project.name}-${project.version}
+                    </outputDirectory>
+                </configuration>
+            </plugin>
+            
+
+            <!-- Dependency plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/${project.name}-${project.version}/lib
+                            </outputDirectory>
+                            <overWriteReleases>true</overWriteReleases>
+                            <overWriteSnapshots>true</overWriteSnapshots>
+                            <excludeTransitive>false</excludeTransitive>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Resources plugin -->
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.3</version>
+                <executions>
+                    <!-- Copy main resources to test resources before testing.  -->
+                    <execution>
+                        <id>copy-test-resources</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <overwrite>true</overwrite>
+                            <outputDirectory>src/test/resources</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>src/main/resources</directory>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    
+                    <!-- Copy the resources -->
+                    <execution>
+                        <id>copy-package-resources</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/${project.name}-${project.version}/
+                            </outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>./</directory>
+                                    <includes>
+                                        <include>resources/</include>
+                                        <include>README.txt</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Create javadoc on build -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.9.1</version>
+                <configuration>
+                    <source>1.8</source>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Pack sources on build -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>2.1.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            
+            <!-- Zip the jar file and the dependencies -->
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.4</version>
+                <configuration>
+                    <descriptors>
+                        <descriptor>src/main/assembly/zip.xml</descriptor>
+                    </descriptors>
+                    <appendAssemblyId>false</appendAssemblyId>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <!-- this is used for inheritance merges -->
+                        <phase>package</phase>
+                        <!-- append to the packaging phase. -->
+                        <goals>
+                            <goal>single</goal>
+                            <!-- goals == mojos -->
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
+
+
+    <!-- Repositores -->
+    <repositories>
+
+        <!-- UGent Genesis Maven 2 repository -->
+        <repository>
+            <id>genesis-maven2-repository</id>
+            <name>Genesis maven2 repository</name>
+            <url>https://genesis.ugent.be/archiva/repository/maven2/</url>
+            <layout>default</layout>
+        </repository>
+
+        <!-- EBI internal repository -->
+        <repository>
+            <id>ebi-repo</id> 
+            <name>The EBI internal repository</name>
+            <url>https://www.ebi.ac.uk/~maven/m2repo</url>
+        </repository>
+
+        <!-- EBI repository -->
+        <repository>
+            <id>nexus-ebi-release-repo</id>
+            <name>EBI Nexus Repository</name>
+            <url>https://www.ebi.ac.uk/Tools/maven/repos/content/groups/ebi-repo/</url>
+        </repository>
+        
+        <!-- EBI SNAPSHOT repo -->
+        <repository>
+            <id>nexus-ebi-snapshot-repo</id>
+            <name>EBI Nexus Snapshots Repository</name>
+            <url>https://www.ebi.ac.uk/Tools/maven/repos/content/groups/ebi-snapshots/</url>
+        </repository>
+
+    </repositories>
+
+
+    <!-- Dependencies -->
+    <dependencies>
+        
+        <dependency>
+            <groupId>com.compomics</groupId>
+            <artifactId>utilities</artifactId>
+            <version>5.1.3</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>commons-math</artifactId>
+                    <groupId>commons-math</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>servlet-api</artifactId>
+                    <groupId>javax.servlet</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>swing-layout</artifactId>
+                    <groupId>org.swinglabs</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>batik-all</artifactId>
+                    <groupId>batik</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>pdf-transcoder</artifactId>
+                    <groupId>batik</groupId>
+                </exclusion>
+                <exclusion>
+                    <groupId>no.uib</groupId>
+                    <artifactId>ols-dialog</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.swinglabs</groupId>
+                    <artifactId>swingx</artifactId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>msv</artifactId>
+                    <groupId>msv</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>isorelax</artifactId>
+                    <groupId>msv</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>relaxngDatatype</artifactId>
+                    <groupId>msv</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>xsdlib</artifactId>
+                    <groupId>msv</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>jmzidentml</artifactId>
+                    <groupId>uk.ac.ebi.jmzidml</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>ssj</artifactId>
+                    <groupId>umontreal.iro.lecuyer.gof</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>eu.isas.peptideshaker</groupId>
+            <artifactId>PeptideShaker</artifactId>
+            <version>3.0.1</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>de.proteinms.omxparser</groupId>
+                    <artifactId>omssa-parser</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>de.proteinms.xtandemparser</groupId>
+                    <artifactId>xtandem-parser</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.compomics</groupId>
+                    <artifactId>mascotdatfile</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>uk.ac.ebi.das</groupId>
+                    <artifactId>jdas</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>no.uib</groupId>
+                    <artifactId>ols-dialog</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>niklaas</groupId>
+                    <artifactId>jmol</artifactId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>twitter4j-core</artifactId>
+                    <groupId>org.twitter4j</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>pride-jaxb</artifactId>
+                    <groupId>uk.ac.ebi.pride.jaxb</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>charts4j</artifactId>
+                    <groupId>com.googlecode.charts4j</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>web-service-model</artifactId>
+                    <groupId>uk.ac.ebi.pride.archive</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>xmlSchemaValidator</artifactId>
+                    <groupId>uk.ac.ebi.pride.tools</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        
+        <!-- This project depends on the junit JAR file. -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.2</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>no.uib</groupId>
+            <artifactId>jsparklines</artifactId>
+            <version>1.0.12</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.ogce</groupId>
+            <artifactId>xpp3</artifactId>
+            <version>1.1.6</version>
+            <type>jar</type>
+        </dependency>
+
+        <dependency>
+            <groupId>org.ujmp</groupId>
+            <artifactId>ujmp-complete</artifactId>
+            <version>0.3.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>jfree</groupId>
+            <artifactId>jfreechart</artifactId>
+            <version>1.0.13</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.swinglabs</groupId>
+            <artifactId>swing-layout</artifactId>
+            <version>1.0.3</version>
+        </dependency>
+        
+        <!-- use for adding desktop shortcuts -->
+        <dependency>
+            <groupId>net.jimmc</groupId>
+            <artifactId>jshortcut</artifactId>
+            <version>0.4-oberzalek</version>
+            <type>jar</type>
+        </dependency>
+
+        <!-- use for creating excel files -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi</artifactId>
+            <version>5.0.0</version>
+        </dependency>
+        
+    </dependencies>
+
+
+    <!-- The deployment maven repository-->
+    <distributionManagement>
+        
+        <!-- UGent Genesis archiva repository -->
+        <repository>
+            <id>archiva.compomics_maven_2</id>
+            <name>Internal Release Repository</name>
+            <url>https://genesis.ugent.be/archiva/repository/maven2/</url>
+        </repository>
+         
+        <!-- UGent Genesis archiva snapshot repository -->
+        <snapshotRepository>
+            <id>archiva.snapshots</id>
+            <name>Internal Snapshot Repository</name>
+            <url>http://genesis.ugent.be/archiva/repository/snapshots</url>
+        </snapshotRepository>
+        
+    </distributionManagement>
+
+</project>

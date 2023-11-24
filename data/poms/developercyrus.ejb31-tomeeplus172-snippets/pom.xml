@@ -1,0 +1,181 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>ejb31-tomeeplus172-snippets</groupId>
+    <artifactId>ejb31-tomeeplus172-snippets</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+        
+    <!--  
+        Remark:
+        1. This is a re-development and enhancement of https://github.com/developercyrus/ejb30-tomee-snippets
+         
+         
+        Tomee:
+        0. in "mvn tomee:run", the command prompt will be held out, and cannot be re-used, while in "mvn tomee:start", the command prompt will not be held out, and can be re-used.
+            in this project, "mvn tomee:start" is used in the pre-integration-phase 
+        1. when running "mvn tomee:run" (this project bind phase to pre-integration-test), 
+            tomee-maven-plugin will automatically download to tomee to .m2\repository\org\apache\openejb\apache-tomee\1.7.2\apache-tomee-1.7.2-plus.zip
+            and unzip to "${project.basedir}\ejb31-tomeeplus172-snippets-client\target\apache-tomee"
+        2. the tomee config directory can be set by "<config>${project.basedir}/src/main/tomee/conf</config>". Any file inside this configuration directory will be 
+            copied and override the default in "${project.basedir}\ejb31-tomeeplus172-snippets-client\target\apache-tomee\conf"
+        3. official document didn't mention tomee-maven-plugin allows execution by id with phase, and always thought it didn't support. In fact, it does. 
+            One of example is here:
+                https://rmannibucau.wordpress.com/2013/07/24/tomee-on-openshift-with-maven/
+        5. tomee currently (already said in year 2012, reference: http://tomee-openejb.979440.n4.nabble.com/Remote-JNDI-access-to-JMS-resources-td4656767.html) 
+            DOES NOT support remote access JNDI to JMS resources. a workaround is to 
+            1) add a system properties 
+                "-DResource/javax.jms.ConnectionFactory=connectionfactory:org.apache.activemq.ActiveMQConnectionFactory:tcp://localhost:61616"
+            2) or add programmatically in the client 
+                "System.setProperty("Resource/javax.jms.ConnectionFactory", "connectionfactory:org.apache.activemq.ActiveMQConnectionFactory:tcp://localhost:61616");"            
+        6. The console output is having strange character when calling JMS client to send message, and received by MDB (it's ok to write into a File)
+            caller: ${project.basedir}\ejb31-tomeeplus172-snippets-client\message.driven.bean.jms.producer\Client.java
+            callee: ${project.basedir}\ejb31-tomeeplus172-snippets-ejb\message.driven.bean\Account.java
+           Tried the below methods, but none of them work. It remains OUTSTANDING! It's resolved by dumping the message into a file, and re-output to console
+            a) set JDK logging console properties to UTF-8 by using systemVariables
+                <plugin>
+                    <configuration>
+                        <systemVariables>
+                            <java.util.logging.ConsoleHandler.encoding>UTF-8</java.util.logging.ConsoleHandler.encoding>
+                        </systemVariables>
+                    </configuration>  
+                </plugin>      
+                reference: https://rmannibucau.wordpress.com/2012/10/18/create-a-tomee-accessible-through-ssh-with-tomee-maven-plugin/ 
+            b) set JDK logging console properties to UTF-8 by using system properties
+                <plugin>                
+                    <configuration>                    
+                        <args>-Djava.util.logging.FileHandler.encoding=utf-8</args>                     
+                        <args>-Djava.util.logging.ConsoleHandler.encoding=utf-8</args> 
+                    </configuration>      
+                </plugin>   
+            c) set ActiveMQ encoding 
+                <plugin>                
+                    <configuration>                    
+                         <args>-Dfile.encoding=utf-8</args> 
+                    </configuration>      
+                </plugin>              
+                reference: http://activemq.2283324.n4.nabble.com/Problems-with-UTF-8-encoding-td4658096.html   
+            d) set maven by running
+                    "mvn -DargLine="-Djava.util.logging.ConsoleHandler.encoding=utf-8"
+            e) programmatically encode utf-8 before sending messge by JMS
+                String msg = new String(text.getBytes(), "UTF-8");
+            f) use ObjectMessage (we created a self-defined object StringMessage to store string) instead of TextMessage
+        7.  the ear deployment will be automatically copied to "${project.basedir}\ejb31-tomeeplus172-snippets-client\target\apache-tomee\apps" by setting
+                <plugin>                
+                    <configuration>    
+                        <warFile>${project.basedir}/../ejb31-tomeeplus172-snippets-ear/target/ejb31-tomeeplus172-snippets-ear-0.0.1-SNAPSHOT.ear</warFile>
+                    </configuration>
+                </plugin>                  
+        8.  the mysql driver will be deployed as datasource by setting
+                <plugin>                
+                    <configuration>    
+                        <libs>
+                            <lib>mysql:mysql-connector-java:5.1.9</lib>
+                        </libs>
+                    </configuration>
+                </plugin>     
+        9.  the EJB remote invocation 
+                ejb:<app-name>/<module-name>/<distinct-name>/<bean-name>!<fully-qualified-classname-of-the-remote-interface>                                
+            the <bean-name> can be set by annotation (e.g., @Stateful(name = "stateful.session.bean.Account")), or by default class name               
+                reference: https://docs.jboss.org/author/display/AS71/EJB+invocations+from+a+remote+client+using+JNDI?_sscc=t
+        
+        
+        
+        Tomee Activemq:
+        1.  tomee comes with activemq. integrated, built-in, and ready to use.
+        2.  The built-in activemq setting is in "${project.basedir}\ejb31-tomeeplus172-snippets-client\src\main\tomee\conf\tomee.xml"        
+        
+        
+        
+        EJB3
+        1.  there's no longer required EJB deployment descriptor (to define EJB name, class, bean type, destination type). They are replaced by annotation
+                @Remote
+                @Local
+                @Statless
+                @Statful
+                @MessageDriven 
+                @ActivationConfigProperty (for destinationType)                   
+            The deployment descriptor, ejb-jar.xml, is located in ${project.basedir}\ejb31-tomeeplus172-snippets\ejb31-tomeeplus172-snippets-ejb\src\main\resources\META-INF\ejb-jar.xml
+        2.  there's no longer required WEB deployment descriptor (to define servlet path). They are replaced by annotation
+                @WebServlet 
+            The deployment descriptor, web.xml, is located in ${project.basedir}\ejb31-tomeeplus172-snippets\ejb31-tomeeplus172-snippets-web\src\main\webapp\WEB-INF\web.xml
+        3.  in EJB 2.1 practise, usually stateful session bean comes with local interface, and being called localledy by web module (because in the same VM), while 
+            statless session bean comes with remote interface, and being called remotely.
+            But in EJB 3, it can allow the bean implements both remote and local interface. So there're 4 combination
+                stateful session bean locally called
+                stateful session bean remotely called
+                stateless session bean locally called
+                stateless session bean remotely called
+        4.  MDB by default is statless              
+                     
+                     
+                           
+        Multi module project creation by elipse
+        1. Create a parent project by File > New > Other > Maven > Maven Project
+        2. Click "Create a simple project (skip archetype selection)"
+        3. Select "pom" for Packaging
+        4. Create a child project by File > New > Other > Maven > Maven Module
+        5. Click "Create a simple project (skip archetype selection)"
+        6. Make sure the Parent Project set as "ejb31-tomeeplus172-snippets"             
+        reference: https://www.youtube.com/watch?v=obHce3gvgec    
+        
+        
+        
+        Project creation sequence:
+        1. ejb31-tomeeplus172-snippets
+        2. ejb31-tomeeplus172-snippets-ejb
+        3. ejb31-tomeeplus172-snippets-web
+        4. ejb31-tomeeplus172-snippets-ear
+        5. ejb31-tomeeplus172-snippets-client        
+        
+        
+        Environment:
+        1.  Windows 7 64 bit (assume OS installed in C:\Windows)
+        2.  Eclipse 4.4
+        3.  JDK 8.0        
+        4.  Tomee 1.7.2 (automatically downloaded by tomee-maven-plugin, for backup purposed, there's zip copy located in ${project.basedir}\ejb31-tomeeplus172-snippets-client\server)
+         
+         
+        Approach1 - all automate (this project uses this)       
+        1. in ${basedir}\ejb31-tomeeplus172-snippets, "mvn clean install" 
+            a) build the projects in this order:
+               ejb31-tomeeplus172-snippets
+               ejb31-tomeeplus172-snippets-ejb
+               ejb31-tomeeplus172-snippets-web
+               ejb31-tomeeplus172-snippets-ear
+               ejb31-tomeeplus172-snippets-client
+            b) build ejb31-tomeeplus172-snippets        into jar    
+            c) build ejb31-tomeeplus172-snippets-web    into war
+            d) build ejb31-tomeeplus172-snippets-ear    into ear with (b) and (c)
+            e) at ejb31-tomeeplus172-snippets-client, start tomee:start, by tomee-maven-plugin, at pre-integration-test phase
+                    -it will deploy mysql driver
+                    -it will override tomee.xml
+                    -it will override logging.properties
+                    -it will deploy ear
+            g) at ejb31-tomeeplus172-snippets-client, run intergration test, for jms client, at integration-test phase (it's verified by dumping the message into a file, and re-output it)
+            h) at ejb31-tomeeplus172-snippets-client, run intergration test, for stateful local client servlet, at integration-test phase
+            h) at ejb31-tomeeplus172-snippets-client, run intergration test, for stateful remote client console, at integration-test phase
+            h) at ejb31-tomeeplus172-snippets-client, run intergration test, for stateless local client servlet, at integration-test phase  
+            h) at ejb31-tomeeplus172-snippets-client, run intergration test, for stateless remote client console, at integration-test phase      
+            i) at ejb31-tomeeplus172-snippets-client, stop tomee:stop, by tomee-maven-plugin, at post-integration phase
+        2. while tomee is still running, the server can be manually accessed without using integration test by going to 
+            http://localhost:8080/ejb31-tomeeplus172-snippets/AccountStatefulLocalCallServlet
+            http://localhost:8080/ejb31-tomeeplus172-snippets/AccountStatelessLocalCallServlet
+               
+               
+        Plugin Reference:
+        1.  http://tomee.apache.org/tomee-maven-plugin.html     
+          
+    -->
+    
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+       
+    <modules>
+        <module>ejb31-tomeeplus172-snippets-ejb</module>
+        <module>ejb31-tomeeplus172-snippets-web</module>
+        <module>ejb31-tomeeplus172-snippets-ear</module>
+        <module>ejb31-tomeeplus172-snippets-client</module>
+    </modules>
+    
+</project>

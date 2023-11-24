@@ -1,0 +1,212 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+	<!-- Licensed to the Apache Software Foundation (ASF) under one or more 
+		contributor license agreements. See the NOTICE file distributed with this 
+		work for additional information regarding copyright ownership. The ASF licenses 
+		this file to You under the Apache License, Version 2.0 (the "License"); you 
+		may not use this file except in compliance with the License. You may obtain 
+		a copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless 
+		required by applicable law or agreed to in writing, software distributed 
+		under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES 
+		OR CONDITIONS OF ANY KIND, either express or implied. See the License for 
+		the specific language governing permissions and limitations under the License. -->
+
+	<parent>
+		<groupId>ch.sourcepond.maven.plugins</groupId>
+		<artifactId>maven-plugin</artifactId>
+		<version>0.2.0-SNAPSHOT</version>
+	</parent>
+	<modelVersion>4.0.0</modelVersion>
+	<artifactId>jenkins-maven-plugin</artifactId>
+	<version>1.2.1-SNAPSHOT</version>
+	<packaging>maven-plugin</packaging>
+	<name>Jenkins Maven Plugin</name>
+	<inceptionYear>2015</inceptionYear>
+	<description>
+		The Jenkins Maven Plugin allows to use the Jenkins CLI (command line interface) from within a Maven build. 
+		It allows the execution of any command supported by the CLI, see https://wiki.jenkins-ci.org/display/JENKINS/Jenkins+CLI
+		for further information. Therefore, it downloads the current jenkins-cli.jar from ${project.ciManagement.url}/jnlpJars/jenkins-cli.jar 
+		and uses that artifact for interacting with the Jenkins server. The architecture of the Jenkins Maven Plugin follows the UNIX philosophy
+		"do one thing and do it well": it does not provide any logic for specific tasks, for instance creating job configuration files. 
+		This can be done with another, more appropriate plugin and its result can then be specified as stdin to the Jenkins Maven Plugin.
+	</description>
+
+	<properties>
+		<!-- Plugin versions -->
+		<download-maven-plugin.version>1.2.1</download-maven-plugin.version>
+
+		<!-- Additional dependencies for integration testing -->
+		<jetty-server.version>8.1.17.v20150415</jetty-server.version>
+		<littleproxy.version>1.0.0-beta8</littleproxy.version>
+
+		<!-- Dependency versions -->
+		<zt-exec.version>1.8</zt-exec.version>
+		<httpclient.version>4.5</httpclient.version>
+		<javassist.version>3.20.0-GA</javassist.version>
+
+		<!-- Additional configuration for integration testing -->
+		<jenkins.war.name>jenkins.war</jenkins.war.name>
+		<jenkins.war.url>http://mirrors.jenkins-ci.org/war-stable/latest</jenkins.war.url>
+	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.zeroturnaround</groupId>
+				<artifactId>zt-exec</artifactId>
+				<version>${zt-exec.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.httpcomponents</groupId>
+				<artifactId>httpclient</artifactId>
+				<version>${httpclient.version}</version>
+			</dependency>
+
+			<!-- Testing -->
+			<dependency>
+				<groupId>org.littleshoot</groupId>
+				<artifactId>littleproxy</artifactId>
+				<version>${littleproxy.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.eclipse.jetty</groupId>
+				<artifactId>jetty-server</artifactId>
+				<version>${jetty-server.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.eclipse.jetty</groupId>
+				<artifactId>jetty-webapp</artifactId>
+				<version>${jetty-server.version}</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.zeroturnaround</groupId>
+			<artifactId>zt-exec</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+		</dependency>
+
+		<!-- Testing -->
+		<dependency>
+			<scope>test</scope>
+			<groupId>org.javassist</groupId>
+			<artifactId>javassist</artifactId>
+		</dependency>
+		<dependency>
+			<scope>test</scope>
+			<groupId>org.littleshoot</groupId>
+			<artifactId>littleproxy</artifactId>
+		</dependency>
+		<dependency>
+			<scope>test</scope>
+			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-server</artifactId>
+		</dependency>
+		<dependency>
+			<scope>test</scope>
+			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-webapp</artifactId>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>com.googlecode.maven-download-plugin</groupId>
+					<artifactId>download-maven-plugin</artifactId>
+					<version>${download-maven-plugin.version}</version>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+		<plugins>
+
+			<!-- TODO: Remove this and correct all JavaDoc issues -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<configuration>
+					<additionalparam>-Xdoclint:none</additionalparam>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>com.googlecode.maven-download-plugin</groupId>
+				<artifactId>download-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-plugin-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>org.eclipse.sisu</groupId>
+				<artifactId>sisu-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<dependencies>
+					<dependency>
+						<groupId>org.apache.maven.surefire</groupId>
+						<!-- Use the older JUnit 4 provider -->
+						<artifactId>surefire-junit47</artifactId>
+						<version>${maven-surefire-plugin.version}</version>
+					</dependency>
+				</dependencies>
+				<configuration>
+					<excludes>
+						<exclude>**/*ITCase.java</exclude>
+					</excludes>
+					<includes>
+						<include>**/*Test.java</include>
+					</includes>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+	<profiles>
+		<!-- The Configuration of the integration-test profile -->
+		<profile>
+			<id>integration-test</id>
+			<properties>
+				<skip.integration.tests>false</skip.integration.tests>
+			</properties>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>com.googlecode.maven-download-plugin</groupId>
+						<artifactId>download-maven-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>download-jenkins</id>
+								<phase>pre-integration-test</phase>
+								<goals>
+									<goal>wget</goal>
+								</goals>
+								<configuration>
+									<url>${jenkins.war.url}/${jenkins.war.name}</url>
+									<overwrite>true</overwrite>
+									<outputDirectory>${project.build.directory}</outputDirectory>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
+	<scm>
+		<url>${git.url}</url>
+		<connection>${git.protocol.url}</connection>
+		<developerConnection>${git.protocol.url}</developerConnection>
+		<tag>HEAD</tag>
+	</scm>
+</project>

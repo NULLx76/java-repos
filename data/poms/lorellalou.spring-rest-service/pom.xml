@@ -1,0 +1,183 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>1.2.5.RELEASE</version>
+	</parent>
+
+	<name>spring-rest-service</name>
+
+	<description>
+        A simple Spring Boot webapp to play with.
+    </description>
+
+	<artifactId>spring-rest-service</artifactId>
+
+	<packaging>war</packaging>
+
+	<version>1.0.0-SNAPSHOT</version>
+
+	<url>https://github.com/lrolaz/spring-rest-service</url>
+
+	<properties>
+		<java.version>1.8</java.version>
+		<jersey.version>2.17</jersey.version>
+		<docker.image.prefix>lrolaz</docker.image.prefix>
+	</properties>
+
+	<build>
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>true</filtering>
+			</resource>
+		</resources>
+
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.tomcat.maven</groupId>
+				<artifactId>tomcat7-maven-plugin</artifactId>
+				<version>2.2</version>
+				<configuration>
+					<url>http://localhost:8080/manager/text</url>
+					<server>TomcatServer</server>
+					<path>/service</path>
+					<username>tomcat</username>
+					<password>password</password>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.jolokia</groupId>
+				<artifactId>docker-maven-plugin</artifactId>
+				<version>0.13.4</version>
+				<configuration>
+					<watchInterval>500</watchInterval>
+					<logDate>default</logDate>
+					<verbose>true</verbose>
+					<autoPull>always</autoPull>
+					<images>
+						<!-- Docker Image to use -->
+						<image>
+							<alias>${project.artifactId}</alias>
+							<!-- Artifact Image -->
+							<name>spring-rest/${project.artifactId}:${project.version}</name>
+							<build>
+								<tags>
+									<tag>latest</tag>
+								</tags>
+								<!-- The assembly descriptor prepares the "/maven" directory in the 
+									temporary data container which will be made available to the specified container. 
+									The startup script in the container (jolokia/tomcat-7.0) should check for 
+									files in this directory and use them for deploying them. I.e. this image 
+									has a script 'deploy-and-run.sh' which exactly does this. -->
+								<assembly>
+									<basedir>/data/tomcat/server/webapps/service</basedir>
+									<mode>dir</mode>
+									<descriptor>assembly.xml</descriptor>
+								</assembly>
+							</build>
+						</image>
+					</images>
+				</configuration>
+				<!-- Connect this plugin to the maven lifecycle around the integration-test 
+					phase. I.e. start the container in pre-integration-test and stop it in post-integration-test. -->
+				<executions>
+					<execution>
+						<id>start</id>
+						<phase>pre-integration-test</phase>
+						<goals>
+							<goal>build</goal>
+							<goal>start</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>stop</id>
+						<phase>post-integration-test</phase>
+						<goals>
+							<goal>stop</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+		</plugins>
+
+
+	</build>
+
+	<dependencies>
+
+		<!-- Enable Spring MVC (request mapping) within Spring Boot. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<!-- It is best to set the Tomcat dependencies to provided if an executable 
+			WAR is going to be generated. As -->
+		<!-- apposed to an executable JAR. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-tomcat</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Enable Spring Data (ORM) within Spring Boot. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+
+
+
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+		</dependency>
+
+		<!-- The HSQL in memory database where all the data is persisted. -->
+		<dependency>
+			<groupId>org.hsqldb</groupId>
+			<artifactId>hsqldb</artifactId>
+			<version>2.3.2</version>
+		</dependency>
+
+		<!-- Add all the Spring Boot test utils, this includes the Spring MVC test 
+			harness. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- The Jersey client that will be used to access to the scratch REST 
+			endpoints in the integration tests. -->
+		<dependency>
+			<groupId>org.glassfish.jersey.core</groupId>
+			<artifactId>jersey-client</artifactId>
+			<version>${jersey.version}</version>
+		</dependency>
+		<!-- This dependency enables automatic JSON serialisation and deserialisation 
+			in the Jersey client. -->
+		<dependency>
+			<groupId>org.glassfish.jersey.media</groupId>
+			<artifactId>jersey-media-json-jackson</artifactId>
+			<version>${jersey.version}</version>
+		</dependency>
+
+		<!-- Database setup utility for importing and clearing test data. -->
+		<dependency>
+			<groupId>org.dbunit</groupId>
+			<artifactId>dbunit</artifactId>
+			<version>2.4.9</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+</project>

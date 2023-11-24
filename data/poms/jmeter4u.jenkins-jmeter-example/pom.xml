@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>de.codecentric.jmeter</groupId>
+    <artifactId>jmeter-maven-example</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <name>JMeter Maven Example</name>
+    <description>
+        Example how to integrate jmeter tests in a maven build and how to automatically 
+        generate graphs from the test results using the jmeter plugins CMDRunner. 
+    </description>
+
+    <properties>
+        <jetty.port>9097</jetty.port>
+        <jetty.stopPort>19097</jetty.stopPort>
+        <performancetest.webservice.host>localhost</performancetest.webservice.host>
+        <performancetest.webservice.port>${jetty.port}</performancetest.webservice.port>
+        <performancetest.webservice.path>/</performancetest.webservice.path>
+        <performancetest.connectTimeout>1000</performancetest.connectTimeout>
+        <performancetest.responseTimeout>3000</performancetest.responseTimeout>
+        <performancetest.threadCount>20</performancetest.threadCount>
+        <performancetest.loopCount>10</performancetest.loopCount>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
+            <version>2.5</version>
+        </dependency>
+    </dependencies>
+
+    <profiles>
+        <profile>
+            <id>jenkins</id>
+            <properties>
+                <performancetest.webservice.host>tomcat7-example-webapp.mlex.cloudbees.net</performancetest.webservice.host>
+                <performancetest.webservice.port>80</performancetest.webservice.port>
+                <performancetest.threadCount>5</performancetest.threadCount>
+                <performancetest.loopCount>5</performancetest.loopCount>
+            </properties>
+        </profile>
+        <profile>
+            <id>embedded-jetty</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.mortbay.jetty</groupId>
+                        <artifactId>jetty-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>start-jetty</id>
+                                <goals>
+                                    <goal>start</goal>
+                                </goals>
+                                <phase>pre-integration-test</phase>
+                                <configuration>
+                                    <daemon>true</daemon>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>stop-jetty</id>
+                                <goals>
+                                    <goal>stop</goal>
+                                </goals>
+                                <phase>post-integration-test</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>com.lazerycode.jmeter</groupId>
+                <artifactId>jmeter-maven-plugin</artifactId>
+                <version>1.9.0</version>
+                <configuration>
+                    <testResultsTimestamp>false</testResultsTimestamp>
+                    <overrideRootLogLevel>DEBUG</overrideRootLogLevel>
+                    <suppressJMeterOutput>false</suppressJMeterOutput>
+                    <ignoreResultFailures>true</ignoreResultFailures>
+                    <propertiesUser>
+                        <webservice.host>${performancetest.webservice.host}</webservice.host>
+                        <webservice.port>${performancetest.webservice.port}</webservice.port>
+                        <webservice.path>${performancetest.webservice.path}</webservice.path>
+                        <webservice.connectTimeout>${performancetest.connectTimeout}</webservice.connectTimeout>
+                        <webservice.responseTimeout>${performancetest.responseTimeout}</webservice.responseTimeout>
+                        <threadCount>${performancetest.threadCount}</threadCount>
+                        <loopCount>${performancetest.threadCount}</loopCount>
+                    </propertiesUser>
+                    <propertiesJMeter>
+                        <jmeter.save.saveservice.thread_counts>true</jmeter.save.saveservice.thread_counts>
+                    </propertiesJMeter>
+                    <jmeterPlugins>
+                        <plugin>
+                            <groupId>kg.apc</groupId>
+                            <artifactId>jmeter-plugins</artifactId>
+                        </plugin>
+                    </jmeterPlugins>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>execute-jmeter-tests</id>
+                        <goals>
+                            <goal>jmeter</goal>
+                        </goals>
+                        <phase>integration-test</phase>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>kg.apc</groupId>
+                        <artifactId>jmeter-plugins</artifactId>
+                        <version>1.0.0</version>
+                        <exclusions>
+                            <!--
+                                Unfortunately some transitive dependencies cannot be found on mvncentral
+                                and we have to explicitly exclude them.
+                                For a complete list, see https://github.com/mlex/jmeter-maven-example/
+                            -->
+                            <exclusion>
+                                <groupId>kg.apc</groupId>
+                                <artifactId>perfmon</artifactId>
+                            </exclusion>
+                            <exclusion>
+                                <groupId>org.apache.hadoop</groupId>
+                                <artifactId>hadoop-core</artifactId>
+                            </exclusion>
+                            <exclusion>
+                                <groupId>org.apache.hbase</groupId>
+                                <artifactId>hbase</artifactId>
+                            </exclusion>
+                            
+                            <!--
+                                These dependencies would override direct JMeter dependencies,
+                                which results in version conflicts (e.g. NoSuchMethodError on jmeter startup
+                            -->
+                            <exclusion>
+                                <groupId>org.apache.jmeter</groupId>
+                                <artifactId>jorphan</artifactId>
+                            </exclusion>
+                            <exclusion>
+                                <groupId>org.apache.bsf</groupId>
+                                <artifactId>bsf-api</artifactId>
+                            </exclusion>
+                            <exclusion>
+                                <groupId>org.bouncycastle</groupId>
+                                <artifactId>bcmail-jdk15</artifactId>
+                            </exclusion>
+                            <exclusion>
+                                <groupId>org.bouncycastle</groupId>
+                                <artifactId>bcprov-jdk15</artifactId>
+                            </exclusion>
+                            <exclusion>
+                                <groupId>javax.activation</groupId>
+                                <artifactId>activation</artifactId>
+                            </exclusion>
+                            <exclusion>
+                                <groupId>commons-logging</groupId>
+                                <artifactId>commons-logging</artifactId>
+                            </exclusion>
+                        </exclusions>
+                    </dependency>
+                </dependencies>
+            </plugin>
+
+            <plugin>
+                <groupId>com.lazerycode.jmeter</groupId>
+                <artifactId>jmeter-analysis-maven-plugin</artifactId>
+                <version>1.0.4</version>
+                <configuration>
+                    <source>${project.build.directory}/jmeter/results/SimpleWebservicePerformanceTest.jtl</source>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>create-html-report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>analyze</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <!-- To start an embedded jetty with a simple webapp for demonstration purposes -->
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty-maven-plugin</artifactId>
+                <version>8.1.14.v20131031</version>
+                <configuration>
+                    <connectors>
+                        <connector implementation="org.eclipse.jetty.server.nio.SelectChannelConnector">
+                            <port>${jetty.port}</port>
+                        </connector>
+                    </connectors>
+                    <stopPort>${jetty.stopPort}</stopPort>
+                    <stopKey>STOP</stopKey>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>de.codecentric</groupId>
+                <artifactId>jmeter-graph-maven-plugin</artifactId>
+                <version>0.1.0</version>
+                <executions>
+                    <execution>
+                        <id>create-graph-threads</id>
+                        <goals>
+                            <goal>create-graph</goal>
+                        </goals>
+                        <phase>verify</phase>
+                    </execution>
+                </executions>
+                <configuration>
+                    <inputFile>${project.build.directory}/jmeter/results/SimpleWebservicePerformanceTest.jtl</inputFile>
+                    <graphs>
+                        <graph>
+                            <pluginType>ThreadsStateOverTime</pluginType>
+                            <width>800</width>
+                            <height>600</height>
+                            <outputFile>${project.build.directory}/jmeter/results/SimpleWebservicePerformanceTest-ThreadsStateOverTime.png</outputFile>
+                        </graph>
+                        <graph>
+                            <pluginType>ResponseTimesOverTime</pluginType>
+                            <width>800</width>
+                            <height>600</height>
+                            <outputFile>${project.build.directory}/jmeter/results/SimpleWebservicePerformanceTest-ResponseTimesOverTime.png</outputFile>
+                        </graph>
+                        <graph>
+                            <pluginType>TransactionsPerSecond</pluginType>
+                            <width>800</width>
+                            <height>600</height>
+                            <outputFile>${project.build.directory}/jmeter/results/SimpleWebservicePerformanceTest-TransactionsPerSecond.png</outputFile>
+                        </graph>
+                   </graphs>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

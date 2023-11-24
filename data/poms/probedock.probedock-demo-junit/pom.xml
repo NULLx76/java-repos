@@ -1,0 +1,231 @@
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+				 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+				 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>io.probedock.demo</groupId>
+	<artifactId>probedock-demo-junit</artifactId>
+	<version>0.2.1</version>
+	<packaging>jar</packaging>
+
+	<name>Probe Dock Demo Junit integration</name>
+	<description>Demonstration of an integration of Junit with Probe Dock.</description>
+
+	<url>https://github.com/probedock/probedock-demo-junit</url>
+
+	<licenses>
+		<license>
+			<name>MIT License</name>
+			<url>http://www.opensource.org/licenses/mit-license.php</url>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<name>Laurent Prevost</name>
+			<email>laurent.prevost@probedock.io</email>
+			<organization>https://github.com/probedock</organization>
+		</developer>
+	</developers>
+
+	<scm>
+		<connection>scm:git:git@github.com:probedock/probedock-demo-junit.git</connection>
+		<developerConnection>scm:git:git@github.com:probedock/probedock-demo-junit.git</developerConnection>
+		<url>git@github.com:probedock/probedock-demo-junit.git</url>
+	</scm>
+
+	<distributionManagement>
+		<snapshotRepository>
+			<id>ossrh</id>
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+		</snapshotRepository>
+		<repository>
+			<id>ossrh</id>
+			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+		</repository>
+	</distributionManagement>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.sonatype.plugins</groupId>
+				<artifactId>nexus-staging-maven-plugin</artifactId>
+				<version>1.6.5</version>
+				<extensions>true</extensions>
+				<configuration>
+					<serverId>ossrhProbeDock</serverId>
+					<nexusUrl>https://oss.sonatype.org/</nexusUrl>
+					<autoReleaseAfterClose>true</autoReleaseAfterClose>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-clean-plugin</artifactId>
+				<version>2.6.1</version>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>2.7</version>
+				<configuration>
+					<encoding>${project.build.sourceEncoding}</encoding>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.2</version>
+				<configuration>
+					<encoding>${project.build.sourceEncoding}</encoding>
+					<source>1.7</source>
+					<target>1.7</target>
+					<compilerArgs>
+						<arg>-Xlint</arg>
+					</compilerArgs>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>2.4</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar-no-fork</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>2.10.1</version>
+				<configuration>
+					<encoding>${project.build.sourceEncoding}</encoding>
+				</configuration>
+				<executions>
+					<execution>
+						<id>attach-javadocs</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-gpg-plugin</artifactId>
+				<version>1.6</version>
+				<executions>
+					<execution>
+						<id>sign-artifacts</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>sign</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.18.1</version>
+				<configuration>
+					<properties>
+						<!-- Configure the Probe Dock and Probe Dock RT listeners. The Probe Dock listener will collects
+							 the test results and send them to Probe Dock. In this demo, the Git data are also sent to
+							 Probe Dock. -->
+						<property>
+							<name>listener</name>
+							<value>io.probedock.client.junit.ProbeListener,io.probedock.rt.client.junit.ProbeRTListener</value>
+						</property>
+					</properties>
+					<environmentVariables>
+						<!-- Tell the probe to use a specific configuration that contains the SCM data. This configuration
+							 is produced by the the shell script done in the maven-exec plugin -->
+						<PROBEDOCK_CONFIG>${basedir}/target/test-classes/probedock-scm.yml</PROBEDOCK_CONFIG>
+					</environmentVariables>
+				</configuration>
+			</plugin>
+
+			<!-- The maven exec plugin is used to run the script ./probedock-git.sh that retrieves Git data to
+				 send with the test results. -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.4.0</version>
+				<executions>
+					<execution>
+						<!-- The script must be run before the test are run but after the test resources are filtered
+							 by maven. In the probedock.yml, it is recommended to use version: ${project.version} and
+							 then, it is required that the filter is already processed by maven before using this
+							 configuration file as the base configuration file to add the Git data. -->
+						<phase>test-compile</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<executable>probedock-git.sh</executable>
+							<!-- Create a new configuration file based on the filtered one -->
+							<outputFile>${basedir}/target/test-classes/probedock-scm.yml</outputFile>
+							<arguments>
+								<!-- Allows the GIT script to use the probedock.yml already filtered by Maven -->
+								<argument>${basedir}/target/test-classes/probedock.yml</argument>
+							</arguments>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-deploy-plugin</artifactId>
+				<version>2.8.2</version>
+			</plugin>
+		</plugins>
+
+		<testResources>
+			<testResource>
+				<directory>src/test/resources</directory>
+				<filtering>true</filtering>
+			</testResource>
+		</testResources>
+	</build>
+
+	<dependencies>
+		<!-- Both Probe Dock probes dependencies are required to in the test scope dependencies as annotations and
+			 rules are used to enriched the test data. -->
+		<dependency>
+			<groupId>io.probedock.client</groupId>
+			<artifactId>probedock-junit</artifactId>
+			<version>0.5.1</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.probedock.rt.client</groupId>
+			<artifactId>probedock-rt-junit</artifactId>
+			<version>0.4.3</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+</project>

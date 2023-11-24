@@ -1,0 +1,238 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>org.thelq</groupId>
+	<artifactId>pircbotx</artifactId>
+	<version>1.0-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>TheLQ-Pircbotx</name>
+	<url>https://code.google.com/p/lq-projects/</url>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+	
+	<prerequisites>
+		<maven>3.0</maven>
+	</prerequisites>
+
+	<build>
+		<plugins>
+			<!--Makes sure License Headers are consistant across all files-->
+			<plugin>
+				<groupId>com.mycila.maven-license-plugin</groupId>
+				<artifactId>maven-license-plugin</artifactId>
+				<version>1.10.b1</version>
+				<configuration>
+					<header>src/etc/license-header.txt</header>
+					<properties>
+						<email>lord.quackstar at gmail.com</email>
+						<name>Leon Blakey</name>
+						<year>2011</year>
+						<projectname>TheLQ-PircBotX</projectname>
+					</properties>
+					<excludes>
+						<exclude>**/*.txt</exclude>
+						<exclude>**/*.log</exclude>
+						<exclude>**/nbactions.xml</exclude>
+						<exclude>.hg*</exclude>
+					</excludes>
+					<strictCheck>true</strictCheck>
+					<aggregate>true</aggregate>
+				</configuration>
+				<executions>
+					<execution>
+						<phase>process-sources</phase>
+						<goals>
+							<goal>format</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- Lombok uses 1.6 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.1</version>
+				<configuration>
+					<showWarnings>true</showWarnings>
+					<showDeprecation>true</showDeprecation>
+					<source>8</source>
+					<target>8</target>
+					<compilerArgs>
+						<arg>-Xlint:unchecked</arg>
+						<arg>-Xlint:deprecation</arg>
+					</compilerArgs>
+				</configuration>
+			</plugin>
+			<!-- Make a final single jar -->
+			<plugin>              
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>2.2</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<transformers>
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+									<manifestEntries>
+										<Main-Class>org.thelq.pircbotx.Main</Main-Class>
+										<Class-Path>.</Class-Path>
+									</manifestEntries>									
+								</transformer>
+							</transformers>
+							<filters>
+								<!-- Exclude BeanUtils's commons-collections classes which cause conflicts -->
+								<filter>
+									<artifact>commons-beanutils:commons-beanutils</artifact>
+									<excludes>
+										<exclude>org/apache/commons/collections/**</exclude>
+									</excludes>
+								</filter>
+								<!-- Remove Signature files that cause 
+								java.lang.SecurityException: Invalid signature file digest for Manifest main attributes -->
+								<filter>
+									<artifact>*:*</artifact>
+									<excludes>
+										<exclude>META-INF/*.SF</exclude>
+										<exclude>META-INF/*.DSA</exclude>
+										<exclude>META-INF/*.RSA</exclude>
+									</excludes>
+								</filter>
+							</filters>
+							<finalName>${project.artifactId}-standalone</finalName>
+							<shadedArtifactAttached>true</shadedArtifactAttached>
+							<shadedClassifierName>standalone</shadedClassifierName>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+	<dependencies>
+		<!-- 
+			Core libraries
+		-->
+		<!-- Our IRC Library -->
+		<dependency>
+			<groupId>org.pircbotx</groupId>
+			<artifactId>pircbotx</artifactId>
+			<version>2.1-SNAPSHOT</version>
+		</dependency>
+		<!-- Magic Annotiation Processor -->
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>1.14.8</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- Joda time library for date commands -->
+		<dependency>
+			<groupId>joda-time</groupId>
+			<artifactId>joda-time</artifactId>
+			<version>2.5</version>
+		</dependency>
+		<!-- Logback for logging to console -->
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>1.1.2</version>
+		</dependency>
+		<dependency>
+			<groupId>com.moandjiezana.toml</groupId>
+			<artifactId>toml4j</artifactId>
+			<version>0.2.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.code.findbugs</groupId>
+			<artifactId>jsr305</artifactId>
+			<version>3.0.0</version>
+			<scope>provided</scope>
+		</dependency>
+		
+		<!--
+			Web Server
+		-->
+		<!-- Jetty -->
+		<dependency>
+			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-servlet</artifactId>
+			<version>9.3.0.M1</version>
+		</dependency>
+		<!-- Velocity page templates and tools -->
+		<dependency>
+			<groupId>org.apache.velocity</groupId>
+			<artifactId>velocity-tools</artifactId>
+			<version>2.0</version>
+			<exclusions>
+				<exclusion>
+					<artifactId>commons-logging</artifactId>
+					<groupId>commons-logging</groupId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<!-- Redirect commons log to slf4j -->
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>jcl-over-slf4j</artifactId>
+			<version>1.7.7</version>
+		</dependency>
+		
+		<!--
+			Testing
+		-->
+		<!-- Test framework -->
+		<dependency>
+			<groupId>org.testng</groupId>
+			<artifactId>testng</artifactId>
+			<version>6.8.8</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<profiles>
+		<!--Lombok tools.jar config-->
+		<profile>
+			<id>lombok-needs-tools-jar</id>
+			<activation>
+				<file>
+					<exists>${java.home}/../lib/tools.jar</exists>
+				</file>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.projectlombok</groupId>
+						<artifactId>lombok-maven-plugin</artifactId>
+						<version>0.12.0.0</version>
+						<dependencies>
+							<dependency>
+								<groupId>sun.jdk</groupId>
+								<artifactId>tools</artifactId>
+								<version>1.6</version>
+								<scope>system</scope>
+								<systemPath>${java.home}/../lib/tools.jar</systemPath>
+							</dependency>
+						</dependencies>        
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
+	<repositories>
+		<repository>
+			<id>sonatype-nexus-snapshots</id>
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
+	</repositories>
+</project>

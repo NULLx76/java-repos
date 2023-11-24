@@ -1,0 +1,693 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- ********************************************** -->
+    <!-- ****************** BASE POM ****************** -->
+    <!-- ********************************************** -->
+
+    <parent>
+        <groupId>com.wandrell.maven</groupId>
+        <artifactId>base-pom</artifactId>
+        <version>0.1.0</version>
+    </parent>
+
+    <!-- ********************************************** -->
+    <!-- **************** PROJECT INFO **************** -->
+    <!-- ********************************************** -->
+
+    <groupId>com.wandrell.tabletop.dreadball</groupId>
+    <artifactId>dreadball-toolkit-ws</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>war</packaging>
+
+    <name>Dreadball Toolkit Web Service</name>
+    <description>A JSON web service for Dreadball, capable of handling team creation and data querying.</description>
+    <url>https://github.com/Bernardo-MG/dreadball-toolkit-ws</url>
+    <inceptionYear>2015</inceptionYear>
+
+    <licenses>
+        <license>
+            <name>Apache v2 License</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <!-- ********************************************** -->
+    <!-- ********* INFRASTRUCTURE AND SERVICES ******** -->
+    <!-- ********************************************** -->
+
+    <scm>
+        <connection>scm:git:https://github.com/Bernardo-MG/dreadball-toolkit-ws.git</connection>
+        <developerConnection>scm:git:https://github.com/Bernardo-MG/dreadball-toolkit-ws.git</developerConnection>
+        <tag>head</tag>
+        <url>https://www.github.com/Bernardo-MG/dreadball-toolkit-ws</url>
+    </scm>
+
+    <issueManagement>
+        <system>GitHub</system>
+        <url>https://github.com/Bernardo-MG/dreadball-toolkit-ws/issues</url>
+    </issueManagement>
+
+    <ciManagement>
+        <system>Travis CI</system>
+        <url>https://travis-ci.org/Bernardo-MG/dreadball-toolkit-ws</url>
+        <notifiers />
+    </ciManagement>
+
+    <distributionManagement>
+        <repository>
+            <uniqueVersion>false</uniqueVersion>
+            <id>releases</id>
+            <name>Releases Repository</name>
+            <url>https://api.bintray.com/maven/Bernardo-MG/maven/dreadball-toolkit-ws</url>
+        </repository>
+        <snapshotRepository>
+            <uniqueVersion>false</uniqueVersion>
+            <id>snapshots</id>
+            <name>Snapshots Repository</name>
+            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+    <!-- ********************************************** -->
+    <!-- ****************** PROFILES ****************** -->
+    <!-- ********************************************** -->
+
+    <profiles>
+        <profile>
+            <!-- Profile for the Eclipse Maven plugin -->
+            <!-- Sets the POM so this plugin does not give the usual unregistered 
+                goals errors -->
+            <!-- It will be activated automatically on Eclipse if this has the m2e 
+                plugin, by detecting the version property -->
+            <id>eclipse-maven</id>
+            <activation>
+                <property>
+                    <name>m2e.version</name>
+                </property>
+            </activation>
+            <build>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <!-- m2e lifecycle mapping -->
+                            <!-- This is used to configure the Maven plugin for Eclipse. -->
+                            <!-- Among other things, it allows registering goals, 
+                                which Eclipse would otherwise reject. -->
+                            <!-- It has no real effect on Maven. -->
+                            <groupId>org.eclipse.m2e</groupId>
+                            <artifactId>lifecycle-mapping</artifactId>
+                            <version>${plugin.lifecycle.version}</version>
+                            <configuration>
+                                <lifecycleMappingMetadata>
+                                    <pluginExecutions>
+                                        <pluginExecution>
+                                            <!-- jacoco plugin configuration -->
+                                            <!-- Fixes the errors with Eclipse not 
+                                                recognizing the plugin configuration -->
+                                            <pluginExecutionFilter>
+                                                <groupId>org.jacoco</groupId>
+                                                <artifactId>jacoco-maven-plugin</artifactId>
+                                                <versionRange>[0.5,)</versionRange>
+                                                <goals>
+                                                    <!-- The 'prepare-agent' goal 
+                                                        is registered to m2e. -->
+                                                    <goal>prepare-agent</goal>
+                                                </goals>
+                                            </pluginExecutionFilter>
+                                            <action>
+                                                <!-- As m2e doesn't know what to 
+                                                    do with jacoco, it is ignored to avoid error warnings. -->
+                                                <ignore />
+                                            </action>
+                                        </pluginExecution>
+                                    </pluginExecutions>
+                                </lifecycleMappingMetadata>
+                                <downloadSources>true</downloadSources>
+                                <downloadJavadocs>true</downloadJavadocs>
+                            </configuration>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
+            </build>
+        </profile>
+        <profile>
+            <!-- H2 database profile -->
+            <!-- Prepares the project to make use of an H2 in-memory database -->
+            <id>h2</id>
+            <properties>
+                <!-- Dependencies versions -->
+                <h2.version>1.4.190</h2.version>
+                <!-- Access data -->
+                <database.url>jdbc:h2:mem:dreadball_toolkit</database.url>
+                <database.username>sa</database.username>
+                <database.password></database.password>
+                <!-- Spring context -->
+                <spring.profile.database>h2</spring.profile.database>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <!-- H2 connector -->
+                    <groupId>com.h2database</groupId>
+                    <artifactId>h2</artifactId>
+                    <version>${h2.version}</version>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <!-- MySQL database profile -->
+            <!-- Prepares the project to make use of an H2 in-memory database -->
+            <id>mysql</id>
+            <properties>
+                <!-- Dependencies versions -->
+                <mysql.version>5.1.38</mysql.version>
+                <!-- Access data -->
+                <database.url>jdbc:mysql://localhost:3306/dreadball_toolkit</database.url>
+                <database.username>root</database.username>
+                <database.password></database.password>
+                <!-- Spring context -->
+                <spring.profile.database>mysql</spring.profile.database>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <!-- MySQL connector -->
+                    <groupId>mysql</groupId>
+                    <artifactId>mysql-connector-java</artifactId>
+                    <version>${mysql.version}</version>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <!-- Release site deployment profile -->
+            <!-- Sets the site repository to point to the releases repo -->
+            <id>deploy-site-release</id>
+            <activation>
+                <!-- Active by default so the repository appears in the reports -->
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <distributionManagement>
+                <site>
+                    <id>site</id>
+                    <name>Project Documentation Site</name>
+                    <url>ftp://docs.wandrell.com/dreadball-toolkit-ws</url>
+                </site>
+            </distributionManagement>
+        </profile>
+        <profile>
+            <!-- Development site deployment profile -->
+            <!-- Sets the site repository to point to the development repo -->
+            <id>deploy-site-development</id>
+            <distributionManagement>
+                <site>
+                    <id>site-development</id>
+                    <name>Project Development Documentation Site</name>
+                    <url>ftp://docs.wandrell.com/dreadball-toolkit-ws</url>
+                </site>
+            </distributionManagement>
+        </profile>
+        <profile>
+            <!-- Deployment profile -->
+            <!-- Sets ups the environment for deployment -->
+            <id>deployment</id>
+            <properties>
+                <!-- Tests are skipped -->
+                <maven.test.skip>true</maven.test.skip>
+            </properties>
+        </profile>
+    </profiles>
+
+    <!-- ********************************************** -->
+    <!-- *********** ORGANIZATION AND MEMBERS ********* -->
+    <!-- ********************************************** -->
+
+    <organization>
+        <name>Bernardo Martínez Garrido</name>
+        <url>https://github.com/Bernardo-MG</url>
+    </organization>
+
+    <developers>
+        <developer>
+            <id>bmg</id>
+            <name>Bernardo Martínez Garrido</name>
+            <email>programming@wandrell.com</email>
+            <url>https://github.com/Bernardo-MG</url>
+            <organization>Bernardo Martínez Garrido</organization>
+            <organizationUrl>https://github.com/Bernardo-MG</organizationUrl>
+            <roles>
+                <role>Developer</role>
+            </roles>
+            <timezone>+1</timezone>
+            <properties />
+        </developer>
+    </developers>
+
+    <!-- ********************************************** -->
+    <!-- **************** PROPERTIES ****************** -->
+    <!-- ********************************************** -->
+
+    <properties>
+        <!-- Manifest data -->
+        <manifest.name>com/wandrell/tabletop/dreadball/ws/toolkit</manifest.name>
+        <!-- Dependencies versions -->
+        <gson.version>2.4</gson.version>
+        <guava.version>18.0</guava.version>
+        <hibernate.version>4.3.11.Final</hibernate.version>
+        <hikari.version>2.3.11</hikari.version>
+        <httpclient.version>4.5.1</httpclient.version>
+        <jackson.version>2.6.3</jackson.version>
+        <jersey.version>2.22.1</jersey.version>
+        <jsoup.version>1.8.3</jsoup.version>
+        <log4j.version>2.4.1</log4j.version>
+        <mockito.version>1.10.19</mockito.version>
+        <slf4j.version>1.7.12</slf4j.version>
+        <spring.version>4.2.2.RELEASE</spring.version>
+        <tabletop.dreadball.model.default.version>0.2.0</tabletop.dreadball.model.default.version>
+        <tabletop.dreadball.model.json.version>0.2.1</tabletop.dreadball.model.json.version>
+        <tabletop.dreadball.model.persistence.version>0.2.1</tabletop.dreadball.model.persistence.version>
+        <testng.version>6.9.8</testng.version>
+        <wandrell.persistence.version>0.1.7</wandrell.persistence.version>
+        <!-- Plugins versions -->
+        <plugin.changes.version>2.11</plugin.changes.version>
+        <plugin.jetty.version>9.3.6.v20151106</plugin.jetty.version>
+        <plugin.site.velocity.version>1.7</plugin.site.velocity.version>
+        <plugin.war.version>2.6</plugin.war.version>
+        <!-- Extensions versions -->
+        <extension.wagon.version>2.9</extension.wagon.version>
+        <!-- Maven Site -->
+        <site.skin.version>0.2.4</site.skin.version>
+        <!-- Test server -->
+        <server.test.path>/${project.artifactId}</server.test.path>
+    </properties>
+
+    <!-- ********************************************** -->
+    <!-- *************** DEPENDENCIES ***************** -->
+    <!-- ********************************************** -->
+
+    <dependencies>
+        <!-- ============================================== -->
+        <!-- ================= DREADBALL ================== -->
+        <!-- ============================================== -->
+        <dependency>
+            <!-- Dreadball Default Model -->
+            <groupId>com.wandrell.tabletop.dreadball</groupId>
+            <artifactId>dreadball-model-default</artifactId>
+            <version>${tabletop.dreadball.model.default.version}</version>
+        </dependency>
+        <dependency>
+            <!-- Dreadball JSON Model -->
+            <groupId>com.wandrell.tabletop.dreadball</groupId>
+            <artifactId>dreadball-model-json</artifactId>
+            <version>${tabletop.dreadball.model.json.version}</version>
+        </dependency>
+        <dependency>
+            <!-- Dreadball Persistence Model -->
+            <groupId>com.wandrell.tabletop.dreadball</groupId>
+            <artifactId>dreadball-model-persistence</artifactId>
+            <version>${tabletop.dreadball.model.persistence.version}</version>
+        </dependency>
+        <!-- ============================================== -->
+        <!-- ================== SPRING ==================== -->
+        <!-- ============================================== -->
+        <dependency>
+            <!-- Spring beans -->
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-beans</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+        <dependency>
+            <!-- Spring core -->
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-core</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+        <dependency>
+            <!-- Spring context -->
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+        <dependency>
+            <!-- Spring Web -->
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+        <dependency>
+            <!-- Spring JDBC -->
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-jdbc</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+        <dependency>
+            <!-- Spring transactions -->
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+        <dependency>
+            <!-- Spring ORM -->
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-orm</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+        <!-- ============================================== -->
+        <!-- ================= HIBERNATE ================== -->
+        <!-- ============================================== -->
+        <dependency>
+            <!-- Hibernate Ehcache -->
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-ehcache</artifactId>
+            <version>${hibernate.version}</version>
+        </dependency>
+        <dependency>
+            <!-- Hibernate Entity Manager -->
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-entitymanager</artifactId>
+            <version>${hibernate.version}</version>
+        </dependency>
+        <dependency>
+            <!-- Hikari CP -->
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP-java6</artifactId>
+            <version>${hikari.version}</version>
+        </dependency>
+        <!-- ============================================== -->
+        <!-- ================== JERSEY ==================== -->
+        <!-- ============================================== -->
+        <dependency>
+            <!-- Jersey Spring integration module -->
+            <groupId>org.glassfish.jersey.ext</groupId>
+            <artifactId>jersey-spring3</artifactId>
+            <version>${jersey.version}</version>
+        </dependency>
+        <dependency>
+            <!-- Jersey JSON Jackson module -->
+            <groupId>org.glassfish.jersey.media</groupId>
+            <artifactId>jersey-media-json-jackson</artifactId>
+            <version>${jersey.version}</version>
+        </dependency>
+        <dependency>
+            <!-- Jersey Entity Data Filtering module -->
+            <groupId>org.glassfish.jersey.ext</groupId>
+            <artifactId>jersey-entity-filtering</artifactId>
+            <version>${jersey.version}</version>
+        </dependency>
+        <dependency>
+            <!-- Jersey MVC Freemarker -->
+            <groupId>org.glassfish.jersey.ext</groupId>
+            <artifactId>jersey-mvc-freemarker</artifactId>
+            <version>${jersey.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>javax.servlet</groupId>
+                    <artifactId>servlet-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <!-- Jersey MVC Bean Validation -->
+            <groupId>org.glassfish.jersey.ext</groupId>
+            <artifactId>jersey-mvc-bean-validation</artifactId>
+            <version>${jersey.version}</version>
+        </dependency>
+        <!-- ============================================== -->
+        <!-- =================== OTHER ==================== -->
+        <!-- ============================================== -->
+        <dependency>
+            <!-- Guava -->
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava.version}</version>
+        </dependency>
+        <dependency>
+            <!-- Jackson Databind -->
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <!-- Java Persistence Utils -->
+            <groupId>com.wandrell</groupId>
+            <artifactId>persistence-utils</artifactId>
+            <version>${wandrell.persistence.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>javax</groupId>
+                    <artifactId>javaee-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- ============================================== -->
+        <!-- ================== LOGGING =================== -->
+        <!-- ============================================== -->
+        <dependency>
+            <!-- Log4j core -->
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>${log4j.version}</version>
+        </dependency>
+        <dependency>
+            <!-- Log4j Commons Logging Bridge -->
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-jcl</artifactId>
+            <version>${log4j.version}</version>
+        </dependency>
+        <dependency>
+            <!-- Log4j SLF4J Bridge -->
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+            <version>${log4j.version}</version>
+        </dependency>
+        <dependency>
+            <!-- SL4J API -->
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <!-- ============================================== -->
+        <!-- ======= TEST ENVIRONMENT DEPENDENCIES ======== -->
+        <!-- ============================================== -->
+        <dependency>
+            <!-- GSON -->
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>${gson.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- HTTPClient -->
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>${httpclient.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- JSoup -->
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>${jsoup.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- Mockito -->
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- TestNG -->
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>${testng.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <!-- ********************************************** -->
+    <!-- ******************* BUILD ******************** -->
+    <!-- ********************************************** -->
+
+    <build>
+        <defaultGoal>clean package jetty:run</defaultGoal>
+        <plugins>
+            <plugin>
+                <!-- Changes -->
+                <!-- Takes care of the changes log -->
+                <!-- It is set to also validate the changes log file -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-changes-plugin</artifactId>
+                <version>${plugin.changes.version}</version>
+                <executions>
+                    <!-- Changes plugin is bound to the pre-site phase -->
+                    <execution>
+                        <id>check-changes</id>
+                        <phase>pre-site</phase>
+                        <goals>
+                            <goal>changes-check</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>validate-changes</id>
+                        <phase>pre-site</phase>
+                        <goals>
+                            <goal>changes-validate</goal>
+                        </goals>
+                        <configuration>
+                            <failOnError>true</failOnError>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <!-- Failsafe -->
+                <!-- Runs integration tests -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <suiteXmlFiles>
+                        <!-- Path to the integration tests suite file -->
+                        <suiteXmlFile>${project.build.testOutputDirectory}/tests_maven_integration_suite.xml</suiteXmlFile>
+                    </suiteXmlFiles>
+                </configuration>
+            </plugin>
+            <plugin>
+                <!-- Jetty -->
+                <!-- Used to create an integration test server -->
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-maven-plugin</artifactId>
+                <version>${plugin.jetty.version}</version>
+                <configuration>
+                    <stopKey>STOP</stopKey>
+                    <stopPort>9999</stopPort>
+                    <stopWait>5</stopWait>
+                    <webApp>
+                        <contextPath>${server.test.path}</contextPath>
+                    </webApp>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>start-jetty-it</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>start</goal>
+                        </goals>
+                        <configuration>
+                            <scanIntervalSeconds>0</scanIntervalSeconds>
+                            <daemon>true</daemon>
+                            <useTestScope>true</useTestScope>
+                            <webApp>
+                                <overrideDescriptor>${project.build.directory}/${project.artifactId}-${project.version}/WEB-INF/web.xml</overrideDescriptor>
+                            </webApp>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>stop-jetty-it</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <!-- Spring beans -->
+                        <groupId>org.springframework</groupId>
+                        <artifactId>spring-beans</artifactId>
+                        <version>${spring.version}</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <!-- Site -->
+                <!-- Generates the Maven Site -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-site-plugin</artifactId>
+                <dependencies>
+                    <dependency>
+                        <!-- Docs Maven Skin -->
+                        <groupId>com.wandrell.maven.skins</groupId>
+                        <artifactId>docs-maven-skin</artifactId>
+                        <version>${site.skin.version}</version>
+                    </dependency>
+                    <dependency>
+                        <!-- Velocity -->
+                        <groupId>org.apache.velocity</groupId>
+                        <artifactId>velocity</artifactId>
+                        <version>${plugin.site.velocity.version}</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <!-- Surefire -->
+                <!-- Runs unit tests -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <suiteXmlFiles>
+                        <!-- Path to the unit tests suite file -->
+                        <suiteXmlFile>${project.build.testOutputDirectory}/tests_maven_unit_suite.xml</suiteXmlFile>
+                    </suiteXmlFiles>
+                </configuration>
+            </plugin>
+            <plugin>
+                <!-- WAR -->
+                <!-- Generates the war file -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>${plugin.war.version}</version>
+                <configuration>
+                    <filteringDeploymentDescriptors>true</filteringDeploymentDescriptors>
+                    <webResources>
+                        <resource>
+                            <!-- Persistence access data -->
+                            <filtering>true</filtering>
+                            <directory>${project.basedir}/src/main/resources/context</directory>
+                            <targetPath>WEB-INF/classes/context</targetPath>
+                            <includes>
+                                <include>persistence-access.properties</include>
+                            </includes>
+                        </resource>
+                    </webResources>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <!-- ********************************************** -->
+    <!-- ****************** REPORTS ******************* -->
+    <!-- ********************************************** -->
+
+    <reporting>
+        <plugins>
+            <plugin>
+                <!-- Checkstyle -->
+                <!-- Checks that the source files comply with style standards -->
+                <!-- It is using a customized rules file -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <configuration>
+                    <!-- The customized rules file -->
+                    <configLocation>${project.basedir}/src/config/checkstyle/checkstyle-rules.xml</configLocation>
+                </configuration>
+            </plugin>
+            <plugin>
+                <!-- PMD -->
+                <!-- Checks that the code complies with a series of code quality 
+                    rules -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-pmd-plugin</artifactId>
+                <configuration>
+                    <rulesets>
+                        <ruleset>${project.basedir}/src/config/pmd/pmd-rules.xml</ruleset>
+                    </rulesets>
+                </configuration>
+            </plugin>
+        </plugins>
+    </reporting>
+
+</project>

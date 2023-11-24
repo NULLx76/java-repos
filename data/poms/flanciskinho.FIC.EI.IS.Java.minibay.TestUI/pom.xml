@@ -1,0 +1,178 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>es.udc.is.isg016.minibay</groupId>
+  <artifactId>minibay-pruebas-interfaz-web</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>minibay-pruebas-interfaz-web</name>
+  <url>http://maven.apache.org</url>
+
+  <properties>
+      <!--  Data source properties -->
+      <dataSource.user>pojo</dataSource.user>
+      <dataSource.password>pojo</dataSource.password>
+      <dataSource.jndiName>jdbc/pojo-examples-ds</dataSource.jndiName>
+      <testDataSource.user>${dataSource.user}</testDataSource.user>
+      <testDataSource.password>${dataSource.password}</testDataSource.password>
+      
+    <!-- Encoding -->
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    
+    <!-- Plugin versions -->
+    <mavenCompilerPlugin.version>2.3.2</mavenCompilerPlugin.version>
+    <mavenResourcesPlugin.version>2.5</mavenResourcesPlugin.version>
+    <sqlMavenPlugin.version>1.4</sqlMavenPlugin.version>
+    <mavenAssemblyPlugin.version>2.2.1</mavenAssemblyPlugin.version>
+  </properties>
+
+<!-- ========================================================== -->
+<!-- Profiles -->
+<profiles>
+    <profile>
+        <id>mysql</id>
+        <activation>
+            <activeByDefault>true</activeByDefault>
+        </activation>
+        <properties>
+            <!-- JDBC driver properties -->
+            <jdbcDriver.groupId>mysql</jdbcDriver.groupId>
+            <jdbcDriver.artifactId>mysql-connector-java</jdbcDriver.artifactId>
+            <jdbcDriver.version>5.1.21</jdbcDriver.version>
+            <jdbcDriver.className>com.mysql.jdbc.Driver</jdbcDriver.className>
+            
+            <!--  Data source properties -->
+            <dataSource.url>jdbc:mysql://localhost/pojo</dataSource.url>
+            <testDataSource.url>${dataSource.url}test</testDataSource.url>
+            <dataSource.createTablesScript>1-MySQLCreateTables.sql</dataSource.createTablesScript>
+            <dataSource.createDataScript>2-MySQLCreateData.sql</dataSource.createDataScript>
+            
+        </properties>
+    </profile>
+</profiles>
+
+
+    <dependencies>
+        <!-- JDBC driver -->
+        <dependency>
+            <groupId>${jdbcDriver.groupId}</groupId>
+            <artifactId>${jdbcDriver.artifactId}</artifactId>
+            <version>${jdbcDriver.version}</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.9</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-java</artifactId>
+            <version>2.30.0</version>
+        </dependency>
+    </dependencies>
+  
+  <build>
+      <finalName>${project.artifactId}</finalName>
+      
+      <pluginManagement>
+          <plugins>
+              
+              
+              <!-- ========================================================== -->
+              <!-- Compiler configuration -->
+              <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-compiler-plugin</artifactId>
+                  <version>${mavenCompilerPlugin.version}</version>
+                  <configuration>
+                      <verbose>true</verbose>
+                      <source>1.7</source>
+                      <target>1.7</target>
+                      <encoding>${project.build.sourceEncoding}</encoding>
+                      <showDeprecation>true</showDeprecation>
+                      <showWarnings>true</showWarnings>
+                  </configuration>
+              </plugin>
+              
+              <!-- ========================================================== -->
+              <!-- Resources plugin (2.4.x versions do not correctly filter
+               files containing '@' character). -->
+              <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-resources-plugin</artifactId>
+                  <version>${mavenResourcesPlugin.version}</version>
+              </plugin>
+              
+              <!-- ========================================================== -->
+              <!-- Setting SQL Plugin -->
+              <!--
+               - Configuartion specifies onError="continue" since SQL scripts
+               try to drop tables before creating them (which causes errors
+               if such tables do not exist yet).
+               
+               - Configuartion specifies autocommit="true" since some drivers
+               (e.g the PostgreSQL JDBC 2 driver) do not commit changes if
+               some error ocurrs.
+               -->
+              <plugin>
+                  <groupId>org.codehaus.mojo</groupId>
+                  <artifactId>sql-maven-plugin</artifactId>
+                  <version>${sqlMavenPlugin.version}</version>
+                  <dependencies>
+                      <dependency>
+                          <groupId>${jdbcDriver.groupId}</groupId>
+                          <artifactId>${jdbcDriver.artifactId}</artifactId>
+                          <version>${jdbcDriver.version}</version>
+                      </dependency>
+                  </dependencies>
+                  <configuration>
+                      <driver>${jdbcDriver.className}</driver>
+                      <url>${dataSource.url}</url>
+                      <username>${dataSource.user}</username>
+                      <password>${dataSource.password}</password>
+                      <autocommit>true</autocommit>
+                      <onError>continue</onError>
+                      <orderFile>ascending</orderFile>
+                      <fileset>
+                          <basedir>${basedir}</basedir>
+                          <includes>
+                              <include>src/sql/${dataSource.createTablesScript}</include>
+                              <include>src/sql/${dataSource.createDataScript}</include>
+                          </includes>
+                      </fileset>
+                  </configuration>
+                  <executions>
+                      <execution>
+                          <id>create-tables-for-testing</id>
+                          <phase>process-test-resources</phase>
+                          <goals>
+                              <goal>execute</goal>
+                          </goals>
+                          <configuration>
+                              <driver>${jdbcDriver.className}</driver>
+                              <url>${testDataSource.url}</url>
+                              <username>${testDataSource.user}</username>
+                              <password>${testDataSource.password}</password>
+                              <autocommit>true</autocommit>
+                              <onError>continue</onError>
+                              <fileset>
+                                  <basedir>${basedir}</basedir>
+                                  <includes>
+                                      <include>src/sql/${dataSource.createTablesScript}</include>
+                                  </includes>
+                              </fileset>
+                          </configuration>
+                      </execution>
+                  </executions>
+              </plugin>
+          </plugins>
+      </pluginManagement>
+  </build>
+  
+</project>

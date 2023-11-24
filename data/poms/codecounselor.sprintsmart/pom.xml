@@ -1,0 +1,149 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                      http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.sprintsmart</groupId>
+  <artifactId>release-planner</artifactId>
+  <version>0.2-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <properties>
+    <javafx.version>2.2.4</javafx.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.oracle</groupId>
+      <artifactId>javafx</artifactId>
+      <version>${javafx.version}</version>
+      <systemPath>${java.home}/lib/jfxrt.jar</systemPath>
+      <scope>system</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+
+      <!-- Generate Model Classes from XSD -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>jaxb2-maven-plugin</artifactId>
+        <version>1.5</version>
+        <executions>
+          <execution>
+            <id>xjc</id>
+            <goals>
+              <goal>xjc</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <packageName>org.sprintsmart.roadmap.model</packageName>
+        </configuration>
+      </plugin>
+
+
+      <!-- copy all dependencies of your app to target folder -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>2.3</version>
+        <executions>
+          <execution>
+            <id>copy-dependencies</id>
+            <phase>package</phase>
+            <configuration>
+              <overWriteReleases>false</overWriteReleases>
+              <overWriteSnapshots>false</overWriteSnapshots>
+              <overWriteIfNewer>true</overWriteIfNewer>
+            </configuration>
+            <goals>
+              <goal>copy-dependencies</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.6</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <configuration>
+              <target>
+                <!-- Generates the executable JAR for the JavaFX Application -->
+                <taskdef name="jfxjar" classname="com.sun.javafx.tools.ant.FXJar" classpathref="maven.plugin.classpath" />
+                <jfxjar destfile="${project.build.directory}/deploy/${project.build.finalName}-jfx.jar">
+                  <application name="Agile Release Planner" mainClass="org.sprintsmart.roadmap.AgileRoadmapUI" />
+                  <resources>
+                    <fileset dir="${project.build.directory}/dependency" includes="*.jar" />
+                  </resources>
+                  <fileset dir="target/classes" />
+                  <manifest>
+                    <attribute name="Implementation-Vendor" value="Sprint Smart" />
+                    <attribute name="Implementation-Version" value="${project.version}" />
+                  </manifest>
+                </jfxjar>
+
+
+                <taskdef name="jfxdeploy" classname="com.sun.javafx.tools.ant.DeployFXTask" classpathref="maven.plugin.classpath" />
+                <jfxdeploy width="1024" height="768" outdir="${project.build.directory}/deploy" outfile="${project.build.finalName}" placeholderid="roadmapUI"> <!-- nativeBundles="all" -->
+                  <info title="${project.name}" vendor="Sprint Smart" />
+                  <application name="${project.name}" mainClass="org.sprintsmart.roadmap.AgileRoadmapUI" />
+                  <resources>
+                    <fileset dir="${project.build.directory}" includes="*.jar" />
+                    <fileset dir="${project.build.directory}/dependency" includes="*.jar" />
+                  </resources>
+                  <!-- set your jvm args -->
+                  <platform javafx="${javafx.version}+">
+                    <jvmarg value="-Xms512m" />
+                    <jvmarg value="-Xmx1024m" />
+                  </platform>
+                </jfxdeploy>
+
+                <!-- <taskdef name="jfxsignjar" classname="com.sun.javafx.tools.ant.FXSignJarTask" classpathref="maven.plugin.classpath" /> you need to generate a key yourself <jfxsignjar destdir="${project.build.directory}/deploy" 
+                  keyStore="path/to/your/keystore" storePass="yourPass" alias="yourAlias" keyPass="keyPass"> <fileset dir="${project.build.directory}/deploy" includes="*.jar" /> </jfxsignjar> -->
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>com.oracle</groupId>
+            <artifactId>ant-javafx</artifactId>
+            <version>${javafx.version}</version>
+            <systemPath>${java.home}/../lib/ant-javafx.jar</systemPath>
+            <scope>system</scope>
+          </dependency>
+          <dependency>
+            <groupId>com.oracle</groupId>
+            <artifactId>javafx</artifactId>
+            <version>${javafx.version}</version>
+            <systemPath>${java.home}/lib/jfxrt.jar</systemPath>
+            <scope>system</scope>
+          </dependency>
+        </dependencies>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>javafx</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+</project>

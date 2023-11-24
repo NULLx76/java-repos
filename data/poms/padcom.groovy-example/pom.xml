@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+
+	<!-- The artifactId and version are used throughout the build process for different purposes -->
+	<groupId>org.example</groupId>
+	<artifactId>groovy-example</artifactId>
+	<version>1.0.0-SNAPSHOT</version>
+
+	<name>Examples :: Groovy example ;)</name>
+
+	<dependencies>
+		<!-- This is the Groovy runtime and is always required by Groovy applications -->
+		<dependency>
+			<groupId>org.codehaus.groovy</groupId>
+			<artifactId>groovy-all</artifactId>
+			<version>2.4.3</version>
+		</dependency>
+		<!-- We're using slf4j with log4j backend for logging -->
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.7.2</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>1.7.2</version>
+		</dependency>
+		<!-- Test dependencies I especially like -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.assertj</groupId>
+			<artifactId>assertj-core</artifactId>
+			<version>3.1.0</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.spockframework</groupId>
+			<artifactId>spock-core</artifactId>
+			<version>1.0-groovy-2.4</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<dependencyManagement>
+		<dependencies>
+			<!-- This determines which version of Log4j will be used -->
+			<dependency>
+				<groupId>log4j</groupId>
+				<artifactId>log4j</artifactId>
+				<version>1.2.17</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<pluginRepositories>
+		<pluginRepository>
+			<id>bintray</id>
+			<name>Groovy Bintray</name>
+			<url>https://dl.bintray.com/groovy/maven</url>
+			<releases>
+				<updatePolicy>never</updatePolicy>
+			</releases>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</pluginRepository>
+	</pluginRepositories>
+
+	<build>
+		<plugins>
+			<!-- The main definition of the Groovy compiler -->
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.6.1</version>
+				<configuration>
+					<source>1.9</source>
+					<target>1.9</target>
+					<compilerId>groovy-eclipse-compiler</compilerId>
+					<compilerArgument>indy</compilerArgument>
+					<verbose>false</verbose>
+				</configuration>
+				<dependencies>
+					<!-- This defines the compiler bridge to process all files (.java and .groovy) -->
+					<dependency>
+						<groupId>org.codehaus.groovy</groupId>
+						<artifactId>groovy-eclipse-compiler</artifactId>
+						<version>2.9.2-03</version>
+					</dependency>
+					<!-- This defines the compiler used by the plugin -->
+					<dependency>
+						<groupId>org.codehaus.groovy</groupId>
+						<artifactId>groovy-eclipse-batch</artifactId>
+						<version>2.4.12-04</version>
+					</dependency>
+				</dependencies>
+			</plugin>
+			<!-- We'd like to be able to execute the project using mvn compile exec:java -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.4.0</version>
+				<configuration>
+					<mainClass>org.example.Program</mainClass>
+				</configuration>
+			</plugin>
+			<!-- We'd like to be able to package the project in a nice, portable way for distribution -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>appassembler-maven-plugin</artifactId>
+				<version>1.9</version>
+				<!-- The package will be generated each time the project is build -->
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>assemble</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<!-- Application configuration folder definition -->
+					<configurationDirectory>conf</configurationDirectory>
+					<!-- Its source is stored in src/main/config -->
+					<copyConfigurationDirectory>true</copyConfigurationDirectory>
+					<!-- It is going to be available on the classpath with the highest priority -->
+					<includeConfigurationDirectoryInClasspath>true</includeConfigurationDirectoryInClasspath>
+					<!-- All dependencies will be stored in the lib folder as a flat list of files -->
+					<repositoryName>lib</repositoryName>
+					<repositoryLayout>flat</repositoryLayout>
+					<!-- The main class is org.example.Program -->
+					<programs>
+						<program>
+							<id>${project.artifactId}</id>
+							<mainClass>org.example.Program</mainClass>
+						</program>
+					</programs>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.5.5</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<descriptors>
+						<descriptor>src/main/assembly/bin.xml</descriptor>
+					</descriptors>
+				</configuration>
+			</plugin>
+			<!-- By default integration tests are not executed but all specifications are -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.18.1</version>
+				<configuration>
+					<useFile>false</useFile>
+					<includes>
+						<include>**/*Test.java</include>
+						<include>**/*Spec.java</include>
+					</includes>
+					<excludes>
+						<exclude>**/*IntegrationTest.java</exclude>
+						<exclude>**/*IntegrationSpec.java</exclude>
+						<exclude>**/*IT*.java</exclude>
+						<exclude>**/*IT.java</exclude>
+						<exclude>**/*ITCase.java</exclude>
+						<exclude>**/*ITSpec.java</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+	<profiles>
+		<!-- This profile enables the execution of integration tests -->
+		<profile>
+			<id>integration-tests</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-failsafe-plugin</artifactId>
+						<version>2.18.1</version>
+						<configuration>
+							<includes>
+								<include>**/*IntegrationTest.java</include>
+								<include>**/*IntegrationSpec.java</include>
+								<include>**/*IT*.java</include>
+								<include>**/*IT.java</include>
+								<include>**/*ITCase.java</include>
+								<include>**/*ITSpec.java</include>
+							</includes>
+						</configuration>
+						<executions>
+							<execution>
+								<id>failsafe-integration-tests</id>
+								<phase>integration-test</phase>
+								<goals>
+									<goal>integration-test</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+</project>

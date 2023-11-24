@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
+
+    Copyright (c) 2010-2015 Oracle and/or its affiliates. All rights reserved.
+
+    The contents of this file are subject to the terms of either the GNU
+    General Public License Version 2 only ("GPL") or the Common Development
+    and Distribution License("CDDL") (collectively, the "License").  You
+    may not use this file except in compliance with the License.  You can
+    obtain a copy of the License at
+    http://glassfish.java.net/public/CDDL+GPL_1_1.html
+    or packager/legal/LICENSE.txt.  See the License for the specific
+    language governing permissions and limitations under the License.
+
+    When distributing the software, include this License Header Notice in each
+    file and include the License file at packager/legal/LICENSE.txt.
+
+    GPL Classpath Exception:
+    Oracle designates this particular file as subject to the "Classpath"
+    exception as provided by Oracle in the GPL Version 2 section of the License
+    file that accompanied this code.
+
+    Modifications:
+    If applicable, add the following below the License Header, with the fields
+    enclosed by brackets [] replaced by your own identifying information:
+    "Portions Copyright [year] [name of copyright owner]"
+
+    Contributor(s):
+    If you wish your version of this file to be governed by only the CDDL or
+    only the GPL Version 2, indicate your decision by adding "[Contributor]
+    elects to include this software in this distribution under the [CDDL or GPL
+    Version 2] license."  If you don't indicate a single choice of license, a
+    recipient has the option to distribute your version of this file under
+    either the CDDL, the GPL Version 2 or to extend the choice of license to
+    its licensees as provided above.  However, if you add GPL Version 2 code
+    and therefore, elected the GPL Version 2 license, then the option applies
+    only if the new code is made subject to such option by the copyright
+    holder.
+
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>example.sonar</groupId>
+    <artifactId>project</artifactId>
+    <packaging>pom</packaging>
+    <version>1.0-SNAPSHOT</version>
+
+    <description>
+        <![CDATA[
+
+        Sonar + JaCoCO Maven multi-module test project.
+
+        The purpose of this project is to verify that Sonar together with JaCoCo reports correct test coverage.
+
+        Following cases are considered:
+
+        [1] Direct JUnit surefire test
+        [2] Indirect JUnit surefire test (from a different maven sub-module)
+        [3] Indirect JUnit failsafe test (from a different maven sub-module)
+        [4] 2-level indirect failsafe test run by using Jetty servlet container (from a different maven sub-module)
+
+
+        EXECUTION:
+        mvn clean install -P sonar 2>&1 | grep 'HELLO FROM' ### (4 different 'HELLO FROM' should be logged in console)
+        mvn sonar:sonar -P sonar -pl core -Djacoco.outputDir=$(pwd)/target
+
+        ]]>
+    </description>
+
+    <scm>
+        <connection>scm:git:https://github.com/stepanv/sonar-test.git</connection>
+        <developerConnection>scm:git:https://github.com/stepanv/sonar-test.git</developerConnection>
+        <url>https://github.com/stepanv/sonar-test</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>2.18.1</version>
+                    <configuration>
+                        <!-- for convenience reasons, 'argLine' should not be overridden in child poms. if needed, a property should be declared and used here -->
+                        <argLine>-Xmx1024m -Dfile.encoding=UTF8 ${surefire.coverage.argline}
+                        </argLine>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>2.16</version>
+                    <configuration>
+                        <argLine>${failsafe.coverage.argline}</argLine>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>integration-test</goal>
+                                <goal>verify</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.mortbay.jetty</groupId>
+                    <artifactId>jetty-maven-plugin</artifactId>
+                    <version>8.1.8.v20121106</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>sonar</id>
+            <properties>
+                <!-- Sonar/Reporting settings (heavily inspired at http://www.aheritier.net/maven-failsafe-sonar-and-jacoco-are-in-a-boat/ -->
+
+                <!-- Tells Sonar to use jacoco for coverage results -->
+                <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
+
+                <!-- Don't let Sonar execute tests. We will ask it to Maven -->
+                <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
+                <!-- The system property jacoco.outputDir is based on. This won't work for 'sonar:sonar' (see http://jira.codehaus.org/browse/SONAR-3427), as such a property 'jacoco.outputDir' has to be explicitly specified from a command line -->
+                <jacoco.outputDir>${session.executionRootDirectory}/target</jacoco.outputDir>
+                <!-- Tells Sonar where the Jacoco coverage result file is located for Unit Tests -->
+                <sonar.jacoco.reportPath>${jacoco.outputDir}/jacoco.exec</sonar.jacoco.reportPath>
+                <!-- Tells Sonar where the Jacoco coverage result file is located for Integration Tests -->
+                <sonar.jacoco.itReportPath>${jacoco.outputDir}/jacoco-it.exec</sonar.jacoco.itReportPath>
+
+                <!-- Force JaCoCo to show 0% coverage if the report is missing -->
+                <sonar.jacoco.reportMissing.force.zero>true</sonar.jacoco.reportMissing.force.zero>
+
+                <!-- jacoco.agent.*.arg properties are dynamically generated by jacoco:prepare-agent (see bellow) -->
+                <surefire.coverage.argline>${jacoco.agent.ut.arg}</surefire.coverage.argline>
+                <failsafe.coverage.argline>${jacoco.agent.it.arg}</failsafe.coverage.argline>
+
+                <!-- Maven versions -->
+                <jacoco.version>0.7.4.201502262128</jacoco.version>
+                <sonar-jacoco-listeners.version>3.2</sonar-jacoco-listeners.version>
+                <sonar.version>2.6</sonar.version>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.codehaus.sonar-plugins.java</groupId>
+                    <artifactId>sonar-jacoco-listeners</artifactId>
+                    <version>${sonar-jacoco-listeners.version}</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>${jacoco.version}</version>
+                        <executions>
+                            <!-- Prepares a variable, jacoco.agent.ut.arg, that contains the info to be passed to the JVM hosting the code being tested. -->
+                            <execution>
+                                <id>prepare-ut-agent</id>
+                                <phase>process-test-classes</phase>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                                <configuration>
+                                    <destFile>${sonar.jacoco.reportPath}</destFile>
+                                    <propertyName>jacoco.agent.ut.arg</propertyName>
+                                    <append>true</append>
+                                </configuration>
+                            </execution>
+                            <!-- Prepares a variable, jacoco.agent.it.arg, that contains the info to be passed to the JVM hosting the code being tested. -->
+                            <execution>
+                                <id>prepare-it-agent</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                                <configuration>
+                                    <destFile>${sonar.jacoco.itReportPath}</destFile>
+                                    <propertyName>jacoco.agent.it.arg</propertyName>
+                                    <append>true</append>
+                                </configuration>
+                            </execution>
+
+                            <!-- Generate reports which may not be complete as the execution won't consider tests of projects that weren't executed during the build yet --><!-- The good thing is that with every module built, we're ensured that integrity of both jacoco .exec files was preserved -->
+                            <execution>
+                                <id>jacoco-report-unit-tests</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>report</goal>
+                                </goals>
+                                <configuration>
+                                    <!-- Sets the path to the file which contains the execution data. -->
+                                    <dataFile>${sonar.jacoco.reportPath}</dataFile>
+                                    <!-- Sets the output directory for the code coverage report. -->
+                                    <outputDirectory>${project.build.directory}/jacoco-ut</outputDirectory>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>jacoco-report-integration-tests</id>
+                                <phase>post-integration-test</phase>
+                                <goals>
+                                    <goal>report</goal>
+                                </goals>
+                                <configuration>
+                                    <!-- Sets the path to the file which contains the execution data. -->
+                                    <dataFile>${sonar.jacoco.itReportPath}</dataFile>
+                                    <!-- Sets the output directory for the code coverage report. -->
+                                    <outputDirectory>${project.build.directory}/jacoco-it</outputDirectory>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <groupId>org.codehaus.mojo</groupId>
+                            <artifactId>sonar-maven-plugin</artifactId>
+                            <version>${sonar.version}</version>
+                        </plugin>
+                        <plugin>
+                            <groupId>org.apache.maven.plugins</groupId>
+                            <artifactId>maven-surefire-plugin</artifactId>
+                            <configuration>
+                                <!-- If possible (in some modules, this has to be disabled due to https://jira.sonarsource.com/browse/SONARJAVA-728), enable coverage details per JUnit test -->
+                                <properties>
+                                    <property>
+                                        <name>listener</name>
+                                        <value>org.sonar.java.jacoco.JUnitListener</value>
+                                    </property>
+                                </properties>
+                            </configuration>
+                        </plugin>
+                        <plugin>
+                            <groupId>org.apache.maven.plugins</groupId>
+                            <artifactId>maven-failsafe-plugin</artifactId>
+                            <configuration>
+                                <!-- Enable coverage details per JUnit test -->
+                                <properties>
+                                    <property>
+                                        <name>listener</name>
+                                        <value>org.sonar.java.jacoco.JUnitListener</value>
+                                    </property>
+                                </properties>
+                                <!-- Let's put failsafe reports with surefire to have access to tests failures/success reports in Sonar -->
+                                <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+                            </configuration>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
+            </build>
+        </profile>
+    </profiles>
+
+    <modules>
+        <module>core</module>
+        <module>tests</module>
+    </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>example.sonar.core</groupId>
+                <artifactId>core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <scope>test</scope>
+                <version>4.12</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <properties>
+        <surefire.coverage.argline/>
+        <failsafe.coverage.argline/>
+        <server.coverage.argline>${failsafe.coverage.argline}</server.coverage.argline>
+    </properties>
+</project>

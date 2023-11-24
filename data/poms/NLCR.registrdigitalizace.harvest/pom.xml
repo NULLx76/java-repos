@@ -1,0 +1,207 @@
+<!--
+Copyright (C) 2011 Jan Pokorsky
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>cz.registrdigitalizace</groupId>
+    <artifactId>harvest</artifactId>
+    <packaging>jar</packaging>
+    <version>1.0-SNAPSHOT</version>
+    <name>harvest</name>
+    <url>http://code.google.com/p/registrdigitalizace/</url>
+
+    <licenses>
+        <license>
+            <name>GNU General Public License</name>
+            <url>http://www.gnu.org/licenses/gpl.html</url>
+        </license>
+    </licenses>
+
+    <scm>
+        <connection>scm:git:https://code.google.com/p/registrdigitalizace.harvest</connection>
+        <developerConnection>scm:git:https://code.google.com/p/registrdigitalizace.harvest</developerConnection>
+    </scm>
+  
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <build>
+        <testResources>
+            <testResource>
+                <directory>src/test/java</directory>
+                <includes>
+                    <include>**/*.xml</include>
+                    <include>**/*.dtd</include>
+                    <include>**/*.properties</include>
+                </includes>
+            </testResource>
+        </testResources>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.0.2</version>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.8</version>
+                <configuration>
+                    <systemPropertyVariables>
+                        <java.util.logging.config.file>${project.build.testOutputDirectory}/test-logging.properties</java.util.logging.config.file>
+                        <drharvest.jdbc.url>${drharvest.test.jdbc.url}</drharvest.jdbc.url>
+                        <drharvest.jdbc.driver>${drharvest.test.jdbc.driver}</drharvest.jdbc.driver>
+                        <drharvest.jdbc.user>${drharvest.test.jdbc.user}</drharvest.jdbc.user>
+                        <drharvest.jdbc.password>${drharvest.test.jdbc.password}</drharvest.jdbc.password>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.jvnet.jaxb2.maven2</groupId>
+                <artifactId>maven-jaxb22-plugin</artifactId>
+                <version>0.8.0</version>
+                <configuration>
+                    <schemaLanguage>XMLSCHEMA</schemaLanguage>
+                    <episode>false</episode>
+                    <extension>true</extension>
+                    <args>
+                        <arg>-Xannotate</arg>
+                    </args>
+                    <plugins>
+                        <!-- xjc does not generate XmlRootElement necessary for JAXBResult usage
+                             see http://java.net/jira/browse/JAXB-690
+                             jaxb2-basics-annotate plugin can work around it (see bindings.xjb)
+                        -->
+                        <plugin>
+                            <groupId>org.jvnet.jaxb2_commons</groupId>
+                            <artifactId>jaxb2-basics-annotate</artifactId>
+                            <version>0.6.2</version>
+                        </plugin>
+                    </plugins>
+
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.2.1</version>
+                <configuration>
+                    <descriptors>
+                        <descriptor>${basedir}/src/main/assembly/release.xml</descriptor>
+                    </descriptors>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id> <!-- this is used for inheritance merges -->
+                        <phase>package</phase> <!-- bind to the packaging phase -->
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.4</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addDefaultSpecificationEntries />
+                            <mainClass>cz.registrdigitalizace.harvest.Harvest</mainClass>
+                        </manifest>
+                        <manifestEntries>
+                            <Implementation-Version>build${project.version}-rev${buildNumber}</Implementation-Version>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>buildnumber-maven-plugin</artifactId>
+                <version>1.1</version>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>create</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <doCheck>false</doCheck>
+                    <doUpdate>false</doUpdate>
+                </configuration>
+            </plugin>
+
+        </plugins>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.oracle</groupId>
+            <artifactId>ojdbc14</artifactId>
+            <version>10.2.0.5.0</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- test dependencies -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.easymock</groupId>
+            <artifactId>easymock</artifactId>
+            <version>3.2</version>
+            <scope>test</scope>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.dbunit</groupId>
+            <artifactId>dbunit</artifactId>
+            <version>2.4.9</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-jdk14</artifactId>
+            <version>1.5.6</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

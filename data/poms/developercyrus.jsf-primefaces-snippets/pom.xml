@@ -1,0 +1,221 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>jsf-primefaces-snippets</groupId>
+    <artifactId>jsf-primefaces-snippets</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>war</packaging>
+    
+    <!-- 
+    
+        JSF:
+        1.  Every component should have a id, otherwise JSF will generate for you which is in the following pattern: component1:component2:component3
+            It might introduct difficult for jquery selector since colon must be escaped.
+        2.  ManagedBean cannot used with a dot for naming, e.g., javaee.jsf.primefaces.example1.input.editor.EditorBean    
+        3.  prefix f/h uses components from oracle implementation, and prefix p uses component from primefaces implementation
+        4   the extension, jsf, xhtml, or faces, are defined in web.xml. In servlet 3.0, there's no longer required web.xml. this project uses servlet 3.1
+        5.  JSF 2 uses Facelets as its default templating system. In contrast, JSF 1.x uses JavaServer Pages (JSP) as its default templating system.
+        6.  Facelets extension is xhtml
+        7.  since url-pattern is defined either as xhtml, faces, jsf in web.xml
+            either one of them, is valid and can be accessible
+                http://localhost:8080/jsf-primefaces-snippets/javaee/jsf/primefaces/example1/input/editor/index.faces
+                http://localhost:8080/jsf-primefaces-snippets/javaee/jsf/primefaces/example1/input/editor/index.jsf
+                http://localhost:8080/jsf-primefaces-snippets/javaee/jsf/primefaces/example1/input/editor/index.xhtml
+                http://localhost:8080/jsf-primefaces-snippets/javaee/jsf/primefaces/example1/input/editor/index.jsp
+        8.  The javax.faces.DEFAULT_SUFFIX represents the default suffix of the physical file you've in your webapplication which represents a JSF file.
+            e.g., if it's set to xhtml, all physical view file must come with extension .xhtml
+            e.g., if it's set to jsp, all physical view file must come with extension .jsp
+            JSF 2 comes with the default value of javax.faces.DEFAULT_SUFFIX as .xhtml
+            
+            
+        Flow:
+        1.  Example1
+            1.  compile as war
+            2.  start jetty at pre-integration-test, and deploy to jetty
+            3.  run integration test
+                    a.  use jsoup to get the default value from editor
+                    b.  use htmlunit, click submit button, and get the value from result page
+                            -the method ActionListener should be invoked
+                            -get all childs from the form, and get the value from editor
+            4.  stop jetty
+            5.  reference: http://www.primefaces.org/showcase/ui/input/editor.xhtml
+        
+                                
+        Environment:
+        1.  Windows 7 64 bit (assume OS installed in C:\Windows)
+        2.  Eclipse 4.4
+        3.  JDK 8.0   
+        
+        
+        
+        Approach1 - all automate (this project uses this)       
+        1. "mvn clean install" 
+            a) compile                
+            b) start jetty, jetty-maven-plugin:start    at pre-integration-test     phase
+            c) run integration test                     at integration-test         phase
+            d) stop jetty, jetty-maven-plugin:stop      at post-integration-test    phase
+        2. while jboss is still running, the server can be manually accessed without using integration test by going to 
+            http://localhost:8080/ejb21-jboss422-snippets-web/HelloWorldLocalClientServlet  
+        
+        
+        Approach2 
+        1.  "mvn clean install"
+        2.  "mvn jetty:start"
+     -->
+    
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <jetty.version>9.0.0.v20130308</jetty.version> 
+    </properties>
+    
+    <build>
+       <plugins>                              
+       
+            <!-- compile -->                  
+            <plugin>                                   
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.0</version>
+                <configuration>
+                    <source>1.7</source>    <!-- java ee comes with jsf 2.2  -->
+                    <target>1.7</target>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                </configuration>
+            </plugin>
+            
+            
+            
+            <!-- integration-test -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.12</version>
+                <executions>
+                    <execution>
+                        <id>integration-test</id>
+                        <goals>
+                            <goal>integration-test</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            
+            
+            <!-- pre-integration-test -->
+            <plugin>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-maven-plugin</artifactId>
+                <version>${jetty.version}</version>
+                
+                <configuration>
+                    <stopKey>foo</stopKey>
+                    <stopPort>9999</stopPort>          
+                    <scanIntervalSeconds>10</scanIntervalSeconds>
+                    <webApp>
+                       <contextPath>/jsf-primefaces-snippets</contextPath>
+                    </webApp>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>start-jetty</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>start</goal>
+                        </goals>
+                        <configuration>
+                            <scanIntervalSeconds>0</scanIntervalSeconds>
+                            <daemon>true</daemon>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>stop-jetty</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+    
+    
+    <dependencies>  
+        <!-- jsf -->
+        <dependency>
+            <groupId>javax.faces</groupId>
+            <artifactId>javax.faces-api</artifactId>
+            <version>2.2</version>
+        </dependency>        
+        <dependency>
+            <groupId>com.sun.faces</groupId>
+            <artifactId>jsf-api</artifactId>
+            <version>2.2.11</version>
+        </dependency>        
+        <dependency>
+            <groupId>com.sun.faces</groupId>
+            <artifactId>jsf-impl</artifactId>
+            <version>2.2.11</version>
+        </dependency>   
+        
+
+        <!-- 
+            jsf implmenetation 
+            4.0 or above supports 
+            https://en.wikipedia.org/wiki/PrimeFaces 
+        -->
+        <dependency>
+            <groupId>org.primefaces</groupId>
+            <artifactId>primefaces</artifactId>
+            <version>5.2</version>
+        </dependency>
+        
+        
+        <!-- 
+            javax             
+            http://en.wikipedia.org/wiki/Java_EE_version_history                       
+        -->            
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <version>3.1.0</version>
+        </dependency>
+                       
+        <dependency>
+            <groupId>javax.servlet.jsp</groupId>
+            <artifactId>javax.servlet.jsp-api</artifactId>
+            <version>2.3.0</version>
+        </dependency>
+        
+        
+        <!-- junit -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.10</version>
+        </dependency>
+        
+        
+        
+         <!-- jsoup -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.8.2</version>
+        </dependency>
+        
+        
+        
+        <!-- htmlunit, used by example1 --> 
+        <dependency>
+            <groupId>net.sourceforge.htmlunit</groupId>
+            <artifactId>htmlunit</artifactId>
+            <version>2.16</version>
+        </dependency>        
+        <dependency>
+            <groupId>net.sourceforge.htmlunit</groupId>
+            <artifactId>htmlunit-core-js</artifactId>
+            <version>2.16</version>
+        </dependency>
+     </dependencies>       
+        
+</project>

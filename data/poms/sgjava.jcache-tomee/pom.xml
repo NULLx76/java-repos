@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright (c) Steven P. Goldsmith. All rights reserved.
+
+Created by Steven P. Goldsmith on September 1, 2015
+sgoldsmith@codeferm.com
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.codeferm.jcache.tomee</groupId>
+    <artifactId>jcache-tomee</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>war</packaging>
+
+    <properties>
+        <java-api.version>1.8</java-api.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <tomee.version>7.0.5-SNAPSHOT</tomee.version>
+    </properties>
+
+    <name>JCache using TomEE</name>
+
+    <build>
+        <plugins>
+            <!-- Compile -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.7.0</version>
+                <configuration>
+                    <source>${java-api.version}</source>
+                    <target>${java-api.version}</target>
+                </configuration>
+            </plugin>
+            <!-- Copy config to target, so tomee:run works without any code changes-->
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.0.2</version>
+                <executions>
+                    <execution>
+                        <id>copy-resources</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${basedir}/target/apache-tomee/config</outputDirectory>
+                            <resources>          
+                                <resource>
+                                    <directory>config</directory>
+                                    <filtering>true</filtering>
+                                </resource>
+                            </resources>              
+                        </configuration>            
+                    </execution>
+                </executions>
+            </plugin>            
+            <!-- Build WAR file -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>3.2.0</version>
+                <configuration>
+                    <failOnMissingWebXml>false</failOnMissingWebXml>
+                </configuration>
+            </plugin>
+            <!-- Tests -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.20.1</version>
+                <configuration>
+                    <argLine>-Dfile.encoding=${project.build.sourceEncoding}</argLine>
+                    <includes>
+                        <include>**/*Test.java</include>
+                    </includes>
+                </configuration>
+            </plugin>
+            <!-- Use tomee:run to launch TomEE and leave running -->
+            <plugin>
+                <groupId>org.apache.tomee.maven</groupId>
+                <artifactId>tomee-maven-plugin</artifactId>
+                <version>${tomee.version}</version>
+                <configuration>
+                    <!-- Must set for default JMS factory to be created -->
+                    <systemVariables>
+                        <openejb.environment.default>true</openejb.environment.default>
+                    </systemVariables>                    
+                    <tomeeVersion>${tomee.version}</tomeeVersion>
+                    <tomeeClassifier>plus</tomeeClassifier>
+                    <zip>false</zip>
+                    <reloadOnUpdate>true</reloadOnUpdate>
+                    <synchronization>
+                        <extensions>
+                            <extension>.class</extension>
+                        </extensions>
+                        <updateOnlyExtensions>
+                            <updateOnlyExtension>.xhtml</updateOnlyExtension>
+                            <updateOnlyExtension>.html</updateOnlyExtension>
+                            <updateOnlyExtension>.js</updateOnlyExtension>
+                            <updateOnlyExtension>.css</updateOnlyExtension>
+                        </updateOnlyExtensions>
+                    </synchronization>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencies>
+        <!-- Provided -->
+        <dependency>
+            <groupId>org.apache.tomee</groupId>
+            <artifactId>javaee-api</artifactId>
+            <version>7.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Compile dependency -->
+        <dependency>
+            <groupId>org.jsr107.ri</groupId>
+            <artifactId>cache-annotations-ri-cdi</artifactId>
+            <version>1.1.0</version>
+        </dependency>
+        <!-- Test dependency -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.tomee</groupId>
+            <artifactId>tomee-embedded</artifactId>
+            <version>${tomee.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.tomee</groupId>
+            <artifactId>openejb-cxf-rs</artifactId>
+            <version>${tomee.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.tomee</groupId>
+            <artifactId>tomee-jaxrs</artifactId>
+            <version>${tomee.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.tomee</groupId>
+            <artifactId>ziplock</artifactId>
+            <version>${tomee.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.jaxrs</groupId>
+            <artifactId>jackson-jaxrs-json-provider</artifactId>
+            <version>2.9.3</version>
+            <scope>test</scope>
+        </dependency>        
+        <!-- Uncomment for Apache JCS -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-jcs-jcache</artifactId>
+            <version>2.2</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- Uncomment for Ehcache
+        <dependency>
+            <groupId>org.ehcache</groupId>
+            <artifactId>ehcache</artifactId>
+            <version>3.4.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.terracotta.management</groupId>
+            <artifactId>management-model</artifactId>
+            <version>2.5.0</version>
+            <scope>test</scope>
+        </dependency>
+        -->
+        <!-- Uncomment for Hazelcast
+        <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast-all</artifactId>
+            <version>3.9.2</version>
+            <scope>test</scope>      
+        </dependency>
+        -->
+        <!-- Uncomment for Blazingcache
+        <dependency>
+            <groupId>org.blazingcache</groupId>
+            <artifactId>blazingcache-jcache</artifactId>
+            <version>1.13.0</version>
+            <scope>test</scope>
+        </dependency>
+        -->
+    </dependencies>
+</project>

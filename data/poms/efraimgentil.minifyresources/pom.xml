@@ -1,0 +1,140 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>br.com.efraimgentil</groupId>
+	<artifactId>minifyresources</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>war</packaging>
+	<name>mininyresources</name>
+	<description>A example project to show how to use minify plugin with maven</description>
+
+	<properties>
+		<maven.build.timestamp.format>yyyyMMddHHmmss</maven.build.timestamp.format>
+	</properties>
+
+	<dependencies>
+
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>3.0.1</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>jstl</artifactId>
+			<version>1.2</version>
+		</dependency>
+
+	</dependencies>
+
+	<build>
+		<finalName>${project.artifactId}</finalName>
+
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.3</version>
+				<configuration>
+					<source>1.7</source>
+					<target>1.7</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<version>2.6</version>
+				<configuration>
+					<useCache>true</useCache>
+					<failOnMissingWebXml>false</failOnMissingWebXml>
+				</configuration>
+				<executions>
+					<!-- added for making the replace plugin run in the exploded phase -->
+					<execution>
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>exploded</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>com.samaxes.maven</groupId>
+				<artifactId>minify-maven-plugin</artifactId>
+				<version>1.7.4</version>
+				<executions>
+					<execution>
+						<id>default-minify</id>
+						<configuration>
+							<ignoreMissingFile>false</ignoreMissingFile>
+							<webappSourceDir>${basedir}/src/main/webapp/resources</webappSourceDir>
+							<cssSourceDir>css</cssSourceDir>
+							<cssSourceFiles>
+								<cssSourceFile>style.css</cssSourceFile>
+								<cssSourceFile>other-style.css</cssSourceFile>
+								<cssSourceFile>ateste.css</cssSourceFile>
+							</cssSourceFiles>
+							<cssTargetDir>resources/css</cssTargetDir>
+							<cssFinalFile>all-${maven.build.timestamp}.css</cssFinalFile>
+							<jsSourceFiles>
+								<jsSourceFile>framework.js</jsSourceFile>
+								<jsSourceFile>ordered.js</jsSourceFile>
+							</jsSourceFiles>
+							<jsTargetDir>resources/js</jsTargetDir>
+							<jsFinalFile>all-${maven.build.timestamp}.js</jsFinalFile>
+						</configuration>
+						<goals>
+							<goal>minify</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+	<profiles>
+		<profile>
+			<id>DEV</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+		</profile>
+		<profile>
+			<id>PROD</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>com.google.code.maven-replacer-plugin</groupId>
+						<artifactId>replacer</artifactId>
+						<version>1.5.0</version>
+						<executions>
+							<execution>
+								<phase>prepare-package</phase>
+								<goals>
+									<goal>replace</goal>
+								</goals>
+							</execution>
+						</executions>
+						<configuration>
+							<file>target/${project.build.finalName}/WEB-INF/template/_head.jsp</file>
+							<outputFile>target/${project.build.finalName}/WEB-INF/template/_head.jsp</outputFile>
+							<replacements>
+								<replacement>
+									<token>
+										(?m)&lt;!--replaceCSS(.|\s)*?replaceCSSEnd --&gt; </token>
+									<value>&lt;link rel="stylesheet" type="text/css" href="&lt;c:url value='/resources/css/all-${maven.build.timestamp}.min.css'/&gt;"/&gt;</value>
+								</replacement>
+								<replacement>
+									<token>(?m)&lt;!--replaceJS(.|\s)*?replaceJSEnd --&gt;</token>
+									<value>&lt;script type="text/javascript" src="&lt;c:url value='/resources/js/all-${maven.build.timestamp}.min.js'/&gt;"&gt;&lt;/script&gt;</value>
+								</replacement>
+							</replacements>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+</project>

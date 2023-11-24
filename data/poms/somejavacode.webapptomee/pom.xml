@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+
+    <groupId>somejavacode</groupId>
+    <artifactId>webapptomee</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>war</packaging>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <slf4j.version>1.7.7</slf4j.version>
+        <log4j.version>1.2.17</log4j.version>
+        <h2.version>1.3.176</h2.version>
+        <openjpa.version>2.2.1</openjpa.version>
+
+        <openjpa.skip>true</openjpa.skip>
+        <deltaspike.version>0.6</deltaspike.version>
+        <openejb.version>4.7.0</openejb.version>
+        <tomee.version>1.7.2</tomee.version>
+        <tomee.mavenplugin.version>${tomee.version}</tomee.mavenplugin.version>
+    </properties>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.openjpa</groupId>
+            <artifactId>openjpa</artifactId>
+            <version>${openjpa.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>junit</groupId>
+                    <artifactId>junit</artifactId>
+                </exclusion>
+            </exclusions>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.openejb</groupId>
+            <artifactId>javaee-api</artifactId>
+            <version>6.0-5</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.deltaspike.modules</groupId>
+            <artifactId>deltaspike-jpa-module-api</artifactId>
+            <version>${deltaspike.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.deltaspike.modules</groupId>
+            <artifactId>deltaspike-jpa-module-impl</artifactId>
+            <version>${deltaspike.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <!-- this is the default context path -->
+        <finalName>testapp</finalName>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>tomee</id>
+            <properties>
+                <projectstage>Development</projectstage>
+                <!-- need to set this empty -->
+                <tomee.additional.args/>
+                <tomee-plugin.catalinaBaseDir>apache-tomee</tomee-plugin.catalinaBaseDir>
+                <tomee.mavenplugin.reloadOnUpdate>false</tomee.mavenplugin.reloadOnUpdate>
+                <attachClasses>false</attachClasses>
+                <war.excludes>
+                    <!-- none so far -->
+                </war.excludes>
+            </properties>
+
+            <build>
+                <plugins>
+                    <plugin>
+                        <!--
+                             http://tomee.apache.org/tomee-maven-plugin.html [1]
+                             http://tomee.apache.org/refcard/refcard.html [2]
+                         -->
+                        <groupId>org.apache.openejb.maven</groupId>
+                        <artifactId>tomee-maven-plugin</artifactId>
+                        <version>${tomee.mavenplugin.version}</version>
+                        <configuration>
+
+                            <!-- if set to false here cannot enable with -Dtomee-plugin.debug=true -->
+                            <!--<debug>false</debug>-->
+                            <debugPort>8000</debugPort>
+
+                            <tomeeVersion>${tomee.version}</tomeeVersion>
+                            <tomeeClassifier>webprofile</tomeeClassifier>
+                            <synchronization>
+                                <extensions>
+                                    <extension>.class</extension>
+                                    <extension>.properties</extension>
+                                    <extension>.css</extension>
+                                </extensions>
+                                <updateInterval>2</updateInterval>
+                            </synchronization>
+
+                            <!-- important: for some reason, this has to be false, else reloading does not work! -->
+                            <reloadOnUpdate>${tomee.mavenplugin.reloadOnUpdate}</reloadOnUpdate>
+
+                            <catalinaBase>${project.build.directory}/${tomee-plugin.catalinaBaseDir}</catalinaBase>
+
+                            <!-- disable "console" to avoid shutdown error -->
+                            <useConsole>false</useConsole>
+
+                            <removeTomeeWebapp>true</removeTomeeWebapp>
+
+                            <!-- removed the .war extension from the "warFile" property, so we can use exploded archives -->
+                            <warFile>${project.build.directory}/${project.build.finalName}</warFile>
+                            <!-- path that is used by tomEE in the tomee:deploy and tomee:undeploy goal -->
+                            <path>${project.build.directory}/apache-tomee/webapps${project.build.finalName}</path>
+                            <!-- memory settings for tomEE; increased PermGen from default 64m to 512m, should allow for more
+                            redeploys without PermGenExceptions -->
+                            <!-- -Xms1024m -Xmx1024m -XX:NewSize=512m -XX:MaxNewSize=384m -XX:PermSize=384m -XX:MaxPermSize=512m -XX:+DisableExplicitGC -->
+                            <!--
+                                  more logging "magic", see org.apache.openejb.util.Logger
+                                 // broken: -Dorg.apache.openejb.util.LogStreamFactory=org.apache.openejb.util.Log4jLogStreamFactory
+                                 // -Dopenejb.log.factory=log4j .. breaks logging format?
+                                 -Dopenejb.log.factory=slf4j .. OK but has strange categories like "OpenEJB.startup.config"
+                            -->
+                            <args>
+                                -Dorg.apache.deltaspike.ProjectStage=${projectstage} -Dopenejb.classloader.forced-load=org.apache.openjpa -Dopenejb.log.factory=slf4j -Djava.awt.headless=true -Dfile.encoding=UTF-8 -server ${tomee.additional.args}
+                            </args>
+
+                            <!-- add slf4j + bridge + log4j to tomee bootstrap classpath
+                                 activated with "conf/logging.properties": handlers = org.slf4j.bridge.SLF4JBridgeHandler
+                                 NOTE: this option is not in the spec [1]. found via plugin source AbstractTomEEMojo.java -->
+                            <classpaths>
+                                <!-- theses jars are added to lib directory with "libs" below -->
+                                <classpath>${project.build.directory}/apache-tomee/lib/slf4j-api-${slf4j.version}.jar</classpath>
+                                <classpath>${project.build.directory}/apache-tomee/lib/jul-to-slf4j-${slf4j.version}.jar</classpath>
+                                <classpath>${project.build.directory}/apache-tomee/lib/slf4j-log4j12-${slf4j.version}.jar</classpath>
+                                <classpath>${project.build.directory}/apache-tomee/lib/log4j-${log4j.version}.jar</classpath>
+                                <!-- to load log4j.xml, -Dlog4j.configuration failed "somehow"... -->
+                                <classpath>${project.build.directory}/apache-tomee/conf/</classpath>
+                            </classpaths>
+                            <libs>
+                                <lib>com.h2database:h2:${h2.version}</lib>
+                                <!-- We need to remove openjpa from the tomee installation to avoid classpath clashes -->
+                                <lib>remove:openjpa</lib>
+                                <lib>remove:myfaces</lib> <!-- just slim down tomee -->
+
+                                <!-- trying to fix logging -->
+                                <lib>remove:slf4j-jdk14</lib>
+                                <lib>org.slf4j:slf4j-api:${slf4j.version}</lib>
+                                <lib>org.slf4j:jul-to-slf4j:${slf4j.version}</lib>
+                                <lib>org.slf4j:slf4j-log4j12:${slf4j.version}</lib>
+                                <lib>log4j:log4j:${log4j.version}</lib>
+                            </libs>
+                        </configuration>
+                    </plugin>
+
+                </plugins>
+            </build>
+
+        </profile>
+    </profiles>
+
+</project>

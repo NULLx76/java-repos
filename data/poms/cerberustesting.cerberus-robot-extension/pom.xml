@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.cerberus</groupId>
+    <artifactId>cerberus-robot-extension</artifactId>
+    <version>1.8-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <name>Cerberus Robot Extension</name>
+    
+    <properties>
+        <!-- Maven properties -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.7</maven.compiler.source>
+        <maven.compiler.target>1.7</maven.compiler.target>
+        <timestamp>${maven.build.timestamp}</timestamp>
+        <maven.build.timestamp.format>yyyyMMdd'-'HHmmss</maven.build.timestamp.format>
+        <ant-jsch.version>1.10.1</ant-jsch.version>
+        <maven-antrun-plugin.version>1.8</maven-antrun-plugin.version>
+        <maven-deploy-plugin.version>2.8.2</maven-deploy-plugin.version>
+    </properties>
+    
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.4.1</version>
+                <configuration>
+                    <!-- get all project dependencies -->
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                    <finalName>${project.artifactId}-${project.version}-full</finalName>
+                    <appendAssemblyId>false</appendAssemblyId>
+                    <!-- MainClass in mainfest make a executable jar -->
+                    <archive>
+                        <manifest>
+                            <mainClass>org.cerberus.robot.extension.QueueReceiver</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <!-- bind to the packaging phase -->
+                        <phase>package</phase> 
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>2.5.3</version>
+            </plugin>
+            <plugin>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>${maven-deploy-plugin.version}</version>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+        </plugins>
+        
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>       
+    </build>
+    
+    <repositories>
+        <repository>
+            <id>sonatype-ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+        </repository>
+    </repositories>
+    <dependencies>
+        <dependency>
+            <groupId>com.sikulix</groupId>
+            <artifactId>sikulixapi</artifactId>
+            <version>2.0.4</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.7</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.10</version>
+        </dependency>
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20080701</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <version>3.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.17.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-server</artifactId>
+            <version>9.4.41.v20210516</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-servlet</artifactId>
+            <version>9.4.41.v20210516</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-cli</groupId>
+            <artifactId>commons-cli</artifactId>
+            <version>1.4</version>
+        </dependency>
+    </dependencies>
+    
+
+    <profiles>
+
+        <!--
+            Additional configuration for deployment process on the qualification server
+
+            /!\ Prerequisites: Beware to correctly declared the following properties into your Maven settings:
+                - cerberus.delivery.username, which is the Cerberus demonstration server's user
+                - cerberus.delivery.password, which is the Cerberus demonstration server's password
+        -->
+        <profile>
+            <id>delivery-deploy</id>
+            <properties>
+                <env>qa</env>
+                <cerberus.delivery.host>vm.cerberus-testing.org</cerberus.delivery.host>
+                <cerberus.delivery.upload.path>/opt/delivery</cerberus.delivery.upload.path>
+                <cerberus.delivery.tomcat.deploy>/opt/bin/deployQA-robot-extension.sh</cerberus.delivery.tomcat.deploy>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>${maven-antrun-plugin.version}</version>
+                        <executions>
+                            <!-- Upload built artifacts into our infra during the deploy phase -->
+                            <execution>
+                                <id>delivery-deploy</id>
+                                <phase>deploy</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <!-- Upload artifact -->
+                                        <echo message="Uploading artifact ${project.build.directory}/${project.build.finalName}-full.jar to Cerberus Delivery server..." />
+                                        <scp file="${project.build.directory}/${project.build.finalName}-full.jar" todir="${cerberus.delivery.username}@${cerberus.delivery.host}:${cerberus.delivery.upload.path}" password="${cerberus.delivery.password}" trust="yes" />
+                                        <!--
+                                            Deploy artifact by:
+                                                1. Extracting distribution package to the server's upload path;
+                                                2. Redeploying current application
+                                                3. Restarting current cluster.
+                                        -->
+                                        <echo message="Deploying to QA..." />
+                                        <sshexec host="${cerberus.delivery.host}" username="${cerberus.delivery.username}" password="${cerberus.delivery.password}" trust="yes" command="${cerberus.delivery.tomcat.deploy} ${cerberus.delivery.upload.path}/${project.build.finalName}-full.jar" />
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                        <dependencies>
+                            <dependency>
+                                <groupId>org.apache.ant</groupId>
+                                <artifactId>ant-jsch</artifactId>
+                                <version>${ant-jsch.version}</version>
+                            </dependency>
+                        </dependencies>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+    </profiles>    
+    
+    
+</project>

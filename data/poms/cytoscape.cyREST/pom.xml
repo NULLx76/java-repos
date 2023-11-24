@@ -1,0 +1,774 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<properties>
+		<!-- Produces timestamped builds.
+	 	<maven.build.timestamp.format>yyyyMMdd-HHmm</maven.build.timestamp.format>
+    	<dev.build.timestamp>${maven.build.timestamp}</dev.build.timestamp>
+    	-->
+		<bundle.symbolicName>org.cytoscape.rest.cy-rest</bundle.symbolicName>
+		<bundle.namespace>org.cytoscape.rest</bundle.namespace>
+		<maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
+		<maven-surefire-plugin.version>3.0.0-M3</maven-surefire-plugin.version>
+		<maven-bundle-plugin.version>5.1.2</maven-bundle-plugin.version>
+		<osgi.api.version>7.0.0</osgi.api.version>
+    	<osgi.compendium.version>7.0.0</osgi.compendium.version>
+ 
+ 		<karaf.version>4.3.7</karaf.version>
+		<junit.version>4.12</junit.version>
+		<jersey.version>2.23</jersey.version>
+
+		<rest.api.version>v1</rest.api.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<cytoscape.api.version>3.10.0</cytoscape.api.version>
+	</properties>
+
+	<groupId>org.cytoscape</groupId>
+	<artifactId>cy-rest</artifactId>
+
+	<version>3.13.3-SNAPSHOT</version>
+	<packaging>bundle</packaging>
+	<name>cyREST</name>
+
+	<repositories>
+		<repository>
+			<id>cytoscape_releases</id>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<name>Cytoscape Releases</name>
+			<url>https://nrnb-nexus.ucsd.edu/repository/cytoscape_releases/</url>
+		</repository>
+		<repository>
+			<id>cytoscape_snapshots</id>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+			<releases>
+				<enabled>false</enabled>
+			</releases>
+			<name>Cytoscape Snapshots</name>
+			<url>https://nrnb-nexus.ucsd.edu/repository/cytoscape_snapshots/</url>
+		</repository>
+
+	</repositories>
+
+	<distributionManagement>
+		<repository>
+			<id>cytoscape_releases</id>
+			<name>Cytoscape Releases</name>
+			<url>https://nrnb-nexus.ucsd.edu/repository/cytoscape_releases/</url>
+		</repository>
+		<snapshotRepository>
+			<id>cytoscape_snapshots</id>
+			<name>Cytoscape Snapshots</name>
+			<url>https://nrnb-nexus.ucsd.edu/repository/cytoscape_snapshots/</url>
+		</snapshotRepository>
+	</distributionManagement>
+
+	<!-- SCM Information. Currently hosted at GitHub. -->
+	<scm>
+		<connection>scm:https://github.com/cytoscape/cyREST.git</connection>
+		<developerConnection>scm:git@github.com:cytoscape/cyREST.git</developerConnection>
+	</scm>
+
+	<build>
+		<plugins>
+			<plugin>
+				<!-- Copy bundles from maven into this bundle's resources folder. These 
+					are all necessary for the OSGi JAX RS connector to function. -->
+				<artifactId>maven-dependency-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>install-hk2</id>
+						<phase>process-resources</phase>
+						<goals>
+							<goal>copy</goal>
+						</goals>
+						<configuration>
+							<artifactItems>
+								<artifactItem>
+									<groupId>org.glassfish.hk2</groupId>
+									<artifactId>hk2-api</artifactId>
+									<version>2.4.0</version>
+								</artifactItem>
+								<artifactItem>
+									<groupId>org.glassfish.hk2</groupId>
+									<artifactId>hk2-locator</artifactId>
+									<version>2.4.0</version>
+								</artifactItem>
+								<artifactItem>
+									<groupId>org.glassfish.hk2</groupId>
+									<artifactId>hk2-utils</artifactId>
+									<version>2.4.0</version>
+								</artifactItem>
+								<artifactItem>
+									<groupId>org.glassfish.hk2</groupId>
+									<artifactId>osgi-resource-locator</artifactId>
+									<version>1.0.1</version>
+								</artifactItem>
+								<artifactItem>
+									<groupId>org.glassfish.hk2.external</groupId>
+									<artifactId>javax.inject</artifactId>
+									<version>2.4.0</version>
+								</artifactItem>
+								<artifactItem>
+									<groupId>org.glassfish.hk2.external</groupId>
+									<artifactId>aopalliance-repackaged</artifactId>
+									<version>2.4.0</version>
+								</artifactItem>
+							</artifactItems>
+							<outputDirectory>src/main/resources/hk2</outputDirectory>
+							<stripVersion>false</stripVersion>
+						</configuration>
+					</execution>
+					<execution>
+						<id>install-glassfish-jersey</id>
+						<phase>process-resources</phase>
+						<goals>
+							<goal>copy</goal>
+						</goals>
+						<configuration>
+							<artifactItems>
+								<artifactItem>
+									<groupId>org.glassfish.jersey.containers</groupId>
+									<artifactId>jersey-container-servlet</artifactId>
+									<version>${jersey.version}</version>
+								</artifactItem>
+								<artifactItem>
+									<groupId>org.glassfish.jersey.media</groupId>
+									<artifactId>jersey-media-sse</artifactId>
+									<version>${jersey.version}</version>
+								</artifactItem>
+								<artifactItem>
+									<groupId>org.glassfish.jersey.media</groupId>
+									<artifactId>jersey-media-multipart</artifactId>
+									<version>${jersey.version}</version>
+								</artifactItem>
+								<artifactItem>
+									<groupId>org.glassfish.jersey.containers</groupId>
+									<artifactId>jersey-container-servlet-core</artifactId>
+									<version>${jersey.version}</version>
+								</artifactItem>
+								<artifactItem>
+									<groupId>org.glassfish.jersey.core</groupId>
+									<artifactId>jersey-common</artifactId>
+									<version>${jersey.version}</version>
+								</artifactItem>
+								<artifactItem>
+									<groupId>org.glassfish.jersey.bundles.repackaged</groupId>
+									<artifactId>jersey-guava</artifactId>
+									<version>${jersey.version}</version>
+								</artifactItem>
+								<artifactItem>
+									<groupId>org.glassfish.jersey.core</groupId>
+									<artifactId>jersey-server</artifactId>
+									<version>${jersey.version}</version>
+								</artifactItem>
+								<artifactItem>
+									<groupId>org.glassfish.jersey.core</groupId>
+									<artifactId>jersey-client</artifactId>
+									<version>${jersey.version}</version>
+								</artifactItem>
+								<artifactItem>
+									<groupId>org.glassfish.jersey.media</groupId>
+									<artifactId>jersey-media-jaxb</artifactId>
+									<version>${jersey.version}</version>
+								</artifactItem>
+							</artifactItems>
+							<outputDirectory>src/main/resources/glassfish-jersey</outputDirectory>
+							<stripVersion>false</stripVersion>
+						</configuration>
+					</execution>
+					<execution>
+						<id>install-jersey-misc</id>
+						<phase>process-resources</phase>
+						<goals>
+							<goal>copy</goal>
+						</goals>
+						<configuration>
+							<artifactItems>
+								<artifactItem>
+									<groupId>javax.annotation</groupId>
+									<artifactId>javax.annotation-api</artifactId>
+									<version>1.2</version>
+								</artifactItem>
+								<artifactItem>
+									<groupId>javax.validation</groupId>
+									<artifactId>validation-api</artifactId>
+									<version>1.1.0.Final</version>
+								</artifactItem>
+								<!-- JAX-RS used to be here, but we want to use an existing version -->
+								<artifactItem>
+									<groupId>org.javassist</groupId>
+									<artifactId>javassist</artifactId>
+									<version>3.18.1-GA</version>
+								</artifactItem>
+								<artifactItem>
+									<groupId>org.jvnet.mimepull</groupId>
+									<artifactId>mimepull</artifactId>
+									<version>1.9.6</version>
+								</artifactItem>
+							</artifactItems>
+							<outputDirectory>src/main/resources/jersey-misc</outputDirectory>
+							<stripVersion>false</stripVersion>
+						</configuration>
+					</execution>
+					<execution>
+						<id>install-osgi-jax-rs-connector</id>
+						<phase>process-resources</phase>
+						<goals>
+							<goal>copy</goal>
+						</goals>
+						<configuration>
+							<artifactItems>
+								<!-- This is already in karaf, so was causing shading <artifactItem> 
+									<groupId>javax.servlet</groupId> <artifactId>javax.servlet-api</artifactId> 
+									<version>3.1.0</version> </artifactItem> -->
+								<!-- We've customized this in the above to support existing JAX-RS. 
+									<artifactItem> <groupId>com.eclipsesource.jaxrs</groupId> <artifactId>jersey-min</artifactId> 
+									<version>2.22.1</version> </artifactItem> -->
+								<artifactItem>
+									<groupId>com.eclipsesource.jaxrs</groupId>
+									<artifactId>consumer</artifactId>
+									<version>5.3</version>
+								</artifactItem>
+								<artifactItem>
+									<groupId>com.eclipsesource.jaxrs</groupId>
+									<artifactId>publisher</artifactId>
+									<version>5.3</version>
+								</artifactItem>
+								<!-- We this plugin exports its own GSON, so this one was just causing 
+									shading <artifactItem> <groupId>com.google.code.gson</groupId> <artifactId>gson</artifactId> 
+									<version>2.3</version> </artifactItem> -->
+								<artifactItem>
+									<groupId>com.eclipsesource.jaxrs</groupId>
+									<artifactId>provider-gson</artifactId>
+									<version>2.3</version>
+								</artifactItem>
+							</artifactItems>
+							<outputDirectory>src/main/resources/osgi-jax-rs-connector</outputDirectory>
+							<stripVersion>false</stripVersion>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>${maven-surefire-plugin.version}</version>
+				<configuration>
+					<systemProperties>
+						<property>
+							<name>cytoscape.api.version</name>
+							<value>${cytoscape.api.version}</value>
+						</property>
+					</systemProperties>
+					<!-- Below is required for mockito -->
+        			<argLine>
+						--add-opens java.base/java.lang=ALL-UNNAMED
+						--add-opens java.base/java.net=ALL-UNNAMED
+						--add-opens java.base/java.util=ALL-UNNAMED
+					</argLine>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${maven-compiler-plugin.version}</version>
+				<extensions>true</extensions>
+				<configuration>
+					<source>17</source>
+					<target>17</target>
+					<encoding>UTF-8</encoding>
+					<optimize>true</optimize>
+					<showWarnings>true</showWarnings>
+					<showDeprecation>true</showDeprecation>
+					<compilerArguments>
+						<Xmaxwarns>10000</Xmaxwarns>
+						<Xmaxerrs>10000</Xmaxerrs>
+					</compilerArguments>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.felix</groupId>
+				<artifactId>maven-bundle-plugin</artifactId>
+				<version>${maven-bundle-plugin.version}</version>
+				<extensions>true</extensions>
+				<configuration>
+					<instructions>
+						<Bundle-SymbolicName>${bundle.symbolicName}</Bundle-SymbolicName>
+						<Bundle-Version>${project.version}</Bundle-Version>
+						<Private-Package>${bundle.namespace}.internal.*</Private-Package>
+						<Bundle-Activator>${bundle.namespace}.internal.CyActivator</Bundle-Activator>
+						<Embed-Dependency>*;scope=!provided|test;groupId=!org.cytoscape</Embed-Dependency>
+						<Embed-Transitive>true</Embed-Transitive>
+						<Export-Package>io.swagger.annotations, com.google.gson, com.google.gson.annotations, com.fasterxml.jackson.annotation</Export-Package>
+						<Import-Package>*;resolution:=optional</Import-Package>
+						<Cytoscape-App-Dependencies>CX Support;2.1.0</Cytoscape-App-Dependencies>
+					</instructions>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.eluder.coveralls</groupId>
+				<artifactId>coveralls-maven-plugin</artifactId>
+				<version>3.1.0</version>
+			</plugin>
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>0.8.4</version>
+				<configuration>
+					<includes>
+						<include>org/cytoscape/rest/**/*</include>
+						<include>org/cytoscape/rest/*</include>
+					</includes>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>report</id>
+						<phase>test</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- Will run build.xml in same folder <plugin> <groupId>org.apache.maven.plugins</groupId> 
+				<artifactId>maven-antrun-plugin</artifactId> <version>1.7</version> <executions> 
+				<execution> <phase>install</phase> <configuration> <target> <ant dir="./" 
+				/> </target> </configuration> <goals> <goal>run</goal> </goals> </execution> 
+				</executions> </plugin> -->
+		</plugins>
+		<pluginManagement>
+			<plugins>
+				<!--This plugin's configuration is used to store Eclipse m2e settings 
+					only. It has no influence on the Maven build itself. -->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>
+											org.apache.maven.plugins
+										</groupId>
+										<artifactId>
+											maven-dependency-plugin
+										</artifactId>
+										<versionRange>
+											[2.1,)
+										</versionRange>
+										<goals>
+											<goal>copy</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore />
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+
+	</build>
+
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.glassfish.jersey</groupId>
+				<artifactId>jersey-bom</artifactId>
+				<version>${jersey.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<dependencies>
+		<!-- Cytoscape 3 Dependencies -->
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>app-api</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>event-api</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>property-api</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>io-api</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>swing-application-api</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>layout-api</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>core-task-api</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>work-api</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>service-api</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>group-api</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>model-api</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>vizmap-api</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>command-executor-api</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>swing-util-api</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+		 	<groupId>org.cytoscape</groupId>
+  			<artifactId>ci-api</artifactId>
+  			<version>${cytoscape.api.version}</version>
+  			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>util-api</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<scope>provided</scope>
+		</dependency>
+	
+	 <dependency>
+	 	  <groupId>org.apache.karaf.features</groupId>
+    	 <artifactId>org.apache.karaf.features.core</artifactId>
+    	  <version>${karaf.version}</version>
+    	  <scope>provided</scope>
+	 </dependency>
+	 <dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>3.1.0</version>
+			<scope>provided</scope>
+		</dependency>
+	
+		<!-- Guice -->
+		<dependency>
+			<groupId>com.google.inject</groupId>
+			<artifactId>guice</artifactId>
+			<version>4.2.0</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.google.inject.extensions</groupId>
+			<artifactId>guice-multibindings</artifactId>
+			<version>4.2.0</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.google.inject.extensions</groupId>
+			<artifactId>guice-assistedinject</artifactId>
+			<version>4.2.0</version>
+			<scope>test</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>25.0-jre</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- OSGi core dependency -->
+		<dependency>
+			<groupId>org.osgi</groupId>
+			<artifactId>osgi.core</artifactId>
+			<version>${osgi.api.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.osgi</groupId>
+			<artifactId>osgi.cmpn</artifactId>
+		 	<version>${osgi.compendium.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- 3rd party libraries -->
+		<!-- osgi jax-rs bundles -->
+
+		<!-- Important: javax.ws.rs-api must always have 'provided' scope in CyREST and in Cytoscape Apps. Provided dependencies are those that 
+		are available within the running OSGi context. This ensures CyREST and all apps will share the same dependency. With a different scope, 
+		javax.ws.rs-api classes will be , and class equalities will not function as intended, preventing CyREST from loading
+		services as REST endpoints.
+		
+		Should this need to be updated, the actual dependency is defined in \gui-distribution\features\src\main\resources\features.xml
+		 -->
+		<dependency>
+			<groupId>javax.ws.rs</groupId>
+			<artifactId>javax.ws.rs-api</artifactId>
+			<version>2.1</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>javax.validation</groupId>
+			<artifactId>validation-api</artifactId>
+			<version>2.0.1.Final</version>
+		</dependency>
+
+    <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-core</artifactId>
+            <version>2.3.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-impl</artifactId>
+            <version>2.3.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.activation</groupId>
+            <artifactId>javax.activation</artifactId>
+            <version>1.2.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+		<!-- Jackson -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<version>2.7.4</version>
+		</dependency>
+		<dependency>
+			<groupId>org.glassfish.jersey.containers</groupId>
+			<artifactId>jersey-container-grizzly2-http</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>3.1.0</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
+			<version>2.3</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.eclipsesource.jaxrs</groupId>
+			<artifactId>provider-gson</artifactId>
+			<version>2.3</version>
+			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>com.eclipsesource.jaxrs</groupId>
+					<artifactId>jersey-all</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<!-- Jersey -->
+		<!-- <dependency> <groupId>org.glassfish.jersey.containers</groupId> <artifactId>jersey-container-grizzly2-servlet</artifactId> 
+			</dependency> -->
+
+
+		<!-- Logging -->
+		<dependency>
+			<groupId>org.ops4j.pax.logging</groupId>
+			<artifactId>pax-logging-api</artifactId>
+			<version>2.0.10</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>io.swagger</groupId>
+			<artifactId>swagger-annotations</artifactId>
+			<version>1.6.2</version>
+		</dependency>
+
+		<dependency>
+			<groupId>io.swagger</groupId>
+			<artifactId>swagger-jersey2-jaxrs</artifactId>
+			<version>1.6.2</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-api</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>io.swagger</groupId>
+					<artifactId>swagger-annotations</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<!-- Testing -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>${junit.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-all</artifactId>
+			<version>1.10.19</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.glassfish.jersey.media</groupId>
+			<artifactId>jersey-media-json-jackson</artifactId>
+			<version>2.36</version><!--$NO-MVN-MAN-VER$-->
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Java 17 removed the packaged JavaScript engine, using grallvm instead. -->
+		<dependency>
+			<groupId>org.graalvm.js</groupId>
+			<artifactId>js</artifactId>
+			<version>22.0.0</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.graalvm.js</groupId>
+			<artifactId>js-scriptengine</artifactId>
+			<version>22.0.0</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>model-impl</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<type>test-jar</type>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>model-impl</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>event-api</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<type>test-jar</type>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>viewmodel-impl</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>viewmodel-impl</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<type>test-jar</type>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>vizmap-impl</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>ding-presentation-impl</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<type>test-jar</type>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.cytoscape</groupId>
+			<artifactId>ding-presentation-impl</artifactId>
+			<version>${cytoscape.api.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.glassfish.jersey.test-framework.providers</groupId>
+			<artifactId>jersey-test-framework-provider-grizzly2</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.glassfish.jersey.test-framework</groupId>
+			<artifactId>jersey-test-framework-core</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+
+
+	</dependencies>
+</project>

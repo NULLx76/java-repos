@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.mycompany</groupId>
+    <artifactId>LedLight</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    
+    <dependencies>
+        <dependency>
+            <groupId>com.pi4j</groupId>
+            <artifactId>pi4j-core</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <!-- END SNIPPET: maven-dependency-snippet -->
+        <dependency>
+            <groupId>com.pi4j</groupId>
+            <artifactId>pi4j-gpio-extension</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.pi4j</groupId>
+            <artifactId>pi4j-device</artifactId>
+            <version>1.0</version>
+        </dependency>
+    </dependencies>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <!-- DEFAULT RASPBERRY PI PROPERTIES -->
+        <pi.host>raspberrypi.mshome.net</pi.host>
+        <pi.port>22</pi.port>
+        <pi.user>pi</pi.user>
+        <pi.password>raspberry</pi.password>
+
+        <!-- SETTINGS FOR REMOTELY BUILDING NATIVE LIBRARY ON RASPBERRY PI -->
+        <pi.dirBuildTemp>/home/pi/pi4j-temp</pi.dirBuildTemp>
+
+        <!-- SETTINGS FOR COPYING Pi4J ARTIFACTS TO DEVELOPMENT RASPBERRY PI -->
+        <pi.transfer.dev>true</pi.transfer.dev>
+        <pi.host.dev>${pi.host}</pi.host.dev>
+        <pi.port.dev>${pi.port}</pi.port.dev>
+        <pi.user.dev>${pi.user}</pi.user.dev>
+        <pi.password.dev>${pi.password}</pi.password.dev>
+        <pi.dirCopyTo.dev>/home/pi/pi4j-dev</pi.dirCopyTo.dev>
+        
+        <ant-jsch.version>1.7.1</ant-jsch.version>
+        <jsch.version>0.1.51</jsch.version>
+        <ant-contrib.version>20020829</ant-contrib.version>
+        <junit.version>4.11</junit.version>
+        <mockito.version>1.9.5</mockito.version>
+        
+        <maven-jar-plugin.version>2.5</maven-jar-plugin.version>
+        <maven-dependency-plugin.version>2.8</maven-dependency-plugin.version>
+        <maven-compiler-plugin.version>3.1</maven-compiler-plugin.version>
+        <maven-bundle-plugin.version>2.5.0</maven-bundle-plugin.version>
+        <maven-source-plugin.version>2.3</maven-source-plugin.version>
+        <maven-assembly-plugin.version>2.4.1</maven-assembly-plugin.version>
+
+    </properties>
+    <!-- BUILD INSTRUCTIONS -->
+    <build>
+      
+
+        <plugins>
+           <plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-dependency-plugin</artifactId>
+    <version>2.10</version>
+    <executions>
+        <execution>
+            <id>copy-dependencies</id>
+            <phase>prepare-package</phase>
+            <goals>
+                <goal>copy-dependencies</goal>
+            </goals>
+            <configuration>
+                <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                <overWriteReleases>false</overWriteReleases>
+                <overWriteSnapshots>false</overWriteSnapshots>
+                <overWriteIfNewer>true</overWriteIfNewer>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+<!--<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-jar-plugin</artifactId>
+    <version>2.6</version>
+    <configuration>
+        <archive>
+            <manifest>
+                <addClasspath>true</addClasspath>
+                <classpathPrefix>lib/</classpathPrefix>
+                <mainClass>com.dellnaresh.ledlight.Controlled</mainClass>
+            </manifest>
+        </archive>
+    </configuration>
+</plugin>-->
+
+      <!-- any other plugins -->
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+          <archive>
+            <manifest>
+              <mainClass>com.dellnaresh.ledlight.Controlled</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+    
+  
+            <!-- JAVA COMPILER -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven-compiler-plugin.version}</version>
+            </plugin>
+
+            <!-- INCLUDE SOURCE JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>${maven-source-plugin.version}</version>
+            </plugin>
+          
+
+
+            <!-- OPTIONALLY DEPLOY THE FINAL JAR TO THE RASPBERRY PI -->
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+
+                    <!-- copy the compiled JAR file to the Raspberry Pi platform platform -->
+                    <execution>
+                        <id>transfer-compiled-pi4j-example-jar</id>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <tasks>
+                                <taskdef resource="net/sf/antcontrib/antcontrib.properties"
+                                         classpathref="maven.plugin.classpath" />
+                                <if>
+                                    <equals arg1="${pi.transfer.dev}" arg2="true" />
+                                    <then>
+
+                                        <!-- ensure the target directory exists on the Raspberry Pi -->
+                                        <sshexec host="${pi.host.dev}" port="${pi.port.dev}" username="${pi.user.dev}"
+                                                 password="${pi.password.dev}" trust="true" failonerror="false"
+                                                 verbose="true" command="mkdir --parents ${pi.dirCopyTo.dev}" />
+
+                                        <!-- copy the JAR file to the Raspberry Pi -->
+                                        <scp
+                                            file="${project.build.directory}/${project.build.finalName}-jar-with-dependencies.jar"
+                                            todir="${pi.user.dev}:${pi.password.dev}@${pi.host.dev}:${pi.dirCopyTo.dev}"
+                                            port="${pi.port.dev}" trust="true" verbose="true" failonerror="true">
+                                        </scp>
+                                    </then>
+                                </if>
+                            </tasks>
+                        </configuration>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.ant</groupId>
+                        <artifactId>ant-jsch</artifactId>
+                        <version>${ant-jsch.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>com.jcraft</groupId>
+                        <artifactId>jsch</artifactId>
+                        <version>${jsch.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>ant-contrib</groupId>
+                        <artifactId>ant-contrib</artifactId>
+                        <version>${ant-contrib.version}</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+        </plugins>
+    </build>
+	
+  
+</project>

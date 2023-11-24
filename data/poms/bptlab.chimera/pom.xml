@@ -1,0 +1,566 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>de.hpi.bpt</groupId>
+	<artifactId>chimera-case-engine</artifactId>
+	<packaging>war</packaging>
+	<version>1.5</version>
+	<name>Chimera</name>
+	<scm>
+		<developerConnection>scm:git:ssh://git@gitlab.hpi.de/bptlab/chimera-case-engine.git</developerConnection>
+	</scm>
+
+	<build>
+		<finalName>Chimera</finalName>
+<!-- 	not working when config.properties is missing, like in initial build!	
+		<filters>
+			<filter>${basedir}/config.properties</filter>
+    	</filters> -->
+		<resources>
+			<resource>
+				<directory>${basedir}/src/main/resources</directory>
+				<filtering>true</filtering>
+			</resource>
+			<resource>
+				<directory>${basedir}</directory>
+				<includes>
+					<include>config.properties</include>
+				</includes>
+				<filtering>true</filtering>
+			</resource>
+		</resources>
+			<plugins>
+			
+				<plugin>
+				  <groupId>org.codehaus.gmaven</groupId>
+				  <artifactId>groovy-maven-plugin</artifactId>
+				    <executions>
+				      <execution>
+				        <phase>generate-sources</phase>
+				        <goals>
+				          <goal>execute</goal>
+				        </goals>
+				        <configuration>
+				          <properties>
+				            <version>${mysql.schema.version}</version>
+				          </properties>
+				          <source>
+				          	def file = new File('mysql_schema_version.txt') 
+				          	if(file.exists()){
+					          	int  oldVersion = file.text.toInteger()
+					          	if(properties['version'].toInteger() == oldVersion){
+					          		println 'Database version did not changed. Database will not be recreated.'
+					          	} else {
+					          		println 'Database version changed. Database schema will be deleted and recreated.'
+					          		project.properties.eclipseLinkDdlGeneration = 'drop-and-create-tables'
+					          		file.write(properties['version'])				          		
+					          	}
+					          } else{
+					          	println 'No current database schema version found. Database schema will be deleted and recreated.'
+					          		project.properties.eclipseLinkDdlGeneration = 'drop-and-create-tables'
+					          		file.write(properties['version'])
+					          }
+				          </source>
+				        </configuration>
+				      </execution>
+				  </executions>
+				</plugin>
+			
+				<plugin>
+					<groupId>com.coderplus.maven.plugins</groupId>
+					<artifactId>copy-rename-maven-plugin</artifactId>
+					<version>1.0</version>
+					<executions>
+						<!-- using a different persistence.xml for testing so we can specify and use a second test database -->
+						<!-- the copying is necessary because JPA does not use the persistence.xml stored under test/resources -->
+						<execution>
+							<id>copy-test-persistence</id>
+							<phase>test-compile</phase>
+							<goals>
+								<goal>copy</goal>
+							</goals>
+							<configuration>
+								<fileSets>
+									<!--backup the "proper" persistence.xml-->
+									<fileSet>
+										<sourceFile>${project.build.outputDirectory}/META-INF/persistence.xml</sourceFile>
+										<destinationFile>${project.build.outputDirectory}/META-INF/persistence.xml.proper</destinationFile>
+									</fileSet>
+									<!--replace the "proper" persistence.xml with the "test" version-->
+									<fileSet>
+										<sourceFile>${project.build.outputDirectory}/META-INF/persistenceTest.xml</sourceFile>
+										<destinationFile>${project.build.outputDirectory}/META-INF/persistence.xml</destinationFile>
+									</fileSet>
+								</fileSets>
+							</configuration>
+						</execution>
+						<execution>
+					        <!--restore the "proper" persistence.xml-->
+							<id>restore-persistence</id>
+							<phase>prepare-package</phase>
+							<goals>
+								<goal>rename</goal>
+							</goals>
+							<configuration>
+								<sourceFile>${project.build.outputDirectory}/META-INF/persistence.xml.proper</sourceFile>
+								<destinationFile>${project.build.outputDirectory}/META-INF/persistence.xml</destinationFile>
+					      </configuration>
+						</execution>
+					</executions>
+				</plugin>
+				<plugin>
+					<groupId>org.codehaus.mojo</groupId>
+					<artifactId>properties-maven-plugin</artifactId>
+					<version>1.0.0</version>
+					<executions>
+						<execution>
+							<phase>initialize</phase>
+							<goals>
+								<goal>read-project-properties</goal>
+							</goals>
+							<configuration>
+								<files>
+									<file>${basedir}/config.properties</file>
+									<file>${basedir}/mysql_schema_version.properties</file>
+								</files>
+							</configuration>
+						</execution>
+					</executions>
+				</plugin>
+			</plugins>
+		
+		<pluginManagement>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.tomcat.maven</groupId>
+				<artifactId>tomcat7-maven-plugin</artifactId>
+				<version>2.2</version>
+				<!-- Deployment is configured in profile managed by jenkins <configuration> 
+					<url>http://172.16.64.113:8080/manager/text</url> <server>chimera113</server> 
+					<path>/Chimera</path> </configuration> -->
+					
+					
+					<!--  for faster local testing -->
+					 <configuration>
+						<path>/${project.name}</path>
+          				<url>http://localhost:8080/manager/text</url>
+        			</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>2.5.1</version>
+				<inherited>true</inherited>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.18.1</version>
+				<configuration>
+					<argLine>-noverify</argLine>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>cobertura-maven-plugin</artifactId>
+				<version>2.6</version>
+				<configuration>
+					<format>xml</format>
+					<maxmem>256m</maxmem>
+					<!-- aggregated reports for multi-module projects -->
+					<aggregate>true</aggregate>
+					<!-- Exclude Debug-Files -->
+					<check />
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.eluder.coveralls</groupId>
+				<artifactId>coveralls-maven-plugin</artifactId>
+				<version>3.1.0</version>
+			</plugin>
+			<plugin>
+				<groupId>org.antlr</groupId>
+				<artifactId>antlr3-maven-plugin</artifactId>
+				<version>3.5.2</version>
+				<executions>
+					<execution>
+						<id>run antlr</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>antlr</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<version>1.9.1</version>
+				<executions>
+					<execution>
+						<id>add-source</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>add-source</goal>
+						</goals>
+						<configuration>
+							<sources>
+								<source>${basedir}/target/generated-sources/antlr3</source>
+							</sources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-release-plugin</artifactId>
+				<version>2.5.3</version>
+			</plugin>
+			
+			
+			<!-- <plugin> <groupId>org.apache.maven.plugins</groupId> <artifactId>maven-javadoc-plugin</artifactId> 
+				<version>2.9.1</version> <executions> <execution> <id>generate-service-docs</id> 
+				<phase>generate-resources</phase> <configuration> <doclet>com.carma.swagger.doclet.ServiceDoclet</doclet> 
+				<docletArtifact> <groupId>com.carma</groupId> <artifactId>swagger-doclet</artifactId> 
+				<version>1.0.5</version> </docletArtifact> <reportOutputDirectory>${project.build.outputDirectory}</reportOutputDirectory> 
+				<useStandardDocletOptions>false</useStandardDocletOptions> <additionalparam>-apiVersion 
+				0.1 -docBasePath http://interface/v2 -apiBasePath http://interface/v2</additionalparam> 
+				</configuration> <goals> <goal>javadoc</goal> </goals> </execution> </executions> 
+				</plugin> -->
+		</plugins>
+		</pluginManagement>
+	</build>
+
+	<properties>
+		<!-- default properties-->
+		<db.schema>chimeradb</db.schema>
+		<db.test.schema>chimeradb_test</db.test.schema>
+		<db.url.root>jdbc:mysql://localhost:3306/</db.url.root>
+  		<db.url>${db.url.root}${db.schema}</db.url>
+		<db.test.url>${db.url.root}${db.test.schema}</db.test.url>
+		<db.user>chimera</db.user>
+		<db.password>chimera</db.password>
+		<unicorn.url>http://localhost:8080</unicorn.url>
+		<eclipseLinkDdlGeneration>create-or-extend-tables</eclipseLinkDdlGeneration>
+		<unicorn.deploy.path>/Unicorn-unicorn_BP15_dev</unicorn.deploy.path>
+		<chimera.url>http://localhost:8080</chimera.url>
+		<chimera.deploy.path>/${project.name}</chimera.deploy.path>
+		<powermock.version>1.6.1</powermock.version>
+		<jersey.version>2.17</jersey.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
+	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.glassfish.jersey</groupId>
+				<artifactId>jersey-bom</artifactId>
+				<version>${jersey.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<dependencies>
+		<!-- Dependencies for Unicorn EventQuery subscription -->
+		<dependency>
+			<groupId>org.apache.activemq</groupId>
+			<artifactId>activemq-all</artifactId>
+			<version>5.12.1</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.github.tomakehurst</groupId>
+			<artifactId>wiremock</artifactId>
+			<version>2.0.10-beta</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.geronimo.specs</groupId>
+			<artifactId>geronimo-jms_1.1_spec</artifactId>
+			<version>1.1.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.glassfish.jersey.containers</groupId>
+			<artifactId>jersey-container-servlet-core</artifactId>
+			<!-- use the following artifactId if you don't need servlet 2.x compatibility -->
+			<!-- artifactId>jersey-container-servlet</artifactId -->
+		</dependency>
+		<dependency>
+			<groupId>info.macias</groupId>
+			<artifactId>jeasse-servlet3</artifactId>
+			<version>0.10.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.glassfish.jersey.media</groupId>
+			<artifactId>jersey-media-sse</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20140107</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>3.4</version>
+		</dependency>
+
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.11</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>commons-fileupload</groupId>
+			<artifactId>commons-fileupload</artifactId>
+			<version>1.3.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>4.3.6</version>
+		</dependency>
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>3.1.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+			<version>5.1.45</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.glassfish.jersey.media</groupId>
+			<artifactId>jersey-media-moxy</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
+			<version>2.2.2</version>
+		</dependency>
+		<dependency>
+			<groupId>com.jayway.jsonpath</groupId>
+			<artifactId>json-path</artifactId>
+			<version>2.2.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-email</artifactId>
+			<version>1.3.3</version>
+		</dependency>
+		<!-- Dependencies for Tests -->
+		<!-- An Framework for mock-Objects -->
+		<dependency>
+			<groupId>org.easymock</groupId>
+			<artifactId>easymock</artifactId>
+			<version>3.3.1</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.powermock</groupId>
+			<artifactId>powermock-module-junit4</artifactId>
+			<version>${powermock.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.powermock</groupId>
+			<artifactId>powermock-api-easymock</artifactId>
+			<version>${powermock.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+     		<groupId>org.mock-server</groupId>
+     		<artifactId>mockserver-netty</artifactId>
+     		<version>5.3.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.jayway.restassured</groupId>
+			<artifactId>rest-assured</artifactId>
+			<version>2.4.0</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.jayway.restassured</groupId>
+			<artifactId>json-schema-validator</artifactId>
+			<version>2.4.0</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.glassfish.jersey.test-framework.providers</groupId>
+			<artifactId>jersey-test-framework-provider-grizzly2</artifactId>
+			<!--<version>${jersey.version}</version>-->
+		</dependency>
+		<!--
+		<dependency>
+			<groupId>org.glassfish.jersey.test-framework.providers</groupId>
+			<artifactId>jersey-test-framework-provider-inmemory</artifactId>
+			<version>${jersey.version}</version>
+		</dependency>
+		-->
+		<dependency>
+			<groupId>com.ibatis</groupId>
+			<artifactId>ibatis2-common</artifactId>
+			<version>2.1.7.597</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jvnet.mock-javamail</groupId>
+			<artifactId>mock-javamail</artifactId>
+			<version>1.9</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>net.javacrumbs.json-unit</groupId>
+			<artifactId>json-unit</artifactId>
+			<version>1.5.1</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.antlr</groupId>
+			<artifactId>antlr</artifactId>
+			<version>3.5.2</version>
+			<type>jar</type>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.glassfish.jersey.core</groupId>
+			<artifactId>jersey-client</artifactId>
+			<!-- <version>2.17</version>  -->
+		</dependency>
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.9</version>
+		</dependency>
+		<dependency>
+			<groupId>joda-time</groupId>
+			<artifactId>joda-time</artifactId>
+			<version>2.3</version>
+		</dependency>
+		<dependency>
+			<groupId>org.quartz-scheduler</groupId>
+			<artifactId>quartz</artifactId>
+			<version>2.2.2</version>
+		</dependency>
+		<dependency>
+			<groupId>com.jayway.restassured</groupId>
+			<artifactId>json-path</artifactId>
+			<version>2.4.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.persistence</groupId>
+			<artifactId>org.eclipse.persistence.jpa</artifactId>
+			<version>2.6.4</version>
+		</dependency>
+		<dependency>
+	      	<groupId>io.swagger.core.v3</groupId>
+	      	<artifactId>swagger-jaxrs2</artifactId>
+	      	<version>2.0.0</version>
+	    </dependency>
+	    <!-- 
+	    <dependency>
+	      	<groupId>io.swagger.core.v3</groupId>
+	      	<artifactId>swagger-jaxrs2-servlet-initializer</artifactId>
+	      	<version>2.0.0</version>
+	    </dependency>
+	    -->
+	    <dependency>
+		    <groupId>com.google.guava</groupId>
+		    <artifactId>guava</artifactId>
+		    <version>23.0</version>
+		</dependency>
+		<dependency>
+		    <groupId>com.fasterxml.jackson.core</groupId>
+		    <artifactId>jackson-databind</artifactId>
+		    <version>2.9.6</version>
+		</dependency>
+		<dependency>
+		    <groupId>com.fasterxml.jackson.core</groupId>
+		    <artifactId>jackson-annotations</artifactId>
+		    <version>2.9.6</version>
+		</dependency>
+		<dependency>
+		    <groupId>com.fasterxml.jackson.core</groupId>
+		    <artifactId>jackson-core</artifactId>
+		    <version>2.9.6</version>
+		</dependency>
+		<dependency>
+		    <groupId>org.eclipse.persistence</groupId>
+		    <artifactId>org.eclipse.persistence.moxy</artifactId>
+		    <version>2.7.3</version>
+		</dependency>
+	</dependencies>
+	<profiles>
+		<profile>
+			<id>initial-build</id>
+			<activation>
+				<file>
+					<missing>${basedir}/config.properties</missing>
+				</file>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+					<!-- copy and filter config template to basedir -->
+						<artifactId>maven-resources-plugin</artifactId>
+						<version>2.6</version>
+						<executions>
+							<execution>
+								<phase>validate</phase>
+								<goals>
+									<goal>copy-resources</goal>
+								</goals>
+								<configuration>
+									<outputDirectory>${basedir}</outputDirectory>
+									<resources>
+										<resource>
+											<directory>${basedir}/src/main/resources</directory>
+											<include>config_template.properties</include>
+											<filtering>true</filtering>
+										</resource>
+									</resources>
+									<overwrite>true</overwrite>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<!-- rename template file to 'config.properties' -->
+						<groupId>com.coderplus.maven.plugins</groupId>
+						<artifactId>copy-rename-maven-plugin</artifactId>
+						<version>1.0</version>
+						<executions>
+							<execution>
+								<id>rename-config-template-file</id>
+								<phase>validate</phase>
+								<goals>
+									<goal>rename</goal>
+								</goals>
+								<configuration>
+									<sourceFile>${basedir}/config_template.properties</sourceFile>
+									<destinationFile>${basedir}/config.properties</destinationFile>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+</project>

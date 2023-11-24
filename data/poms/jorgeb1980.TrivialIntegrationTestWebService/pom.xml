@@ -1,0 +1,216 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>service.integration</groupId>
+	<artifactId>RestServiceIntegrationTest</artifactId>
+	<version>1.0</version>
+	<packaging>war</packaging>
+	
+	
+	
+	<!-- Credit for the solution to 
+		http://www.petrikainulainen.net/programming/maven/integration-testing-with-maven/
+	 -->
+	
+	<properties>
+		<project.build.sourceEncoding>cp1252</project.build.sourceEncoding>
+		<!-- Properties used to access jetty instance in integration tests -->
+		<jetty.port>56789</jetty.port>
+		<jetty.context.path>app</jetty.context.path>
+	</properties>
+	
+	<dependencies>
+		<dependency>
+			<groupId>com.sun.jersey</groupId>
+			<artifactId>jersey-server</artifactId>
+			<version>1.8</version>
+		</dependency>
+		<dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20140107</version>
+		</dependency>
+		<!-- Tests run with JUnit -->	
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- Horrible but fast way to get to the Jetty server -->
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>4.5.2</version>
+			<scope>test</scope>
+		</dependency>
+		
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+			    <groupId>org.codehaus.mojo</groupId>
+			    <artifactId>build-helper-maven-plugin</artifactId>
+			    <version>1.9.1</version>
+			    <executions>
+			        <execution>
+					    <id>add-integration-test-sources</id>
+					    <phase>generate-test-sources</phase>
+					    <goals>
+					        <goal>add-test-source</goal>
+					    </goals>
+					    <configuration>
+					        <!-- Configures the source directory of our integration tests -->
+					        <sources>
+					            <source>src/integration-test/java</source>
+					        </sources>
+					    </configuration>
+					</execution>
+					<!-- Add a new resource directory to our build -->
+					<execution>
+						<id>add-integration-test-resources</id>
+						<phase>generate-test-resources</phase>
+						<goals>
+						    <goal>add-test-resource</goal>
+						</goals>
+						<configuration>
+						    <!-- Configures the resource directory of our integration tests -->
+						    <resources>
+						        <!--
+						            Placeholders that are found from the files located in the configured resource
+						            directories are replaced with the property values found from the profile
+						            specific configuration file.
+						        -->
+						        <resource>
+						            <filtering>true</filtering>
+						            <directory>src/integration-test/resources</directory>
+						        </resource>
+						    </resources>
+						</configuration>
+					</execution>
+			    </executions>
+			</plugin>
+			<plugin>
+		        <groupId>org.apache.maven.plugins</groupId>
+		        <artifactId>maven-war-plugin</artifactId>
+		        <version>2.6</version>
+		    </plugin>
+			<plugin>
+	          <groupId>org.apache.maven.plugins</groupId>
+	          <artifactId>maven-compiler-plugin</artifactId>
+	          <version>3.1</version>
+	          <configuration>
+	          	<source>1.7</source>
+	          	<target>1.7</target>
+	          </configuration>
+	        </plugin>
+	        <!-- Unit tests, depending on the selected profile by the means
+	        	of skipping it throught a property -->
+	        <plugin>
+			    <groupId>org.apache.maven.plugins</groupId>
+			    <artifactId>maven-surefire-plugin</artifactId>
+			    <version>2.18</version>
+			    <configuration>
+			        <!-- Skips unit tests if the value of skip.unit.tests property is true -->
+			        <skipTests>${skip.unit.tests}</skipTests>
+			        <!-- Excludes integration tests when unit tests are run -->
+			        <excludes>
+			            <exclude>**/IT*.java</exclude>
+			        </excludes>
+			    </configuration>
+			</plugin>
+			<!-- Integration tests, depending on the selected profile by the means
+	        	of skipping it throught a property -->
+	        <plugin>
+			    <groupId>org.apache.maven.plugins</groupId>
+			    <artifactId>maven-failsafe-plugin</artifactId>
+			    <version>2.18</version>
+			    <executions>
+			        <!--
+			            Invokes both the integration-test and the verify goals of the
+			            Failsafe Maven plugin
+			        -->
+			        <execution>
+			            <id>integration-tests</id>
+			            <goals>
+			                <goal>integration-test</goal>
+			                <goal>verify</goal>
+			            </goals>
+			            <configuration>
+			                <!--
+			                    Skips integration tests if the value of skip.integration.tests
+			                    property is true
+			                -->
+			                <skipTests>${skip.integration.tests}</skipTests>
+			            </configuration>
+			        </execution>
+			    </executions>
+			</plugin>
+        </plugins>
+	</build>
+	
+	<!-- Define different profiles in order to launch different sets of tests
+	while building -->
+	<profiles>
+	    <profile>
+	        <id>unit-test</id>
+	        <properties>
+	            <build.profile.id>unit-test</build.profile.id>
+	            <skip.integration.tests>true</skip.integration.tests>
+	            <skip.unit.tests>false</skip.unit.tests>
+	        </properties>
+	    </profile>
+	    <!-- The Configuration of the integration-test profile -->
+	    <profile>	    
+	    	<!-- This is left by default in order to get it executed in IT -->
+	        <activation>
+	            <activeByDefault>true</activeByDefault>
+	        </activation>
+	        <id>integration-test</id>
+	        <properties>
+	            <build.profile.id>integration-test</build.profile.id>
+	            <skip.integration.tests>false</skip.integration.tests>
+	            <skip.unit.tests>true</skip.unit.tests>
+	        </properties>
+	        <build>
+	        	<plugins>	        		
+					<!-- We want to start a jetty instance -->
+					<plugin>
+				        <groupId>org.eclipse.jetty</groupId>
+				        <artifactId>jetty-maven-plugin</artifactId>
+				        <version>9.2.2.v20140723</version>
+				        <configuration>
+				          <scanIntervalSeconds>10</scanIntervalSeconds>
+				          <stopPort>8005</stopPort>
+				          <stopKey>STOP</stopKey>
+				          <httpConnector>
+				          	<port>${jetty.port}</port>
+				          </httpConnector>
+				        </configuration>
+				        <executions>
+				          <execution>
+				            <id>start-jetty</id>
+				            <phase>pre-integration-test</phase>
+				            <goals>
+				              <goal>start</goal>
+				            </goals>
+				            <configuration>
+				              <scanIntervalSeconds>0</scanIntervalSeconds>
+				              <daemon>true</daemon>
+				            </configuration>
+				          </execution>
+				          <execution>
+				            <id>stop-jetty</id>
+				            <phase>post-integration-test</phase>
+				            <goals>
+				              <goal>stop</goal>
+				            </goals>
+				          </execution>
+				        </executions>
+				    </plugin>
+	        	</plugins>
+	        </build>
+	    </profile>
+	</profiles>
+</project>

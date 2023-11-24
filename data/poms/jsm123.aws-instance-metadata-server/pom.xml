@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>de.is24.aws</groupId>
+  <artifactId>aws-instance-metadata-server</artifactId>
+  <version>1.0-SNAPSHOT</version>
+
+  <name>AWS Instance Metadata Server</name>
+  <description>tbc.</description>
+  <url>https://github.com/ImmobilienScout24/aws-instance-metadata-server</url>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>1.2.1.RELEASE</version>
+  </parent>
+
+  <properties>
+    <java.version>1.8</java.version>
+    <maven.build.timestamp.format>yyyyMMddHHmmss</maven.build.timestamp.format>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.spring.platform</groupId>
+        <artifactId>platform-bom</artifactId>
+        <version>1.1.1.RELEASE</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk</artifactId>
+      <version>1.8.2</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+    </dependency>
+
+
+
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-test</artifactId>
+      <scope>test</scope>
+      <version>${spring.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-library</artifactId>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>rpm-maven-plugin</artifactId>
+        <version>2.1-alpha-4</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>version</goal>
+              <goal>rpm</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <name>is24-${project.artifactId}</name>
+          <vendor>${project.organization.name}</vendor>
+          <version>1</version>
+          <release>${maven.build.timestamp}</release>
+          <group>is24</group>
+          <copyright>2014, ${project.organization.name}</copyright>
+          <distribution>${project.artifactId}</distribution>
+
+          <requires>
+            <require>nc</require>
+            <require>shadow-utils</require>
+            <require>daemonize</require>
+            <require>logrotate</require>
+            <require>is24-jdk-8</require>
+          </requires>
+          <postinstallScriptlet>
+            <script><![CDATA[
+              /sbin/chkconfig --add ${project.artifactId}
+            ]]></script>
+          </postinstallScriptlet>
+          <preremoveScriptlet>
+            <script><![CDATA[
+              if [ "$1" -eq 0 ]; then
+                /sbin/service ${project.artifactId} stop >/dev/null 2>&1
+                /sbin/chkconfig --del ${project.artifactId}
+              fi
+            ]]>
+            </script>
+          </preremoveScriptlet>
+          <postremoveScriptlet>
+            <script><![CDATA[
+              [ "$1" -ge 1 ] && /sbin/service ${project.artifactId} condrestart >/dev/null 2>&1
+            ]]></script>
+          </postremoveScriptlet>
+          <mappings>
+            <mapping>
+              <directory>/etc/init.d</directory>
+              <filemode>755</filemode>
+              <directoryIncluded>false</directoryIncluded>
+              <sources>
+                <source>
+                  <location>src/main/rpm/etc/init.d</location>
+                </source>
+              </sources>
+            </mapping>
+            <mapping>
+              <directory>/etc/logrotate.d</directory>
+              <filemode>755</filemode>
+              <directoryIncluded>false</directoryIncluded>
+              <sources>
+                <source>
+                  <location>src/main/rpm/etc/logrotate.d</location>
+                </source>
+              </sources>
+            </mapping>
+            <mapping>
+              <directory>/etc/yadt.conf.d</directory>
+              <filemode>755</filemode>
+              <directoryIncluded>false</directoryIncluded>
+              <sources>
+                <source>
+                  <location>src/main/rpm/etc/yadt.conf.d</location>
+                </source>
+              </sources>
+            </mapping>
+            <mapping>
+              <directory>/etc/${project.artifactId}.conf.d</directory>
+              <filemode>755</filemode>
+            </mapping>
+            <mapping>
+              <directory>/data/is24/${project.artifactId}</directory>
+              <filemode>755</filemode>
+              <username>webadmin</username>
+              <groupname>admins</groupname>
+              <sources>
+                <source>
+                  <location>${project.build.directory}/${project.artifactId}-${project.version}.jar
+                  </location>
+                  <destination>application.jar</destination>
+                </source>
+              </sources>
+            </mapping>
+            <mapping>
+              <directory>/data/logs/${project.artifactId}</directory>
+              <filemode>755</filemode>
+              <username>webadmin</username>
+              <groupname>admins</groupname>
+            </mapping>
+          </mappings>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.3.2</version>
+        <executions>
+          <execution>
+            <id>deployRpm</id>
+            <phase>deploy</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <skip>${build.is.personal}</skip>
+              <executable>repoclient</executable>
+              <workingDirectory>
+                ${project.build.directory}/rpm/is24-${project.artifactId}/RPMS/noarch/
+              </workingDirectory>
+              <commandlineArgs>
+                uploadto ${rpm.repository} is24-${project.artifactId}-${rpm.version}-${rpm.release}.noarch.rpm
+              </commandlineArgs>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+    </plugins>
+  </build>
+
+</project>

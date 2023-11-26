@@ -1,0 +1,291 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.deimos</groupId>
+	<artifactId>ProyectoFinal</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>war</packaging>
+	<profiles>
+		<profile>
+			<id>IT</id>
+			<build>
+				<plugins>
+					<!-- Para que el entorno al ejecutar las pruebas de integracion sea 
+						correcto, debemos lanzar un servidor de aplicaciones -->
+					<plugin>
+						<groupId>org.codehaus.cargo</groupId>
+						<artifactId>cargo-maven2-plugin</artifactId>
+						<version>1.4.18</version>
+						<configuration>
+							<wait>true</wait>
+							<container>
+								<containerId>tomcat7x</containerId>
+								  <!-- Ubicacion del contenedor -->
+								<home>C:\Users\curso\Ecosistema\apache-tomcat-7.0.72</home>
+								<type>installed</type>
+							</container>
+							<configuration>
+								<type>existing</type>
+								  <!-- Ubicacion a partir de la cual se creará la configuración de 
+									despliegue -->
+								<home>C:\Users\curso\Ecosistema\apache-tomcat-7.0.72</home>
+								<properties>
+									<cargo.servlet.port>8082</cargo.servlet.port>
+								</properties>
+							</configuration>
+							<deployables>
+								<deployable>
+									<groupId>com.deimos</groupId>
+									<artifactId>ProyectoFinal</artifactId>
+									<type>war</type>
+									<pingURL>http://localhost:8080/ProyectoFinal/index.html</pingURL>
+								</deployable>
+							</deployables>
+						</configuration>
+						<executions>
+							<execution>
+								<id>arrancar-servidor</id>
+								<phase>pre-integration-test</phase>
+								<goals>
+									<goal>start</goal>
+								</goals>
+							</execution>
+							<execution>
+								<id>parar-servidor</id>
+								<phase>post-integration-test</phase>
+								<goals>
+									<goal>stop</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+					<!-- Plugin para poder enviar aSonar el codigo de la aplicacion y que 
+						realice el analisis estatico -->
+					<plugin>
+						<groupId>org.codehaus.sonar</groupId>
+						<artifactId>sonar-maven-plugin</artifactId>
+						<version>6.1</version>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>QA</id>
+			<build>
+				<plugins>
+					<!-- Para que el entorno al ejecutar las pruebas de integracion sea 
+						correcto, debemos lanzar un servidor de aplicaciones -->
+					<plugin>
+						<groupId>org.codehaus.cargo</groupId>
+						<artifactId>cargo-maven2-plugin</artifactId>
+						<version>1.4.18</version>
+						<configuration>
+							<wait>true</wait>
+							<container>
+								<containerId>tomcat7x</containerId>
+								  <!-- Ubicacion del contenedor -->
+								<home>C:\Users\curso\Ecosistema\apache-tomcat-7.0.72</home>
+								<type>installed</type>
+							</container>
+							<configuration>
+								<type>existing</type>
+								  <!-- Ubicacion a partir de la cual se creará la configuración de 
+									despliegue -->
+								<home>C:\Users\curso\Ecosistema\apache-tomcat-7.0.72</home>
+								<properties>
+									<cargo.servlet.port>8082</cargo.servlet.port>
+								</properties>
+							</configuration>
+							<deployables>
+								<deployable>
+									<groupId>com.deimos</groupId>
+									<artifactId>ProyectoFinal</artifactId>
+									<type>war</type>
+									<pingURL>http://localhost:8080/ProyectoFinal/index.html</pingURL>
+								</deployable>
+							</deployables>
+						</configuration>
+						<executions>
+							<execution>
+								<id>arrancar-servidor</id>
+								<phase>pre-integration-test</phase>
+								<goals>
+									<goal>start</goal>
+								</goals>
+							</execution>
+							<execution>
+								<id>parar-servidor</id>
+								<phase>post-integration-test</phase>
+								<goals>
+									<goal>stop</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+	<!-- Para poder lanzar la tarea de deploy en el job de Continuous Delivery -->
+	<distributionManagement>
+		<repository>
+			<uniqueVersion>false</uniqueVersion>
+			<id>releases</id>
+			<name>Releases</name>
+			<url>http://localhost:8080/repository/internal</url>
+			<layout>default</layout>
+		</repository>
+		<snapshotRepository>
+			<uniqueVersion>true</uniqueVersion>
+			<id>snapshots</id>
+			<name>Snapshots</name>
+			<url>http://localhost:8080/repository/snapshots</url>
+			<layout>default</layout>
+		</snapshotRepository>
+	</distributionManagement>
+	<build>
+		<plugins>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.5.1</version>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+			<!-- Porque es un proyecto web -->
+			<plugin>
+				<artifactId>maven-war-plugin</artifactId>
+				<version>3.0.0</version>
+				<configuration>
+					<failOnMissingWebXml>false</failOnMissingWebXml>
+				</configuration>
+			</plugin>
+			<!-- Para lanzar las pruebas unitarias -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.7.1</version>
+				<configuration>
+					<!-- Esta linea de argLine, es motivada por el analisis de cobertura 
+						de JaCoCo -->
+					<argLine>${surefireArgLine}</argLine>
+					<excludes>
+						<exclude>**/*IT.java</exclude>
+						<exclude>**/*AT.java</exclude>
+					</excludes>
+					<includes>
+						<include>**/*UT.java</include>
+					</includes>
+				</configuration>
+			</plugin>
+			<!-- Para lanzar las pruebas integracion -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<version>2.8</version>
+				<configuration>
+					<excludes>
+						<exclude>**/*UT.java</exclude>
+						<exclude>**/*AT.java</exclude>
+					</excludes>
+					<includes>
+						<include>**/*IT.java</include>
+					</includes>
+				</configuration>
+				<executions>
+					<execution>
+						<id>pasar test integracion</id>
+						<phase>integration-test</phase>
+						<goals>
+							<goal>integration-test</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>validar pruebas integracion</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- Para que el entorno al ejecutar las pruebas de integracion sea correcto, 
+				debemos lanzar un servidor de aplicaciones -->
+			<plugin>
+				<groupId>org.codehaus.cargo</groupId>
+				<artifactId>cargo-maven2-plugin</artifactId>
+				<version>1.4.18</version>
+			</plugin>
+			<!-- PAra obtener la lectura de la cobertura -->
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>0.7.5.201505241946</version>
+				<executions>
+					<execution>
+						<id>pre-unit-test</id>
+						<phase>test-compile</phase>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+						<configuration>
+							<dataFile>${project.build.directory}/jacoco-ut.exec</dataFile>
+							<propertyName>surefireArgLine</propertyName>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>0.7.5.201505241946</version>
+				<executions>
+					<execution>
+						<id>post-unit-test</id>
+						<phase>test</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+						<configuration>
+							<dataFile>${project.build.directory}/jacoco.exec</dataFile>
+							<outputDirectory>${project.build.directory}/jacocout</outputDirectory>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+	<dependencies>
+		<!-- Dependecias de Test -->
+		<!-- Para la ejecucion de Test y asertos -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- Para la ejecucion de test de integracion -->
+		<dependency>
+			<groupId>org.seleniumhq.selenium</groupId>
+			<artifactId>selenium-java</artifactId>
+			<version>3.0.0</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- Para que los test unitarios lo sean de verdad, aislando la funcionalidad 
+			a probar -->
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-all</artifactId>
+			<version>1.10.19</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- Dependencias de ejecucion -->
+		<dependency>
+			<groupId>org.apache.tomcat</groupId>
+			<artifactId>tomcat-catalina</artifactId>
+			<version>7.0.72</version>
+			<scope>provided</scope>
+		</dependency>
+	</dependencies>
+</project>

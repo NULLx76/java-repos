@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>io.vertx.openshift</groupId>
+  <artifactId>vertx-openshift-it</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <java.version>1.8</java.version>
+
+    <!-- set by projects -->
+    <main.verticle/>
+    <main.class>io.vertx.core.Launcher</main.class>
+    <fabric8.skip>false</fabric8.skip>
+
+    <vertx.version>3.6.3</vertx.version>
+    <!-- version aligned with vert.x core -->
+    <slf4j.version>1.7.25</slf4j.version>
+
+    <!-- constrained by kubernetes assertions, which for whatever reason are way behind the latest -->
+    <!--<assertj.version>3.6.2</assertj.version>-->
+    <rest-assured.version>3.3.0</rest-assured.version>
+    <junit.version>4.12.0.redhat-003</junit.version>
+    <maven-surefire-plugin.version>2.18.1</maven-surefire-plugin.version>
+    <vertx-maven-plugin.version>1.0.18</vertx-maven-plugin.version>
+    <awaitility.version>3.1.6</awaitility.version>
+    <jgroups-kubernetes.version>1.0.9.Final</jgroups-kubernetes.version>
+
+    <release.candidate.repository>
+      https://maven.repository.redhat.com/earlyaccess/all/
+    </release.candidate.repository>
+    <snapshot.repository>https://oss.sonatype.org/content/repositories/snapshots/</snapshot.repository>
+
+    <!--
+     while we would need to align the version with one from
+     https://maven.repository.redhat.com/ga/io/fabric8/fabric8-maven-plugin/
+
+     they are very outdated.
+     -->
+
+    <fabric8.maven.plugin.version>3.5.42</fabric8.maven.plugin.version>
+
+    <!-- muse use version from https://maven.repository.redhat.com/ga/io/fabric8/kubernetes-api/ -->
+    <kubernetes.api.version>3.0.12</kubernetes.api.version>
+
+    <!-- Docker configuration -->
+    <docker.group.name>vertx-openshift-it</docker.group.name>
+    <fabric8.dockerUser>vertx-openshift-it</fabric8.dockerUser>
+    <docker.image>${docker.group.name}/${project.artifactId}:${project.version}</docker.image>
+    <vertx.health.path>/</vertx.health.path>
+
+    <postgresql.driver.version>42.2.5</postgresql.driver.version>
+    <mysql.driver.version>8.0.15</mysql.driver.version>
+    <oracle.driver.version>12.2.0.1</oracle.driver.version>
+  </properties>
+
+  <modules>
+    <module>vertx-it-utils</module>
+    <module>simple-http-it</module>
+    <module>http2-it</module>
+    <module>embedded-http-it</module>
+    <module>jdbc-it</module>
+    <module>configuration-it</module>
+    <module>healthcheck-it</module>
+    <module>vertx-service-discovery-it</module>
+    <module>sockjs-it</module>
+    <module>sockjs-service-proxy</module>
+    <module>sso-auth</module>
+    <module>vertx-cluster-manager-it</module>
+    <module>various-db-engines-it</module>
+    <module>vertx-circuit-breaker</module>
+    <module>vertx-mqtt-it</module>
+    <module>vertx-proton</module>
+    <module>micrometer-metrics-it</module>
+  </modules>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-dependencies</artifactId>
+        <version>${vertx.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-core</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-web</artifactId>
+    </dependency>
+
+    <!-- Logging -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+
+    <!-- Testing -->
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-unit</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>io.fabric8</groupId>
+      <artifactId>kubernetes-assertions</artifactId>
+      <version>${kubernetes.api.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>27.0.1-jre</version>
+    </dependency>
+
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>${junit.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.awaitility</groupId>
+      <artifactId>awaitility</artifactId>
+      <version>${awaitility.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.rest-assured</groupId>
+      <artifactId>rest-assured</artifactId>
+      <version>${rest-assured.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>io.reactiverse</groupId>
+          <artifactId>vertx-maven-plugin</artifactId>
+          <version>${vertx-maven-plugin.version}</version>
+          <executions>
+            <execution>
+              <id>vmp</id>
+              <goals>
+                <goal>initialize</goal>
+                <goal>package</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.8.0</version>
+        <configuration>
+          <source>${java.version}</source>
+          <target>${java.version}</target>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <repositories>
+    <repository>
+      <id>redhat-build</id>
+      <name>Red Hat builds Repository</name>
+      <url>${release.candidate.repository}</url>
+      <layout>default</layout>
+      <releases>
+        <enabled>true</enabled>
+        <updatePolicy>never</updatePolicy>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+    <repository>
+      <id>redhat-ga</id>
+      <name>MRRC</name>
+      <url>https://maven.repository.redhat.com/ga/</url>
+      <layout>default</layout>
+      <releases>
+        <enabled>true</enabled>
+        <updatePolicy>never</updatePolicy>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+
+
+    <repository>
+      <id>oss.snapshots</id>
+      <name>OSS Snapshots</name>
+      <url>${snapshot.repository}</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+    </repository>
+
+  </repositories>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>redhat-build</id>
+      <url>${release.candidate.repository}</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </pluginRepository>
+    <pluginRepository>
+      <id>oss.snapshots</id>
+      <url>${snapshot.repository}</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </pluginRepository>
+    <pluginRepository>
+      <id>MRRC</id>
+      <url>https://maven.repository.redhat.com/ga/</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </pluginRepository>
+  </pluginRepositories>
+
+  <profiles>
+    <profile>
+      <id>openshift</id>
+      <properties>
+        <test.to.exclude/>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>fabric8-maven-plugin</artifactId>
+            <version>${fabric8.maven.plugin.version}</version>
+            <executions>
+              <execution>
+                <id>fmp</id>
+                <goals>
+                  <goal>resource</goal>
+                  <goal>build</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <skip>${fabric8.skip}</skip>
+              <resources>
+                <labels>
+                  <service>
+                    <expose>true</expose>
+                  </service>
+                </labels>
+              </resources>
+              <enricher>
+                <config>
+                  <vertx-health-check>
+                    <path>/health</path>
+                  </vertx-health-check>
+                </config>
+              </enricher>
+            </configuration>
+          </plugin>
+
+          <plugin>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <version>2.22.1</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>integration-test</goal>
+                  <goal>verify</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

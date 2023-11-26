@@ -1,0 +1,228 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.nytimes</groupId>
+	<artifactId>pipeline-stress</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<properties>
+
+		<alpn.version>8.1.6.v20151105</alpn.version>
+
+	</properties>
+
+	<build>
+		<extensions>
+			<!-- Use os-maven-plugin to initialize the "os.detected" properties -->
+			<extension>
+				<groupId>kr.motd.maven</groupId>
+				<artifactId>os-maven-plugin</artifactId>
+				<version>1.4.0.Final</version>
+			</extension>
+		</extensions>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>com.lazerycode.jmeter</groupId>
+					<artifactId>jmeter-maven-plugin</artifactId>
+					<version>1.10.1</version>
+					<executions>
+						<execution>
+							<id>jmeter-tests</id>
+							<phase>verify</phase>
+							<goals>
+								<goal>jmeter</goal>
+							</goals>
+						</execution>
+					</executions>
+
+					<dependencies>
+						<dependency>
+							<groupId>com.nytimes</groupId>
+							<artifactId>pipeline-stress</artifactId>
+							<version>0.0.1-SNAPSHOT</version>
+						</dependency>
+						<dependency>
+							<groupId>com.google.gcloud</groupId>
+							<artifactId>gcloud-java-storage</artifactId>
+							<version>0.1.4</version>
+						</dependency>
+						<dependency>
+							<groupId>com.google.apis</groupId>
+							<artifactId>google-api-services-pubsub</artifactId>
+							<version>v1-rev8-1.21.0</version>
+						</dependency>
+						<dependency>
+							<groupId>org.apache.commons</groupId>
+							<artifactId>commons-pool2</artifactId>
+							<version>2.4.2</version>
+						</dependency>
+
+						<dependency>
+							<groupId>com.google.cloud.bigtable</groupId>
+							<artifactId>bigtable-hbase-1.1</artifactId>
+							<version>0.2.3</version>
+						</dependency>
+						<!-- <dependency> <groupId>io.netty</groupId> <artifactId>netty-tcnative</artifactId> 
+							<version>1.1.33.Fork14</version> <classifier>linux-x86_64</classifier> </dependency> -->
+
+						<dependency>
+							<groupId>org.mortbay.jetty.alpn</groupId>
+							<artifactId>alpn-boot</artifactId>
+							<version>${alpn.version}</version>
+						</dependency>
+
+						<dependency>
+							<groupId>kg.apc</groupId>
+							<artifactId>jmeter-plugins-standard</artifactId>
+							<version>1.3.1</version>
+						</dependency>
+
+						<dependency>
+							<groupId>kg.apc</groupId>
+							<artifactId>jmeter-plugins-extras</artifactId>
+							<version>1.3.1</version>
+						</dependency>
+
+					</dependencies>
+					<configuration>
+						<propertiesJMeter>
+							<jmeter.save.saveservice.latency>true</jmeter.save.saveservice.latency>
+							<jmeter.save.saveservice.time>true</jmeter.save.saveservice.time>
+							<sampleresult.useNanoTime>false</sampleresult.useNanoTime>
+							<testFilesIncluded>BTWrite.jmx</testFilesIncluded>
+						</propertiesJMeter>
+						<testResultsTimestamp>true</testResultsTimestamp>
+						<jMeterProcessJVMSettings>
+							<xms>5120</xms>
+							<xmx>10240</xmx>
+							<arguments>
+								<argument>
+									-Xbootclasspath/p:${settings.localRepository}/org/mortbay/jetty/alpn/alpn-boot/${alpn.version}/alpn-boot-${alpn.version}.jar
+								</argument>
+							</arguments>
+						</jMeterProcessJVMSettings>
+						<!-- protocol, server and port of tested webapp -->
+						<propertiesUser>
+							<csv.path>abc123</csv.path>
+						</propertiesUser>
+
+
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>com.lazerycode.jmeter</groupId>
+					<artifactId>jmeter-analysis-maven-plugin</artifactId>
+					<executions>
+						<execution>
+							<goals>
+								<goal>analyze</goal>
+							</goals>
+							<configuration>
+								<writers>
+									<writer>com.lazerycode.jmeter.analyzer.writer.ChartWriter</writer>
+								</writers>
+							</configuration>
+						</execution>
+					</executions>
+				</plugin>
+
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-antrun-plugin</artifactId>
+					<executions>
+						<execution>
+							<phase>initialize</phase>
+							<configuration>
+								<exportAntProperties>true</exportAntProperties>
+								<target>
+									<condition property="tcnative.classifier"
+										value="${os.detected.classifier}-fedora" else="${os.detected.classifier}">
+										<isset property="os.detected.release.fedora" />
+									</condition>
+								</target>
+							</configuration>
+							<goals>
+								<goal>run</goal>
+							</goals>
+						</execution>
+					</executions>
+				</plugin>
+
+
+				<plugin>
+					<groupId>de.codecentric</groupId>
+					<artifactId>jmeter-graph-maven-plugin</artifactId>
+					<version>0.1.0</version>
+					<executions>
+						<execution>
+							<id>create-graphs</id>
+							<goals>
+								<goal>create-graph</goal>
+							</goals>
+							<phase>verify</phase>
+							<configuration>
+								<inputFile>${project.build.directory}/jmeter/results/SimpleWebservicePerformanceTest.jtl</inputFile>
+								<graphs>
+									<graph>
+									   <pluginType>ResponseTimesPercentiles</pluginType>
+										<width>800</width>
+										<height>600</height>
+										<outputFile>${project.build.directory}/jmeter/results/test.png</outputFile>
+									</graph>
+									<!-- ... you can declare more <graph>-elements here -->
+								</graphs>
+							</configuration>
+						</execution>
+					</executions>
+				</plugin>
+
+
+			</plugins>
+
+		</pluginManagement>
+	</build>
+
+
+
+
+	<dependencies>
+		<dependency>
+			<groupId>org.apache.jmeter</groupId>
+			<artifactId>ApacheJMeter_java</artifactId>
+			<version>2.6</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.gcloud</groupId>
+			<artifactId>gcloud-java-storage</artifactId>
+			<version>0.1.4</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.apis</groupId>
+			<artifactId>google-api-services-pubsub</artifactId>
+			<version>v1-rev8-1.21.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-pool2</artifactId>
+			<version>2.4.2</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.cloud.bigtable</groupId>
+			<artifactId>bigtable-hbase-1.1</artifactId>
+			<version>0.2.3</version>
+		</dependency>
+
+		<!-- <dependency> <groupId>io.netty</groupId> <artifactId>netty-tcnative</artifactId> 
+			<version>1.1.33.Fork14</version> <classifier>linux-x86_64</classifier> </dependency> -->
+
+		<dependency>
+			<groupId>org.mortbay.jetty.alpn</groupId>
+			<artifactId>alpn-boot</artifactId>
+			<version>${alpn.version}</version>
+		</dependency>
+
+	</dependencies>
+
+
+
+</project>

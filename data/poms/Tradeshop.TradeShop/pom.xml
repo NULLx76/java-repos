@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  ~
+  ~                         Copyright (c) 2016-2023
+  ~                SparklingComet @ http://shanerx.org
+  ~               KillerOfPie @ http://killerofpie.github.io
+  ~
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
+  ~
+  ~                http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  ~
+  ~  NOTICE: All modifications made by others to the source code belong
+  ~  to the respective contributor. No contributor should be held liable for
+  ~  any damages of any kind, whether be material or moral, which were
+  ~  caused by their contribution(s) to the project. See the full License for more information.
+  ~
+  -->
+
+<!--
+  ~ ~~~~[ NOTE ON JAVADOC GENERATION ]~~~~
+  ~
+  ~ Javadoc generation has been made part of the standard (default) build.
+  ~ To skip their generation, set the maven runtime variable `skip_docs` to `true`,
+  ~ for example by running Maven like this:
+  ~
+  ~     mvn -Dskip_docs=true
+  ~
+  ~ If `skip_docs` is set to `false` or is found to be undefined, the Javadoc will be generated
+  ~ every time Maven executes the default goal(s).
+-->
+
+<!--
+  ~ ~~~~[ NOTE ON SELF-EXPIRATION ]~~~~
+  ~
+  ~ In order to force server admins not to linger too long on potentially buggy or dangerous DEV builds,
+  ~ such builds may be built with
+  ~
+  ~     mvn -P expiration
+  ~
+  ~ in order to include the file located at:
+  ~
+  ~     src/main/resources/builtdate.yml
+  ~
+  ~ If such a file is included, it will contain the compilation date as provided by Maven. Should the current
+  ~ date exceed this build date by a certain predefined lifetime (ie. 1 month) the plugin will refuse to load.
+  ~ The expiration profile should ONLY BE ENABLED for DEV BUILDS!
+  ~ It MUST NOT be used with any other kind of build (STABLE, BETA...).
+-->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.shanerx</groupId>
+    <artifactId>tradeshop</artifactId>
+    <version>2.6.1-STABLE</version>
+    <packaging>jar</packaging>
+    <name>TradeShop</name>
+    <url>https://tradeshop.github.io/</url>
+    <description>A powerful trading plugin based on sign-chest shops.</description>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.build.timestamp.format>yyyy-MM-dd'T'HH.mm.ss</maven.build.timestamp.format>
+        <timeStamp>${maven.build.timestamp}</timeStamp>
+        <pluginDir>org/shanerx/tradeshop</pluginDir>
+        <resourceDir>src/main/resources</resourceDir>
+
+        <!-- Profile variables  -->
+        <expirationFile/> <!-- default value for non-DEV build -->
+        <doClean/> <!-- default value for dirty build -->
+        <skipDocs/> <!-- default value for including docs -->
+        <commit/> <!-- default value for excluding commit -->
+        <branch/> <!-- default value for excluding commit -->
+        <fileTimeStamp/> <!-- default value for excluding commit -->
+        <build/> <!-- default value for jenkins build number -->
+
+        <!-- Changeable variables  -->
+        <outputDir>target/output-files
+        </outputDir> <!-- Set to relative directory output of PreShade and JavaDoc files  -->
+
+    </properties>
+
+    <profiles>
+        <profile>
+            <id>expiration</id> <!-- additional profile for DEV build -->
+            <properties>
+                <expirationFile>builddate.yml</expirationFile>
+            </properties>
+        </profile>
+        <profile>
+            <id>clean</id> <!-- additional profile for a Clean build -->
+            <properties>
+                <doClean>clean</doClean>
+            </properties>
+        </profile>
+        <profile>
+            <id>skipDocs</id> <!-- additional profile for a no javadocs in build -->
+            <properties>
+                <skipDocs>true</skipDocs>
+            </properties>
+        </profile>
+        <profile>
+            <id>includeTimeStamp</id> <!-- additional profile for a timestamped build -->
+            <properties>
+                <fileTimeStamp>-${timeStamp}</fileTimeStamp>
+            </properties>
+        </profile>
+        <profile>
+            <id>includeCommit</id> <!-- additional profile for a non-commit named build -->
+            <properties>
+                <!--suppress UnresolvedMavenProperty -->
+                <commit>-${commit_num}
+                </commit> <!-- `-Dcommit_num=###` is required for the commit number to appear in the file name -->
+            </properties>
+        </profile>
+        <profile>
+            <id>includeBranch</id> <!-- additional profile for a non-commit named build -->
+            <properties>
+                <!--suppress UnresolvedMavenProperty -->
+                <branch>-${branch_name}
+                </branch> <!-- `-Dbranch_name=###` is required for the branch name to appear in the file name -->
+            </properties>
+        </profile>
+        <profile>
+            <id>includeBuild</id> <!-- additional profile for a non-commit named build -->
+            <properties>
+                <!--suppress UnresolvedMavenProperty -->
+                <branch>-${build_num}
+                </branch> <!-- `-Dbuild_num=###` is required for the branch name to appear in the file name -->
+            </properties>
+        </profile>
+    </profiles>
+
+    <build>
+        <defaultGoal>${doClean} install</defaultGoal>
+        <finalName>${project.name}-${project.version}${branch}${commit}${fileTimeStamp}${build}</finalName>
+
+        <sourceDirectory>src/main/java</sourceDirectory>
+        <resources>
+            <resource>
+                <targetPath>.</targetPath>
+                <filtering>true</filtering>
+                <directory>${basedir}/${resourceDir}</directory>
+                <includes>
+                    <include>plugin.yml</include>
+                    <include>${expirationFile}</include>
+                </includes>
+            </resource>
+            <resource>
+                <targetPath>./Lang</targetPath>
+                <filtering>false</filtering>
+                <directory>${basedir}/${resourceDir}/Lang</directory>
+            </resource>
+        </resources>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <outputDirectory>${outputDir}/PreShade</outputDirectory>
+                    <createDependencyReducedPom>false</createDependencyReducedPom>
+                    <artifactSet>
+                        <includes>
+                            <include>org.bstats:*</include>
+                            <include>de.themoep:*</include>
+                        </includes>
+                    </artifactSet>
+                    <relocations>
+                        <relocation>
+                            <pattern>org.bstats</pattern>
+                            <shadedPattern>${project.groupId}.${project.artifactId}.bstats</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>de.themoep</pattern>
+                            <shadedPattern>${project.groupId}.${project.artifactId}</shadedPattern>
+                        </relocation>
+                    </relocations>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>META-INF/maven/**</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.4.0</version>
+                <configuration>
+                    <name>${project.build.finalName}</name>
+                    <failOnError>false</failOnError>
+                    <jarOutputDirectory>${outputDir}/JavaDocs</jarOutputDirectory>
+                    <!--suppress UnresolvedMavenProperty -->
+                    <skip>${skipDocs}</skip>
+                    <sourceFileExcludes>
+                        <exclude>${pluginDir}/TradeShop.java</exclude>
+                        <exclude>${pluginDir}/commands/**</exclude>
+                        <exclude>${pluginDir}/shop/listeners/**</exclude>
+                        <exclude>${pluginDir}/utils/versionmanagement/**</exclude>
+                        <exclude>${pluginDir}/player/JoinEventListener.java</exclude>
+                    </sourceFileExcludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <repositories>
+        <repository>
+            <id>spigot-repo</id>
+            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+        </repository>
+
+        <repository>
+            <id>CodeMC</id>
+            <url>https://repo.codemc.org/repository/maven-public</url>
+        </repository>
+
+        <repository>
+            <id>minebench-repo</id>
+            <url>https://repo.minebench.de/</url>
+        </repository>
+
+        <repository>
+            <id>papermc</id>
+            <url>https://repo.papermc.io/repository/maven-public/</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.spigotmc</groupId>
+            <artifactId>spigot-api</artifactId>
+            <version>1.20-R0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.bstats</groupId>
+            <artifactId>bstats-bukkit</artifactId>
+            <version>3.0.0</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>de.themoep</groupId>
+            <artifactId>inventorygui</artifactId>
+            <version>1.6-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>3.4.1</version>
+            <type>maven-plugin</type>
+        </dependency>
+
+        <dependency>
+            <groupId>se.eris</groupId>
+            <artifactId>notnull-instrumenter-maven-plugin</artifactId>
+            <version>1.1.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.papermc.paper</groupId>
+            <artifactId>paper-api</artifactId>
+            <version>1.20.1-R0.1-20230627.215235-38</version>
+        </dependency>
+    </dependencies>
+
+    <distributionManagement>
+        <repository>
+            <id>central</id>
+            <name>KOP-Artifactory-releases</name>
+            <url>https://repo.killerofpie.com/artifactory/${project.name}</url>
+        </repository>
+        <snapshotRepository>
+            <id>snapshots</id>
+            <name>KOP-Artifactory-snapshots</name>
+            <url>https://repo.killerofpie.com/artifactory/${project.name}</url>
+        </snapshotRepository>
+    </distributionManagement>
+</project>

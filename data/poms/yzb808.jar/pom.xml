@@ -1,0 +1,200 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.yzb808</groupId>
+	<artifactId>jarTest</artifactId>
+	<version>0.0.1</version>
+	<packaging>jar</packaging>
+
+	<name>jarTest</name>
+	<url>http://maven.apache.org</url>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+					<encoding>UTF-8</encoding>
+					<!-- 如果手动创建了Processor的spi目录，则当前工程在编译时就会执行该Processor，但该Processor还没有编译出来， -->
+					<!-- 因此会抛出 javax.annotation.processing.Processor: not found的异常 -->
+					<!-- 但如果使用google @AutoService注解自动注入spi文件，则无需使用该配置项 -->
+					<!-- <compilerArgument>-proc:none</compilerArgument> -->
+				</configuration>
+			</plugin>
+			
+			<!-- 打独立jar包的第一种方式：mvn打jar包，默认只会把java工程的java文件打进包里，如果想将工程依赖第三方的jar包也一起打进来，使用以下命令 shade -->
+			<!--  <plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>3.0.0</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<transformers>
+								<transformer
+									implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+									<resource>META-INF/spring.handlers</resource>
+								</transformer>
+								<transformer
+									implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+									<resource>META-INF/spring.schemas</resource>
+								</transformer>
+								<transformer
+									implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+									<resource>META-INF/spring.tooling</resource>
+								</transformer>
+							</transformers>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<configuration>
+					<classesDirectory>target/classes/</classesDirectory>
+					<archive>
+						<manifest>
+							<mainClass>com.yzb808.main.MainClass</mainClass>
+						</manifest>
+					</archive>
+				</configuration>
+			</plugin> -->
+			
+			<!-- 打独立jar包的第二种方式：使用 maven-jar-plugin 插件定制 META-INF 文件，使用 maven-dependency-plugin 插件完成依赖lib包复制 -->
+			<!-- 执行mvn install命令后，会在target目录下生成当前应用的jar包，同时target目录下还有一个lib包，lib目录和应用jar包同级 -->
+			<!-- 而应用jar包的 META-INF 文件中会枚举所有的应用依赖的jar包，并把jar包路径指向lib目录，例如 Class-Path: lib/mysql-connector-java-5.1.22.jar -->
+			<!-- 使用这种方式还没有打出一个能独立执行的jar包，通常还需要配合发布平台，在构建机器上将lib目录和应用jar包打包，在发布机器上解压后执行应用jar文件 -->
+			<!-- <plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<configuration>
+					<classesDirectory>target/classes/</classesDirectory>
+					<archive>
+						<manifest>
+							<mainClass>com.yzb808.main.MainClass</mainClass>
+							<addClasspath>true</addClasspath>
+							<classpathPrefix>lib/</classpathPrefix>
+						</manifest>
+						<manifestEntries>
+							<Class-Path>.</Class-Path>
+						</manifestEntries>
+					</archive>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>copy-dependencies</id>
+						<phase>package</phase>
+						<goals>
+							<goal>copy-dependencies</goal>
+						</goals>
+						<configuration>
+							<type>jar</type>
+							<includeTypes>jar</includeTypes>
+							<useUniqueVersions>false</useUniqueVersions>
+							<outputDirectory> ${project.build.directory}/lib
+							</outputDirectory>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin> -->
+			
+			<!-- 打独立jar包的第三种方式：spring插件会自动扫描应用目录下的main方法,这一点很方便 -->
+			<!-- spring打出的包有自己的特点，首先java应用启动的是springboot的main方法 org.springframework.boot.loader.JarLauncher.main(args)-->
+			<!-- 随后在springboot 自己main方法的逻辑中，再初始化用户依赖lib，最后回调用户main。 -->
+			<!-- 使用 spring-boot-maven-plugin 插件打独立可运行的jar包最方便，该插件可以自动查找包含main方法的类，也可以由用户显式指定。 -->
+			<!-- 打包出来的jar可以被直接执行，用户class和依赖的jar包目录也很清晰。但需要注意的一点，这种启动方式改变了默认的classLoader。 -->
+<<<<<<< HEAD
+			<!-- <plugin>
+=======
+			<!--<plugin>
+>>>>>>> 3bcd6a486c8a440e0ebf2671b454f10d8d38d492
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<version>2.0.4.RELEASE</version>
+				<configuration>
+					<mainClass>com.yzb808.main.HbaseWriteService</mainClass>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>repackage</goal>
+						</goals>
+					</execution>
+				</executions>
+<<<<<<< HEAD
+			</plugin> -->
+=======
+			</plugin>-->
+>>>>>>> 3bcd6a486c8a440e0ebf2671b454f10d8d38d492
+		</plugins>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>3.8.1</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+			<version>5.1.22</version>
+		</dependency>
+
+		<dependency>
+			<groupId>commons-lang</groupId>
+			<artifactId>commons-lang</artifactId>
+			<version>2.6</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-loader</artifactId>
+			<version>2.0.1.RELEASE</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.apache.hbase</groupId>
+			<artifactId>hbase-client</artifactId>
+			<version>0.98.7-hadoop2</version>
+		</dependency>
+
+		<dependency>
+			<groupId>jdk.tools</groupId>
+			<artifactId>jdk.tools</artifactId>
+			<version>1.7</version>
+			<scope>system</scope>
+			<systemPath>${JAVA_HOME}/lib/tools.jar</systemPath>
+		</dependency>
+
+		
+		<!-- google工具，支持通过注解的方式生成spi文件 -->
+		<!-- 该工具分离了注解和Processor，分别有独立的jar包，这使得注解jar包能伴随应用持续存在，而Processor jar包只在编译阶段生效 -->
+		<!-- 这种方式能有效减少应用jar包或war包的大小，对于android这类有65k方法数量限制的应用非常重要 -->
+		<dependency>
+			<groupId>com.google.auto.service</groupId>
+			<artifactId>auto-service</artifactId>
+			<version>1.0-rc5</version>
+		</dependency>
+
+	</dependencies>
+</project>

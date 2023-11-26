@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>net.praqma.bitbucket.plugins.tracey</groupId>
+    <artifactId>eiffel-rabbitmq-post-receive-hook</artifactId>
+    <version>0.9.1-SNAPSHOT</version>
+
+    <organization>
+        <name>Praqma</name>
+        <url>http://www.praqma.com/</url>
+    </organization>
+
+    <name>eiffel-rabbitmq-post-receive-hook</name>
+    <description>This is the net.praqma.bitbucket.plugins.tracey:eiffel-rabbitmq-post-receive-hook plugin for Atlassian Bitbucket Server.</description>
+    <packaging>atlassian-plugin</packaging>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.atlassian.bitbucket.server</groupId>
+                <artifactId>bitbucket-parent</artifactId>
+                <version>${bitbucket.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
+    <dependencies>
+          <dependency>
+            <groupId>com.github.Praqma</groupId>
+            <artifactId>tracey-protocol-eiffel</artifactId>
+            <version>2eddc78f98</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.github.Praqma</groupId>
+            <artifactId>commit-message-parser</artifactId>
+            <version>8834a4b0fe</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.github.Praqma</groupId>
+            <artifactId>tracey-broker</artifactId>
+            <version>1.2.1</version>
+            <scope>compile</scope>
+        </dependency>
+          <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.core</artifactId>
+            <version>6.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- REQUIRED by jgit to work properly otherwise OSGi conflict. TODO:Find a better way -->
+        <dependency>
+            <groupId>.org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.2</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>1.7.2</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.atlassian.sal</groupId>
+            <artifactId>sal-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.atlassian.bitbucket.server</groupId>
+            <artifactId>bitbucket-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.atlassian.bitbucket.server</groupId>
+            <artifactId>bitbucket-spi</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.atlassian.bitbucket.server</groupId>
+            <artifactId>bitbucket-page-objects</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.libversion}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>${commons.lang3.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.atlassian.plugin</groupId>
+            <artifactId>atlassian-spring-scanner-annotation</artifactId>
+            <version>1.2.13</version>
+            <type>jar</type>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+            <version>${javax.inject.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        <!-- WIRED TEST RUNNER DEPENDENCIES -->
+        <dependency>
+            <groupId>com.atlassian.plugins</groupId>
+            <artifactId>atlassian-plugins-osgi-testrunner</artifactId>
+            <version>${plugin.testrunner.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>jsr311-api</artifactId>
+            <version>${jsr311.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>${gson.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>com.atlassian.maven.plugins</groupId>
+                <artifactId>bitbucket-maven-plugin</artifactId>
+                <version>${amps.version}</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <products>
+                        <product>
+                            <id>bitbucket</id>
+                            <instanceId>bitbucket</instanceId>
+                            <version>${bitbucket.version}</version>
+                            <dataVersion>${bitbucket.data.version}</dataVersion>
+                        </product>
+                    </products>
+                    <pluginDependencies>
+                        <!-- According to this reference:
+                         https://developer.atlassian.com/server/framework/atlassian-sdk/bundling-extra-dependencies-in-an-obr/
+                         we need to mention our own Tracey dependencies here to be able to bundle them into
+                          the ORB which is then what we deliver instead of a jar tol the Bitbucket add manager
+
+                          This is the general info about dependency mgmt in the plugins:
+                          https://developer.atlassian.com/server/framework/atlassian-sdk/managing-dependencies/
+                          -->
+                        <pluginDependency>
+                            <groupId>com.github.Praqma</groupId>
+                            <artifactId>tracey-protocol-eiffel</artifactId>
+                        </pluginDependency>
+                        <pluginDependency>
+                            <groupId>com.github.Praqma</groupId>
+                            <artifactId>commit-message-parser</artifactId>
+                        </pluginDependency>
+                        <pluginDependency>
+                            <groupId>com.github.Praqma</groupId>
+                            <artifactId>tracey-broker</artifactId>
+                        </pluginDependency>
+                    </pluginDependencies>
+                    <instructions>
+                        <Atlassian-Plugin-Key>${atlassian.plugin.key}</Atlassian-Plugin-Key>
+
+                        <!-- Add package to export here -->
+                        <Export-Package>
+                            net.praqma.bitbucket.plugins.tracey.api,
+                        </Export-Package>
+
+                        <!-- Add package import here -->
+                        <Atlassian-Plugin-Key>${atlassian.plugin.key}</Atlassian-Plugin-Key>
+                        <!-- Add package to export here -->
+                        <!-- Add package import here -->
+                        <!-- We need to import our Tracey dependencies here as well according to
+                        https://developer.atlassian.com/server/framework/atlassian-sdk/bundling-extra-dependencies-in-an-obr/
+                        -->
+                        <Import-Package>
+                            org.springframework.osgi.*;resolution:="optional",
+                            org.eclipse.gemini.blueprint.*;resolution:="optional",
+                            com.jcraft.*;resolution:="optional",
+                            org.apache.*;resolution:="optional",
+                            sun.*;resolution:="optional",
+                            com.thoughtworks.*;resolution:="optional",
+                            groovyjarjarasm.asm.tree.*;resolution:="optional",
+                            jline;resolution:="optional",
+                            jline.*;resolution:="optional",
+                            org.junit;resolution:="optional",
+                            junit.*;resolution:="optional",
+                            org.fusesource.*;resolution:="optional",
+                            net.praqma.tracey.*;resolution:="required",
+                            com.atlassian.stash.*;resolution:="optional",
+                            *
+                        </Import-Package>
+                        <!-- Reference http://felix.apache.org/documentation/subprojects/apache-felix-maven-bundle-plugin-bnd.html#embedding-dependencies
+                        It seems we might want to embed our own compile in deps as well like this:
+                        -->
+                        <Embed-Dependency>*;scope=compile</Embed-Dependency>
+                        <!-- Ensure plugin is Spring powered -->
+                        <Spring-Context>*</Spring-Context>
+                    </instructions>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>com.atlassian.plugin</groupId>
+                <artifactId>atlassian-spring-scanner-maven-plugin</artifactId>
+                <version>${atlassian.spring.scanner.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>atlassian-spring-scanner</goal>
+                        </goals>
+                        <phase>process-classes</phase>
+                    </execution>
+                </executions>
+                <configuration>
+                    <scannedDependencies>
+                        <dependency>
+                            <groupId>com.atlassian.plugin</groupId>
+                            <artifactId>atlassian-spring-scanner-external-jar</artifactId>
+                        </dependency>
+                    </scannedDependencies>
+                    <verbose>false</verbose>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+    <properties>
+        <bitbucket.data.version>5.4.1</bitbucket.data.version>
+        <bitbucket.version>5.4.1</bitbucket.version>
+
+        <amps.version>6.3.6</amps.version>
+        <!-- This key is used to keep the consistency between the key in atlassian-plugin.xml and the key to generate bundle. -->
+        <atlassian.plugin.key>${project.groupId}.${project.artifactId}</atlassian.plugin.key>
+        <atlassian.spring.scanner.version>2.1.3</atlassian.spring.scanner.version>
+        <commons.lang3.version>3.5</commons.lang3.version>
+        <gson.version>2.8.0</gson.version>
+        <javax.inject.version>1</javax.inject.version>
+        <jsr311.version>1.1.1</jsr311.version>
+        <junit.libversion>4.12</junit.libversion>
+        <plugin.testrunner.version>1.2.3</plugin.testrunner.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+    </properties>
+    
+</project>

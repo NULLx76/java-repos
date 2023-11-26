@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <modules>
+        <module>backend</module>
+        <module>frontend</module>
+        <module>coverage</module>
+    </modules>
+
+    <properties>
+        <!-- we dont want to write file.seperator each time for the wildfly + jacoco setup as the string will become huge -->
+        <fs>${file.separator}</fs>
+        <hibernate.version>5.2.2.Final</hibernate.version>
+        <wildfly.version>10.1.0.Final</wildfly.version>
+        <jboss.target>${basedir}${fs}target${fs}downloaded_Wildfly</jboss.target>
+        <jboss.home>${jboss.target}${fs}wildfly-${wildfly.version}</jboss.home>
+        <jacoco.version>0.7.7.201606060606</jacoco.version>
+    </properties>
+
+    <groupId>no.westerdals.news</groupId>
+    <artifactId>news-application</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- I am fully aware not everyone likes lombok -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>1.16.10</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>javax</groupId>
+                <artifactId>javaee-api</artifactId>
+                <version>7.0</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.jboss.spec</groupId>
+                <artifactId>jboss-javaee-7.0</artifactId>
+                <version>1.0.3.Final</version>
+                <!-- Import all libraries definitions in this dependency pom file  -->
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- hibernate dependencies -->
+            <dependency>
+                <groupId>org.hibernate</groupId>
+                <artifactId>hibernate-core</artifactId>
+                <version>${hibernate.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.hibernate</groupId>
+                <artifactId>hibernate-validator</artifactId>
+                <version>${hibernate.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.hibernate.javax.persistence</groupId>
+                <artifactId>hibernate-jpa-2.1-api</artifactId>
+                <version>1.0.0.Final</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <!-- Database driver -->
+            <dependency>
+                <groupId>com.h2database</groupId>
+                <artifactId>h2</artifactId>
+                <version>1.4.192</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <!-- Testing dependencies -->
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>4.12</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- We need JaCoCo for test coverage. -->
+            <dependency>
+                <groupId>org.jacoco</groupId>
+                <artifactId>org.jacoco.core</artifactId>
+                <version>${jacoco.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- Arquillian for testing Java EE code -->
+            <dependency>
+                <groupId>org.jboss.arquillian</groupId>
+                <artifactId>arquillian-bom</artifactId>
+                <version>1.1.11.Final</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>org.jboss.arquillian.junit</groupId>
+                <artifactId>arquillian-junit-container</artifactId>
+                <version>1.1.11.Final</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.jboss.arquillian.extension</groupId>
+                <artifactId>arquillian-jacoco</artifactId>
+                <version>1.0.0.Alpha8</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.wildfly.arquillian</groupId>
+                <artifactId>wildfly-arquillian-container-managed</artifactId>
+                <version>1.1.0.Final</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- We use selenium for testing that the webpage works correctly in the browser, I've selected
+             the beta version of selenium because I want to use firefox during my main testing. This is so
+             I don't have to have chromium running while programming, the final test before delivery(and the
+             default) will be using chrome/chromium -->
+            <dependency>
+                <groupId>org.seleniumhq.selenium</groupId>
+                <artifactId>selenium-java</artifactId>
+                <version>3.0.0-beta4</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- During the initialization of the selenium tests we need to wait for the container to be loaded,
+             the way we do that is by waiting until the jboss admin page tells us that it is running, jboss uses
+             bearer authentication which is hard to implement with the default java library's HttpUrlConnection -->
+            <dependency>
+                <groupId>org.jboss.resteasy</groupId>
+                <artifactId>resteasy-client</artifactId>
+                <version>3.0.19.Final</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <!--
+             I'm lazy and dont like waiting, see:
+             https://maven.apache.org/surefire/maven-surefire-plugin/examples/fork-options-and-parallel-execution.html
+             and
+             https://maven.apache.org/surefire/maven-surefire-plugin/examples/junit.html#Running_tests_in_parallel
+             -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.19.1</version>
+                <configuration>
+                    <paralell>classes</paralell>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>unpack</id>
+                        <phase>process-test-classes</phase>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>org.wildfly</groupId>
+                                    <artifactId>wildfly-dist</artifactId>
+                                    <version>${wildfly.version}</version>
+                                    <type>zip</type>
+                                    <overWrite>false</overWrite>
+                                    <outputDirectory>${jboss.target}</outputDirectory>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+        <pluginManagement>
+            <plugins>
+                <!-- We want to use java 1.8 -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.5.1</version>
+                    <configuration>
+                        <source>1.8</source>
+                        <target>1.8</target>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.wildfly.plugins</groupId>
+                    <artifactId>wildfly-maven-plugin</artifactId>
+                    <version>1.1.0.Alpha11</version>
+                    <configuration>
+                        <!--
+                            If jbossHome is not specified, this plugin will download it.
+                            Here, we point to the same installation done for the unit tests
+                            with the maven-dependency-plugin, as to avoid double download/installation
+                          -->
+                        <jbossHome>${jboss.home}</jbossHome>
+                        <add-user>
+                            <users>
+                                <user>
+                                    <username>admin</username>
+                                    <password>admin</password>
+                                </user>
+                            </users>
+                        </add-user>
+                        <java-opts>
+                            <!-- comment out if need to attach a remote debugger -->
+                            <!--<javaOpt>-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005</javaOpt>-->
+                        </java-opts>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>init</id>
+                            <phase>pre-integration-test</phase>
+                            <goals>
+                                <goal>start</goal>
+                                <goal>deploy</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>shutdown</id>
+                            <phase>post-integration-test</phase>
+                            <goals>
+                                <goal>undeploy</goal>
+                                <goal>shutdown</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>${jacoco.version}</version>
+                    <executions>
+                        <execution>
+                            <id>default-prepare-agent</id>
+                            <goals>
+                                <goal>prepare-agent</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>default-report</id>
+                            <phase>prepare-package</phase>
+                            <goals>
+                                <goal>report</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>default-prepare-agent-integration</id>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>prepare-agent-integration</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>default-report-integration</id>
+                            <goals>
+                                <goal>report-integration</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>2.19.1</version>
+                    <executions>
+                        <execution>
+                            <id>run-tests</id>
+                            <phase>integration-test</phase>
+                            <goals>
+                                <goal>integration-test</goal>
+                                <goal>verify</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>

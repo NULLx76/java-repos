@@ -1,0 +1,354 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.acss.core.rs</groupId>
+	<artifactId>rs.images</artifactId>
+	<version>1.0.0-SNAPSHOT</version>
+	<packaging>jar</packaging>
+	<name>rs.images</name>
+	
+	<url>http://maven.apache.org</url>
+
+	<properties>
+
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<java-version>1.8</java-version>
+		<start-class>com.acss.core.rs.Application</start-class>
+		<!-- DEPENDENCY VERSIONS -->
+		<jooq.version>3.7.1</jooq.version>
+
+		<!-- BUILD PROPERTIES DEFINITION -->
+		<skip.db.creation>true</skip.db.creation>
+		<jooq.generator.db.dialect>org.jooq.util.oracle.OracleDatabase</jooq.generator.db.dialect>
+	</properties>
+	
+	<!-- PROFILES -->
+	<profiles>
+		<!-- DEVELOPMENT PROFILE FOR APP BUILD -->	
+		<profile>
+			<id>dev</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<properties>
+				<build.profile.id>dev</build.profile.id>
+				<!-- RESPONSIBLE FOR GENERATING THE JOOQ GENERATION-->
+				<skip.jooq.generation>true</skip.jooq.generation>
+			</properties>
+		<!-- main build profile ends here -->			
+		</profile>
+		
+		<!-- DEVELOPMENT PROFILE FOR JOOQ GENERATION USING DEV PROPERTIES-->
+		<profile>
+			<id>dev-jooq</id>
+			<properties>
+				<build.profile.id>dev</build.profile.id>
+				<!-- RESPONSIBLE FOR GENERATING THE JOOQ GENERATION-->
+				<skip.jooq.generation>false</skip.jooq.generation>
+			</properties>
+			<build>
+				<finalName>rs.images</finalName>
+				<filters>
+					<filter>src/main/resources/profiles/${build.profile.id}/dbconfig.properties</filter>
+					<!-- for environment specific filter -->
+					<filter>src/main/resources/profiles/${build.profile.id}/env-${build.profile.id}.properties</filter>
+				</filters>
+				<resources>
+					<resource>
+						<filtering>true</filtering>
+						<directory>src/main/resources</directory>
+					</resource>
+				</resources>
+			</build>	
+		</profile>
+		
+		<!-- PRODUCTION PROFILE FOR JOOQ GENERATION USING DEV PROPERTIES-->
+		<profile>
+			<id>prod-jooq</id>
+			<properties>
+				<build.profile.id>prod</build.profile.id>
+				<skip.jooq.generation>false</skip.jooq.generation>
+			</properties>
+			<build>
+				<finalName>rs.images</finalName>
+				<filters>
+					<filter>src/main/resources/profiles/${build.profile.id}/dbconfig.properties</filter>
+					<!-- for environment specific filter -->
+					<filter>src/main/resources/profiles/${build.profile.id}/env-${build.profile.id}.properties</filter>
+				</filters>
+				<resources>
+					<resource>
+						<filtering>true</filtering>
+						<directory>src/main/resources</directory>
+					</resource>
+				</resources>
+				
+				<plugins>
+					<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-antrun-plugin</artifactId>
+					<version>1.8</version>
+					<executions>
+						<execution>
+							<id>server-copy</id>
+							<goals>
+								<goal>run</goal>
+							</goals>
+							<phase>package</phase>
+							<configuration>
+								<target>
+									<echo message="Push to server /home/hpsph/prod/executable/rs.images" />
+									<scp trust="yes"
+										todir="[username]:[password]@[ip]:/home/hpsph/prod/executable/rs.images/">
+										<fileset dir="${project.build.directory}">
+											<include name="**/lib/*.jar" />
+											<include name="**/rs.images.jar" />
+										</fileset>
+									</scp>
+								</target>
+							</configuration>
+						</execution>
+					</executions>
+					<dependencies>
+						<dependency>
+							<groupId>org.apache.ant</groupId>
+							<artifactId>ant-jsch</artifactId>
+							<version>1.9.6</version>
+						</dependency>
+					</dependencies>
+					</plugin>
+				</plugins>
+			</build>	
+		</profile>
+	</profiles>
+	
+	<!-- WRAPPER OF ALL RESTFUL SERVICE DEPENDENCIES -->
+	<dependencies>
+		<dependency>
+			<groupId>com.acss.core.dependencies</groupId>
+			<artifactId>rs-dependencies</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+			<type>pom</type>
+		</dependency>		
+	</dependencies>
+
+	<build>
+		<finalName>rs.images</finalName>
+		<plugins>
+			<!-- COMPILER -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>${java-version}</source>
+					<target>${java-version}</target>
+					<encoding>${project.build.sourceEncoding}</encoding>
+				</configuration>
+			</plugin>
+			<!-- BOOT -->
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<!-- RESOURCES -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<configuration>
+					<encoding>${project.build.sourceEncoding}</encoding>
+				</configuration>
+			</plugin>
+			<!-- SUREFIRE PLUGIN -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<includes>
+						<include>**/When*.java</include>
+					</includes>
+				</configuration>
+			</plugin>
+			<!-- PROPERTIES -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>properties-maven-plugin</artifactId>
+				<version>1.0-alpha-2</version>
+				<executions>
+					<execution>
+						<phase>initialize</phase>
+						<goals>
+							<goal>read-project-properties</goal>
+						</goals>
+						<configuration>
+							<files>
+								<file>src/main/resources/profiles/${build.profile.id}/dbconfig.properties</file>
+							</files>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			
+			<!-- EXECUTABLE JAR PLUGIN CONFIG -->
+			<plugin>
+			    <groupId>org.apache.maven.plugins</groupId>
+			    <artifactId>maven-dependency-plugin</artifactId>
+			    <executions>
+			        <execution>
+			            <id>copy-dependencies</id>
+			            <phase>prepare-package</phase>
+			            <goals>
+			                <goal>copy-dependencies</goal>
+			            </goals>
+			            <configuration>
+			                <outputDirectory>${project.build.directory}/lib</outputDirectory>
+			                <overWriteReleases>false</overWriteReleases>
+			                <overWriteSnapshots>true</overWriteSnapshots>
+			                <overWriteIfNewer>true</overWriteIfNewer>
+			            </configuration>
+			        </execution>
+			    </executions>
+			</plugin>
+			<plugin>
+			    <groupId>org.apache.maven.plugins</groupId>
+			    <artifactId>maven-jar-plugin</artifactId>
+			    <configuration>
+			        <archive>
+			            <manifest>
+			                <addClasspath>true</addClasspath>
+			                <classpathPrefix>lib</classpathPrefix>
+			                <mainClass>${start-class}</mainClass>
+			            </manifest>
+			        </archive>
+			    </configuration>
+			</plugin>
+			
+			<!-- SQL MAVEN PLUGIN -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>sql-maven-plugin</artifactId>
+				<version>1.5</version>
+		
+				<configuration>
+					<skip>${skip.db.creation}</skip>
+				</configuration>
+		
+				<executions>
+					<execution>
+						<id>create-database-oracle</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>execute</goal>
+						</goals>
+						<configuration>
+							<driver>${db.driver}</driver>
+							<url>${db.url}</url>
+							<username>${db.username}</username>
+							<password>${db.password}</password>
+		
+							<autocommit>true</autocommit>
+							<!-- <srcFiles> -->
+							<!-- <srcFile>src/main/resources/${db.schema.script}</srcFile> -->
+							<!-- <srcFile>src/main/resources/${db.data.script}</srcFile> -->
+							<!-- </srcFiles> -->
+						</configuration>
+					</execution>
+				</executions>
+		
+				<dependencies>
+					<dependency>
+						<groupId>com.oracle</groupId>
+						<artifactId>ojdbc6</artifactId>
+						<version>11.2.0.3</version>
+					</dependency>
+				</dependencies>
+			</plugin>
+			<!-- JOOQ-CODE GENERATOR PLUGIN -->
+			<plugin>
+				<groupId>org.jooq.trial</groupId>
+				<artifactId>jooq-codegen-maven</artifactId>
+				<version>${jooq.version}</version>
+				<!-- UNCOMMENT THIS PART IF IN CASE YOU NEED TO REGENERATE THE TABLE -->
+				<executions>
+					<execution>
+						<id>generate-oracle</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>generate</goal>
+						</goals>
+					</execution>
+				</executions>
+		
+				<dependencies>
+					<dependency>
+						<groupId>com.oracle</groupId>
+						<artifactId>ojdbc6</artifactId>
+						<version>11.2.0.3</version>
+					</dependency>
+				</dependencies>
+		
+				<configuration>
+					<skip>${skip.jooq.generation}</skip>
+					<jdbc>
+						<driver>${db.driver}</driver>
+						<url>${db.url}</url>
+						<user>${db.username}</user>
+						<password>${db.password}</password>
+					</jdbc>
+		
+					<generator>
+						<database>
+							<name>${jooq.generator.db.dialect}</name>
+							<includes>T_IMAGE|T_APPLICATION|NUMBERINGMACHINE</includes>
+							<excludes></excludes>
+							<inputSchema>${db.username}</inputSchema>
+						</database>
+						<generate>
+							<records>true</records>
+							<pojos>true</pojos>
+						</generate>
+						<target>
+							<packageName>com.acss.core.rs.db</packageName>
+							<directory>target/generated-sources/jooq</directory>
+						</target>
+					</generator>
+				</configuration>
+			</plugin>
+			
+			<!-- <plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>1.8</version>
+				<executions>
+					<execution>
+						<id>server-copy</id>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<phase>package</phase>
+						<configuration>
+							<target>
+								<echo message="Push to server /home/hpsph/prod/executable/rs.images" />
+								<scp trust="yes"
+									todir="hpsph:P@ssw0rd911@192.168.50.4:/home/hpsph/prod/executable/rs.images/">
+									<fileset dir="${project.build.directory}">
+										<include name="**/lib/*.jar" />
+										<include name="**/rs.images.jar" />
+									</fileset>
+								</scp>
+							</target>
+						</configuration>
+					</execution>
+				</executions>
+				<dependencies>
+					<dependency>
+						<groupId>org.apache.ant</groupId>
+						<artifactId>ant-jsch</artifactId>
+						<version>1.9.6</version>
+					</dependency>
+				</dependencies>
+			</plugin> -->			
+		</plugins>
+	</build>
+</project>
+ 

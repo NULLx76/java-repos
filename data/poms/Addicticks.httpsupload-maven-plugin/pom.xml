@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.addicticks.oss.maven</groupId>
+    <artifactId>httpsupload-maven-plugin</artifactId>
+    <version>1.1.8-SNAPSHOT</version>
+    <packaging>maven-plugin</packaging>
+    <name>HTTPS Upload Maven Plugin</name>
+    <url>https://github.com/Addicticks/httpsupload-maven-plugin</url>
+    
+    <description>
+        Maven plugin which allows to upload one or several files
+        to a remote site by using HTTP/HTTPS.
+    </description>
+
+    <organization>
+        <name>Addicticks</name>
+        <url>http://www.addicticks.com</url>
+    </organization>
+    
+    <licenses>        
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+    
+    <scm>
+        <connection>scm:git:https://github.com/Addicticks/httpsupload-maven-plugin.git</connection>
+        <developerConnection>scm:git:https://github.com/Addicticks/httpsupload-maven-plugin.git</developerConnection>
+        <url>https://github.com/Addicticks/httpsupload-maven-plugin.git</url>
+      <tag>HEAD</tag>
+  </scm>    
+    
+    
+    <distributionManagement>
+        <repository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>    
+    
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-plugin-api</artifactId>
+            <version>2.2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven.plugin-tools</groupId>
+            <artifactId>maven-plugin-annotations</artifactId>
+            <version>3.4</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-settings</artifactId>
+            <version>3.0.5</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.10</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.addicticks.oss</groupId>
+            <artifactId>httpsupload</artifactId>
+            <version>1.2.3</version>
+        </dependency>
+    </dependencies>
+    
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.4</version>
+                <configuration>
+                    <archive>
+                        
+                        <manifestEntries>                            
+                            <!-- Add some useful properties that we can pick up programmatically -->
+                            <Project-Version>${project.version}</Project-Version>
+                            <Build-Date>${maven.build.timestamp}</Build-Date>
+                            <Build-Date-Format>${maven.build.timestamp.format}</Build-Date-Format>
+                            
+                            <!-- Override the default 'Built-By' which would otherwise be the OS name user -->
+                            <Built-By>Addicticks</Built-By>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+            
+            <!-- Only annotations are used so there are no descriptor files -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-plugin-plugin</artifactId>
+                <version>3.4</version>
+                <configuration>
+                    <skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>mojo-descriptor</id>
+                        <goals>
+                            <goal>descriptor</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>help-goal</id>
+                        <goals>
+                            <goal>helpmojo</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+ 
+
+            <!-- Maven-plugin-plugin produces HelpMojo.java file which has
+                 invalid Javadoc syntax. https://issues.apache.org/jira/browse/MPLUGIN-244 
+                 As a workaround for this we turn off Javadoc doclint so that 
+                 Javadoc generation will not fail on this error.           -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.10.3</version>
+                <configuration>
+                    <additionalparam>-Xdoclint:none</additionalparam>
+                </configuration>
+            </plugin>
+
+            <!--  Publish the Maven Site docs to Github static pages.
+                  Execute this command to generate and publish site docs:
+                  mvn clean site scm-publish:publish-scm
+                  
+                  Unfortunately, and ugly, currently the maven-scm-publish-plugin
+                  cannot use an embedded git client, which means a git client
+                  must be available in PATH.
+                                                                       -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-scm-publish-plugin</artifactId>
+                <version>1.1</version>
+                <configuration>
+                    <checkoutDirectory>${project.build.directory}/scmpublish</checkoutDirectory>
+                    <checkinComment>Publishing Maven site docs for ${project.artifactId}:${project.version}</checkinComment>
+                    <content>${project.reporting.outputDirectory}</content>
+                    <skipDeletedFiles>true</skipDeletedFiles>
+                    <pubScmUrl>scm:git:https://github.com/Addicticks/httpsupload-maven-plugin.git</pubScmUrl>
+                    <scmBranch>gh-pages</scmBranch> 
+                </configuration>
+            </plugin>
+
+
+            <!--   Required for publishing to Maven Central  -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>2.5.2</version>
+                <configuration>
+                    <autoVersionSubmodules>true</autoVersionSubmodules>
+                    <useReleaseProfile>false</useReleaseProfile>
+                    <releaseProfiles>release-to-central</releaseProfiles>
+                    <goals>deploy</goals>
+                </configuration>
+            </plugin>
+
+        </plugins>
+    </build>
+    
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-plugin-plugin</artifactId>
+                <version>3.4</version>
+            </plugin>
+        </plugins>
+    </reporting>   
+    
+    <profiles>        
+        <profile> 
+            <id>release-to-central</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>2.4</version>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>2.10.3</version>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>                    
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.6</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+    
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- Set the format of the Maven build timestamp explicitly so that when
+        we save it in the JAR's manifest then we know exactly what format it has -->
+        <maven.build.timestamp.format>yyyyMMdd-HHmmss</maven.build.timestamp.format>
+        <maven.compiler.source>1.7</maven.compiler.source>
+        <maven.compiler.target>1.7</maven.compiler.target>
+    </properties>
+
+    <developers>
+        <developer>
+            <name>Addama Gabor</name>
+            <organization>Addicticks</organization>
+            <organizationUrl>http://www.addicticks.com</organizationUrl>
+        </developer>
+    </developers>
+</project>

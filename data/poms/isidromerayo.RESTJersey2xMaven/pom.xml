@@ -1,0 +1,342 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>net.estilolibre.demo.jersey</groupId>
+	<artifactId>DummyJersey</artifactId>
+	<packaging>war</packaging>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>Dummy Jersey</name>
+
+	<build>
+		<finalName>dummy-jersey</finalName>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${maven.compiler.plugin.version}</version>
+				<inherited>true</inherited>
+				<configuration>
+					<source>${jdk.source.version}</source>
+					<target>${jdk.target.version}</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<version>${maven.failsafe.plugin.version}</version>
+			</plugin>
+		</plugins>
+	</build>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.glassfish.jersey</groupId>
+				<artifactId>jersey-bom</artifactId>
+				<version>${jersey.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<dependencies>
+		<!-- Eclipse markers shits -->
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>servlet-api</artifactId>
+			<version>${servlet-api.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- Jersey -->
+		<dependency>
+			<groupId>org.glassfish.jersey.containers</groupId>
+			<artifactId>jersey-container-servlet-core</artifactId>
+			<!-- use the following artifactId if you don't need servlet 2.x compatibility -->
+			<!-- artifactId>jersey-container-servlet</artifactId -->
+		</dependency>
+		<!-- uncomment this to get JSON support <dependency> <groupId>org.glassfish.jersey.media</groupId> 
+			<artifactId>jersey-media-moxy</artifactId> </dependency> -->
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-core</artifactId>
+			<version>${mockito.version}</version>
+			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>org.hamcrest</groupId>
+					<artifactId>hamcrest-core</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>${junit.version}</version>
+			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>org.hamcrest</groupId>
+					<artifactId>hamcrest-core</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.hamcrest</groupId>
+			<artifactId>hamcrest-all</artifactId>
+			<version>${hamcrest.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- Jersey Test -->
+		<!-- Grizzly container can run as a light-weight, plain HTTP container. 
+			Almost all Jersey tests are using Grizzly by default -->
+<!-- 		<dependency> -->
+<!-- 		<groupId>org.glassfish.jersey.test-framework.providers</groupId> -->
+<!-- 		<artifactId>jersey-test-framework-provider-grizzly2</artifactId> -->
+<!-- 		<scope>test</scope> -->
+<!-- 		</dependency> -->
+		<!-- In-Memory container, more quickly than Grizzly but it's very simple -->
+		<dependency>
+			<groupId>org.glassfish.jersey.test-framework.providers</groupId>
+			<artifactId>jersey-test-framework-provider-inmemory</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+	<profiles>
+		<profile>
+			<id>weblogic-it</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>com.oracle.weblogic</groupId>
+						<artifactId>weblogic-maven-plugin</artifactId>
+						<version>${weblogic.maven.plugin.version}</version>
+						<!-- You can find and redefine the following variables in the parent 
+							pom file arccording to your environment. oracleMiddlewareHome oracleServerUrl 
+							oracleUsername oraclePassword oracleServerName -->
+						<configuration>
+							<middlewareHome>${weblogic.home.user}</middlewareHome>
+							<domainHome>${weblogic.home.user}/user_projects/domains/mydomain</domainHome>
+						</configuration>
+						<executions>
+							<!--Deploy the application to the server -->
+							<execution>
+								<phase>pre-integration-test</phase>
+								<goals>
+									<goal>start-server</goal>
+									<goal>deploy</goal>
+								</goals>
+								<configuration>
+									<!--The admin URL where the app is deployed. Here use the plugin's 
+										default value t3://localhost:7001 -->
+									<!--adminurl>${oracleServerUrl}</adminurl -->
+									<user>${weblogic.admin.user}</user>
+									<password>${weblogic.admin.password}</password>
+									<targets>${weblogic.targets}</targets>
+									<!--The location of the file or directory to be deployed -->
+									<source>${project.build.directory}/${project.build.finalName}.${project.packaging}</source>
+									<!--The target servers where the application is deployed. Here use 
+										the plugin's default value AdminServer -->
+									<!--targets>${oracleServerName}</targets -->
+									<verbose>true</verbose>
+									<!--The deployment name of the application -->
+									<name>${path.name.it}</name>
+								</configuration>
+							</execution>
+							<execution>
+								<id>wls-wlst-stop-server</id>
+								<phase>post-integration-test</phase>
+								<goals>
+									<goal>stop-server</goal>
+								</goals>
+								<configuration>
+									<user>${weblogic.admin.user}</user>
+									<password>${weblogic.admin.password}</password>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>tomcat-7-it</id>
+			<activation>
+				<activeByDefault>false</activeByDefault>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.tomcat.maven</groupId>
+						<artifactId>tomcat7-maven-plugin</artifactId>
+						<version>${tomcat7-maven-plugin.version}</version>
+						<configuration>
+							<path>/${path.name.it}</path>
+							<port>${port.integration-test}</port>
+						</configuration>
+						<executions>
+							<execution>
+								<phase>pre-integration-test</phase>
+								<goals>
+									<goal>run</goal>
+								</goals>
+								<configuration>
+									<fork>true</fork>
+								</configuration>
+							</execution>
+							<execution>
+								<id>stop-tomcat</id>
+								<phase>post-integration-test</phase>
+								<goals>
+									<goal>shutdown</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>jetty-9-it</id>
+			<activation>
+				<activeByDefault>false</activeByDefault>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.eclipse.jetty</groupId>
+						<artifactId>jetty-maven-plugin</artifactId>
+						<version>${jetty.version}</version>
+						<configuration>
+							<webApp>
+								<contextPath>/${path.name.it}</contextPath>
+							</webApp>
+							<httpConnector>
+								<port>${port.integration-test}</port>
+							</httpConnector>
+							<stopPort>${jetty-stop-port}</stopPort>
+							<stopKey>foo</stopKey>
+						</configuration>
+						<executions>
+							<execution>
+								<id>start-jetty</id>
+								<phase>pre-integration-test</phase>
+								<goals>
+									<goal>start</goal>
+								</goals>
+								<configuration>
+									<scanIntervalSeconds>0</scanIntervalSeconds>
+								</configuration>
+							</execution>
+							<execution>
+								<id>stop-jetty</id>
+								<phase>post-integration-test</phase>
+								<goals>
+									<goal>stop</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>integration-test</id>
+			<activation>
+				<activeByDefault>false</activeByDefault>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<!-- run the integration tests -->
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-failsafe-plugin</artifactId>
+						<version>${maven.failsafe.plugin.version}</version>
+						<executions>
+							<execution>
+								<goals>
+									<goal>integration-test</goal>
+									<goal>verify</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<!-- Deploy enviroments -->
+		<profile>
+			<id>weblogic-local</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>com.oracle.weblogic</groupId>
+						<artifactId>weblogic-maven-plugin</artifactId>
+						<version>${weblogic.maven.plugin.version}</version>
+						<!-- You can find and redefine the following variables in the parent 
+							pom file arccording to your environment. oracleMiddlewareHome oracleServerUrl 
+							oracleUsername oraclePassword oracleServerName -->
+						<configuration>
+							<middlewareHome>${weblogic.home.user}</middlewareHome>
+							<domainHome>${weblogic.home.user}/user_projects/domains/mydomain</domainHome>
+						</configuration>
+						<executions>
+							<!--Deploy the application to the server -->
+							<execution>
+								<phase>pre-integration-test</phase>
+								<goals>
+									<goal>start-server</goal>
+									<goal>undeploy</goal>
+									<goal>deploy</goal>
+								</goals>
+								<configuration>
+									<!--The admin URL where the app is deployed. Here use the plugin's 
+										default value t3://localhost:7001 -->
+									<!--adminurl>${oracleServerUrl}</adminurl -->
+									<user>${weblogic.admin.user}</user>
+									<password>${weblogic.admin.password}</password>
+									<targets>${weblogic.targets}</targets>
+									<!--The location of the file or directory to be deployed -->
+									<source>${project.build.directory}/${project.build.finalName}.${project.packaging}</source>
+									<!--The target servers where the application is deployed. Here use 
+										the plugin's default value AdminServer -->
+									<!--targets>${oracleServerName}</targets -->
+									<verbose>true</verbose>
+									<name>${project.build.finalName}</name>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+	<properties>
+		<jdk.source.version>1.7</jdk.source.version>
+		<jdk.target.version>1.7</jdk.target.version>
+		<maven.compiler.plugin.version>2.5.1</maven.compiler.plugin.version>
+		<servlet-api.version>2.5</servlet-api.version>
+		<maven.failsafe.plugin.version>2.12</maven.failsafe.plugin.version>
+		<jersey.version>2.5.1</jersey.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<junit.version>4.12</junit.version>
+		<mockito.version>1.10.19</mockito.version>
+		<hamcrest.version>1.3</hamcrest.version>
+		<weblogic.version.server>12.1.3</weblogic.version.server>
+		<weblogic.maven.plugin.version>12.1.3-0-0</weblogic.maven.plugin.version>
+		<port.integration-test>7001</port.integration-test>
+		<jetty.version>9.3.0.v20150612</jetty.version>
+		<tomcat7-maven-plugin.version>2.2</tomcat7-maven-plugin.version>
+		<jetty-stop-port>9999</jetty-stop-port>
+		<path.name.it>dummy-jersey</path.name.it>
+	</properties>
+	<organization>
+		<name>Estilo Libre</name>
+		<url>http://estilolibre.net/</url>
+	</organization>
+	<url>https://bitbucket.org/isidromerayo/restjersey2xmaven</url>
+	<description>Dummy project to use JAX-WS 2.0 with Jersey</description>
+</project>

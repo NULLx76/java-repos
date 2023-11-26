@@ -1,0 +1,201 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>webapprestful</groupId>
+    <artifactId>webapprestful</artifactId>
+    <packaging>war</packaging>
+    <version>1.0-SNAPSHOT</version>
+    <name>Maven Webapp webapprestful</name>
+
+    <!-- https://github.com/cko/predefined_maven_properties/blob/master/README.md -->
+    <properties>
+        <jersey.version>2.23.2</jersey.version>
+        <jetty.maven.plugin>9.3.13.v20161014</jetty.maven.plugin>
+        <exec.maven.plugin>1.5.0</exec.maven.plugin>
+        <junit.version>4.12</junit.version>
+        <maven.compiler.plugin>3.5.1</maven.compiler.plugin>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <build>
+        <finalName>webapprestful</finalName>
+        <plugins>
+            <!-- Compiler Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven.compiler.plugin}</version>
+                <inherited>true</inherited>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                    <excludes>
+                        <exclude>${compiler.excluded.files}</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+
+            <!-- Jetty Maven Plugin -->
+            <!-- http://www.eclipse.org/jetty/documentation/9.3.13.v20161014/jetty-maven-plugin.html -->
+            <plugin>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-maven-plugin</artifactId>
+                <version>${jetty.maven.plugin}</version>
+                <configuration>
+                    <war>${project.build.directory}/${project.build.finalName}.war</war>
+                    <!-- Configure ServerConnector -->
+                    <httpConnector>
+                        <!-- Listen at 8080 (DEFAULT) -->
+                        <port>8080</port>
+                    </httpConnector>
+                    <webApp>
+                        <contextPath>/${project.build.finalName}</contextPath>
+                    </webApp>
+
+                    <!-- Scan for changes every 10 seconds -->
+                    <!--<scanIntervalSeconds>10</scanIntervalSeconds>-->
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!-- Profile for Grizzly HTTP Server -->
+        <profile>
+            <id>grizzly-server</id>
+
+            <properties>
+                <compiler.excluded.files>GHOST_FILE</compiler.excluded.files>
+            </properties>
+
+
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>${exec.maven.plugin}</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>java</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <mainClass>grizzly.Main</mainClass>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+
+            <dependencies>
+                <!-- Grizzly container extension module -->
+                <dependency>
+                    <groupId>org.glassfish.jersey.containers</groupId>
+                    <artifactId>jersey-container-grizzly2-http</artifactId>
+                </dependency>
+
+                <!-- uncomment this to get JSON support: -->
+                <!--<dependency>-->
+                <!--<groupId>org.glassfish.jersey.media</groupId>-->
+                <!--<artifactId>jersey-media-moxy</artifactId>-->
+                <!--</dependency>-->
+            </dependencies>
+        </profile>
+
+        <!-- Profile for Servlet 3.x Container (Tomcat) -->
+        <profile>
+            <id>servlet-container</id>
+
+            <properties>
+                <compiler.excluded.files>**/grizzly/Main.java</compiler.excluded.files>
+            </properties>
+
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+
+            <dependencies>
+                <!-- Only dependency needed for Servlet 3.x environment -->
+                <dependency>
+                    <groupId>org.glassfish.jersey.containers</groupId>
+                    <!-- if your container implements Servlet API older than 3.0, use "jersey-container-servlet-core"  -->
+                    <artifactId>jersey-container-servlet</artifactId>
+                </dependency>
+
+                <!-- Grizzly container extension module -->
+                <dependency>
+                    <groupId>org.glassfish.jersey.containers</groupId>
+                    <artifactId>jersey-container-grizzly2-http</artifactId>
+                    <optional>true</optional>
+                </dependency>
+            </dependencies>
+        </profile>
+
+        <!-- Profile for Servlet 3.x Container (Jetty) -->
+        <profile>
+            <id>jetty-servlet-container</id>
+
+            <properties>
+                <compiler.excluded.files>**/grizzly/Main.java</compiler.excluded.files>
+            </properties>
+
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+
+            <dependencies>
+                <!-- Only dependency needed for Servlet 3.x environment -->
+                <dependency>
+                    <groupId>org.glassfish.jersey.containers</groupId>
+                    <!-- if your container implements Servlet API older than 3.0, use "jersey-container-servlet-core"  -->
+                    <artifactId>jersey-container-servlet</artifactId>
+                </dependency>
+
+                <!-- Grizzly container extension module -->
+                <dependency>
+                    <groupId>org.glassfish.jersey.containers</groupId>
+                    <artifactId>jersey-container-grizzly2-http</artifactId>
+                    <optional>true</optional>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
+
+    <!-- http://stackoverflow.com/questions/22870422/what-is-the-purpose-of-including-the-jersey-bom-import-scoped-dependency-in-a-je -->
+    <!-- It is possible to add Jersey dependencies without the version defined -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.glassfish.jersey</groupId>
+                <artifactId>jersey-bom</artifactId>
+                <version>${jersey.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Required only when you are using JAX-RS Client -->
+        <!--<dependency>-->
+        <!--<groupId>org.glassfish.jersey.core</groupId>-->
+        <!--<artifactId>jersey-client</artifactId>-->
+        <!--</dependency>-->
+    </dependencies>
+
+</project>

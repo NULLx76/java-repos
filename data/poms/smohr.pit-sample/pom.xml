@@ -1,0 +1,455 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>im.mohr</groupId>
+  <artifactId>pitdemo</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>pit-demo</name>
+
+  <description>
+    Example for a simplistic PIT usage.
+  </description>
+
+  <developers>
+    <developer>
+      <id>smohr</id>
+      <name>Sven Mohr</name>
+      <email>svmohr@gmail.com</email>
+      <url>https://github.com/smohr</url>
+    </developer>
+  </developers>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+
+    <rules.basepackage>com.github</rules.basepackage>
+
+    <!-- test - coverage -->
+    <jacoco.outputDir>${project.build.directory}</jacoco.outputDir>
+    <jacoco.outputFilename.unitTest>jacoco-unit-test.exec</jacoco.outputFilename.unitTest>
+    <jacoco.outputFilename.integrationTest>jacoco-integration-test.exec</jacoco.outputFilename.integrationTest>
+    <jacoco.reportPath>${jacoco.outputDir}/${jacoco.outputFilename.unitTest}</jacoco.reportPath>
+    <jacoco.itReportPath>${jacoco.outputDir}/${jacoco.outputFilename.integrationTest}</jacoco.itReportPath>
+
+    <!-- sane defaults -->
+    <jacoco.agent.ut.argLine></jacoco.agent.ut.argLine>
+    <jacoco.agent.it.argLine></jacoco.agent.it.argLine>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>3.4</version>
+    </dependency>
+
+    <!-- logging -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>1.7.21</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jcl-over-slf4j</artifactId>
+      <version>1.7.21</version>
+    </dependency>
+
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>1.1.7</version>
+    </dependency>
+
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-core</artifactId>
+      <version>1.1.7</version>
+    </dependency>
+
+    <!-- test dependencies -->
+    <dependency>
+      <groupId>org.testng</groupId>
+      <artifactId>testng</artifactId>
+      <version>6.9.10</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <version>3.4.1</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>1.10.19</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <profiles>
+    <profile>
+      <id>enable-jacoco</id>
+      <!-- work around for intellij idea, as it doesn't support
+      late binding of properties -->
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.jacoco</groupId>
+              <artifactId>jacoco-maven-plugin</artifactId>
+              <version>0.7.6.201602180812</version>
+              <executions>
+                <execution>
+                  <id>prepare-jacoco-ut-agent</id>
+                  <goals>
+                    <goal>prepare-agent</goal>
+                  </goals>
+                  <configuration>
+                    <destFile>${jacoco.reportPath}</destFile>
+                    <propertyName>jacoco.agent.ut.argLine</propertyName>
+                    <append>true</append>
+                  </configuration>
+                </execution>
+                <execution>
+                  <id>prepare-jacoco-it-agent</id>
+                  <phase>pre-integration-test</phase>
+                  <goals>
+                    <goal>prepare-agent</goal>
+                  </goals>
+                  <configuration>
+                    <destFile>${jacoco.itReportPath}</destFile>
+                    <propertyName>jacoco.agent.it.argLine</propertyName>
+                    <append>true</append>
+                  </configuration>
+                </execution>
+
+                <execution>
+                  <id>build-jacoco-ut-report</id>
+                  <phase>test</phase>
+                  <goals>
+                    <goal>report</goal>
+                  </goals>
+                  <configuration>
+                    <dataFile>${jacoco.reportPath}</dataFile>
+                  </configuration>
+                </execution>
+
+                <execution>
+                  <id>build-jacoco-it-report</id>
+                  <phase>post-integration-test</phase>
+                  <goals>
+                    <goal>report-integration</goal>
+                  </goals>
+                  <configuration>
+                    <dataFile>${jacoco.itReportPath}</dataFile>
+                    <outputDirectory>${project.reporting.outputDirectory}/jacoco-it</outputDirectory>
+                  </configuration>
+                </execution>
+              </executions>
+            </plugin>
+
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-failsafe-plugin</artifactId>
+              <version>2.19.1</version>
+              <configuration>
+                <argLine>-Dfile.encoding=${project.build.sourceEncoding} -Xms128M -Xmx512M -XX:-UseSplitVerifier @{jacoco.agent.it.argLine}</argLine>
+                <forkCount>1</forkCount>
+              </configuration>
+              <executions>
+                <execution>
+                  <goals>
+                    <goal>integration-test</goal>
+                    <goal>verify</goal>
+                  </goals>
+                </execution>
+              </executions>
+            </plugin>
+
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-surefire-plugin</artifactId>
+              <version>2.19.1</version>
+              <configuration>
+                <argLine>-Dfile.encoding=${project.build.sourceEncoding} -Xms128M -Xmx512M -XX:-UseSplitVerifier @{jacoco.agent.ut.argLine}</argLine>
+                <forkCount>1</forkCount>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+
+        <plugins>
+          <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.pitest</groupId>
+          <artifactId>pitest-maven</artifactId>
+          <version>1.1.10</version>
+          <configuration>
+            <withHistory>true</withHistory>
+            <failWhenNoMutations>false</failWhenNoMutations>
+            <verbose>true</verbose>
+            <targetClasses>
+              <param>${rules.basepackage}*</param>
+            </targetClasses>
+            <targetTests>
+              <param>${rules.basepackage}*</param>
+            </targetTests>
+          </configuration>
+          <executions>
+            <execution>
+              <id>pit-execute-mutation-coverage</id>
+              <phase>verify</phase>
+              <goals>
+                <goal>mutationCoverage</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+
+        <plugin>
+          <groupId>de.thetaphi</groupId>
+          <artifactId>forbiddenapis</artifactId>
+          <version>2.1</version>
+          <configuration>
+            <failOnUnsupportedJava>false</failOnUnsupportedJava>
+            <bundledSignatures>
+              <bundledSignature>jdk-unsafe</bundledSignature>
+              <bundledSignature>jdk-deprecated</bundledSignature>
+              <bundledSignature>jdk-internal</bundledSignature>
+              <bundledSignature>jdk-non-portable</bundledSignature>
+              <bundledSignature>jdk-system-out</bundledSignature>
+              <bundledSignature>jdk-reflection</bundledSignature>
+              <!--<bundledSignature>commons-io-unsafe-2.4</bundledSignature>-->
+            </bundledSignatures>
+          </configuration>
+          <executions>
+            <execution>
+              <goals>
+                <goal>check</goal>
+                <!--goal>testCheck</goal-->
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>2.19.1</version>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>2.19.1</version>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-site-plugin</artifactId>
+          <version>3.5.1</version>
+          <executions>
+            <execution>
+              <id>attach-descriptor</id>
+              <goals>
+                <goal>attach-descriptor</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <version>3.0.0</version>
+          <executions>
+            <execution>
+              <id>attach-sources</id>
+              <goals>
+                <goal>jar</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <version>2.10.3</version>
+          <executions>
+            <execution>
+              <id>attach-javadocs</id>
+              <phase>generate-sources</phase>
+              <goals>
+                <goal>jar</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-scm-plugin</artifactId>
+          <version>1.9.4</version>
+          <configuration>
+            <providerImplementations>
+              <git>jgit</git>
+            </providerImplementations>
+          </configuration>
+          <dependencies>
+            <dependency>
+              <groupId>org.apache.maven.scm</groupId>
+              <artifactId>maven-scm-provider-jgit</artifactId>
+              <version>1.9.4</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+
+    <plugins>
+      <plugin>
+        <groupId>org.pitest</groupId>
+        <artifactId>pitest-maven</artifactId>
+      </plugin>
+
+      <plugin>
+        <groupId>de.thetaphi</groupId>
+        <artifactId>forbiddenapis</artifactId>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-site-plugin</artifactId>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-scm-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+
+  <reporting>
+    <excludeDefaults>false</excludeDefaults>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-project-info-reports-plugin</artifactId>
+        <version>2.9</version>
+        <configuration>
+          <dependencyDetailsEnabled>false</dependencyDetailsEnabled>
+          <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
+        </configuration>
+        <!--
+          <reportSets>
+          <reportSet>
+            <reports>
+              <report>dependencies</report>
+              <report>scm</report>
+            </reports>
+          </reportSet>
+        </reportSets>-->
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.10.3</version>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-report-plugin</artifactId>
+        <version>2.19.1</version>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jxr-plugin</artifactId>
+        <version>2.4</version>
+        <configuration>
+          <aggregate>true</aggregate>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.7.6.201602180812</version>
+
+        <reportSets>
+          <reportSet>
+            <inherited>true</inherited>
+            <reports>
+              <report>report</report>
+            </reports>
+            <configuration>
+              <dataFile>${jacoco.reportPath}</dataFile>
+              <outputDirectory>${project.reporting.outputDirectory}/jacoco</outputDirectory>
+            </configuration>
+          </reportSet>
+
+          <reportSet>
+            <inherited>true</inherited>
+            <reports>
+              <report>report-integration</report>
+            </reports>
+            <configuration>
+              <dataFile>${jacoco.itReportPath}</dataFile>
+              <outputDirectory>${project.reporting.outputDirectory}/jacoco-it</outputDirectory>
+            </configuration>
+          </reportSet>
+        </reportSets>
+      </plugin>
+
+      <plugin>
+        <groupId>org.pitest</groupId>
+        <artifactId>pitest-maven</artifactId>
+        <version>1.1.10</version>
+      </plugin>
+    </plugins>
+  </reporting>
+</project>

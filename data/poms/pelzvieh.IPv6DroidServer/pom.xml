@@ -1,0 +1,177 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <artifactId>IPv6DTLSTransport</artifactId>
+  <name>IPv6 DTLS Transport</name>
+  <groupId>de.flyingsnail.ipv6server</groupId>
+  <version>0.3.0-SNAPSHOT</version>
+  <properties>
+    <!-- encoding -->
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <!--java version -->
+    <java-version>11</java-version>
+
+    <!-- plugin versions -->
+    <compiler-plugin-version>3.3</compiler-plugin-version>
+
+    <!-- dependency versions -->
+    <javaee-api-version>8.0.1-b5</javaee-api-version>
+    <junit-version>4.13.1</junit-version>
+    <bouncycastle-version>1.71</bouncycastle-version>
+    <lxtunchannel-version>1.0.0</lxtunchannel-version>
+    <jna-version>5.9.0</jna-version>
+  </properties>  
+  <distributionManagement>
+    <repository>
+      <id>localdeployrepo</id>
+      <url>${localRepositoryURL}</url>
+    </repository>
+  </distributionManagement>
+  
+  <profiles>
+   <profile>
+     <id>test</id>
+     <build>
+       <plugins>
+         <plugin>
+           <artifactId>maven-antrun-plugin</artifactId>
+           <executions>
+             <execution>
+               <phase>test</phase>
+               <goals>
+                 <goal>run</goal>
+               </goals>
+               <configuration>
+                 <tasks>
+                   <delete file="${project.build.outputDirectory}/de/flyingsnail/ipv6server/dtlstransporter/dtlsserver.cert" />
+                   <delete file="${project.build.outputDirectory}/de/flyingsnail/ipv6server/dtlstransporter/dtlsserver.key" />
+                   <copy file="src/main/resources//de/flyingsnail/ipv6server/dtlstransporter/dtlsserver.test.cert" tofile="${project.build.outputDirectory}/de/flyingsnail/ipv6server/dtlstransporter/dtlsserver.cert" />
+                   <copy file="src/main/resources//de/flyingsnail/ipv6server/dtlstransporter/dtlsserver.test.key" tofile="${project.build.outputDirectory}/de/flyingsnail/ipv6server/dtlstransporter/dtlsserver.key" />
+                 </tasks>
+               </configuration>
+             </execution>
+           </executions>
+         </plugin>
+         <plugin>
+           <artifactId>maven-surefire-plugin</artifactId>
+           <configuration>
+             <skip>true</skip>
+           </configuration>
+         </plugin>
+         <plugin>
+           <artifactId>maven-jar-plugin</artifactId>
+           <executions>
+             <execution>
+               <phase>package</phase>
+               <goals>
+                 <goal>jar</goal>
+               </goals>
+               <configuration>
+                 <classifier>test</classifier>
+               </configuration>
+             </execution>
+           </executions>
+         </plugin>
+       </plugins>
+     </build>
+   </profile>
+  </profiles>
+  <dependencies>
+    <dependency>
+      <groupId>org.eclipse.jdt</groupId>
+      <artifactId>org.eclipse.jdt.annotation</artifactId>
+      <version>2.2.600</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>${junit-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bctls-jdk15to18</artifactId>
+      <version>${bouncycastle-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk15to18</artifactId>
+      <version>${bouncycastle-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>de.flyingsnail.tun</groupId>
+      <artifactId>LinuxTunChannel</artifactId>
+      <version>${lxtunchannel-version}</version>
+    </dependency>
+    <dependency>
+      <groupId>net.java.dev.jna</groupId>
+      <artifactId>jna-platform</artifactId>
+      <version>${jna-version}</version>
+    </dependency>
+  </dependencies>
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>${compiler-plugin-version}</version>
+        <configuration>
+          <source>${java-version}</source>
+          <target>${java-version}</target>
+          <encoding>${project.build.sourceEncoding}</encoding>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>2.4.3</version>
+        <configuration>
+          <filters>
+            <filter>
+              <artifact>*:*</artifact>
+              <excludes>
+                <exclude>META-INF/*.SF</exclude>
+                <exclude>META-INF/*.DSA</exclude>
+                <exclude>META-INF/*.RSA</exclude>
+              </excludes>
+            </filter>
+          </filters>
+        </configuration>
+
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>de.flyingsnail.ipv6server.dtlstransporter.TransporterStart</mainClass>
+                </transformer>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+    <extensions>
+      <!-- Enabling the use of SSH -->
+      <extension>
+        <groupId>org.apache.maven.wagon</groupId>
+         <artifactId>wagon-ssh-external</artifactId>
+         <version>1.0-beta-6</version>
+      </extension>
+    </extensions>
+    
+  </build>
+  <scm>
+    <connection>scm:git:https://github.com/pelzvieh/IPv6DroidServer</connection>
+    <url>https://github.com/pelzvieh/IPv6DroidServer</url>
+    <tag>HEAD</tag>
+  </scm>
+</project>

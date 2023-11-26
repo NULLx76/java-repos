@@ -1,0 +1,214 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>soht</groupId>
+    <artifactId>soht</artifactId>
+    <version>0.7.1-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>soht-server-jetty</artifactId>
+  <version>0.7.1-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>SOHT: Server jetty</name>
+  <description>Socket over HTTP Tunneling: Server deployed on embedded jetty</description>
+
+  <scm>
+    <url>https://github.com/guydriesen/soht-server-jetty</url>
+    <connection>scm:git:ssh://github.com/guydriesen/soht-server-jetty.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/guydriesen/soht-server-jetty.git</developerConnection>
+  </scm>
+
+  <properties>
+    <main.basedir>${project.basedir}/..</main.basedir>
+    <java.version>1.7</java.version> <!-- jetty 9.2 minimum req -->
+    <jetty.version>9.2.18.v20160721</jetty.version>
+
+    <service.name>sohtserver</service.name>
+    <service.user>soht</service.user>
+    <service.group>soht</service.group>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>buildnumber-maven-plugin</artifactId>
+        <!-- This will cause the create goal of the buildNumber plugin to be executed -->
+        <!-- during the validate phase. It will first check to see if you have locally -->
+        <!-- modified files, and will fail if there are any. You can suppress this behaviour -->
+        <!-- with -Dmaven.buildNumber.doCheck=false (or remove/change the configuration info). -->
+        <!--  -->
+        <!-- The buildNumber plugin will then update your local repository. This is done -->
+        <!-- because 'svn info' grabs the revision out of your local repository, and is -->
+        <!-- not necessarily the same as the revision in the remote repository. You should -->
+        <!-- probably deal with these changes before creating a build in any case. Again, -->
+        <!-- this behaviour can be suppressed with -Dmaven.buildNumber.doUpdate=false. -->
+        <configuration>
+          <doCheck>false</doCheck> <!-- Local changes? -->
+          <doUpdate>false</doUpdate> <!-- Update local repo? -->
+        </configuration>
+        <executions>
+          <execution>
+            <phase>validate</phase>
+            <goals>
+              <goal>create</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <!-- create a .jar that contains all dependencies -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <finalName>${service.name}_${version}</finalName>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>soht.server.jetty.SohtServer</mainClass>
+                  <manifestEntries>
+                    <Implementation-Title>${project.name}</Implementation-Title>
+                    <Implementation-Version>${project.version}</Implementation-Version>
+                    <SCM-Branch>${scmBranch}</SCM-Branch>
+                    <SCM-Revision>${buildNumber}</SCM-Revision>
+                  </manifestEntries>
+                </transformer>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <!-- create a tarball -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>make-distribution</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <finalName>${service.name}_${version}</finalName>
+              <descriptors>
+                <descriptor>src/main/assembly/distribution.xml</descriptor>
+              </descriptors>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <!-- build a debian package from the tarball -->
+        <groupId>org.vafer</groupId>
+        <artifactId>jdeb</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>jdeb</goal>
+            </goals>
+            <configuration>
+              <verbose>true</verbose>
+              <deb>[[buildDir]]/[[service.name]]_[[version]]_all.deb</deb>
+              <changesOut>[[buildDir]]/[[service.name]]_[[version]]_all.changes</changesOut>
+              <snapshotExpand>true</snapshotExpand> <!-- change "SNAPSHOT" into a timestamp -->
+              <controlDir>${basedir}/src/main/deb/control</controlDir>
+              <dataSet>
+                <data>
+                  <src>${project.build.directory}/${service.name}_${version}-distribution.tar.gz</src>
+                  <type>archive</type>
+                  <includes>
+                    **/etc/default/sohtserver,
+                    **/etc/monit/conf.d/sohtserver.monitrc,
+                    **/etc/sohtserver/soht.properties
+                  </includes>
+                  <conffile>true</conffile>
+                  <mapper>
+                    <type>perm</type>
+                    <prefix>/</prefix>
+                    <strip>1</strip>
+                    <user>${service.user}</user>
+                    <group>${service.group}</group>
+                  </mapper>
+                </data>
+                <data>
+                  <src>${project.build.directory}/${service.name}_${version}-distribution.tar.gz</src>
+                  <type>archive</type>
+                  <excludes>
+                    **/etc/default/sohtserver,
+                    **/etc/monit/conf.d/sohtserver.monitrc,
+                    **/etc/sohtserver/soht.properties
+                  </excludes>
+                  <mapper>
+                    <type>perm</type>
+                    <prefix>/</prefix>
+                    <strip>1</strip>
+                    <user>${service.user}</user>
+                    <group>${service.group}</group>
+                  </mapper>
+                </data>
+                <data>
+                  <type>template</type>
+                  <paths>
+                    <path>var/log/${service.name}</path>
+                  </paths>
+                  <mapper>
+                    <type>perm</type>
+                    <user>${service.user}</user>
+                    <group>${service.group}</group>
+                  </mapper>
+                </data>
+              </dataSet>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <dependencies>
+    <dependency>
+      <groupId>soht</groupId>
+      <artifactId>soht-server</artifactId>
+      <version>${project.version}</version>
+      <type>war</type>
+    </dependency>
+    <dependency>
+      <groupId>args4j</groupId>
+      <artifactId>args4j</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-annotations</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-servlet</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-webapp</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>apache-jsp</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>apache-jstl</artifactId>
+    </dependency>
+  </dependencies>
+
+</project>

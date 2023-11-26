@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.inrix</groupId>
+    <artifactId>analytics-trip-monitor</artifactId>
+    <version>DEVELOP-1.0-SNAPSHOT</version>
+
+    <properties>
+        <java.version>1.8</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <build.number>unknown</build.number>
+
+        <docker.directory>docker/</docker.directory>
+
+        <finalName>tripMetricsMonitor</finalName>
+        <mainClass>com.inrix.analytics.trip.metrics.monitor.App</mainClass>
+
+        <jackson.version>2.7.6</jackson.version>
+        <analytics-api-core.version>DEVELOP-1.0-SNAPSHOT</analytics-api-core.version>
+        <analytics-dal.version>DEVELOP-2.0-SNAPSHOT</analytics-dal.version>
+        <analytics-trip-monitor-threshold-dal.version>DEVELOP-1.0-SNAPSHOT</analytics-trip-monitor-threshold-dal.version>
+        <analytics-population-dal.version>DEVELOP-1.0-SNAPSHOT</analytics-population-dal.version>
+        <internal.repo.path>http://devopsjenkins:8081/artifactory/libs-snapshot-local</internal.repo.path>
+    </properties>
+
+    <repositories>
+        <repository>
+            <id>internal.repo</id>
+            <url>${internal.repo.path}</url>
+
+            <!-- use snapshot version -->
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <!-- dist management-->
+    <distributionManagement>
+        <repository>
+            <id>com.inrix.maven</id>
+            <name>Internal Repository</name>
+            <url>${internal.repo.path}</url>
+        </repository>
+    </distributionManagement>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>inrix-analytics</groupId>
+            <artifactId>analytics-api-core</artifactId>
+            <version>${analytics-api-core.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>inrix-analytics</groupId>
+            <artifactId>Analytics-TripMonitorThreshold-DAL</artifactId>
+            <version>${analytics-trip-monitor-threshold-dal.version}</version>
+        </dependency>
+
+
+    </dependencies>
+
+    <build>
+        <finalName>Analytics-Trip-Monitor</finalName>
+
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <targetPath>../${docker.directory}</targetPath>
+            </resource>
+        </resources>
+
+        <plugins>
+
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.5.1</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>2.4.3</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <filters>
+                                <filter>
+                                    <!-- filter out signatures from signed deps to prevent build failures -->
+                                    <artifact>*.*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ComponentsXmlResourceTransformer"/>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>${mainClass}</mainClass>
+                                    <manifestEntries>
+                                        <Build-Time>${maven.build.timestamp}</Build-Time>
+                                        <Build-Number>${build.number}</Build-Number>
+                                        <Project-Version>${project.version}</Project-Version>
+                                    </manifestEntries>
+                                </transformer>
+                            </transformers>
+
+                            <finalName>${finalName}</finalName>
+                            <outputDirectory>${project.build.directory}/${docker.directory}</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <executions>
+                    <!-- Zip Assembler for Docker files -->
+                    <execution>
+                        <id>create-docker</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>assembly/docker.xml</descriptor>
+                            </descriptors>
+                            <finalName>${finalName}</finalName>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+
+    </build>
+
+</project>

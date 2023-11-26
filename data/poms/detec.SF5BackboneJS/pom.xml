@@ -1,0 +1,640 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>SF5BackboneJS</groupId>
+  <artifactId>SF5BackboneJS</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>war</packaging>
+  <name>openboxsf5-BackboneJS</name>
+  <description>Openbox SF-5 settings editor, web implementation with REST and BackboneJS</description>
+  
+	<properties>
+  		<spring.version>4.3.10.RELEASE</spring.version>
+  		<spring.security.version>4.2.0.RELEASE</spring.security.version>
+  		<hibernate.version>5.1.10.Final</hibernate.version> <!-- Comply with JavaEE 6 -->
+  		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  		<jackson.version>2.8.4</jackson.version>
+  		<jersey.version>2.25.1</jersey.version>
+  		<moxy.version>2.6.2</moxy.version>
+  		<springfox.swagger.version>2.7.0</springfox.swagger.version>
+  		<slf4j.version>1.7.21</slf4j.version>
+  		<log4j.version>1.2.17</log4j.version>
+	</properties>  
+ 
+<build>
+<resources>
+	<resource>
+    	<directory>src/main/java</directory> <!-- This excludes webapp resources from copying to classes! -->
+        <excludes>
+          <exclude>**/*.java</exclude>
+        </excludes>
+      </resource>
+	<resource>
+    	<directory>src/main/resources</directory>
+    	<filtering>true</filtering>
+  	</resource>
+  	<resource>
+  		<directory>src/main/java</directory>
+  		<excludes>
+          <exclude>**/*.java</exclude>
+        </excludes>
+  	</resource>
+</resources>
+ 
+<defaultGoal>install</defaultGoal>
+<testResources>
+	<testResource>
+    	<directory>${project.basedir}/src/test/java</directory>
+  	</testResource>
+  	<testResource>
+    	<directory>${project.basedir}/src/test/resources</directory>
+    	<filtering>true</filtering>
+   	</testResource>
+</testResources>
+
+<plugins>
+	<plugin>
+    	<artifactId>maven-compiler-plugin</artifactId>
+        <version>3.7.0</version>
+        <configuration>
+        	<source>1.8</source>
+          	<target>1.8</target>
+        </configuration>
+    </plugin>   
+
+	<plugin>
+		<groupId>org.apache.maven.plugins</groupId>
+		<artifactId>maven-surefire-plugin</artifactId>
+		<version>2.19.1</version>
+		<configuration>
+			<includes>
+				<include>**/*Tests.java</include>
+			</includes>
+			<excludes>
+            	<exclude>**/*IT.java</exclude>
+            </excludes>
+		</configuration>
+	</plugin>
+	
+	<plugin>
+		<groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>3.0.1</version>
+        <configuration>
+          <!-- specify UTF-8, ISO-8859-1 or any other file encoding -->
+          <encoding>UTF-8</encoding>
+        </configuration>
+        <executions>
+        	<execution>
+          	<!-- Serves *only* to filter the wro.xml so it can get an absolute
+            	path for the project -->
+          	<id>copy-resources</id>
+          	<phase>validate</phase>
+          	<goals>
+            	<goal>copy-resources</goal>
+          	</goals>
+          	<configuration>
+            	<outputDirectory>${basedir}/target/wro</outputDirectory>
+            	<resources>
+              	<resource>
+                	<directory>src/main/wro</directory>
+                	<filtering>true</filtering>
+              </resource>
+            </resources>
+          	</configuration>
+        	</execution>
+		</executions>
+        
+     </plugin>
+	
+     <plugin>
+        <artifactId>maven-war-plugin</artifactId>
+        <version>3.2.0</version>
+        <configuration>
+        	<warSourceDirectory>src/main/webapp</warSourceDirectory>
+          	<failOnMissingWebXml>false</failOnMissingWebXml>
+			<packagingExcludes>web.xml</packagingExcludes> <!-- In container test it says duplicate context, it still includes web.xml (( -->
+        	<warName>${rp.build.warname}</warName>
+        	<archive>
+        		<manifestEntries>
+        			<Dependencies>org.hibernate</Dependencies>
+        		</manifestEntries>
+        	</archive> 
+		<webResources>
+			<resource>
+                <filtering>true</filtering> <!-- THIS IS IMPORTANT! It tells maven to replace your variables with the properties values -->
+                <directory>src/main/resources</directory>
+                <targetPath>WEB-INF/classes/</targetPath>
+                <includes>
+                	<include>**/hibernate.cfg.xml</include> <!-- the path to hibernate.cfg.xml -->
+                </includes>
+            </resource>
+
+            <resource>
+            	<filtering>true</filtering> <!-- THIS IS IMPORTANT! It tells maven to replace your variables with the properties values -->
+            	<directory>src/main/resources/spring</directory>
+             	<targetPath>WEB-INF</targetPath>
+             	<includes>
+					<include>*.xml</include>
+                </includes>
+            </resource>
+            
+            <resource>
+            	<filtering>true</filtering> <!-- THIS IS IMPORTANT! It tells maven to replace your variables with the properties values -->
+            	<directory>src/main/resources/spring/${property.placeholder}/</directory>
+             	<targetPath>WEB-INF/classes/</targetPath>
+             	<includes>
+					<include>application.properties</include>
+                </includes>
+            </resource>
+            <resource>
+            	<filtering>true</filtering>
+                <directory>src/main/resources/web-inf-filter/</directory>
+                <targetPath>WEB-INF/</targetPath>
+                <includes>
+		        	<include>**/jboss-web.xml</include>
+        	    </includes>
+            </resource> 
+            
+        </webResources>
+        	
+        </configuration>
+	</plugin>
+	
+	
+	
+</plugins> 
+</build>  
+
+<profiles>
+	<profile>
+  	<id>test</id>
+  		<activation>
+            <activeByDefault>false</activeByDefault>
+        </activation>  		   	 
+	<properties>
+  		<db.jdbcUrl>jdbc:h2:mem:test;DB_CLOSE_DELAY=-1</db.jdbcUrl>
+  		<db.driver>org.h2.Driver</db.driver>
+  		<db.user>sa</db.user>
+  		<db.password></db.password>
+        <db.dialect>H2Dialect</db.dialect>
+        <db.hbm2ddl>update</db.hbm2ddl>
+        <deploy.context>/</deploy.context> 
+  		<rp.build.warname>ROOT</rp.build.warname>
+  		<property.placeholder>test</property.placeholder>
+  	</properties>
+  	
+  	<!-- http://stackoverflow.com/questions/20916581/how-to-do-in-container-testing-of-a-web-app-in-spring -->
+  	<build>
+    	<plugins>
+             <plugin>
+             <groupId>org.codehaus.cargo</groupId>
+             <artifactId>cargo-maven2-plugin</artifactId>
+             <version>1.6.7</version>
+             	<configuration>
+                     <container>
+						    <containerId>wildfly11x</containerId>
+	                     	<zipUrlInstaller>
+								<url>http://download.jboss.org/wildfly/11.0.0.Final/wildfly-11.0.0.Final.zip</url>
+							</zipUrlInstaller>
+						    <dependencies>
+                				<dependency>
+                    				<groupId>mysql</groupId>
+                    				<artifactId>mysql-connector-java</artifactId>
+                 				</dependency>
+                 				<dependency>
+                 					<groupId>com.h2database</groupId>
+                 					<artifactId>h2</artifactId>
+                 				</dependency>
+            				</dependencies>
+                     </container>
+                     <configuration>
+                     	<properties>
+                             <cargo.servlet.port>8080</cargo.servlet.port>
+                             <cargo.protocol>http</cargo.protocol>
+                             <cargo.datasource.datasource.ds1>
+                             		cargo.datasource.url=jdbc:h2:mem:test;DB_CLOSE_DELAY=-1|
+                             		cargo.datasource.driver=org.h2.Driver|
+                             		cargo.datasource.username=sa|
+                             		cargo.datasource.password=''|
+                             		cargo.datasource.jndi=jboss/datasources/MySQLDS
+                             </cargo.datasource.datasource.ds1>                  
+                    	</properties>
+                	</configuration>
+                		<deployables>
+                		<deployable>
+                			<pingURL>http://localhost:8080/${rp.build.warname}/</pingURL>
+	                		<pingTimeout>120000</pingTimeout> <!-- 2 min -->
+                		 	<properties>
+                		     	<context>${rp.build.warname}</context>
+              				</properties>
+                		</deployable>
+                		</deployables>
+                </configuration>
+
+                
+                
+                <executions>
+                     <execution>
+                        <id>start-container</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                        <goal>start</goal>
+                    </goals>
+                    </execution>
+                    	<execution>
+                    	<id>stop-container</id>
+                    	<phase>post-integration-test</phase>
+                    	<goals>
+                    		<goal>stop</goal>
+                    	</goals>
+                	</execution>
+            	</executions>
+        	</plugin>
+             	<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-surefire-plugin</artifactId>	
+					<version>2.19.1</version>
+					<executions>
+ 				       	<execution>
+            			<phase>integration-test</phase>
+            			<goals>
+               				<goal>test</goal>
+            			</goals>
+            			<configuration>
+               				<excludes>
+                  				<exclude>**/*Tests.java</exclude>
+               				</excludes>
+            				<includes>
+								<include>**/*IT.java</include>
+							</includes>
+																			
+            			</configuration>
+        		</execution> 
+      		</executions>
+		</plugin>
+		
+<!-- 		<plugin>
+      		<groupId>ro.isdc.wro4j</groupId>
+      		<artifactId>wro4j-maven-plugin</artifactId>
+      		<version>1.7.6</version>
+      		<executions>
+        		<execution>
+          		<phase>generate-resources</phase>
+          		<goals>
+            		<goal>run</goal>
+          		</goals>
+        		</execution>
+      		</executions>
+      		<configuration>
+        		<wroManagerFactory>ro.isdc.wro.maven.plugin.manager.factory.ConfigurableWroManagerFactory</wroManagerFactory>
+        		<cssDestinationFolder>${project.build.directory}/generated-resources/css</cssDestinationFolder>
+        		<jsDestinationFolder>${project.build.directory}/generated-resources/js</jsDestinationFolder>
+        		<wroFile>${project.build.directory}/wro/wro.xml</wroFile>
+        		<extraConfigFile>${basedir}/src/main/wro/wro.properties</extraConfigFile>
+        		<contextFolder>${basedir}/src/main/wro</contextFolder>
+      		</configuration>
+      		<dependencies>
+        		<dependency>
+          			<groupId>org.webjars</groupId>
+          			<artifactId>jquery</artifactId>
+          			<version>2.1.4</version>
+        		</dependency>
+        		<dependency>
+					<groupId>org.webjars</groupId>
+					<artifactId>backbonejs</artifactId>
+					<version>1.2.3</version>
+				</dependency>
+				<dependency>
+					<groupId>org.webjars</groupId>
+					<artifactId>lodash</artifactId>
+					<version>3.10.1</version>
+				</dependency>
+				<dependency>
+					<groupId>org.webjars</groupId>
+					<artifactId>cujojs-curl</artifactId>
+					<version>0.8.1</version>
+				</dependency>
+
+      		</dependencies>
+    	</plugin> -->
+		
+ 	</plugins>
+    </build>	
+	</profile>
+
+	<profile>
+  		<id>dev</id>
+  		<activation>
+            <activeByDefault>false</activeByDefault>
+        </activation>
+		<properties>
+  			<property.placeholder>dev</property.placeholder>
+  		</properties>
+	</profile>
+	<profile>
+	 	<id>openshift</id>
+         	<activation>
+            	<activeByDefault>true</activeByDefault>
+        	</activation>
+        	<properties>
+        		<property.placeholder>openshift</property.placeholder>
+        	</properties>
+         <build>
+            <plugins>
+               <plugin>
+                  <artifactId>maven-war-plugin</artifactId>
+                  <version>2.6</version>
+                  <configuration>
+                     <outputDirectory>deployments</outputDirectory>
+                     <warName>ROOT</warName>
+                  </configuration>
+               </plugin>
+            </plugins>
+         </build>
+      </profile>
+</profiles>
+
+ 
+ 
+<dependencies>
+	<!-- Spring -->
+	<dependency>
+  		<groupId>org.springframework</groupId>
+  		<artifactId>spring-context</artifactId>
+  		<version>${spring.version}</version>
+  	</dependency>
+  	<dependency>
+		<groupId>org.springframework</groupId>
+		<artifactId>spring-aop</artifactId>
+		<version>${spring.version}</version>
+	</dependency>
+	<dependency>
+		<groupId>org.springframework</groupId>
+		<artifactId>spring-webmvc</artifactId>
+			<version>${spring.version}</version>
+	</dependency>
+	<dependency>
+		<groupId>org.springframework</groupId>
+		<artifactId>spring-web</artifactId>
+		<version>${spring.version}</version>
+	</dependency>
+ 	<dependency>
+    	<groupId>org.springframework</groupId>
+    	<artifactId>spring-beans</artifactId>
+    	<version>${spring.version}</version>
+	</dependency>
+	<dependency>
+		<groupId>org.springframework</groupId>
+		<artifactId>spring-jdbc</artifactId>
+		<version>${spring.version}</version>
+	</dependency>
+	<dependency>
+		<groupId>org.springframework</groupId>
+		<artifactId>spring-test</artifactId>
+		<version>${spring.version}</version>
+	</dependency>
+	<dependency>
+    	<groupId>org.springframework</groupId>
+    	<artifactId>spring-tx</artifactId>
+    	<version>${spring.version}</version>
+	</dependency>
+	<dependency>
+		<groupId>org.springframework</groupId>
+		<artifactId>spring-orm</artifactId>
+		<version>${spring.version}</version>
+	</dependency>
+	<dependency>
+		<groupId>org.springframework</groupId>
+		<artifactId>spring-oxm</artifactId>
+		<version>${spring.version}</version>
+	</dependency>
+	
+	<dependency>
+    	<groupId>org.springframework.ws</groupId>
+    	<artifactId>spring-ws-core</artifactId>
+    	<version>2.4.0.RELEASE</version>
+	</dependency>
+	
+		
+	<!-- Spring security -->
+    <dependency>
+        <groupId>org.springframework.security</groupId>
+        <artifactId>spring-security-web</artifactId>
+        <version>${spring.security.version}</version>
+	</dependency>
+ 	<dependency>
+		<groupId>org.springframework.security</groupId>
+		<artifactId>spring-security-config</artifactId>
+		<version>${spring.security.version}</version>
+	</dependency>
+ 	<dependency>
+		<groupId>org.springframework.security</groupId>
+		<artifactId>spring-security-core</artifactId>
+		<version>${spring.security.version}</version>
+	</dependency>
+	<dependency>
+    	<groupId>org.springframework.security</groupId>
+    	<artifactId>spring-security-taglibs</artifactId>
+    	<version>${spring.security.version}</version>
+	</dependency>
+		
+	<!-- Work with JSP - for login -->
+	<dependency>
+		<groupId>javax.servlet</groupId>
+		<artifactId>jstl</artifactId>
+		<version>1.2</version>
+	</dependency>
+	<dependency>
+		<groupId>javax.servlet.jsp.jstl</groupId>
+		<artifactId>javax.servlet.jsp.jstl-api</artifactId>
+		<version>1.2.1</version>
+		<scope>provided</scope>
+	</dependency>
+	<dependency>
+		<groupId>javax.servlet.jsp</groupId>
+		<artifactId>jsp-api</artifactId>
+		<version>2.2.1-b03</version>
+		<scope>provided</scope>
+	</dependency>
+	<dependency>
+		<groupId>org.apache.taglibs</groupId>
+		<artifactId>taglibs-standard-impl</artifactId>
+		<version>1.2.5</version>
+		<scope>provided</scope>
+	</dependency>
+	
+	<!-- Hibernate -->
+	<dependency>
+		<groupId>org.hibernate</groupId>
+		<artifactId>hibernate-core</artifactId>
+		<version>${hibernate.version}</version>
+		<scope>provided</scope>
+	</dependency>
+	<dependency>
+    	<groupId>org.hibernate</groupId>
+    	<artifactId>hibernate-entitymanager</artifactId>
+    	<version>${hibernate.version}</version>
+    	<scope>provided</scope>
+	</dependency>
+	
+	<dependency>
+		<groupId>org.hibernate</groupId>
+		<artifactId>hibernate-validator</artifactId>
+		<version>5.3.2.Final</version>
+	</dependency>
+	
+	<dependency>
+	    <groupId>org.glassfish.web</groupId>
+	    <artifactId>javax.el</artifactId>
+	    <version>2.2.6</version>
+	</dependency>
+	
+	
+	<!--  APIs -->
+	<dependency>
+    	<groupId>javax</groupId>
+    	<artifactId>javaee-web-api</artifactId>
+    	<version>7.0</version>
+    	<scope>provided</scope>
+	</dependency>
+	<dependency>
+		<groupId>javax.servlet</groupId>
+		<artifactId>javax.servlet-api</artifactId>
+		<version>3.1.0</version>
+		<scope>provided</scope>
+	</dependency>
+	
+	<!-- Databases -->
+	<dependency>
+		<groupId>mysql</groupId>
+		<artifactId>mysql-connector-java</artifactId>
+		<version>5.1.38</version>
+		<scope>provided</scope>
+	</dependency>
+	<dependency>
+		<groupId>com.h2database</groupId>
+		<artifactId>h2</artifactId>
+		<version>1.4.192</version>
+		<scope>test</scope>
+	</dependency>
+	
+	<!-- Jackson dependencies -->
+	<dependency>
+    	<groupId>com.fasterxml.jackson.core</groupId>
+    	<artifactId>jackson-databind</artifactId>
+    	<version>${jackson.version}</version>
+    	<scope>provided</scope>
+	</dependency>
+	<dependency>
+		<groupId>com.fasterxml.jackson.jaxrs</groupId>
+		<artifactId>jackson-jaxrs-json-provider</artifactId>
+		<version>${jackson.version}</version>
+		<scope>test</scope>
+	</dependency>
+	<dependency>
+		<groupId>com.fasterxml.jackson.jaxrs</groupId>
+		<artifactId>jackson-jaxrs-xml-provider</artifactId>
+		<version>${jackson.version}</version>
+		<scope>test</scope>
+	</dependency>
+	<!-- This is only needed for Spring -->
+	<dependency>
+		<groupId>com.fasterxml.jackson.dataformat</groupId>
+		<artifactId>jackson-dataformat-xml</artifactId>
+		<version>${jackson.version}</version>
+	</dependency>
+	<!-- From http://stackoverflow.com/questions/22950542/pretty-printing-xml-with-jackson-library -->
+	<dependency>
+		<groupId>org.codehaus.woodstox</groupId>
+		<artifactId>woodstox-core-asl</artifactId>
+		<version>4.4.1</version>
+	</dependency>
+	
+	<!-- Tests -->
+	<dependency>
+		<groupId>junit</groupId>
+		<artifactId>junit</artifactId>
+		<version>4.12</version>
+		<scope>test</scope>
+	</dependency>
+	<dependency>
+		<groupId>org.assertj</groupId>
+		<artifactId>assertj-core</artifactId>
+		<version>3.2.0</version>
+		<scope>test</scope>
+	</dependency>
+	
+	
+	<!-- Jersey dependencies -->
+	<dependency>
+		<groupId>org.glassfish.jersey.core</groupId>
+		<artifactId>jersey-client</artifactId>
+		<version>${jersey.version}</version>
+		<scope>test</scope>
+	</dependency>
+	<dependency>
+		<groupId>org.glassfish.jersey.media</groupId>
+		<artifactId>jersey-media-json-jackson</artifactId>
+		<version>${jersey.version}</version>
+		<scope>test</scope>
+	</dependency>
+	<dependency>
+		<groupId>org.glassfish.jersey.media</groupId>
+		<artifactId>jersey-media-json-processing</artifactId>
+		<version>${jersey.version}</version>
+		<scope>test</scope>
+	</dependency>
+	<dependency>
+		<groupId>org.glassfish.jersey.media</groupId>
+		<artifactId>jersey-media-multipart</artifactId>
+		<version>${jersey.version}</version>
+		<scope>test</scope>
+	</dependency>
+	<dependency>
+	    <groupId>org.glassfish.jersey.connectors</groupId>
+	    <artifactId>jersey-apache-connector</artifactId>
+	    <version>${jersey.version}</version>
+	</dependency>
+	
+	<dependency>
+		<groupId>org.glassfish.hk2</groupId>
+		<artifactId>hk2-api</artifactId>
+		<version>2.5.0-b61</version>
+		<scope>test</scope>
+	</dependency>
+	
+	<!-- Springfox swagger API documentation. -->
+	<dependency>
+    	<groupId>io.springfox</groupId>
+    	<artifactId>springfox-swagger2</artifactId>
+    	<version>${springfox.swagger.version}</version>
+	</dependency>
+	<dependency>
+	    <groupId>io.springfox</groupId>
+	    <artifactId>springfox-swagger-ui</artifactId>
+	    <version>${springfox.swagger.version}</version>
+	</dependency>
+	
+        <!-- Logging  -->
+
+
+     <dependency>
+         <groupId>org.slf4j</groupId>
+         <artifactId>jcl-over-slf4j</artifactId>
+         <version>${slf4j.version}</version>
+     </dependency>
+     <dependency>
+         <groupId>org.slf4j</groupId>
+         <artifactId>slf4j-log4j12</artifactId>
+         <version>${slf4j.version}</version>
+     </dependency>
+     <dependency>
+         <groupId>log4j</groupId>
+         <artifactId>log4j</artifactId>
+         <version>${log4j.version}</version>
+     </dependency>
+	
+			
+</dependencies> 
+  
+</project>

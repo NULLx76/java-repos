@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.bremersee</groupId>
+    <artifactId>common-service-parent</artifactId>
+    <version>2.3.1</version>
+    <relativePath/> <!-- lookup parent from repository -->
+  </parent>
+
+  <artifactId>config-server</artifactId>
+  <version>1.4.1</version>
+  <packaging>jar</packaging>
+
+  <name>config-server</name>
+  <description>Spring Cloud Config Server</description>
+  <url>https://github.com/bremersee/config-server</url>
+
+  <properties>
+    <github.repo>config-server</github.repo>
+    <gh-pages-staging-dir>${project.build.directory}/staging</gh-pages-staging-dir>
+
+    <start-class>org.bremersee.configserver.Application</start-class>
+
+    <!--suppress UnresolvedMavenProperty -->
+    <debBaseName>
+      spring-config-server_${project.version}-${maven.build.timestamp}+${scmBranch}+${buildNumber}_all
+    </debBaseName>
+    <debName>${debBaseName}.deb</debName>
+    <debChangesName>${debBaseName}.changes</debChangesName>
+  </properties>
+
+  <scm>
+    <connection>scm:git:ssh://git@github.com:bremersee/config-server.git</connection>
+    <developerConnection>
+      scm:git:ssh://git@github.com:bremersee/config-server.git
+    </developerConnection>
+    <url>https://github.com/bremersee/config-server</url>
+  </scm>
+
+  <issueManagement>
+    <url>https://github.com/bremersee/config-server/issues</url>
+    <system>GitHub Issues</system>
+  </issueManagement>
+
+  <distributionManagement>
+    <repository>
+      <id>bremersee-releases</id>
+      <url>https://nexus.bremersee.org/repository/maven-releases</url>
+    </repository>
+    <snapshotRepository>
+      <id>bremersee-snapshots</id>
+      <url>https://nexus.bremersee.org/repository/maven-snapshots</url>
+    </snapshotRepository>
+    <site>
+      <id>bremersee-sites</id>
+      <url>
+        dav:https://nexus.bremersee.org/repository/maven-sites/config-server/${project.version}
+      </url>
+    </site>
+  </distributionManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-config</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-config-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-configuration-processor</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>config-server</finalName>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <configuration>
+            <skip>true</skip>
+          </configuration>
+        </plugin>
+        <plugin>
+          <artifactId>jdeb</artifactId>
+          <groupId>org.vafer</groupId>
+          <version>1.5</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>debian11</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <properties>
+        <assembly-config>debian11.xml</assembly-config>
+      </properties>
+      <build>
+        <finalName>config-server</finalName>
+        <plugins>
+          <plugin>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-maven-plugin</artifactId>
+            <configuration>
+              <executable>true</executable>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <configuration>
+              <descriptors>
+                <descriptor>${basedir}/src/assembly/debian11.xml</descriptor>
+              </descriptors>
+            </configuration>
+            <executions>
+              <execution>
+                <id>debian11-archive</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>jdeb</artifactId>
+            <groupId>org.vafer</groupId>
+            <executions>
+              <execution>
+                <id>debian11-deb</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>jdeb</goal>
+                </goals>
+                <configuration>
+                  <verbose>true</verbose>
+                  <deb>${project.build.directory}/${debName}</deb>
+                  <changesOut>${project.build.directory}/${debChangesName}</changesOut>
+                  <controlDir>${basedir}/src/assembly/debian11/control</controlDir>
+                  <dataSet>
+                    <data>
+                      <src>${project.build.directory}/config-server-debian11.tar.gz</src>
+                      <type>archive</type>
+                      <mapper>
+                        <type>perm</type>
+                        <prefix>/</prefix>
+                      </mapper>
+                    </data>
+                  </dataSet>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>deploy-to-repo-debian-bullseye</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <!--+
+              | wagon-http only supports http method put
+              | uploading to nexus apt works only with a workaround in haproxy
+              +-->
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>wagon-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>upload-to-debian-bullseye</id>
+                <phase>deploy</phase>
+                <goals>
+                  <goal>upload-single</goal>
+                </goals>
+                <configuration>
+                  <serverId>bremersee-apt</serverId>
+                  <fromFile>${project.build.directory}/${debName}</fromFile>
+                  <url>https://nexus.bremersee.org/repository/debian-bullseye</url>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>apt-get-on-config-server</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>wagon-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>install-on-config-server</id>
+                <phase>deploy</phase>
+                <goals>
+                  <goal>sshexec</goal>
+                </goals>
+                <configuration>
+                  <serverId>bremersee-dpkg</serverId>
+                  <url>scp://config.eixe.bremersee.org/home/giacomo</url>
+                  <commands>
+                    <command>sudo -n /usr/bin/apt-get update</command>
+                    <command>sudo -n /usr/bin/env DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get -yq install spring-config-server</command>
+                  </commands>
+                  <displayCommandOutputs>true</displayCommandOutputs>
+                  <failOnError>false</failOnError>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>copy-to-and-install-on-config-server</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>wagon-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>copy-to-config-server</id>
+                <phase>deploy</phase>
+                <goals>
+                  <goal>upload-single</goal>
+                </goals>
+                <configuration>
+                  <serverId>bremersee-dpkg</serverId>
+                  <url>scp://config.eixe.bremersee.org/home/giacomo</url>
+                  <fromFile>${project.build.directory}/${debName}</fromFile>
+                  <toFile>spring-config-server.deb</toFile>
+                </configuration>
+              </execution>
+              <execution>
+                <id>dpkg-on-config-server</id>
+                <phase>deploy</phase>
+                <goals>
+                  <goal>sshexec</goal>
+                </goals>
+                <configuration>
+                  <serverId>bremersee-dpkg</serverId>
+                  <url>scp://config.eixe.bremersee.org/home/giacomo</url>
+                  <commands>
+                    <command>sudo -n /usr/bin/dpkg -i /home/giacomo/spring-config-server.deb</command>
+                    <command>rm /home/giacomo/spring-config-server.deb</command>
+                  </commands>
+                  <displayCommandOutputs>true</displayCommandOutputs>
+                  <failOnError>true</failOnError>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

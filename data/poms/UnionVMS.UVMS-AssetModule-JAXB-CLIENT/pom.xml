@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+        
+    <name>UVMS Service clients</name>
+    <groupId>eu.europa.ec.fisheries.uvms.service.client</groupId>
+    <artifactId>client</artifactId>    
+    <version>1.0.5-SNAPSHOT</version>
+    
+    <description>Super POM for all UVMS web services clients</description>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>eu-vessel-service-receiver</module>
+        <module>eu-vessel-service-sender</module>
+    </modules>
+
+    <properties>
+        <contract.scm.url>http://svn/svn/ipl/trunk/schemas/schemas-HAV-v2</contract.scm.url>
+        <contract.files.outputDirectory>contracts</contract.files.outputDirectory>
+        <contract.files.location>${project.build.directory}/${contract.files.outputDirectory}</contract.files.location>
+        <wsdl.name>${contract.name}.wsdl</wsdl.name>
+        <project.scm.id>github</project.scm.id>
+        <maven-release-plugin>2.5.3</maven-release-plugin>
+    </properties>
+    
+    <repositories>
+        <repository>
+            <id>focus-repo</id>
+            <name>Focus nexus repository</name>
+            <url>http://nexus.focus.fish/</url>
+        </repository>
+    </repositories>
+
+    <distributionManagement> 
+        <repository>
+            <id>focus-releases</id>
+            <name>UnionVms Repository</name>
+            <url>http://nexus.focus.fish/nexus/content/repositories/releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>focus-snapshots</id>
+            <name>UnionVms Snapshot Repository</name>
+            <url>http://nexus.focus.fish/nexus/content/repositories/snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+    <scm>
+        <connection>scm:git:https://github.com/UnionVMS/UVMS-AssetModule-JAXB-CLIENT.git</connection>
+      <tag>HEAD</tag>
+  </scm>
+
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>${maven-release-plugin}</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.scm</groupId>
+                        <artifactId>maven-scm-provider-gitexe</artifactId>
+                        <version>1.8.1</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <checkModificationExcludes>
+                        <checkModificationExclude>src/main/java/eu/europa/ec/fisheries/wsdl</checkModificationExclude>
+                    </checkModificationExcludes>
+                </configuration>
+            </plugin>
+        </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <includes>
+                    <include>bindings.xml</include>
+                </includes>
+                <targetPath>${contract.files.location}</targetPath>
+                <filtering>true</filtering>
+            </resource>
+            <resource>
+                <directory>${contract.files.location}</directory>
+                <targetPath>${project.build.outputDirectory}/${contract.files.outputDirectory}</targetPath>
+                <excludes>
+                    <exclude>bindings.xml</exclude>
+                </excludes>
+            </resource>
+        </resources>
+        <pluginManagement>
+            <plugins>
+
+                <!-- Plugin that get contracts from repository -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-scm-plugin</artifactId>
+                    <configuration>
+                        <connectionUrl>scm:svn:${contract.scm.url}</connectionUrl>
+                        <exportDirectory>${contract.files.location}</exportDirectory>
+                        <includes>${contract.includes}</includes>
+                    </configuration>
+                    <version>1.8.1</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>export</goal>
+                            </goals>
+                            <phase>generate-resources</phase>
+                        </execution>
+                    </executions>
+                </plugin>
+
+                <!-- Plugin that parses major and minor version for the client -->
+                <!-- <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>build-helper-maven-plugin</artifactId>
+                    <version>1.8</version>
+                    <executions>
+                        <execution>
+                            <phase>initialize</phase>
+                            <id>parse-version</id>
+                            <goals>
+                                <goal>parse-version</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin> -->
+
+                <!-- Plugin that generates jaxws classes -->
+                <plugin>
+                    <groupId>org.apache.cxf</groupId>
+                    <artifactId>cxf-codegen-plugin</artifactId>
+                    <version>2.7.6</version>
+                    <executions>
+                        <execution>
+                            <id>wsdl2java</id>
+                            <phase>process-resources</phase>
+                            <goals>
+                                <goal>wsdl2java</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <fork>once</fork>
+                        <additionalJvmArgs>-Dfile.encoding=UTF-8</additionalJvmArgs>
+                        <sourceRoot>${project.build.directory}/generated</sourceRoot>
+                        <wsdlOptions>
+                            <wsdlOption>
+                                <wsdl>${contract.files.location}/${wsdl.name}</wsdl>
+                                <bindingFiles>
+                                    <bindingFile>${contract.files.location}/bindings.xml</bindingFile>
+                                </bindingFiles> 
+                                <!-- <extraargs>
+                                    <extraarg>-p</extraarg>
+                                    <extraarg>${project.groupId}.${contract.name}ws.v${parsedVersion.majorVersion}_${parsedVersion.minorVersion}</extraarg>
+                                    <extraarg>-wsdlLocation</extraarg>
+                                    <extraarg>classpath:${contract.files.outputDirectory}/${wsdl.name}</extraarg>
+                                </extraargs> -->
+                            </wsdlOption>
+                        </wsdlOptions>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>xml-maven-plugin</artifactId>
+                    <version>1.0</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>validate</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <validationSets>
+                            <validationSet>
+                                <dir>${contract.files.location}</dir>
+                            </validationSet>
+                        </validationSets>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+
+</project>

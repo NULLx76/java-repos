@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>ru.glaizier</groupId>
+    <artifactId>powerliftersdb</artifactId>
+    <version>0.1</version>
+    <description>Program API for powerliftersdb</description>
+    <packaging>war</packaging>
+
+    <properties>
+        <jdk.version>1.8</jdk.version>
+    </properties>
+
+    <profiles>
+        <profile>
+            <id>local</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <profile.name>local</profile.name>
+                <glaizier.server>127.0.0.1</glaizier.server>
+                <glaizier.tomcat.path>${project.name}</glaizier.tomcat.path>
+                <glaizier.tomcat.port>8080</glaizier.tomcat.port>
+            </properties>
+        </profile>
+        <profile>
+            <id>docker</id>
+            <properties>
+                <profile.name>docker</profile.name>
+                <glaizier.server>127.0.0.1</glaizier.server>
+                <glaizier.tomcat.path>${project.name}</glaizier.tomcat.path>
+                <glaizier.tomcat.port>8888</glaizier.tomcat.port>
+            </properties>
+        </profile>
+    </profiles>
+
+    <build>
+        <filters>
+            <!--<filter>${project.basedir}/src/profiles/${profile.name}.properties</filter>-->
+            <filter>${project.basedir}/src/main/resources/profiles/${profile.name}.properties</filter>
+        </filters>
+
+        <finalName>${project.name}</finalName>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
+                <configuration>
+                    <source>${jdk.version}</source>
+                    <target>${jdk.version}</target>
+                    <compilerArgument>-proc:none</compilerArgument>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>2.5</version>
+                <executions>
+                    <execution>
+                        <id>auto-clean</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Important! Place for config files inside war is important!
+             The place for configs inside project structure is important too -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>2.5</version>
+                <configuration>
+                    <goal>war:war</goal>
+                    <attachClasses>false</attachClasses>
+                    <webResources>
+                        <webResource>
+                            <directory>src/main/resources/META-INF</directory>
+                            <includes>
+                                <include>context.xml</include>
+                            </includes>
+                            <filtering>true</filtering>
+                            <targetPath>META-INF</targetPath>
+                        </webResource>
+                        <webResource>
+                            <directory>src/main/webapp/WEB-INF</directory>
+                            <includes>
+                                <include>web.xml</include>
+                            </includes>
+                            <filtering>true</filtering>
+                            <targetPath>WEB-INF</targetPath>
+                        </webResource>
+                        <webResource>
+                            <directory>src/main/resources</directory>
+                            <includes>
+                                <include>hibernate.cfg.xml</include>
+                            </includes>
+                            <filtering>true</filtering>
+                            <targetPath>WEB-INF/classes</targetPath>
+                        </webResource>
+                        <webResource>
+                            <directory>src/main/resources/META-INF</directory>
+                            <includes>
+                                <include>persistence.xml</include>
+                            </includes>
+                            <filtering>true</filtering>
+                            <targetPath>WEB-INF/classes/META-INF</targetPath>
+                        </webResource>
+                    </webResources>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.tomcat.maven</groupId>
+                <artifactId>tomcat7-maven-plugin</artifactId>
+                <version>2.2</version>
+                <configuration>
+                    <server>${glaizier.server}</server>
+                    <url>http://${glaizier.server}:${glaizier.tomcat.port}/manager/text</url>
+                    <path>/${glaizier.tomcat.path}</path>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.bsc.maven</groupId>
+                <artifactId>maven-processor-plugin</artifactId>
+                <version>2.0.5</version>
+                <executions>
+                    <execution>
+                        <id>process</id>
+                        <goals>
+                            <goal>process</goal>
+                        </goals>
+                        <phase>generate-sources</phase>
+                        <configuration>
+                            <processors>
+                                <processor>org.hibernate.jpamodelgen.JPAMetaModelEntityProcessor</processor>
+                            </processors>
+                        </configuration>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.hibernate</groupId>
+                        <artifactId>hibernate-jpamodelgen</artifactId>
+                        <version>5.2.2.Final</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+
+        </plugins>
+
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>9.4.1212</version>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <version>3.1.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!--&lt;!&ndash; Get access to Tomcat filters, valves, connection pool etc sources &ndash;&gt;-->
+        <!--<dependency>-->
+        <!--<groupId>org.apache.tomcat</groupId>-->
+        <!--<artifactId>tomcat-catalina</artifactId>-->
+        <!--<version>7.0.59</version>-->
+        <!--<scope>provided</scope>-->
+        <!--</dependency>-->
+        <!--&lt;!&ndash;Creation datasource manually&ndash;&gt;-->
+        <!--<dependency>-->
+        <!--<groupId>org.apache.tomcat</groupId>-->
+        <!--<artifactId>tomcat-jdbc</artifactId>-->
+        <!--<version>7.0.57</version>-->
+        <!--<scope>provided</scope>-->
+        <!--</dependency>-->
+
+        <!-- Templater -->
+        <dependency>
+            <groupId>org.freemarker</groupId>
+            <artifactId>freemarker</artifactId>
+            <version>2.3.23</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-core</artifactId>
+            <version>5.2.2.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-entitymanager</artifactId>
+            <version>5.2.2.Final</version>
+        </dependency>
+        <!--JPA2 metamodel generator-->
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-jpamodelgen</artifactId>
+            <version>5.2.2.Final</version>
+        </dependency>
+
+        <!--<dependency>-->
+        <!--<groupId>javax</groupId>-->
+        <!--<artifactId>javaee-api</artifactId>-->
+        <!--<version>7.0</version>-->
+        <!--</dependency>-->
+
+        <!--Tests-->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+</project>

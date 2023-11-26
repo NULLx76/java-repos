@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.jboss</groupId>
+        <artifactId>jboss-parent</artifactId>
+        <version>20</version>
+        <relativePath></relativePath>
+    </parent>
+    <groupId>org.modeshape.example</groupId>
+    <artifactId>modeshape-cmis-example</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>war</packaging>
+    <name>Example of a custom web application that exposes the ModeShape CMIS endpoint</name>
+    <description>
+        A simple web application that overlays a custom repository configuration on top of the OOTB modeshape-web-cmis-war.
+		This is the idiomatic way in which projects can customize ModeShape with their own configuration and expose the CMIS endpoint.
+    </description>
+
+    <properties>
+        <cargo.container>jetty9x</cargo.container>
+        <version.cargo.plugin>1.4.16</version.cargo.plugin>
+
+        <!-- Global dependency version information-->
+        <version.modeshape>5.0.0.Final</version.modeshape>
+        <version.junit>4.11</version.junit>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.modeshape.bom</groupId>
+                <artifactId>modeshape-bom-embedded</artifactId>
+                <version>${version.modeshape}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!--This is the default WAR CMIS-Service which Maven will overlay with the custom files & dependencies from this project -->
+        <dependency>
+            <groupId>org.modeshape</groupId>
+            <artifactId>modeshape-web-cmis-war</artifactId>
+            <type>war</type>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${version.junit}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>${project.artifactId}</finalName>
+        <plugins>
+            <plugin>
+                <artifactId>maven-war-plugin</artifactId>
+                <configuration>
+                    <failOnMissingWebXml>false</failOnMissingWebXml>
+                    <overlays>
+                        <overlay>
+                            <id>exclude-default-config</id>
+                            <groupId>org.modeshape</groupId>
+                            <artifactId>modeshape-web-cmis-war</artifactId>
+                            <excludes>
+                                <exclude>**/*.json</exclude>
+                                <exclude>**/jboss-logging*</exclude>
+                            </excludes>
+                        </overlay>
+                    </overlays>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.cargo</groupId>
+                <artifactId>cargo-maven2-plugin</artifactId>
+                <version>${version.cargo.plugin}</version>
+                <executions>
+                    <execution>
+                        <id>start-container</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>start</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>stop-container</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <skip>${skipTests}</skip>
+                    <container>
+                        <containerId>${cargo.container}</containerId>
+                        <log>${project.build.directory}/cargo.log</log>
+                        <home>${project.build.directory}/cargo</home>
+                        <type>embedded</type>
+                    </container>
+                    <configuration >
+                        <properties>
+                            <cargo.logging>high</cargo.logging>
+                            <cargo.servlet.users>admin:admin:connect,readwrite,admin|unauthorized:password:bogus</cargo.servlet.users>
+                            <cargo.servlet.port>8090</cargo.servlet.port>
+                        </properties>
+                    </configuration>
+                    <deployables>
+                        <deployable>
+                            <properties>
+                                <context>${project.build.finalName}</context>
+                            </properties>
+                        </deployable>
+                    </deployables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+    <repositories>
+        <repository>
+            <id>JBoss</id>
+            <url>https://repository.jboss.org/nexus/content/groups/public/</url>
+        </repository>
+    </repositories>
+</project>

@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- This is the maven "Project Object Model"
+        for more info see:
+        -   http://www.vogella.com/tutorials/ApacheMaven/article.html#maven_configurationpom
+        -   https://www.jetbrains.com/help/idea/2017.1/getting-started-with-maven.html
+        -   https://maven.apache.org/guides/introduction/introduction-to-the-pom.html
+        -   http://search.maven.org/
+        -   https://mvnrepository.com/ (search for repos)
+        -   http://maven.apache.org/pom.html#Plugin%5FManagement
+
+        For dependency version control, checks etc., use these commands in terminal
+        -   $ mvn versions:display-dependency-updates
+        -   $ mvn versions:display-plugin-updates
+        -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.I2LP</groupId>
+    <artifactId>edi</artifactId><version>0.103</version>
+
+    <name>Edi</name>
+    <description>
+        Edi is a product produced through the SWENG project at the University of York in 2016/17
+    </description>
+
+    <prerequisites>
+        <maven>3.0</maven>
+    </prerequisites>
+
+    <!-- Set some overall versions -->
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <minimum-required-maven-version>3.0</minimum-required-maven-version>
+        <maven-compiler-plugin-version>3.6.1</maven-compiler-plugin-version>
+        <maven-assembly-plugin-version>3.0.0</maven-assembly-plugin-version>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven-antrun-plugin>1.8</maven-antrun-plugin>
+        <maven-jar-plugin>3.0.2</maven-jar-plugin>
+        <maven-enforcer-plugin>1.4.1</maven-enforcer-plugin>
+    </properties>
+
+    <!-- Remove XREF warning in build progress -->
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jxr-plugin</artifactId>
+                <version>2.5</version>
+            </plugin>
+        </plugins>
+    </reporting>
+
+    <build>
+        <!--Package the project images etc.-->
+        <resources>
+            <resource>
+                <directory>projectResources</directory>
+            </resource>
+        </resources>
+
+        <plugins>
+            <!-- Auto increment build number -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>${maven-antrun-plugin}</version>
+                <executions>
+                    <execution>
+                        <phase>compile</phase>
+                        <configuration>
+                            <target>
+                                <ant antfile="build.xml" target="updateBuildNum"/>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Set Maven Jar default phase to none, so no default jar is built. We only want assemblies -->
+            <plugin>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>${maven-jar-plugin}</version>
+                <executions>
+                    <execution>
+                        <id>default-jar</id>
+                        <phase>none</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven-compiler-plugin-version}</version>
+                <configuration>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
+                </configuration>
+            </plugin>
+
+            <!-- Bundle dependencies into Jar files for client and server jars -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>${maven-assembly-plugin-version}</version>
+                <executions>
+                    <!-- Server jar generation -->
+                    <execution>
+                        <id>create-com.i2lp.edi.server-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Set name of Jar, even if maven doesn't like it -->
+                            <finalName>${project.artifactId}-${project.version}-server</finalName>
+                            <archive>
+                                <manifest>
+                                    <mainClass>com.i2lp.edi.server.SocketServer</mainClass>
+                                </manifest>
+                            </archive>
+                            <descriptorRefs>
+                                <descriptorRef>jar-with-dependencies</descriptorRef>
+                            </descriptorRefs>
+                        </configuration>
+                    </execution>
+                    <!-- Client jar generation -->
+                    <execution>
+                        <id>create-com.i2lp.edi.client-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Set name of Jar, even if maven doesn't like it -->
+                            <finalName>${project.artifactId}-${project.version}-client</finalName>
+                            <archive>
+                                <manifest>
+                                    <mainClass>com.i2lp.edi.client.managers.EdiManager</mainClass>
+                                </manifest>
+                            </archive>
+                            <descriptorRefs>
+                                <descriptorRef>jar-with-dependencies</descriptorRef>
+                            </descriptorRefs>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Enforce maven version 3-->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>${maven-enforcer-plugin}</version>
+                <executions>
+                    <execution>
+                        <id>enforce-maven</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireMavenVersion>
+                                    <version>${minimum-required-maven-version}</version>
+                                </requireMavenVersion>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
+
+    <dependencies>
+        <!-- https://mvnrepository.com/artifact/commons-net/commons-net -->
+        <dependency>
+            <groupId>commons-net</groupId>
+            <artifactId>commons-net</artifactId>
+            <version>3.4</version>
+        </dependency>
+
+        <!-- Clear XREF Surefire Report Warning -->
+        <dependency>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jxr-plugin</artifactId>
+            <version>2.5</version>
+        </dependency>
+
+        <!-- client login auth crypto -->
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.10</version> <!-- updated from 1.6 to 1.10 -->
+        </dependency>
+
+        <!-- Socket IO Client -->
+        <dependency>
+            <groupId>io.socket</groupId>
+            <artifactId>socket.io-client</artifactId>
+            <version>0.8.3</version>
+        </dependency>
+
+        <!-- Socket IO Server -->
+        <dependency>
+            <groupId>com.corundumstudio.socketio</groupId>
+            <artifactId>netty-socketio</artifactId>
+            <version>1.7.12</version>
+        </dependency>
+
+        <!-- PostgreSQL Database driver -->
+        <dependency>
+            <groupId>com.impossibl.pgjdbc-ng</groupId>
+            <artifactId>pgjdbc-ng</artifactId>
+            <version>0.7.1</version>
+            <classifier>complete</classifier>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/de.jensd/fontawesomefx -->
+        <!-- Pretty Fonts and Icons from FontAwesome-->
+        <dependency>
+            <groupId>de.jensd</groupId>
+            <artifactId>fontawesomefx</artifactId>
+            <version>8.9</version>
+        </dependency>
+
+        <!-- Unit Testing Framework -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!--  JavaFX test suite
+        https://github.com/TestFX/TestFX -->
+        <dependency>
+            <groupId>org.testfx</groupId>
+            <artifactId>testfx-core</artifactId>
+            <version>4.0.6-alpha</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- JUnit testing with JavaFX
+        https://github.com/TestFX/TestFX -->
+        <dependency>
+            <groupId>org.testfx</groupId>
+            <artifactId>testfx-junit</artifactId>
+            <version>4.0.6-alpha</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Gorgeous CSS bindings for JavaFx Objects-->
+        <dependency>
+            <groupId>org.kordamp.bootstrapfx</groupId>
+            <artifactId>bootstrapfx-core</artifactId>
+            <version>0.2.1</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/eu.hansolo/tilesfx -->
+        <dependency>
+            <groupId>eu.hansolo</groupId>
+            <artifactId>tilesfx</artifactId>
+            <version>1.4.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.kennycason</groupId>
+            <artifactId>kumo</artifactId>
+            <version>1.5</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
+        <!-- Logging Framework -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.24</version> <!-- 1.8.0-alpha1 or 1.7.24 ?? -->
+        </dependency>
+
+        <!-- add log4j binding to classpath -->
+        <!-- routes slf4j calls to log4j -->
+        <!--<dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.8.0-alpha1</version>
+           <!- <exclusions>
+                <exclusion>
+                    <groupId>log4j</groupId>
+                    <artifactId>log4j</artifactId>
+                </exclusion>
+            </exclusions>
+            <scope>runtime</scope>
+        </dependency> -->
+        <!-- add a newer log4j binding to classpath -->
+        <!-- routes slf4j calls to log4j.
+        Doesn't work as it requires  "ServiceLoader mechanism". The slf4j-log4j12
+        adds log4j1.2, which is why it works... -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+            <version>2.8.2</version>
+        </dependency>
+        <!-- hhttps://logging.apache.org/log4j/2.x/index.html -->
+        <!-- newer and better Logging Backend -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <version>2.8.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.8.2</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.apache.pdfbox/pdfbox  for PDF generation-->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>2.0.5</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.0</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.controlsfx/controlsfx -->
+        <dependency>
+            <groupId>org.controlsfx</groupId>
+            <artifactId>controlsfx</artifactId>
+            <version>8.40.12</version>
+        </dependency>
+
+
+
+    </dependencies>
+
+</project>

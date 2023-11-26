@@ -1,0 +1,206 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <name>Code Interlingua</name>
+  <groupId>com.mikesamuel</groupId>
+  <artifactId>code-interlingua</artifactId>
+  <version>1.0-beta-SNAPSHOT</version>
+  <packaging>jar</packaging>
+  <description>
+    Tools for multi-backend code generators.
+  </description>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>19.0</version>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.json</groupId>
+      <artifactId>json</artifactId>
+      <version>20160212</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <version>3.0.1</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>findbugs</artifactId>
+      <version>3.0.1</version>
+    </dependency>
+
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.12</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.truth</groupId>
+      <artifactId>truth</artifactId>
+      <version>0.30</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <defaultGoal>verify</defaultGoal>
+
+    <testResources>
+      <testResource>
+        <directory>${project.build.directory}/test-resources</directory>
+      </testResource>
+    </testResources>
+
+    <plugins>
+      <plugin>
+        <artifactId>exec-maven-plugin</artifactId>
+        <groupId>org.codehaus.mojo</groupId>
+        <version>1.4.0</version>
+        <executions>
+          <execution>
+            <!-- Derive .java files from the JLS grammar -->
+            <id>Process Java8 Grammar</id>
+            <!-- We want to run this before compilation -->
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <workingDirectory>${project.basedir}</workingDirectory>
+              <executable>${project.basedir}/src/main/scripts/generate_parser_helpers.py</executable>
+              <arguments>
+                <argument>--grammar_name</argument>
+                <argument>j8</argument>
+                <argument>--grammar_customizations</argument>
+                <argument>${project.build.resources[0].directory}/jls-19-custom.json</argument>
+                <argument>--srcdir</argument>
+                <argument>${project.build.sourceDirectory}</argument>
+                <argument>--outdir</argument>
+                <argument>${project.build.directory}/generated-sources/parse-helpers</argument>
+                <argument>${project.build.resources[0].directory}/jls-19.txt</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>Process Java-Minimal Grammar</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <workingDirectory>${project.basedir}</workingDirectory>
+              <executable>${project.basedir}/src/main/scripts/generate_parser_helpers.py</executable>
+              <arguments>
+                <argument>--grammar_name</argument>
+                <argument>jmin</argument>
+                <argument>--grammar_customizations</argument>
+                <argument>${project.build.resources[0].directory}/jls-19-custom.json</argument>
+                <argument>--srcdir</argument>
+                <argument>${project.build.sourceDirectory}</argument>
+                <argument>--outdir</argument>
+                <argument>${project.build.directory}/generated-sources/parse-helpers</argument>
+                <argument>${project.build.resources[0].directory}/jmin.txt</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>List source files</id>
+            <!-- Generate list of source files used by SourceParsingSanityTest
+                 before tests run -->
+            <phase>generate-test-resources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <workingDirectory>${project.basedir}</workingDirectory>
+              <outputFile>${project.build.directory}/test-resources/all-sources.txt</outputFile>
+              <executable>find</executable>
+              <arguments>
+                <argument>${project.build.sourceDirectory}</argument>
+                <argument>${project.build.testSourceDirectory}</argument>
+                <argument>${project.build.directory}/generated-sources/parse-helpers</argument>
+                <argument>-name</argument> <argument>*.java</argument>
+                <argument>-type</argument> <argument>f</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- recognize the generated .java files as sources -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>1.12</version>
+        <executions>
+          <execution>
+            <id>add-source</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${project.build.directory}/generated-sources/parse-helpers</source>
+              </sources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>add-test-resource</id>
+            <phase>generate-test-sources</phase>
+            <goals>
+              <goal>add-test-resource</goal>
+            </goals>
+            <configuration>
+              <resources>
+                <resource>
+                  <!-- We parse our own source files as a sanity check for the parser. -->
+                  <directory>${project.basedir}/src/main/java</directory>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.3</version>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+          <debug>true</debug>
+          <debuglevel>lines,vars,source</debuglevel>
+          <compilerArgument>-Werror</compilerArgument>
+          <compilerArgument>-Xlint:deprecation</compilerArgument>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <!-- per http://bpossolo.blogspot.com/2013/04/configuring-javautillogging-for-unit.html -->
+        <!-- configure the logging properties file to use when tests are run -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.19.1</version>
+        <configuration>
+          <systemPropertyVariables>
+            <java.util.logging.config.file>src/test/resources/logging.properties</java.util.logging.config.file>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

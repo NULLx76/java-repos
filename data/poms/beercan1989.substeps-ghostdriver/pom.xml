@@ -1,0 +1,360 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>uk.co.baconi.substeps</groupId>
+    <artifactId>ghostdriver-substeps</artifactId>
+    <version>0.0.2-SNAPSHOT</version>
+
+    <name>${project.groupId}:${project.artifactId}</name>
+    <description>A ghost driver implementation for Substeps, to provide a means of using phantomjs via remote webdriver tools.</description>
+    <url>https://github.com/beercan1989/substeps-ghostdriver</url>
+
+    <parent>
+        <groupId>uk.co.baconi</groupId>
+        <artifactId>baconi-parent</artifactId>
+        <version>0.0.2</version>
+    </parent>
+
+    <scm>
+        <connection>scm:git:git@github.com:beercan1989/substeps-ghostdriver.git</connection>
+        <developerConnection>scm:git:git@github.com:beercan1989/substeps-ghostdriver.git</developerConnection>
+        <url>git@github.com:beercan1989/substeps-ghostdriver.git</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>beercan1989</id>
+            <name>James Bacon</name>
+            <email>james@baconi.co.uk</email>
+            <url>https://github.com/beercan1989</url>
+            <roles>
+                <role>architect</role>
+                <role>developer</role>
+            </roles>
+        </developer>
+    </developers>
+
+    <properties>
+        <!-- Core Properties -->
+        <slf4j.version>1.7.12</slf4j.version>
+        <substeps.version>1.1.2</substeps.version>
+        <typesafe.config.version>1.3.0</typesafe.config.version>
+
+        <phantomjs.version>1.9.8</phantomjs.version> <!-- NOTE: 1.9.8 has problems with custom agent strings. -->
+        <ghostdriver.version>1.1.0</ghostdriver.version> <!-- JS Project --> <!-- NOTE: 1.1.1 has problems with latest phantomjs -->
+        <phantomjsdriver.version>1.2.0</phantomjsdriver.version> <!-- Java Project -->
+
+        <!-- Testing -->
+        <spring.boot.version>1.2.6.RELEASE</spring.boot.version>
+    </properties>
+
+    <dependencies>
+        <!-- Properties-->
+        <dependency>
+            <groupId>com.typesafe</groupId>
+            <artifactId>config</artifactId>
+            <version>${typesafe.config.version}</version>
+        </dependency>
+
+        <!-- Ghost Driver -->
+        <dependency>
+            <groupId>com.github.detro</groupId>
+            <artifactId>phantomjsdriver</artifactId>
+            <version>${phantomjsdriver.version}</version>
+        </dependency>
+
+        <!-- Substeps -->
+        <dependency>
+            <groupId>com.technophobia.substeps</groupId>
+            <artifactId>substeps-core-api</artifactId>
+            <version>${substeps.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.technophobia.substeps</groupId>
+            <artifactId>webdriver-substeps</artifactId>
+            <version>${substeps.version}</version>
+        </dependency>
+
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
+        <!-- Testing -->
+        <dependency>
+            <groupId>com.technophobia.substeps</groupId>
+            <artifactId>substeps-junit-runner</artifactId>
+            <version>${substeps.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.technophobia.substeps</groupId>
+            <artifactId>substeps-core</artifactId>
+            <version>${substeps.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <filtering>true</filtering>
+            </testResource>
+        </testResources>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>download-ghostdriver</id>
+                        <phase>process-test-classes</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+
+                                <get src="https://github.com/detro/ghostdriver/archive/${ghostdriver.version}.zip" dest="${project.build.testOutputDirectory}/ghostdriver-${ghostdriver.version}.zip" verbose="false" usetimestamp="true" />
+
+                                <unzip src="${project.build.testOutputDirectory}/ghostdriver-${ghostdriver.version}.zip" dest="${project.build.testOutputDirectory}/" />
+
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>phantomjs-windows</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+
+            <properties>
+                <phantomjs.path>${project.build.testOutputDirectory}/phantomjs-${phantomjs.version}-windows/phantomjs.exe</phantomjs.path>
+            </properties>
+
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>download-phantomjs-windows</id>
+                                <phase>process-test-classes</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <get src="https://bitbucket.org/ariya/phantomjs/downloads/phantomjs-${phantomjs.version}-windows.zip" dest="${project.build.testOutputDirectory}/phantomjs-${phantomjs.version}-windows.zip" verbose="false" usetimestamp="true" />
+
+                                        <unzip src="${project.build.testOutputDirectory}/phantomjs-${phantomjs.version}-windows.zip" dest="${project.build.testOutputDirectory}/" />
+
+                                        <chmod file="${phantomjs.path}" perm="u+x" />
+
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>phantomjs-unix-64bit</id>
+            <activation>
+                <os>
+                    <family>unix</family>
+                    <arch>amd64</arch>
+                </os>
+            </activation>
+
+            <properties>
+                <phantomjs.path>${project.build.testOutputDirectory}/phantomjs-${phantomjs.version}-linux-x86_64/bin/phantomjs</phantomjs.path>
+            </properties>
+
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>download-phantomjs-unix-64bit</id>
+                                <phase>process-test-classes</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+
+                                        <get src="https://bitbucket.org/ariya/phantomjs/downloads/phantomjs-${phantomjs.version}-linux-x86_64.tar.bz2" dest="${project.build.testOutputDirectory}/phantomjs-${phantomjs.version}-linux-x86_64.tar.bz2" verbose="false" usetimestamp="true" />
+
+                                        <untar src="${project.build.testOutputDirectory}/phantomjs-${phantomjs.version}-linux-x86_64.tar.bz2" dest="${project.build.testOutputDirectory}/" compression="bzip2" />
+
+                                        <chmod file="${phantomjs.path}" perm="u+x" />
+
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>phantomjs-unix-32bit</id>
+            <activation>
+                <os>
+                    <family>unix</family>
+                    <arch>i386</arch>
+                </os>
+            </activation>
+
+            <properties>
+                <phantomjs.path>${project.build.testOutputDirectory}/phantomjs-${phantomjs.version}-linux-i686/bin/phantomjs</phantomjs.path>
+            </properties>
+
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>download-phantomjs-unix-32bit</id>
+                                <phase>process-test-classes</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+
+                                        <get src="https://bitbucket.org/ariya/phantomjs/downloads/phantomjs-${phantomjs.version}-linux-i686.tar.bz2" dest="${project.build.testOutputDirectory}/phantomjs-${phantomjs.version}-linux-i686.tar.bz2" verbose="false" usetimestamp="true" />
+
+                                        <untar src="${project.build.testOutputDirectory}/phantomjs-${phantomjs.version}-linux-i686.tar.bz2" dest="${project.build.testOutputDirectory}/" compression="bzip2" />
+
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>skip-phantonjs-download-on-maven-test-skip</id>
+            <activation>
+                <property>
+                    <name>maven.test.skip</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>download-phantomjs-unix-32bit</id>
+                                <phase>none</phase>
+                            </execution>
+                            <execution>
+                                <id>download-phantomjs-unix-64bit</id>
+                                <phase>none</phase>
+                            </execution>
+                            <execution>
+                                <id>download-phantomjs-windows</id>
+                                <phase>none</phase>
+                            </execution>
+                            <execution>
+                                <id>download-ghostdriver</id>
+                                <phase>none</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>skip-phantonjs-download-on-skip-tests</id>
+            <activation>
+                <property>
+                    <name>skipTests</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>download-phantomjs-unix-32bit</id>
+                                <phase>none</phase>
+                            </execution>
+                            <execution>
+                                <id>download-phantomjs-unix-64bit</id>
+                                <phase>none</phase>
+                            </execution>
+                            <execution>
+                                <id>download-phantomjs-windows</id>
+                                <phase>none</phase>
+                            </execution>
+                            <execution>
+                                <id>download-ghostdriver</id>
+                                <phase>none</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

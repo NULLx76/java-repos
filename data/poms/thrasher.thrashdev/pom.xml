@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+	<packaging>war</packaging>
+	<version>1.0-SNAPSHOT</version>
+
+	<groupId>me.thrasher</groupId>
+	<artifactId>thrashdev</artifactId>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<jetty.port>8080</jetty.port>
+		<appengine.version>1.9.82</appengine.version>
+		<gcloud.plugin.version>2.0.9.87.v20151118</gcloud.plugin.version>
+		<app.id>thrashdev</app.id>
+		<app.version>1</app.version>
+
+		<jersey.version>2.19</jersey.version>
+		<guice.version>3.0</guice.version>
+	</properties>
+
+	<dependencies>
+		<!-- Compile/runtime dependencies -->
+		<dependency>
+			<groupId>com.google.appengine</groupId>
+			<artifactId>appengine-api-1.0-sdk</artifactId>
+			<version>${appengine.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.inject</groupId>
+			<artifactId>guice</artifactId>
+			<version>${guice.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.inject.extensions</groupId>
+			<artifactId>guice-servlet</artifactId>
+			<version>${guice.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>servlet-api</artifactId>
+			<version>2.5</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>jstl</groupId>
+			<artifactId>jstl</artifactId>
+			<version>1.2</version>
+		</dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>1.16.4</version>
+		</dependency>
+
+		<!-- Test Dependencies -->
+		<dependency>
+			<groupId>com.google.appengine</groupId>
+			<artifactId>appengine-testing</artifactId>
+			<version>${appengine.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.google.appengine</groupId>
+			<artifactId>appengine-api-stubs</artifactId>
+			<version>${appengine.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.13.1</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-core</artifactId>
+			<version>2.0.14-beta</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<!-- for hot reload of the web application -->
+		<outputDirectory>${project.build.directory}/${project.build.finalName}/WEB-INF/classes</outputDirectory>
+		<plugins>
+			<plugin>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<configuration>
+					<target>
+						<echo level="info">
+							Checking that your JDK version will work on GAE.
+							Your current JDK is: ${java.version}
+						</echo>
+						<condition property="jdkVersion">
+							<matches pattern="1.8" string="${java.version}" />
+						</condition>
+						<fail unless="jdkVersion">
+							GAE requires classes/jsps compiled with JDK 1.8,
+							on OSX run:
+							export JAVA_HOME=`/usr/libexec/java_home -v 1.8`
+						</fail>
+						<!-- Move on if no failture -->
+						<echo message="Passed! using JDK ${java.version}" />
+					</target>
+				</configuration>
+				<executions>
+					<execution>
+						<phase>compile</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>versions-maven-plugin</artifactId>
+				<version>2.1</version>
+				<!-- what does this do? <executions> <execution> <phase>compile</phase>
+					<goals> <goal>display-dependency-updates</goal> <goal>display-plugin-updates</goal>
+					</goals> </execution> </executions> -->
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.8.1</version>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.18.1</version>
+				<configuration>
+					<includes>
+						<!-- only test thrasher classes (e.g. exclude BCrypt) -->
+						<include>com/thrasher/**/*Test.java</include>
+					</includes>
+					<systemPropertyVariables>
+						<buildDirectory>${project.build.directory}</buildDirectory>
+						<!-- force log output to single line -->
+						<!-- <java.util.logging.SimpleFormatter.format>%1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS
+							%4$s %2$s %5$s%6$s%n</java.util.logging.SimpleFormatter.format> -->
+						<java.util.logging.config.file>${basedir}/src/main/webapp/WEB-INF/logging.properties</java.util.logging.config.file>
+						<app.version>${app.version}</app.version>
+						<app.id>${app.id}</app.id>
+					</systemPropertyVariables>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<version>2.4</version>
+				<configuration>
+					<archiveClasses>true</archiveClasses>
+					<webResources>
+						<!-- in order to interpolate version from pom into appengine-web.xml -->
+						<resource>
+							<directory>${basedir}/src/main/webapp/WEB-INF</directory>
+							<filtering>true</filtering>
+							<targetPath>WEB-INF</targetPath>
+						</resource>
+					</webResources>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>com.google.appengine</groupId>
+				<artifactId>appengine-maven-plugin</artifactId>
+				<version>${appengine.version}</version>
+				<configuration>
+					<enableJarClasses>false</enableJarClasses>
+					<port>${jetty.port}</port>
+					<address>0.0.0.0</address>
+					<version>${app.version}</version>
+					<fullScanSeconds>3</fullScanSeconds>
+					<!-- Comment in the below snippet to bind to all IPs instead of just
+						localhost -->
+					<!-- address>0.0.0.0</address> <port>8080</port -->
+					<!-- Comment in the below snippet to enable local debugging with a remote
+						debugger like those included with Eclipse or IntelliJ -->
+					<jvmFlags>
+						<jvmFlag>-agentlib:jdwp=transport=dt_socket,address=8000,server=y,suspend=n</jvmFlag>
+						<jvmFlag>-XX:PermSize=512m</jvmFlag>
+						<jvmFlag>-XX:MaxPermSize=512m</jvmFlag>
+					</jvmFlags>
+				</configuration>
+				<executions>
+					<execution>
+						<id>start-jetty</id>
+						<phase>pre-integration-test</phase>
+						<goals>
+							<goal>devserver_start</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>stop-jetty</id>
+						<phase>post-integration-test</phase>
+						<goals>
+							<goal>devserver_stop</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>com.google.appengine</groupId>
+				<artifactId>gcloud-maven-plugin</artifactId>
+				<version>${gcloud.plugin.version}</version>
+				<configuration>
+					<set_default>true</set_default>
+				</configuration>
+			</plugin>
+		</plugins>
+		<pluginManagement>
+			<plugins>
+				<!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>
+											org.apache.maven.plugins
+										</groupId>
+										<artifactId>
+											maven-antrun-plugin
+										</artifactId>
+										<versionRange>
+											[1.8,)
+										</versionRange>
+										<goals>
+											<goal>run</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore></ignore>
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+	<profiles>
+		<profile>
+			<!-- deploys to http://2-dot-thrashdev.appspot.com/ -->
+			<id>2-dot-thrashdev.appspot.com</id>
+			<properties>
+				<app.version>2</app.version>
+			</properties>
+		</profile>
+	</profiles>
+</project>

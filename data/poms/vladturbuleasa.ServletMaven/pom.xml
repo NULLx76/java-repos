@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.devops</groupId>
+    <artifactId>ServletMaven</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>war</packaging>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>webserver-maven-snapshot</id>
+            <url>http://192.168.56.4:8081/nexus/content/repositories/ServletMaven-snapshot/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+    <properties>
+        <!-- All source files comes in UTF-8 -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
+            <version>2.5</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <!-- Will be name of WAR file -->
+        <finalName>${project.artifactId}</finalName>
+
+        <plugins>
+            <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+                <source>1.8</source>
+                <target>1.8</target>
+            </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>nexus-staging-maven-plugin</artifactId>
+                <version>1.6.6</version>
+                <executions>
+                    <execution>
+                        <id>default-deploy</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>deploy</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <extensions>true</extensions>
+                <configuration>
+                    <serverId>ServletMaven-snapshot</serverId>
+                    <nexusUrl>http://192.168.56.4:8081/nexus/</nexusUrl>
+                </configuration>
+            </plugin>
+
+
+            <!-- RPM -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>rpm-maven-plugin</artifactId>
+                <version>2.1.4</version>
+                <extensions>true</extensions>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>attached-rpm</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <group>com.devops</group>
+                    <mappings>
+                        <mapping>
+                            <directory>/opt/tomcat/latest/webapp/</directory>
+                            <configuration>true</configuration>
+                            <filemode>755</filemode>
+                            <username>tomcat</username>
+                            <groupname>tomcat</groupname>
+                            <sources>
+                                <source>
+                                    <location>${project.basedir}/target/ServletMaven.war</location>
+                                </source>
+                            </sources>
+                        </mapping>
+                    </mappings>
+                    <preinstallScriptlet>
+                        <script>
+                            echo "Install start!"
+                            /etc/init.d/tomcat6 stop
+                        </script>
+                    </preinstallScriptlet>
+                    <postinstallScriptlet>
+                        <script>
+                            ln -s /var/lib/tomcat6/webapps /opt/tomcat/latest/webapps
+                            echo "Install done."
+                        </script>
+                    </postinstallScriptlet>
+                    <preremoveScriptlet>
+                        <script>
+                         /etc/init.d/tomcat6 stop
+                        </script>
+                    </preremoveScriptlet>
+                    <postremoveScriptlet>
+                        <script>
+                        rm -rf /opt/tomcat/latest/webapps
+                        </script>
+                    </postremoveScriptlet>
+                </configuration>
+            </plugin>
+
+        </plugins>
+    </build>
+
+</project>

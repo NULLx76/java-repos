@@ -1,0 +1,280 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.testgen</groupId>
+    <artifactId>testgen</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+
+    <properties>
+        <testgen.dest.directory>${project.build.directory}/generated-resources/groovy/tests</testgen.dest.directory>
+        <testgen.lib.directory>${basedir}/lib</testgen.lib.directory>
+    </properties>
+
+    <build>
+        <sourceDirectory>src/java</sourceDirectory>
+
+        <resources>
+            <resource>
+                <directory>src/groovy/int</directory>
+            </resource>
+            <resource>
+                <directory>src/groovy/util</directory>
+            </resource>
+            <resource>
+                <directory>src/groovy/tests/</directory>
+            </resource>
+            <resource>
+                <directory>src/conf</directory>
+            </resource>
+            <resource>
+                <directory>${testgen.dest.directory}</directory>
+            </resource>
+        </resources>
+
+        <plugins>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
+                <configuration>
+                    <fork>true</fork>
+                    <executable>javac</executable>
+                    <compilerVersion>1.5</compilerVersion>
+                    <maxmem>512m</maxmem>
+                    <source>1.5</source>
+                    <target>1.5</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.17</version>
+                <configuration>
+                    <testfailureignore>true</testfailureignore>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-eclipse-plugin</artifactId>
+                <version>2.5.1</version>
+            </plugin>
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>load-libs</id>
+                        <phase>generate-sources</phase>
+                        <configuration>
+                            <tasks>
+                                <taskdef resource="net/sf/antcontrib/antcontrib.properties"
+                                    classpathref="maven.compile.classpath" />
+                                <if>
+                                    <isset property="load.jnlp" />
+                                    <then>                                        
+                                        <if>
+                                            <not>
+                                                <available file="${testgen.lib.directory}" type="dir" />
+                                            </not>
+                                            <then>
+                                                <mkdir dir="${testgen.lib.directory}" />
+                                            </then>
+                                        </if>
+                                        
+                                        <taskdef name="groovy" classname="org.codehaus.groovy.ant.Groovy"
+                                            classpathref="maven.compile.classpath" />
+                                        <property name="gen.lib.dir" value="${testgen.lib.directory}" />
+                                        <property name="gen.jnlp.url" value="${load.jnlp}" />
+                                        <groovy src="${basedir}/src/groovy/jaws/JnlpLoader.groovy" />                                        
+                                    </then>
+                                </if>
+                            </tasks>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>generate-tests</id>
+                        <phase>generate-resources</phase>
+                        <configuration>
+                            <tasks>
+                                <taskdef name="groovy" classname="org.codehaus.groovy.ant.Groovy"
+                                    classpathref="maven.compile.classpath" />
+                                <mkdir dir="${testgen.dest.directory}" />
+                                <property name="gen.dest.directory" value="${testgen.dest.directory}" />
+                                <property name="gen.data.directory" value="${basedir}/src/generator-data" />
+                                <groovy src="${basedir}/src/groovy/generator/TestGenerator.groovy" />
+                            </tasks>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>rename-project-jar</id>
+                        <phase>package</phase>
+                        <configuration>
+                            <tasks>
+                                <copy overwrite="true"
+                                      file="${project.build.directory}/${project.build.finalName}.jar"
+                                      tofile="${project.build.directory}/${project.name}.jar" />
+                            </tasks>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <excludeScope>provided</excludeScope>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.6</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>run-test</id>
+            <build>
+            <defaultGoal>antrun:run</defaultGoal>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>1.8</version>
+                        <configuration>
+                            <target>
+                                <!-- system properties -->
+                                <property name="runtime_classpath" refid="maven.runtime.classpath" />
+                                
+                                <!-- import ant-contrib -->
+                                <taskdef resource="net/sf/antcontrib/antcontrib.properties"
+                                    classpathref="maven.compile.classpath" />
+                                
+                                <!-- test specific properties -->
+                                <property name="test-gen.log4j"
+                                    location="${project.build.directory}/classes/log4j.xml" />
+                                <property name="test-gen.log.path" location="${basedir}/logs" />
+                                <property name="test-gen.test.path" location="${project.build.directory}/classes" />
+
+                                <!-- jars application specific libraries to simplify launching -->
+                                <property name="lib.path" location="${testgen.lib.directory}" />
+
+                                <manifestclasspath property="jar.classpath"
+                                    jarfile="${lib.path}/app-bundle.jar">
+                                    <classpath>
+                                        <fileset dir="${lib.path}/">
+                                            <include name="*.jar" />
+                                            <exclude name="app-bundle.jar" />
+                                        </fileset>
+                                    </classpath>
+                                </manifestclasspath>
+                                
+                                <jar destfile="${lib.path}/app-bundle.jar" update="true">
+                                    <manifest>
+                                        <attribute name="Class-Path" value="${jar.classpath}" />
+                                    </manifest>
+                                </jar>
+                            
+                                <!-- prepare classpath for launching -->
+                                <path id="test-gen.classpath">
+                                    <pathelement path="${runtime_classpath}" />
+                                    <pathelement path="${lib.path}/app-bundle.jar" />
+                                </path>
+                                
+                                <tstamp>
+                                    <format property="datetime" pattern="yyyyMMddHHmmS" />
+                                </tstamp>
+
+                                <property name="cp" refid="test-gen.classpath" />
+                                
+                                <if>
+                                    <not>
+                                        <isset property="test.filter" />
+                                    </not>
+                                    <then>
+                                        <fail message="test.filter should be specified. mvn -P run-test -Dtest.filter=test1.*" />
+                                    </then>
+                                </if>
+                                
+                                <if>
+                                    <isset property="test.filter" />
+                                    <then>
+                                        <apply executable="java" dir="${lib.path}" relative="true">
+                                            <sort>
+                                                <fileset dir="${test-gen.test.path}" includes="${test.filter}" />
+                                            </sort>
+                                            <arg value="-cp" />
+                                            <arg pathref="test-gen.classpath" />
+                                            <arg value="-Xmx1024M" />
+                                            <arg value="-Dlog4j.configuration=file:///${test-gen.log4j}" />
+                                            <arg value="-Dlog.path=${test-gen.log.path}" />
+                                            <mapper type="glob" from="*.groovy" to="${datetime}/*_${datetime}.log" />
+                                            <targetfile prefix="-Dlog.name=" />
+                                            <srcfile prefix="-Dtest-gen.test.name=" />
+                                            
+                                            <arg value="org.testgen.ScriptRunner" />
+                                        </apply>
+                                    </then>
+                                </if>
+                            </target>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+    <dependencies>
+        <dependency>
+            <groupId>ant-contrib</groupId>
+            <artifactId>ant-contrib</artifactId>
+            <version>1.0b3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>6.1.1</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-all</artifactId>
+            <version>2.4.4</version>
+        </dependency>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.17</version>
+        </dependency>
+            <dependency>
+            <groupId>net.sf.opencsv</groupId>
+            <artifactId>opencsv</artifactId>
+            <version>2.3</version>
+        </dependency>
+    </dependencies>
+</project>

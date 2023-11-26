@@ -1,0 +1,128 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.github.acme.microservices</groupId>
+  <artifactId>microservices-masterpom</artifactId>
+  <name>microservices-masterpom</name>
+  <packaging>pom</packaging>
+  <version>1.0-SNAPSHOT</version>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>1.3.3.RELEASE</version>
+    <relativePath/> <!-- lookup parent from repository -->
+  </parent>
+
+  <modules>
+    <!-- Common infrastructure -->
+    <module>config-server</module>
+
+    <!-- Actual microservices -->
+    <module>sensor-config</module>
+    <module>sensor-alerts</module>
+  </modules>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <java.version>1.8</java.version>
+  </properties>
+
+  <repositories>
+    <repository>
+      <id>spring-snapshots</id>
+      <name>Spring Snapshots</name>
+      <url>https://repo.spring.io/snapshot</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+    <repository>
+      <id>spring-milestones</id>
+      <name>Spring Milestones</name>
+      <url>https://repo.spring.io/milestone</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>${java.version}</source>
+					<target>${java.version}</target>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+	<scm>
+		<connection>scm:git:git@github.com:djalexd/microservices-masterpom.git</connection>
+		<!--<url>git://git@github.com:djalexd/microservices-masterpom.git</url>-->
+	</scm>
+
+
+	<profiles>
+		<!-- The docker-build profile takes care of building the docker image
+		     based on some configuration found in respective project:
+		       - <module>/src/main/docker needs to be a Dockerfile directory
+		       - <module>/pom.xml needs to match buildName with whatever JAR
+		         is ran with Dockerfile.
+		-->
+		<profile>
+			<id>docker-build</id>
+			<build>
+				<plugins>
+
+					<!-- Unfortunately, we need this here in order to allow its
+					     execution before Docker build. Without it, the JAR file
+					     you can -->
+					<plugin>
+						<groupId>org.springframework.boot</groupId>
+						<artifactId>spring-boot-maven-plugin</artifactId>
+					</plugin>
+
+					<plugin>
+						<groupId>com.spotify</groupId>
+						<artifactId>docker-maven-plugin</artifactId>
+						<version>0.4.5</version>
+						<configuration>
+							<dockerDirectory>${project.basedir}/src/main/docker</dockerDirectory>
+							<imageName>${project.name}</imageName>
+							<resources>
+								<resource>
+									<targetPath>/</targetPath>
+									<directory>${project.build.directory}</directory>
+									<include>${project.build.finalName}.jar</include>
+								</resource>
+							</resources>
+							<useGitCommitId>true</useGitCommitId>
+							<noCache>true</noCache>
+							<forceTags>true</forceTags>
+							<imageTags>
+								<!--<imageTag>${buildNumber}</imageTag>-->
+								<imageTag>${project.version}</imageTag>
+								<imageTag>latest</imageTag>
+							</imageTags>
+						</configuration>
+						<executions>
+							<execution>
+								<id>build</id>
+								<goals>
+									<goal>build</goal>
+								</goals>
+								<phase>package</phase>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
+</project>

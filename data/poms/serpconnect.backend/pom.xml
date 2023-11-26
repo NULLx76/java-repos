@@ -1,0 +1,249 @@
+<project>
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- project coordinates, i.e. a group of values which
+    uniquely identify this project -->
+
+    <groupId>se.lth.cs</groupId>
+    <artifactId>connect</artifactId>
+    <version>1.0.0</version>
+
+    <properties>
+        <!-- set entry point here -->
+        <main.class>se.lth.cs.connect.Connect</main.class>
+
+        <packaging.type>jar</packaging.type>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <java.version>1.8</java.version>
+
+        <!-- pippo (framework) and slf4j (logger) versions -->
+        <pippo.version>1.12.0</pippo.version>
+        <slf4j.version>1.7.7</slf4j.version>
+    </properties>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>**/*</include>
+                </includes>
+            </resource>
+        </resources>
+        <plugins>
+            <!-- allow java8 features (mainly lambda expressions) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.5.1</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <optimize>true</optimize>
+                    <encoding>UTF-8</encoding>
+                    <showWarnings>true</showWarnings>
+                    <showDeprecation>true</showDeprecation>
+                </configuration>
+                <inherited>true</inherited>
+            </plugin>
+
+            <!-- bundle dependencies and server together -->
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.3</version>
+                <configuration>
+                    <descriptors>
+                        <descriptor>
+                            src/main/assembly/assembly.xml
+                        </descriptor>
+                    </descriptors>
+                    <appendAssemblyId>false</appendAssemblyId>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>attached</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- put dependencies in the lib/ folder -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.3.1</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                            <mainClass>${main.class}</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+
+            <!-- allow execution without packaging; mvn compile exec:java -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.4.0</version>
+                <executions>
+                    <execution>
+                    	<id>connect</id>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                        <configuration>
+		                    <mainClass>${main.class}</mainClass>
+		                </configuration>
+            </plugin>
+			<plugin>
+		        <groupId>org.apache.maven.plugins</groupId>
+		        <artifactId>maven-failsafe-plugin</artifactId>
+		        <version>2.19.1</version>
+		        <executions>
+		          <execution>
+		            <goals>
+		              <goal>integration-test</goal>
+		              <goal>verify</goal>
+		            </goals>
+		          </execution>
+		        </executions>
+		      </plugin>
+			<plugin>
+	            <groupId>com.bazaarvoice.maven.plugins</groupId>
+	            <artifactId>process-exec-maven-plugin</artifactId>
+	            <version>0.7</version>
+	            <executions>
+	                <execution>
+	                    <id>neo4j-process</id>
+	                    <phase>pre-integration-test</phase>
+	                    <goals>
+	                        <goal>start</goal>
+	                    </goals>
+	                    <configuration>
+	                        <name>neo4j</name>
+	                        <waitForInterrupt>false</waitForInterrupt>
+	                        <healthcheckUrl>http://localhost:7474/</healthcheckUrl>
+	                        <workingDir>../dep/neo4j/</workingDir>
+	                        <arguments>
+	                            <argument>java</argument>
+	                            <argument>-cp</argument>
+	                            <argument>.${path.separator}${project.basedir}${file.separator}dep${file.separator}neo4j${file.separator}lib${file.separator}*${path.separator}${project.basedir}${file.separator}dep${file.separator}neo4j${file.separator}system${file.separator}lib${file.separator}*</argument>
+	                            <argument>org.neo4j.server.CommunityBootstrapper</argument>
+	                        </arguments>
+	                    </configuration>
+	                </execution>
+	         	</executions>
+         	</plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.7.7.201606060606</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>integration-test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <excludes>
+                        <exclude>docs/</exclude>
+                        <exclude>src/main/resources/</exclude>
+                        <exclude>src/main/assembly/</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>ro.pippo</groupId>
+            <artifactId>pippo-core</artifactId>
+            <version>${pippo.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>ro.pippo</groupId>
+            <artifactId>pippo-jetty</artifactId>
+            <version>${pippo.version}</version>
+        </dependency>
+         <dependency>
+            <groupId>ro.pippo</groupId>
+            <artifactId>pippo-jackson</artifactId>
+            <version>${pippo.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>ro.pippo</groupId>
+            <artifactId>pippo-session-cookie</artifactId>
+            <version>${pippo.version}</version>
+            <type>pom</type>
+        </dependency>
+        <dependency>
+            <groupId>ro.pippo</groupId>
+            <artifactId>pippo-test</artifactId>
+            <version>${pippo.version}</version>
+        </dependency>
+
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
+        <!-- neo4j/cypher querying: jcypher -->
+        <dependency>
+            <groupId>net.iot-solutions.graphdb</groupId>
+            <artifactId>jcypher</artifactId>
+            <version>3.3.1</version>
+
+            <!-- We don't need stuff for embedded or in-memory db access -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.neo4j</groupId>
+                    <artifactId>neo4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.neo4j</groupId>
+                    <artifactId>neo4j-kernel</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.neo4j</groupId>
+                    <artifactId>neo4j-io</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- scrypt library for password needs -->
+        <dependency>
+            <groupId>com.lambdaworks</groupId>
+            <artifactId>scrypt</artifactId>
+            <version>1.4.0</version>
+        </dependency>
+
+        <!-- JavaMail extension -->
+    	<dependency>
+		<groupId>javax.mail</groupId>
+		<artifactId>mail</artifactId>
+		<version>1.4.7</version>
+	</dependency>
+
+    </dependencies>
+
+</project>

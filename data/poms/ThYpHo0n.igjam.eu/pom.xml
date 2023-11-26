@@ -1,0 +1,190 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.innogames</groupId>
+	<artifactId>igjam</artifactId>
+	<version>1.0.0-SNAPSHOT</version>
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>1.4.2.RELEASE</version>
+	</parent>
+
+	<properties>
+		<!--                       -->
+		<!-- External Dependencies -->
+		<!--                       -->
+		<java.version>1.8</java.version>
+		<assertj.version>3.5.2</assertj.version>
+		<raven-logback.version>7.6.0</raven-logback.version>
+		<logstash-logback-encoder.version>4.7</logstash-logback-encoder.version>
+		<lombok.version>1.16.10</lombok.version>
+		<pebble.version>2.3.0</pebble.version>
+		<!--                       -->
+		<!-- Internal Dependencies -->
+		<!--                       -->
+	</properties>
+
+	<dependencies>
+		<!--                     -->
+		<!-- Spring Dependencies -->
+		<!--                     -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+		</dependency>
+		<!--                       -->
+		<!-- External Dependencies -->
+		<!--                       -->
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.mitchellbosecke</groupId>
+			<artifactId>pebble-spring-boot-starter</artifactId>
+			<version>${pebble.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>${lombok.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>net.logstash.logback</groupId>
+			<artifactId>logstash-logback-encoder</artifactId>
+			<version>${logstash-logback-encoder.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.getsentry.raven</groupId>
+			<artifactId>raven-logback</artifactId>
+			<version>${raven-logback.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>net.bican</groupId>
+			<artifactId>jwordpress</artifactId>
+			<version>0.6.5</version>
+		</dependency>
+		<!--                       -->
+		<!-- Internal Dependencies -->
+		<!--                       -->
+
+	</dependencies>
+
+	<build>
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+			</resource>
+		</resources>
+		<finalName>crm-${project.artifactId}_${project.version}</finalName>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<artifactId>jdeb</artifactId>
+				<groupId>org.vafer</groupId>
+				<version>1.5</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>jdeb</goal>
+						</goals>
+						<configuration>
+							<deb>${project.build.directory}/${project.build.finalName}_all.deb</deb>
+							<changesOut>${project.build.directory}/${project.build.finalName}_all.changes</changesOut>
+							<dataSet>
+								<data>
+									<src>${project.build.directory}/${project.build.finalName}.jar</src>
+									<dst>${project.build.finalName}.jar</dst>
+									<type>file</type>
+									<mapper>
+										<type>perm</type>
+										<prefix>/opt/crm-${project.artifactId}/</prefix>
+										<user>www-data</user>
+										<group>www-data</group>
+									</mapper>
+								</data>
+								<data>
+									<!-- Creating directories -->
+									<type>template</type>
+									<paths>
+										<path>/var/log/crm/${project.artifactId}</path>
+										<path>/etc/crm/${project.artifactId}</path>
+									</paths>
+									<mapper>
+										<type>perm</type>
+										<user>www-data</user>
+										<group>www-data</group>
+									</mapper>
+								</data>
+								<data>
+									<type>link</type>
+									<linkName>/opt/crm-${project.artifactId}/current</linkName>
+									<linkTarget>/opt/crm-${project.artifactId}/${project.build.finalName}.jar
+									</linkTarget>
+									<symlink>true</symlink>
+									<mapper>
+										<type>perm</type>
+										<user>www-data</user>
+										<group>www-data</group>
+									</mapper>
+								</data>
+								<data>
+									<src>${basedir}/src/deb/systemd</src>
+									<type>directory</type>
+									<mapper>
+										<type>perm</type>
+										<prefix>/etc/systemd/system</prefix>
+										<filemode>0644</filemode>
+									</mapper>
+								</data>
+							</dataSet>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+	<repositories>
+		<repository>
+			<id>spring-releases</id>
+			<name>Spring Releases</name>
+			<url>https://repo.spring.io/libs-release</url>
+		</repository>
+	</repositories>
+	<pluginRepositories>
+		<pluginRepository>
+			<id>spring-releases</id>
+			<name>Spring Releases</name>
+			<url>https://repo.spring.io/libs-release</url>
+		</pluginRepository>
+	</pluginRepositories>
+</project>

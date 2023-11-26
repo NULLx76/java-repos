@@ -1,0 +1,504 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com</groupId>
+	<artifactId>dweeter</artifactId>
+	<version>1.4</version>
+	<packaging>mule</packaging>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8
+		</project.reporting.outputEncoding>
+
+		<!-- for mns: to run on 3.6.1 CE use: -->
+		<mule.version>3.7.0</mule.version>
+		<!-- for mns: to run on 3.6.2 EE use: <mule.version>3.6.2</mule.version> -->
+		<mule.tools.version>1.0</mule.tools.version>
+
+
+		<!-- mns deployment specific properties -->
+		<!-- some of the properties will be overriden in the jenkins configuration 
+			for this job , or could be overriden in the settings.xml -->
+		<skip.deploy.nexus>false</skip.deploy.nexus>
+		<skip.soapui.test>true</skip.soapui.test>
+		<skip.deploy.ciserver>true</skip.deploy.ciserver>
+
+		<soapui.projectFile>src/test/resources/integtests/soapui-project.xml
+		</soapui.projectFile>
+		<soapui.endpoint.hostname>localhost</soapui.endpoint.hostname>
+		<soapui.endpoint.username />
+		<soapui.endpoint.password />
+
+		 
+
+
+
+		<munit.version>1.1.0</munit.version>
+		<mule.munit.support.version>3.7.1</mule.munit.support.version>
+	</properties>
+
+	<build>
+		<plugins>
+			<!-- <plugin> <groupId>com.spotify</groupId> <artifactId>docker-maven-plugin</artifactId> 
+				<version>0.3.5</version> <configuration> <imageName>stevengonsalvez/mnsctest:0.1</imageName> 
+				<baseImage>stevengonsalvez/mvnmuleelastic:2.0</baseImage> <dockerDirectory>.</dockerDirectory> 
+				<entryPoint>["java", "-jar", "/${project.build.finalName}.jar"]</entryPoint> 
+				copy the service's jar file from target into the root directory of the image 
+				<resources> <resource> <targetPath>/opt/mule/apps</targetPath> <directory>${project.build.directory}</directory> 
+				<include>${project.build.finalName}.zip</include> </resource> </resources> 
+				</configuration> </plugin> -->
+			<plugin>
+				<groupId>org.mule.tools.maven</groupId>
+				<artifactId>mule-app-maven-plugin</artifactId>
+				<version>${mule.tools.version}</version>
+				<extensions>true</extensions>
+				<configuration>
+					<copyToAppsDirectory>true</copyToAppsDirectory>
+					<inclusions>
+						<inclusion>
+							<groupId>org.mule.modules</groupId>
+							<artifactId>mule-module-apikit</artifactId>
+						</inclusion>
+
+
+						<inclusion>
+							<groupId>org.mule.modules</groupId>
+							<artifactId>mule-module-extensions-support</artifactId>
+						</inclusion>
+						<inclusion>
+							<groupId>org.mule.modules</groupId>
+							<artifactId>mule-module-extensions-spring-support</artifactId>
+						</inclusion>
+					</inclusions>
+				</configuration>
+			</plugin>
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.2.1</version>
+				<configuration>
+					<descriptorRefs>
+						<descriptorRef>project</descriptorRef>
+					</descriptorRefs>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<version>1.7</version>
+				<executions>
+					<execution>
+						<id>add-resource</id>
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>add-resource</goal>
+						</goals>
+						<configuration>
+							<resources>
+								<resource>
+									<directory>src/main/app/</directory>
+								</resource>
+								<resource>
+									<directory>mappings/</directory>
+								</resource>
+								<resource>
+									<directory>src/main/api/</directory>
+								</resource>
+							</resources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>add-external-jars</id>
+						<phase>package</phase>
+						<configuration>
+							<tasks>
+								<zip destfile="${project.build.directory}/${project.build.finalName}.zip" update="true">
+									<zipfileset dir="${project.basedir}/lib" prefix="lib"/>
+								</zip>
+							</tasks>
+						</configuration>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.3</version>
+				<configuration>
+					<source>1.7</source>
+					<target>1.7</target>
+				</configuration>
+			</plugin>
+			<!-- for mns: add the bundled proprietary (non-Maven repo) jars to the 
+				app zip -->
+			<plugin>
+				<groupId>com.github.redfish4ktc.soapui</groupId>
+				<artifactId>maven-soapui-extension-plugin</artifactId>
+				<version>4.6.4.2</version>
+				<configuration>
+					<projectFile>${soapui.projectFile}</projectFile>
+					<skip>${skip.soapui.test}</skip>
+					<projectProperties>
+						<projectProperty>ENDPOINT_HOSTNAME=${soapui.endpoint.hostname}
+						</projectProperty>
+						<projectProperty>ENDPOINT_USERNAME=${soapui.endpoint.username}
+						</projectProperty>
+						<projectProperty>ENDPOINT_PASSWORD=${soapui.endpoint.password}
+						</projectProperty>
+					</projectProperties>
+				</configuration>
+				<executions>
+					<execution>
+						<phase>integration-test</phase>
+						<goals>
+							<goal>test</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-install-plugin</artifactId>
+				<version>2.3.1</version>
+			</plugin>
+			<!-- plugin added for maven release for the artefact -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-release-plugin</artifactId>
+				<version>2.5</version>
+				<dependencies>
+					<dependency>
+						<groupId>org.apache.maven.scm</groupId>
+						<artifactId>maven-scm-provider-gitexe</artifactId>
+						<version>1.9.1</version>
+					</dependency>
+				</dependencies>
+			</plugin>
+			<plugin>
+				<groupId>com.mulesoft.munit.tools</groupId>
+				<artifactId>munit-maven-plugin</artifactId>
+				<version>${munit.version}</version>
+				<executions>
+					<execution>
+						<id>test</id>
+						<phase>test</phase>
+						<goals>
+							<goal>test</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+		<testResources>
+			<testResource>
+				<directory>src/test/munit</directory>
+			</testResource>
+			<testResource>
+				<directory>src/test/resources</directory>
+			</testResource>
+		</testResources>
+	</build>
+
+	<!-- Mule Dependencies -->
+	<dependencies>
+		<dependency>
+			<groupId>org.mule.transports</groupId>
+			<artifactId>mule-transport-file</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.transports</groupId>
+			<artifactId>mule-transport-http</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.transports</groupId>
+			<artifactId>mule-transport-vm</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- Mule Modules -->
+		<dependency>
+			<groupId>org.mule.modules</groupId>
+			<artifactId>mule-module-scripting</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.modules</groupId>
+			<artifactId>mule-module-xml</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- for testing -->
+		<dependency>
+			<groupId>org.mule.tests</groupId>
+			<artifactId>mule-tests-functional</artifactId>
+			<version>${mule.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- for mns: don't need clover: <dependency> <groupId>com.cloveretl</groupId> 
+			<artifactId>cloveretl-engine</artifactId> <version>${mule.version}</version> 
+			<scope>test</scope> </dependency> -->
+		<dependency>
+			<groupId>org.mule.modules</groupId>
+			<artifactId>mule-module-apikit</artifactId>
+			<version>1.6.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.modules</groupId>
+			<artifactId>mule-module-spring-config</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.modules</groupId>
+			<artifactId>mule-module-http</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- for mns from here -->
+		<!-- depend on a version of commons-lang that's available both in 3.6.1 
+			CE and 3.6.2 EE: -->
+		<dependency>
+			<groupId>commons-lang</groupId>
+			<artifactId>commons-lang</artifactId>
+			<version>2.4</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- depend on a version of commons-io that's compatible wtih both in 3.6.1 
+			CE and 3.6.2 EE: -->
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.4</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>3.1</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>commons-cli</groupId>
+			<artifactId>commons-cli</artifactId>
+			<version>1.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.modules</groupId>
+			<artifactId>mule-module-json</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- for jwt tokens -->
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt</artifactId>
+			<version>0.5.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.transports</groupId>
+			<artifactId>mule-transport-quartz</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.modules</groupId>
+			<artifactId>mule-module-ws</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- commented this out as #shame , because this is not getting added , 
+			manually added jars. -->
+		<dependency>
+			<groupId>org.jasypt</groupId>
+			<artifactId>jasypt-spring3</artifactId>
+			<version>1.9.2</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.jasypt</groupId>
+			<artifactId>jasypt</artifactId>
+			<version>1.9.2</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.mulesoft.munit</groupId>
+			<artifactId>mule-munit-support</artifactId>
+			<version>${mule.munit.support.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.mulesoft.munit</groupId>
+			<artifactId>munit-runner</artifactId>
+			<version>${munit.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+
+		<dependency>
+			<groupId>org.mule.modules</groupId>
+			<artifactId>mule-module-extensions-support</artifactId>
+			<version>${mule.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.modules</groupId>
+			<artifactId>mule-module-extensions-spring-support</artifactId>
+			<version>${mule.version}</version>
+		</dependency>
+		
+				<!-- Include IBM MQ Libs -->
+		<dependency>
+			<groupId>com.ibm.mq.commonservices</groupId>
+			<artifactId>mq-comonservices</artifactId>
+			<version>7.5.0</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/lib/com.ibm.mq.commonservices.jar</systemPath>
+		</dependency>
+		<dependency>
+			<groupId>com.ibm.mq.headers</groupId>
+			<artifactId>mq-headers</artifactId>
+			<version>7.5.0</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/lib/com.ibm.mq.headers.jar</systemPath>
+		</dependency>
+		<dependency>
+			<groupId>com.ibm.mq</groupId>
+			<artifactId>mq</artifactId>
+			<version>7.5.0</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/lib/com.ibm.mq.jar</systemPath>
+		</dependency>
+		<dependency>
+			<groupId>com.ibm.mq.jmqi</groupId>
+			<artifactId>jmqi</artifactId>
+			<version>7.5.0</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/lib/com.ibm.mq.jmqi.jar</systemPath>
+		</dependency>
+		<dependency>
+			<groupId>com.ibm.mqjms</groupId>
+			<artifactId>mqjms</artifactId>
+			<version>7.5.0</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/lib/com.ibm.mqjms.jar</systemPath>
+		</dependency>
+		<dependency>
+			<groupId>dhbcore</groupId>
+			<artifactId>dhbcore</artifactId>
+			<version>7.5.0</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/lib/dhbcore.jar</systemPath>
+		</dependency>
+		<dependency>
+			<groupId>fscontext</groupId>
+			<artifactId>fscontext</artifactId>
+			<version>7.5.0</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/lib/fscontext.jar</systemPath>
+		</dependency>
+	    <dependency>
+            <groupId>org.mule.transports</groupId>
+            <artifactId>mule-transport-jms</artifactId>
+            <version>${mule.version}</version>
+            <scope>provided</scope>
+        </dependency>
+    	<dependency>
+            <groupId>com.mulesoft.munit.utils</groupId>
+            <artifactId>munit-synchronize-module</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+	</dependencies>
+
+	<repositories>
+		<repository>
+			<id>Central</id>
+			<name>Central</name>
+			<url>http://repo1.maven.org/maven2/</url>
+			<layout>default</layout>
+		</repository>
+		<repository>
+			<id>mulesoft-releases</id>
+			<name>MuleSoft Releases Repository</name>
+			<url>http://repository.mulesoft.org/releases/</url>
+			<layout>default</layout>
+		</repository>
+		<repository>
+			<id>mulesoft-snapshots</id>
+			<name>MuleSoft Snapshots Repository</name>
+			<url>http://repository.mulesoft.org/snapshots/</url>
+			<layout>default</layout>
+		</repository>
+		<repository>
+			<id>mulesoft-dependencies</id>
+			<name>MuleSoft Dependencies</name>
+			<url>https://repository.mulesoft.org/nexus/content/repositories/public/
+			</url>
+			<layout>default</layout>
+		</repository>
+	</repositories>
+	<pluginRepositories>
+		<pluginRepository>
+			<id>Central</id>
+			<name>Central</name>
+			<url>http://repo1.maven.org/maven2/</url>
+			<layout>default</layout>
+		</pluginRepository>
+		<pluginRepository>
+			<id>mulesoft-releases</id>
+			<name>mulesoft release repository</name>
+			<layout>default</layout>
+			<url>http://repository.mulesoft.org/releases/</url>
+		</pluginRepository>
+		<pluginRepository>
+			<id>mulesoft-snapshots</id>
+			<name>MuleSoft Snapshots Repository</name>
+			<url>http://repository.mulesoft.org/snapshots/</url>
+			<layout>default</layout>
+		</pluginRepository>
+		<pluginRepository>
+			<id>smartbear-sweden-plugin-repository</id>
+			<url>http://www.soapui.org/repository/maven2/</url>
+		</pluginRepository>
+		<pluginRepository>
+			<id>mulesoft-dependencies</id>
+			<name>MuleSoft Dependencies</name>
+			<url>https://repository.mulesoft.org/nexus/content/repositories/public/
+			</url>
+			<layout>default</layout>
+		</pluginRepository>
+	</pluginRepositories>
+
+	<distributionManagement>
+		<repository>
+			<uniqueVersion>false</uniqueVersion>
+			<id>mns.corp.nexus.release</id>
+			<name>Marks and Spencer Corporate Release Repository</name>
+			<url>http://admin:admin123@54.85.196.177:8081/content/repositories/releases/
+			</url>
+		</repository>
+		<snapshotRepository>
+			<uniqueVersion>true</uniqueVersion>
+			<id>mns.corp.nexus.snapshot</id>
+			<name>Marks and Spencer Corporate Snapshot Repository</name>
+			<url>http://admin:admin123@54.85.196.177:8081/content/repositories/snapshots/
+			</url>
+		</snapshotRepository>
+	</distributionManagement>
+
+</project>

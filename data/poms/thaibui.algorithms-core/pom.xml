@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.bui.algorithms</groupId>
+  <artifactId>core</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>Algorithms Core</name>
+  <url>http://maven.apache.org</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <!-- Test dependencies -->
+    <junit.version>4.12</junit.version>
+    <hamcrest.version>1.3</hamcrest.version>
+
+    <!--Build & plug-in dependencies & properties -->
+    <!-- Build properties -->
+    <java.compiler.source.version>1.7</java.compiler.source.version>
+    <java.compiler.target.version>1.7</java.compiler.target.version>
+
+    <!-- Continuous integration related plug-in -->
+    <jacoco.version>0.7.6.201602180812</jacoco.version>
+    <coveralls.version>4.1.0</coveralls.version>
+
+    <!-- Build dependencies -->
+    <maven.compiler.version>3.5.1</maven.compiler.version>
+    <maven.ant.plugin>1.8</maven.ant.plugin>
+
+  </properties>
+
+  <modules>
+    <module>sort</module>
+    <module>benchmark</module>
+    <module>leetcode</module>
+  </modules>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>${maven.compiler.version}</version>
+          <configuration>
+            <source>${java.compiler.source.version}</source>
+            <target>${java.compiler.target.version}</target>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.jacoco</groupId>
+          <artifactId>jacoco-maven-plugin</artifactId>
+          <version>${jacoco.version}</version>
+          <executions>
+            <execution>
+              <id>prepare-agent</id>
+              <goals>
+                <goal>prepare-agent</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.eluder.coveralls</groupId>
+          <artifactId>coveralls-maven-plugin</artifactId>
+          <version>${coveralls.version}</version>
+          <configuration>
+            <repoToken>${env.ALGORITHMS_CORE_COVERALLS_TOKEN}</repoToken>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>coverage-report</id>
+      <properties>
+        <build.directory.projecta>${basedir}/leetcode/target</build.directory.projecta>
+        <build.directory.projectb>${basedir}/sort/target</build.directory.projectb>
+
+        <classes.directory.projecta>${basedir}/leetcode/target/classes</classes.directory.projecta>
+        <classes.directory.projectb>${basedir}/sort/target/classes</classes.directory.projectb>
+
+        <sources.directory.projecta>${basedir}/leetcode/src/main/java</sources.directory.projecta>
+        <sources.directory.projectb>${basedir}/sort/src/main/java</sources.directory.projectb>
+
+        <generated-sources.directory.projecta>${basedir}/leetcode/target/generated-sources/annotations</generated-sources.directory.projecta>
+        <generated-sources.directory.projectb>${basedir}/sort/target/generated-sources/annotations</generated-sources.directory.projectb>
+      </properties>
+
+      <build>
+        <!-- aggregation all reports into one -->
+        <plugins>
+          <!-- Dependencies -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+              <!-- Copy the ant tasks jar. Needed for ts.jacoco.report-ant . -->
+              <execution>
+                <id>jacoco-dependency-ant</id>
+                <goals>
+                  <goal>copy</goal>
+                </goals>
+                <phase>initialize</phase>
+                <inherited>false</inherited>
+                <configuration>
+                  <artifactItems>
+                    <artifactItem>
+                      <groupId>org.jacoco</groupId>
+                      <artifactId>org.jacoco.ant</artifactId>
+                      <version>${jacoco.version}</version>
+                    </artifactItem>
+                  </artifactItems>
+                  <stripVersion>true</stripVersion>
+                  <outputDirectory>${basedir}/target/jacoco-jars</outputDirectory>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <!-- Ant plugin. -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>${maven.ant.plugin}</version>
+            <executions>
+              <execution>
+                <phase>initialize</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <inherited>false</inherited>
+                <configuration>
+                  <target>
+                    <!-- Execute an ant task within maven -->
+                    <echo message="Generating JaCoCo Reports"/>
+                    <taskdef name="report" classname="org.jacoco.ant.ReportTask">
+                      <classpath path="${basedir}/target/jacoco-jars/org.jacoco.ant.jar"/>
+                    </taskdef>
+                    <mkdir dir="${basedir}/target/site/jacoco"/>
+                    <report>
+                      <executiondata>
+                        <fileset dir="${build.directory.projecta}">
+                          <include name="jacoco.exec"/>
+                        </fileset>
+                        <fileset dir="${build.directory.projectb}">
+                          <include name="jacoco.exec"/>
+                        </fileset>
+                      </executiondata>
+                      <structure name="org.bui.algorithms.core Coverage Report">
+                        <group name="jacoco-multi">
+                          <classfiles>
+                            <fileset dir="${classes.directory.projecta}"/>
+                            <fileset dir="${classes.directory.projectb}"/>
+                          </classfiles>
+                          <sourcefiles encoding="UTF-8">
+                            <fileset dir="${sources.directory.projecta}"/>
+                            <fileset dir="${sources.directory.projectb}"/>
+                          </sourcefiles>
+                        </group>
+                      </structure>
+                      <html destdir="${basedir}/target/site/jacoco"/>
+                      <xml destfile="${basedir}/target/site/jacoco/jacoco.xml"/>
+                      <csv destfile="${basedir}/target/site/jacoco/jacoco.csv"/>
+                    </report>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+            <dependencies>
+              <dependency>
+                <groupId>org.jacoco</groupId>
+                <artifactId>org.jacoco.ant</artifactId>
+                <version>${jacoco.version}</version>
+              </dependency>
+            </dependencies>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>${junit.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.hamcrest</groupId>
+        <artifactId>hamcrest-all</artifactId>
+        <version>${hamcrest.version}</version>
+        <scope>test</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+</project>

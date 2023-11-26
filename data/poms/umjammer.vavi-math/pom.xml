@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project
+    xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>vavi</groupId>
+  <artifactId>vavi-math</artifactId>
+  <version>0.0.4</version>
+
+  <name>Vavi Math Library</name>
+  <organization>
+    <name>vavi</name>
+  </organization>
+  <url>https://github.com/umjammer/vavi-math</url>
+  <description>Vavi Math Library</description>
+  <scm>
+    <url>https://github.com/umjammer/vavi-math</url>
+  </scm>
+  <issueManagement>
+    <url>https://github.com/umjammer/vavi-math/issues</url>
+  </issueManagement>
+
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <name>GitHub umjammer Apache Maven Packages</name>
+      <url>https://maven.pkg.github.com/umjammer/vavi-math</url>
+    </repository>
+  </distributionManagement>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+          <encoding>UTF-8</encoding>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.0.0-M5</version>
+        <configuration>
+          <trimStackTrace>false</trimStackTrace>
+          <argLine>
+            -javaagent:${project.build.directory}/vavi-memoization-${project.version}.jar
+            -Djava.util.logging.config.file=${project.build.testResources.testResource.directory}/logging.properties
+          </argLine>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.8</version>
+        <executions>
+          <execution>
+            <phase>compile</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <jar jarfile="${project.build.directory}/vavi-memoization-${project.version}.jar"
+                     manifest="src/instrumentation/resources/memoization.mf">
+                  <fileset dir="${project.build.outputDirectory}">
+                    <include name="vavi/util/memoization/*.class" />
+                  </fileset>
+                  <zipfileset src="${maven.dependency.org.javassist.javassist.jar.path}"
+                              excludes="META-INF/**"/>
+                </jar>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-install-plugin</artifactId>
+        <version>3.0.0-M1</version>
+        <executions>
+          <execution>
+            <id>install-library</id>
+            <phase>install</phase>
+            <goals>
+              <goal>install-file</goal>
+            </goals>
+            <configuration>
+              <groupId>${project.groupId}</groupId>
+              <artifactId>vavi-memoization</artifactId>
+              <version>${project.version}</version>
+              <packaging>jar</packaging>
+              <file>${project.build.directory}/vavi-memoization-${project.version}.jar</file>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <version>3.0.0-M2</version>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <!--
+          because of maven deploy-file uploads source, jar also
+          TODO maven-metadata.xml!/metadata/versioning/latest is not updated
+          TODO how about https://stackoverflow.com/a/37552776/6102938
+         -->
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.6.0</version>
+        <executions>
+          <execution>
+            <id>deploy-library</id>
+            <phase>deploy</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <executable>mvn</executable>
+          <arguments>
+            <argument>deploy:deploy-file</argument>
+            <argument>-DgroupId=${project.groupId}</argument>
+            <argument>-DartifactId=vavi-memoization</argument>
+            <argument>-Dversion=${project.version}</argument>
+            <argument>-Dpackaging=jar</argument>
+            <argument>-Dfile=${project.build.directory}/vavi-memoization-${project.version}.jar</argument>
+            <argument>-DrepositoryId=github</argument>
+            <argument>-Durl=https://maven.pkg.github.com/umjammer/vavi-math</argument>
+            <argument>-s</argument>
+            <argument>${env.GITHUB_WORKSPACE}/settings.xml</argument>
+          </arguments>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.junit</groupId>
+        <artifactId>junit-bom</artifactId>
+        <version>5.8.2</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.javassist</groupId>
+      <artifactId>javassist</artifactId>
+      <version>3.23.0-GA</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-commons</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>

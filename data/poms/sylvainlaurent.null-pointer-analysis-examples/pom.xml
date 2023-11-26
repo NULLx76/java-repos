@@ -1,0 +1,210 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.github.sylvainlaurent</groupId>
+  <artifactId>null-pointer-analysis-examples</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+
+  <description>Examples to demonstrate Null Pointer Analysis with eclipse, maven and IntelliJ</description>
+
+  <properties>
+    <java.version>1.8</java.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <checker-framework.version>2.1.10</checker-framework.version>
+    <spring.version>4.1.7.RELEASE</spring.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <version>2.0.2</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jdt</groupId>
+      <artifactId>org.eclipse.jdt.annotation</artifactId>
+      <version>2.0.0</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jetbrains</groupId>
+      <artifactId>annotations</artifactId>
+      <version>15.0</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>19.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.checkerframework</groupId>
+      <artifactId>checker-qual</artifactId>
+      <version>${checker-framework.version}</version>
+    </dependency>
+    <!-- <dependency> -->
+    <!-- <groupId>org.checkerframework</groupId> -->
+    <!-- <artifactId>checker</artifactId> -->
+    <!-- <version>${checker-framework.version}</version> -->
+    <!-- </dependency> -->
+    <!-- <dependency> -->
+    <!-- <groupId>org.checkerframework</groupId> -->
+    <!-- <artifactId>jdk8</artifactId> -->
+    <!-- <version>${checker-framework.version}</version> -->
+    <!-- </dependency> -->
+
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-core</artifactId>
+      <version>${spring.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.5.1</version>
+          <configuration>
+            <source>${java.version}</source>
+            <target>${java.version}</target>
+            <encoding>UTF-8</encoding>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>m2e</id>
+      <activation>
+        <property>
+          <name>m2e.version</name>
+        </property>
+      </activation>
+      <properties>
+        <m2e.jdt.annotationpath>/eclipse-external-annotations/src/main/resources</m2e.jdt.annotationpath>
+      </properties>
+      <dependencies>
+      </dependencies>
+    </profile>
+
+    <profile>
+      <id>jdt</id>
+      <properties>
+        <tycho-version>0.26.0</tycho-version>
+      </properties>
+      <repositories>
+        <repository>
+          <!-- just to retrieve snapshots of com.github.sylvainlaurent:null-pointer-analysis-examples. Useless if using versions released to maven central -->
+          <id>ossrh-snapshots</id>
+          <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+          <snapshots>
+            <enabled>true</enabled>
+            <checksumPolicy>warn</checksumPolicy>
+          </snapshots>
+        </repository>
+      </repositories>
+
+      <dependencies>
+        <dependency>
+          <groupId>com.github.sylvainlaurent</groupId>
+          <artifactId>eclipse-external-annotations</artifactId>
+          <version>0.0.1-SNAPSHOT</version>
+          <scope>provided</scope>
+        </dependency>
+      </dependencies>
+
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-compiler-plugin</artifactId>
+              <executions>
+                <execution>
+                  <!-- check nullability using jdt compiler, only for compile, not for testCompile -->
+                  <id>compile</id>
+                  <phase>compile</phase>
+                  <goals>
+                    <goal>compile</goal>
+                  </goals>
+                  <configuration>
+                    <compilerId>jdt</compilerId>
+                    <compilerArgs>
+                      <arg>-properties</arg>
+                      <arg>${project.basedir}/ide-settings/eclipse-with-npe-analysis/org.eclipse.jdt.core.prefs</arg>
+                      <arg>-annotationpath</arg>
+                      <arg>CLASSPATH</arg>
+                    </compilerArgs>
+                  </configuration>
+                </execution>
+              </executions>
+              <dependencies>
+                <dependency>
+                  <groupId>org.eclipse.tycho</groupId>
+                  <artifactId>tycho-compiler-jdt</artifactId>
+                  <version>${tycho-version}</version>
+                </dependency>
+              </dependencies>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
+    </profile>
+
+    <profile>
+      <id>checker-framework</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.checkerframework</groupId>
+          <artifactId>checker</artifactId>
+          <version>${checker-framework.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.checkerframework</groupId>
+          <artifactId>jdk8</artifactId>
+          <version>${checker-framework.version}</version>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <fork>true</fork>
+              <annotationProcessors>
+                <!-- Add all the checkers you want to enable here -->
+                <annotationProcessor>org.checkerframework.checker.nullness.NullnessChecker</annotationProcessor>
+              </annotationProcessors>
+              <compilerArgs>
+                <!-- location of the annotated JDK, which comes from a Maven dependency -->
+                <arg>-Xbootclasspath/p:${org.checkerframework:jdk8:jar}</arg>
+              </compilerArgs>
+            </configuration>
+          </plugin>
+          <plugin>
+            <!-- This plugin will set properties values using dependency information -->
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <version>2.3</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>properties</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

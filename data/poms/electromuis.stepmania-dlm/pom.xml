@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>electromuis</groupId>
+    <artifactId>smdownloadmanager</artifactId>
+    <version>3.1.0.2</version>
+
+    <properties>
+        <!-- Installer Filename without suffix -->
+        <app.filename>Stepmania Download manager</app.filename>
+
+        <!-- The JavaFX Application class name -->
+        <app.mainClass>com.electromuis.smdl.Main</app.mainClass>
+
+        <!-- Optional override to specify where the cached files are stored. Default is current working directory -->
+        <app.cacheDir>USERLIB/SM-DLM</app.cacheDir>
+
+        <!-- Optional parameters to the application, will be embedded in the launcher and can be overriden on the command line -->
+        <app.parameters></app.parameters>
+
+        <!-- The Application vendor used by javapackager -->
+        <app.vendor>Electromuis</app.vendor>
+
+        <!-- The Application version used by javapackager -->
+        <app.version>3.1</app.version>
+
+        <!-- Base URL where you will host the application artifacts -->
+        <app.url>http://dutchrhythm.com/dlm/</app.url>
+
+        <!-- Optional scp target for application artifacts hosted at the above url -->
+        <app.deploy.target></app.deploy.target>
+
+        <!-- The app and launcher will be assembled in this folder -->
+        <app.dir>${project.build.directory}/app</app.dir>
+
+        <!-- Native installers will be built in this folder -->
+        <app.installerdir>${project.build.directory}/installer</app.installerdir>
+
+        <!-- Should the client downgrade if the server version is older than the local version? -->
+        <app.acceptDowngrade>false</app.acceptDowngrade>
+
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <build>
+        <plugins>
+            <!-- Compile project jar to appdir -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.6</version>
+                <configuration>
+                    <outputDirectory>${app.dir}</outputDirectory>
+                    <archive>
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <!-- Copy dependencies to appdir -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>2.10</version>
+                <configuration>
+                    <excludeScope>provided</excludeScope>
+                    <outputDirectory>${app.dir}</outputDirectory>
+                    <stripVersion>true</stripVersion>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.4.0</version>
+                <!-- Generate app.xml manifest -->
+                <executions>
+                    <execution>
+                        <id>create-manifest</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>fxlauncher.CreateManifest</mainClass>
+                            <arguments>
+                                <argument>${app.url}</argument>
+                                <argument>${app.mainClass}</argument>
+                                <argument>${app.dir}</argument>
+                                <argument>--cache-dir=${app.cacheDir}</argument>
+                                <argument>--accept-downgrade=${app.acceptDowngrade}</argument>
+                                <argument>--include-extensions=jpg</argument>
+                                <argument>${app.parameters}</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>embed-manifest-in-launcher</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>jar</executable>
+                            <workingDirectory>${app.dir}</workingDirectory>
+                            <arguments>
+                                <argument>uf</argument>
+                                <argument>fxlauncher.jar</argument>
+                                <argument>app.xml</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.3</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+            <!--<plugin>-->
+                <!--<groupId>com.akathist.maven.plugins.launch4j</groupId>-->
+                <!--<artifactId>launch4j-maven-plugin</artifactId>-->
+                <!--<version>1.7.24</version>-->
+                <!--<executions>-->
+                    <!--<execution>-->
+                        <!--<id>l4j-gui</id>-->
+                        <!--<phase>package</phase>-->
+                        <!--<goals>-->
+                            <!--<goal>launch4j</goal>-->
+                        <!--</goals>-->
+                        <!--<configuration>-->
+                            <!--<headerType>gui</headerType>-->
+                            <!--<outfile>target/SM-DLM.exe</outfile>-->
+                            <!--<jar>target/app/fxlauncher.jar</jar>-->
+                            <!--&lt;!&ndash; if <dontWrapJar>true</dontWrapJar> change to this conf <jar>${project.artifactId}-${project.version}.jar</jar> &ndash;&gt;-->
+                            <!--<dontWrapJar>false</dontWrapJar>-->
+                            <!--<errTitle>Error in launch4j plugin</errTitle>-->
+                            <!--<classPath>-->
+                                <!--<mainClass>fxlauncher.Launcher</mainClass>-->
+                            <!--</classPath>-->
+                            <!--<icon>src/main/resources/images/icon.ico</icon>-->
+                            <!--<jre>-->
+                                <!--<minVersion>1.8.0</minVersion>-->
+                                <!--<maxVersion></maxVersion>-->
+                                <!--<initialHeapSize>512</initialHeapSize>-->
+                                <!--<maxHeapSize>1024</maxHeapSize>-->
+                            <!--</jre>-->
+                            <!--<versionInfo>-->
+                                <!--<fileVersion>${project.version}</fileVersion>-->
+                                <!--<txtFileVersion>${project.version}</txtFileVersion>-->
+                                <!--<fileDescription>des</fileDescription>-->
+                                <!--<copyright>Copyright (c) 2018 </copyright>-->
+                                <!--<companyName>${app.vendor}</companyName>-->
+                                <!--<productVersion>${project.version}</productVersion>-->
+                                <!--<txtProductVersion>${project.version}</txtProductVersion>-->
+                                <!--<productName>${app.filename}</productName>-->
+                                <!--<internalName>${app.filename}</internalName>-->
+                                <!--<originalFilename>SM-DLM.exe</originalFilename>-->
+                            <!--</versionInfo>-->
+                        <!--</configuration>-->
+                    <!--</execution>-->
+                <!--</executions>-->
+            <!--</plugin>-->
+            <plugin>
+                <groupId>com.zenjava</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>8.8.3</version>
+                <configuration>
+                    <mainClass>com.electromuis.smdl.Main</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>no.tornado</groupId>
+            <artifactId>fxlauncher</artifactId>
+            <version>LATEST</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.10.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.ini4j</groupId>
+            <artifactId>ini4j</artifactId>
+            <version>0.5.4</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.5</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-net</groupId>
+            <artifactId>commons-net</artifactId>
+            <version>3.5</version>
+        </dependency>
+        <dependency>
+            <groupId>net.sf.sevenzipjbinding</groupId>
+            <artifactId>sevenzipjbinding</artifactId>
+            <version>9.20-2.00beta</version>
+        </dependency>
+        <dependency>
+            <groupId>net.sf.sevenzipjbinding</groupId>
+            <artifactId>sevenzipjbinding-all-platforms</artifactId>
+            <version>9.20-2.00beta</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.lookfirst</groupId>
+            <artifactId>sardine</artifactId>
+            <version>5.7</version>
+        </dependency>
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20171018</version>
+        </dependency>
+        <dependency>
+            <groupId>com.dropbox.core</groupId>
+            <artifactId>dropbox-core-sdk</artifactId>
+            <version>3.0.6</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.7</version>
+        </dependency>
+    </dependencies>
+</project>

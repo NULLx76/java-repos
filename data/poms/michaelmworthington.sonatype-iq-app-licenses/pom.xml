@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.mike</groupId>
+  <artifactId>sonatype-iq-app-licenses-aggregator-pom</artifactId>
+  <packaging>pom</packaging>
+  <version>1.2-SNAPSHOT</version>
+
+  <modules>
+    <module>sonatype-iq-app-licenses</module>
+    <module>sonatype-iq-app-client</module>
+  </modules>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <clm.serverUrl>http://localhost:8060/iq/</clm.serverUrl>
+    <clm.serverId>nexus</clm.serverId>
+    <clm.applicationId>sonatype-iq-app-licenses</clm.applicationId>
+    <clm.additionalScopes>test,provided,system</clm.additionalScopes>
+    <clm.stage>build</clm.stage>
+    <!--clm-maven-plugin-version>2.4.2</clm-maven-plugin-version-->
+    <clm-maven-plugin-version>2.13.0-02</clm-maven-plugin-version>
+  </properties>
+
+  <!-- deploy snapshots to a normal maven snapshot repository -->
+  <distributionManagement>
+    <snapshotRepository>
+      <id>nexus</id>
+      <url>http://localhost:8083/nexus/repository/maven-snapshots</url>
+    </snapshotRepository>
+  </distributionManagement>
+
+  <repositories>
+    <repository>
+      <releases>
+        <enabled>true</enabled>
+        <updatePolicy>always</updatePolicy>
+        <checksumPolicy>fail</checksumPolicy>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+        <updatePolicy>never</updatePolicy>
+        <checksumPolicy>fail</checksumPolicy>
+      </snapshots>
+      <name>Restlet</name>
+      <id>restlet-releases</id>
+      <url>https://maven.restlet.talend.com</url>
+      <layout>default</layout>
+    </repository>
+  </repositories>
+
+  <profiles>
+    <profile>
+      <id>staging-release</id>
+      <!-- deploy releases to the nexus staging repository   -->
+      <build>
+        <plugins>
+          <!-- see https://docs.sonatype.com/pages/viewpage.action?spaceKey=Nexus&title=NXRM3+Maven+Plugin+testing
+          & https://maven.apache.org/plugins/maven-deploy-plugin/faq.html#skip
+          & https://maven.apache.org/guides/mini/guide-configuring-plugins.html#Using_the_executions_Tag
+          & https://issues.sonatype.org/browse/NEXUS-19842
+          & https://help.sonatype.com/integrations/nexus-and-continuous-integration/repository-manager-for-maven-plugin
+          -
+          https://sonatype.slack.com/archives/CCA312YJD/p1567097551051700
+          -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-deploy-plugin</artifactId>
+            <configuration>
+              <skip>true</skip>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nxrm3-maven-plugin</artifactId>
+            <version>1.0.2</version>
+            <extensions>true</extensions>
+            <executions>
+              <execution>
+                <id>default-deploy</id>
+                <phase>deploy</phase>
+                <goals>
+                  <goal>deploy</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <serverId>nexus</serverId>
+              <nexusUrl>http://localhost:8083/nexus/</nexusUrl>
+              <!-- update this to the correct id! -->
+              <repository>maven-releases</repository>
+              <skipNexusStagingDeployMojo>false</skipNexusStagingDeployMojo>
+              <!--           <tags>
+                          <localUsername>${env.USER}</localUsername>
+                          <javaVersion>${java.version}</javaVersion>
+                        </tags>
+               -->
+            </configuration>
+          </plugin>
+
+          <!-- for CLM -->
+
+          <!-- do the scan in the maven build context -->
+          <plugin>
+            <groupId>com.sonatype.clm</groupId>
+            <artifactId>clm-maven-plugin</artifactId>
+            <version>${clm-maven-plugin-version}</version>
+            <executions>
+              <execution>
+                <phase>verify</phase>
+                <goals>
+                  <goal>evaluate</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+
+          <!-- so the dependencies show up in Jenkins -->
+          <plugin>
+            <groupId>com.sonatype.clm</groupId>
+            <artifactId>clm-maven-plugin</artifactId>
+            <version>${clm-maven-plugin-version}</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>index</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+
+          <!-- so the dependencies get passed to Nexus Repo Staging -->
+          <plugin>
+            <groupId>com.sonatype.clm</groupId>
+            <artifactId>clm-maven-plugin</artifactId>
+            <version>${clm-maven-plugin-version}</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>attach</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+  <build>
+    <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
+      <plugins>
+        <!-- clean lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#clean_Lifecycle -->
+        <plugin>
+          <artifactId>maven-clean-plugin</artifactId>
+          <version>3.1.0</version>
+        </plugin>
+        <!-- default lifecycle, jar packaging: see https://maven.apache.org/ref/current/maven-core/default-bindings.html#Plugin_bindings_for_jar_packaging -->
+        <plugin>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>3.0.2</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.8.0</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>2.22.1</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>3.0.2</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-install-plugin</artifactId>
+          <version>2.5.2</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <version>2.8.2</version>
+        </plugin>
+        <!-- site lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#site_Lifecycle -->
+        <plugin>
+          <artifactId>maven-site-plugin</artifactId>
+          <version>3.7.1</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-project-info-reports-plugin</artifactId>
+          <version>3.0.0</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+</project>

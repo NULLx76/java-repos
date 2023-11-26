@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>nl.ivonet.service</groupId>
+    <artifactId>ivonet</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>war</packaging>
+
+    <dependencies>
+        <dependency>
+            <groupId>javax</groupId>
+            <artifactId>javaee-api</artifactId>
+            <version>${version.javaee}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.media</groupId>
+            <artifactId>jersey-media-json-jackson</artifactId>
+            <version>2.13</version>
+        </dependency>
+
+        <!--Test dependencies-->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>1.9.5</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${version.junit}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-all</artifactId>
+            <version>${version.hamcrest.core}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss.arquillian.junit</groupId>
+            <artifactId>arquillian-junit-container</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss.weld.se</groupId>
+            <artifactId>weld-se</artifactId>
+            <version>${version.weld_se}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+             <groupId>org.jboss.shrinkwrap.resolver</groupId>
+             <artifactId>shrinkwrap-resolver-impl-maven</artifactId>
+             <scope>test</scope>
+             <type>jar</type>
+         </dependency>
+         <dependency>
+             <groupId>org.jboss.shrinkwrap.resolver</groupId>
+             <artifactId>shrinkwrap-resolver-impl-maven-archive</artifactId>
+             <scope>test</scope>
+         </dependency>
+    </dependencies>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.jboss.arquillian</groupId>
+                <artifactId>arquillian-bom</artifactId>
+                <version>${version.arquillian_core}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+    <build>
+        <finalName>${project.artifactId}</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>${version.maven_war_plugin}</version>
+                <configuration>
+                    <failOnMissingWebXml>false</failOnMissingWebXml>
+                    <warName>${project.build.finalName}</warName>
+                    <outputDirectory>artifact</outputDirectory>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+    <profiles>
+        <profile>
+            <id>with-integration</id>
+            <properties>
+                <skip.integration.tests>false</skip.integration.tests>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-dependency-plugin</artifactId>
+                        <version>${version.maven_dependency_plugin}</version>
+                        <executions>
+                            <execution>
+                                <id>unpack</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>unpack</goal>
+                                </goals>
+                                <configuration>
+                                    <artifactItems>
+                                        <artifactItem>
+                                            <groupId>org.wildfly</groupId>
+                                            <artifactId>wildfly-dist</artifactId>
+                                            <version>${version.wildfly}</version>
+                                            <type>zip</type>
+                                            <overWrite>false</overWrite>
+                                            <outputDirectory>${project.build.directory}</outputDirectory>
+                                        </artifactItem>
+                                    </artifactItems>
+                                    <skip>${skip.integration.tests}</skip>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <!-- Configure environment for Wildfly -->
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>${version.plugin.failsafe}</version>
+                        <configuration>
+                            <environmentVariables>
+                                <JBOSS_HOME>${project.build.directory}/wildfly-${version.wildfly}</JBOSS_HOME>
+                                <serverProfile>standalone-full.xml</serverProfile>
+                                <serverRoot>${project.build.directory}/wildfly-${version.wildfly}</serverRoot>
+                            </environmentVariables>
+                            <redirectTestOutputToFile>false</redirectTestOutputToFile>
+                            <skipITs>${skip.integration.tests}</skipITs>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+            <dependencies>
+                <dependency>
+                    <groupId>org.wildfly</groupId>
+                    <artifactId>wildfly-arquillian-container-managed</artifactId>
+                    <version>${version.wildfly}</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
+    <properties>
+        <!-- File encodings -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!--maven plugins-->
+        <version.plugin.failsafe>2.18.1</version.plugin.failsafe>
+        <version.maven_war_plugin>2.5</version.maven_war_plugin>
+        <version.plugin.compiler>3.1</version.plugin.compiler>
+        <version.maven_dependency_plugin>2.9</version.maven_dependency_plugin>
+
+        <!-- Java Specifications -->
+        <failOnMissingWebXml>false</failOnMissingWebXml>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <version.javaee>7.0</version.javaee>
+
+        <!-- Arquillian version -->
+        <version.arquillian_core>1.1.11.Final</version.arquillian_core>
+        
+        <!-- Default value, is explicitly set in profiles -->
+        <skip.integration.tests>true</skip.integration.tests>
+
+        <!-- Dependencies -->
+        <version.junit>4.12</version.junit>
+        <version.hamcrest.core>1.3</version.hamcrest.core>
+        <version.wildfly>8.2.1.Final</version.wildfly>
+        <version.resteasy>3.0.16.Final</version.resteasy>
+        <version.weld_se>2.3.3.Final</version.weld_se>
+
+    </properties>
+</project>

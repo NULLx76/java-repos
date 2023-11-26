@@ -1,0 +1,271 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.example.maven</groupId>
+    <artifactId>maven-it-with-docker</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <dependencies>
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongo-java-driver</artifactId>
+            <version>3.2.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>6.9.10</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>3.3.0</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!--
+            If multiple plugins are bound to the same build phase, they are executed in order they appear in the pom.xml.
+            It's easier to understand the order if the plugins are listed in one place.
+            This is why some plugins are kept here and not in a profile even though they are executed only when certain profile is activated.
+            -->
+            <plugin>
+                <!-- Use this plugin to start up a VM where docker engine is installed. -->
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.5.0</version>
+                <executions>
+                    <execution>
+                        <!-- execute 'vagrant up' before integration tests -->
+                        <id>vagrant-up</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>vagrant</executable>
+                            <arguments>
+                                <argument>up</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <!-- execute 'vagrant destroy -f' after integration tests -->
+                        <id>vagrant-destroy</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>vagrant</executable>
+                            <arguments>
+                                <argument>destroy</argument>
+                                <argument>-f</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+                <configuration>
+                    <!-- skip when in linux (see profiles) -->
+                    <skip>${docker.vm.skip}</skip>
+                </configuration>
+            </plugin>
+            <plugin>
+                <!--
+                This plugin is used to find unused ports on host machine.
+                This way the services running in the containers won't have conflicts with each other or other programs.
+                -->
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>port-allocator-maven-plugin</artifactId>
+                <version>1.2</version>
+                <executions>
+                    <execution>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>allocate-ports</goal>
+                        </goals>
+                        <configuration>
+                            <ports>
+                                <port>
+                                    <!-- Assign this name to the port used in MongoDbServiceStartupLogIT test -->
+                                    <name>MongoDbServiceStartupLogIT.port</name>
+                                </port>
+                                <port>
+                                    <!-- Assign this name to the port used in MongoDbServiceAdminDbIT test -->
+                                    <name>MongoDbServiceAdminDbIT.port</name>
+                                </port>
+                            </ports>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <!--
+                This plugin is used to create docker containers.
+                For our tests we create two containers with MongoDB server in each
+                and bind them to random unused ports allocated earlier.
+                -->
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>0.15.1</version>
+                <configuration>
+                    <!-- Assign different docker host url based on where docker engine is, in a VM or on host machine (see profiles). -->
+                    <dockerHost>${docker.host.url}</dockerHost>
+                    <images>
+                        <image>
+                            <!--
+                            Define one container from image 'mongo:3.2.6'
+                            and container's port 27017 (MongoDb server) bound to MongoDbServiceStartupLogIT.port
+                            assigned earlier
+                            -->
+                            <name>mongo:3.2.6</name>
+                            <run>
+                                <ports>
+                                    <port>${MongoDbServiceStartupLogIT.port}:27017</port>
+                                </ports>
+                                <wait>
+                                    <!-- Consider the container to be ready when this line is logged -->
+                                    <log>waiting for connections on port</log>
+                                </wait>
+                            </run>
+                        </image>
+                        <image>
+                            <!--
+                            Define another container from image 'mongo:3.2.6'
+                            and container's port 27017 (MongoDb server) bound to MongoDbServiceAdminDbIT.port
+                            assigned earlier
+                            -->
+                            <name>mongo:3.2.6</name>
+                            <run>
+                                <ports>
+                                    <port>${MongoDbServiceAdminDbIT.port}:27017</port>
+                                </ports>
+                                <wait>
+                                    <!-- Consider the container to be ready when this line is logged -->
+                                    <log>waiting for connections on port</log>
+                                </wait>
+                            </run>
+                        </image>
+                    </images>
+                </configuration>
+                <executions>
+                    <execution>
+                        <!-- Start all containers before integration tests -->
+                        <id>start</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>start</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <!-- Clean up after integration tests -->
+                        <id>stop</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <!-- Use this plugin to run integration tests -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.19.1</version>
+                <configuration>
+                    <!-- Pass the following system variables to the tests -->
+                    <systemPropertyVariables>
+                        <!--
+                        Address of the mongo db server.
+                        In case of linux run it's 'localhost'.
+                        In case of non-linux run it's the IP of the VM.
+                        -->
+                        <mongodb.host>${docker.host.address}</mongodb.host>
+                        <!-- Port on which the MongoDB for the MongoDbServiceStartupLogIT test listens -->
+                        <MongoDbServiceStartupLogIT.port>${MongoDbServiceStartupLogIT.port}</MongoDbServiceStartupLogIT.port>
+                        <!-- Port on which the MongoDB for the MongoDbServiceAdminDbIT test listens -->
+                        <MongoDbServiceAdminDbIT.port>${MongoDbServiceAdminDbIT.port}</MongoDbServiceAdminDbIT.port>
+                    </systemPropertyVariables>
+                    <!--
+                    Since the tests set system variables (ports) we cannot reuse the same JVM for all tests.
+                    Here we make failsafe fork a new JVM for each test, running tests serially.
+                    Setting forkCount to the number of test makes failsafe run tests in parallel.
+                    While that speeds things up a lot, it is going to break when number of tests changes.
+                    -->
+                    <forkCount>1</forkCount>
+                    <reuseForks>false</reuseForks>
+                </configuration>
+                <executions>
+                    <execution>
+                        <!-- Run integration tests (already bound to integration-test phase by default) -->
+                        <id>integration-test</id>
+                        <goals>
+                            <goal>integration-test</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <!-- Collect integration test results (already bound to integration-test phase by default) -->
+                        <id>verify</id>
+                        <goals>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.5</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!--
+        Here we use profiles to have different preparation steps happen
+        when building in different environments (Linux, VirtualBox VM, AWS VM, on-premise docker machine, ...).
+        More profiles can be added where different vagrantfiles are used (VAGRANT_CWD can be used to tell vagrant which Vagrantfile to use).
+        -->
+        <profile>
+            <id>linux</id>
+            <activation>
+                <os>
+                    <family>linux</family>
+                </os>
+            </activation>
+            <properties>
+                <!-- Don't need to have a separate VM for docker engine, so skip the plugin that creates one -->
+                <docker.vm.skip>true</docker.vm.skip>
+                <!-- This is where docker engine is running -->
+                <docker.host.address>localhost</docker.host.address>
+                <!-- This is docker daemon URL -->
+                <docker.host.url>unix:///var/run/docker.sock</docker.host.url>
+            </properties>
+        </profile>
+        <profile>
+            <id>windows</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <!-- Do need to have a separate VM for docker engine, so don't skip the plugin that creates one -->
+                <docker.vm.skip>false</docker.vm.skip>
+                <!-- This is where docker engine is running -->
+                <docker.host.address>192.168.60.30</docker.host.address>
+                <!-- This is docker daemon URL -->
+                <docker.host.url>tcp://${docker.host.address}:2375</docker.host.url>
+            </properties>
+        </profile>
+    </profiles>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
+</project>

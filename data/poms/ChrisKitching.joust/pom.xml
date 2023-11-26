@@ -1,0 +1,248 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>cdk23</groupId>
+  <artifactId>JOUST</artifactId>
+  <version>0.0.6-SNAPSHOT</version>
+  <licenses>
+    <license>
+      <name>GNU General Public License (GPL)</name>
+      <url>http://www.gnu.org/licenses/gpl.txt</url>
+    </license>
+  </licenses>
+  <packaging>jar</packaging>
+
+  <name>JOUST</name>
+  <url>https://bitbucket.org/ckitching/javac-opt/overview</url>
+  <inceptionYear>2013</inceptionYear>
+  <description>Java Optimisation Using Syntax Trees</description>
+
+  <scm>
+    <connection>scm:hg:https://bitbucket.org/ckitching/javac-opt</connection>
+    <developerConnection>scm:hg:ssh://ckitching@bitbucket.org/ckitching/javac-opt</developerConnection>
+    <url>https://bitbucket.org/ckitching/javac-opt</url>
+  </scm>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+  </properties>
+
+  <dependencies>
+    <!-- JUnit for unit testing -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- JUnitParams for making the unit tests slightly less awful... -->
+    <dependency>
+      <groupId>pl.pragmatists</groupId>
+      <artifactId>JUnitParams</artifactId>
+      <version>1.0.2</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- The internal javac classes we need. -->
+    <dependency>
+      <groupId>sun.jdk</groupId>
+      <artifactId>tools</artifactId>
+      <version>1.8.0</version>
+      <scope>system</scope>
+      <systemPath>${java.home}/../lib/tools.jar</systemPath>
+    </dependency>
+
+    <!-- Project Lombok. For magic. -->
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <version>1.12.2</version>
+    </dependency>
+
+    <!-- xxHash for efficient non-cryptographic hashes (To spot classfile content collisions). -->
+    <dependency>
+      <groupId>net.jpountz.lz4</groupId>
+      <artifactId>lz4</artifactId>
+      <version>1.2.0</version>
+    </dependency>
+
+    <!-- Kryo, for efficient object serialisation. (Used for the disk cache). -->
+    <dependency>
+      <groupId>com.esotericsoftware.kryo</groupId>
+      <artifactId>kryo</artifactId>
+      <version>2.22</version>
+    </dependency>
+
+    <!-- jdbm2 - a key/value store for holding the contents of the disk cache. -->
+    <dependency>
+      <groupId>jdbm</groupId>
+      <artifactId>jdbm</artifactId>
+      <version>2.4</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <extensions>
+      <extension>
+        <groupId>org.apache.maven.wagon</groupId>
+        <artifactId>wagon-ssh</artifactId>
+        <version>2.5</version>
+      </extension>
+    </extensions>
+
+    <plugins>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>2.4</version>
+        <configuration>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+        </configuration>
+        <executions>
+          <execution>
+            <id>make-assembly</id> <!-- this is used for inheritance merges -->
+            <phase>package</phase> <!-- bind to the packaging phase -->
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Maven dep plugin config, for copying of dependent jars. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <configuration>
+          <outputDirectory>
+            ${project.build.directory}
+          </outputDirectory>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.1</version>
+        <configuration>
+          <source>1.6</source>
+          <target>1.6</target>
+          <showWarnings>true</showWarnings>
+          <!-- Stop the annotation processor from annotation processing the annotation processor,
+               but allow Project Lombok, which is an annotation processor, to annotation process 
+               the annotation processor. -->
+          <annotationProcessors>
+            <annotationProcessor>
+              lombok.core.AnnotationProcessor
+            </annotationProcessor>
+          </annotationProcessors>
+          <showDeprecation>true</showDeprecation>
+          <compilerVersion>1.8</compilerVersion>
+        </configuration>
+      </plugin>
+
+      <!-- For integration tests. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>2.6</version>
+        <executions>
+          <execution>
+            <id>integration-test</id>
+            <goals>
+              <goal>integration-test</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>verify</id>
+            <goals>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <!-- Uncomment to attach debugger to integration tests. -->
+          <!--<debugForkedProcess>true</debugForkedProcess>-->
+          <includes>
+            <include>tests/integrationtests/*.java</include>
+          </includes>
+        </configuration>
+      </plugin>
+
+      <!-- Call a shell script to clean up the integration testing environment before a run. -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.2.1</version>
+        <executions>
+          <execution>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <workingDirectory>${project.build.testOutputDirectory}</workingDirectory>
+          <executable>/bin/sh</executable>
+          <arguments>
+            <argument>${project.build.testOutputDirectory}/pre-integration-test.sh</argument>
+          </arguments>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+        <version>2.4.2</version>
+        <configuration>
+          <tagNameFormat>b@{buildNumber}</tagNameFormat>
+        </configuration>
+      </plugin>
+
+      <!-- For unit tests. -->
+      <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-surefire-plugin</artifactId>
+      <version>2.12</version>
+      <configuration>
+        <!-- Uncomment to attach debugger to integration tests. -->
+        <!--<debugForkedProcess>true</debugForkedProcess>-->
+        <includes>
+          <include>tests/unittests/*.java</include>
+        </includes>
+      </configuration>
+      </plugin>
+    </plugins>
+
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
+  </build>
+
+  <repositories>
+    <repository>
+      <id>projectlombok.org</id>
+      <url>http://projectlombok.org/mavenrepo</url>
+    </repository>
+
+    <repository>
+      <id>clojars.org</id>
+      <url>http://clojars.org/repo</url>
+    </repository>
+
+    <repository>
+      <id>jlibs-repository</id>
+      <name>JLibs Repository</name>
+      <url>https://dl.dropboxusercontent.com/u/46836646/jlibs-repo</url>
+      <layout>default</layout>
+    </repository>
+  </repositories>
+</project>

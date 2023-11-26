@@ -1,0 +1,158 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                      http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+ 
+  <!-- The Basics -->
+  <groupId>com.shane.calculatorservice</groupId>
+  <artifactId>calculator-service</artifactId>
+  <version>1.0</version>
+  
+  <packaging>jar</packaging>
+
+  <name>izea-calculator-service</name>
+  
+  <dependencies>
+	<dependency>
+		<groupId>junit</groupId>
+		<artifactId>junit</artifactId>
+		<version>4.12</version>
+		<scope>test</scope>
+	</dependency>
+    <dependency>
+        <groupId>com.yammer.dropwizard</groupId>
+        <artifactId>dropwizard-core</artifactId>
+        <version>0.6.1</version>
+    </dependency>	
+  </dependencies>
+
+
+	<properties>
+		<docker.registry.name></docker.registry.name><!-- leave empty for docker hub; use e.g. "localhost:5000/" for a local docker registry -->
+		<docker.repository.name>${docker.registry.name}skaszyca/${project.artifactId}</docker.repository.name>
+		<docker.host.address>192.168.99.100</docker.host.address><!-- this is not localhost when using boot2docker! -->
+		<skaszyca.port>8080</skaszyca.port>
+		<skaszyca.port.admin>8081</skaszyca.port.admin>
+	</properties>
+
+	<build>
+	
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>2.3.2</version>
+				<configuration>
+					<archive>
+						<manifest>
+							<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+						</manifest>
+					</archive>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>1.6</version>
+				<configuration>
+					<createDependencyReducedPom>true</createDependencyReducedPom>
+					<filters>
+						<filter>
+							<artifact>*:*</artifact>
+							<excludes>
+								<exclude>META-INF/*.SF</exclude>
+								<exclude>META-INF/*.DSA</exclude>
+								<exclude>META-INF/*.RSA</exclude>
+							</excludes>
+						</filter>
+					</filters>
+				</configuration>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<transformers>
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+									<mainClass>com.shane.calculatorservice.CalculatorService</mainClass>
+								</transformer>
+							</transformers>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>  
+			
+			<plugin>
+				<groupId>org.jolokia</groupId>
+				<artifactId>docker-maven-plugin</artifactId>
+				<version>0.13.3</version>
+				<configuration>
+					<forceTags>true</forceTags><!-- Temporary setting -->
+					<imageTags>
+					   <imageTag>${project.version}</imageTag>
+					   <imageTag>latest</imageTag>
+					</imageTags>				
+					<images>
+						<image>
+							<alias>${project.artifactId}</alias>
+							<name>${docker.repository.name}:${project.version}</name>
+							<build>
+								<from>java:7-jre</from>
+								<maintainer>skaszyca</maintainer>
+								<assembly>
+									<descriptor>docker-assembly.xml</descriptor>
+								</assembly>
+								<ports>
+									<port>8080</port>
+									<port>8081</port>
+								</ports>
+								<cmd>
+									<shell>java -jar \
+										/maven/${project.build.finalName}.jar server \
+										/maven/calculate.yml</shell>
+								</cmd>
+							</build>
+							<run>
+								<namingStrategy>alias</namingStrategy>
+								<ports>
+									<port>${skaszyca.port}:8080</port>
+									<port>${skaszyca.port.admin}:8081</port>
+								</ports>
+								<volumes>
+									<bind>
+										<volume>${user.home}/logs:/logs</volume>
+									</bind>
+								</volumes>
+								<wait>
+									<url>http://${docker.host.address}:${skaszyca.port.admin}/ping</url>
+									<time>10000</time>
+								</wait>
+								<log>
+									<prefix>${project.artifactId}</prefix>
+									<color>cyan</color>
+								</log>
+							</run>
+						</image>
+					</images>
+				</configuration>		
+				<executions>
+					<execution>
+						<id>push-to-docker-registry</id>
+						<phase>build</phase>
+						<goals>
+							<goal>push</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			
+		</plugins>
+	</build>
+  	
+</project>
+

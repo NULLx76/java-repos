@@ -1,0 +1,419 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>it.clefra</groupId>
+	<artifactId>hello-world-maven</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>war</packaging>
+	<name>Hello World</name>
+
+
+	<build>
+		<!-- ..:: PLUGINS ::.. -->
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+			</plugin>
+
+			<!-- ..:: ENFORCER ::.. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>enforce-versions</id>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<requireMavenVersion>
+									<version>[${mavenMinVersion},${mavenMaxVersion})</version>
+								</requireMavenVersion>
+								<requireJavaVersion>
+									<version>1.8.0</version>
+								</requireJavaVersion>
+								<bannedDependencies>
+									<excludes>
+										<exclude>commons-logging:*:*:jar:compile</exclude>
+									</excludes>
+								</bannedDependencies>
+								<!-- <requirePluginVersions> -->
+								<!-- <message>Best Practice is to always define plugin versions!</message> -->
+								<!-- <banLatest>true</banLatest> -->
+								<!-- <banRelease>true</banRelease> -->
+								<!-- <banSnapshots>true</banSnapshots> -->
+								<!-- <phases>clean,deploy,site</phases> -->
+								<!-- <unCheckedPluginList>org.codehaus.mojo:sonar-maven-plugin,org.apache.maven.plugins:maven-failsafe-plugin</unCheckedPluginList> -->
+								<!-- </requirePluginVersions> -->
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>${maven.compiler.source}</source>
+					<target>${maven.compiler.target}</target>
+					<compilerVersion>${jdk.version}</compilerVersion>
+					<encoding>${maven.compiler.encoding}</encoding>
+					<fork>true</fork>
+					<showDeprecation>true</showDeprecation>
+					<verbose>true</verbose>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<!-- Da utilizzare solo in alcuni casi (ad esempio per il mock di classi 
+						final) -->
+					<argLine>
+						-javaagent:${settings.localRepository}/org/powermock/powermock-module-javaagent/${org.powermock.version}/powermock-module-javaagent-${org.powermock.version}.jar
+					</argLine>
+					<useSystemClassloader>true</useSystemClassloader>
+					<argLine>-XX:-UseSplitVerifier</argLine>
+					<threadCount>10</threadCount>
+					<includes>
+						<include>**/Test*.java</include>
+						<include>**/*Test.java</include>
+						<include>**/*TestCase.java</include>
+						<include>**/*Spec.java</include>
+					</includes>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.scoverage</groupId>
+				<artifactId>scoverage-maven-plugin</artifactId>
+				<configuration>
+					<highlighting>true</highlighting>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-deploy-plugin</artifactId>
+			</plugin>
+		</plugins>
+
+		<!-- Resources -->
+		<resources>
+			<resource>
+				<directory>src/main/config/development</directory>
+			</resource>
+			<resource>
+				<directory>src/main/resources</directory>
+			</resource>
+		</resources>
+	</build>
+
+	<!-- PROFILES -->
+	<profiles>
+		<!-- PROFILE : DEVELOPMENT -->
+		<profile>
+			<id>development</id>
+			<properties>
+				<!-- <config.for.profile>src/main/config/development</config.for.profile> -->
+				<!-- <filters.for.profile>src/main/filters/development/filter.properties</filters.for.profile> -->
+			</properties>
+		</profile>
+
+		<!-- PROFILE : DEVELOPMENT-M2E -->
+		<profile>
+			<id>development-m2e</id>
+			<build>
+				<directory>${m2eBuildDirectory}</directory>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-eclipse-plugin</artifactId>
+						<configuration>
+							<additionalProjectnatures>
+								<projectnature>org.springframework.ide.eclipse.core.springnature</projectnature>
+							</additionalProjectnatures>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+			<properties>
+				<m2eBuildDirectory>${basedir}/target-eclipse</m2eBuildDirectory>
+				<m2eclipse.wtp.contextRoot>/clefra</m2eclipse.wtp.contextRoot>
+			</properties>
+		</profile>
+
+		<!-- PROFILE : TARGET-JETTY -->
+		<profile>
+			<id>target-jetty</id>
+
+			<!-- Profilo da utilizzare per la run locale con Jetty -->
+			<dependencies>
+				<dependency>
+					<groupId>org.eclipse.jetty</groupId>
+					<artifactId>jetty-servlets</artifactId>
+					<version>9.3.8.RC0</version>
+				</dependency>
+			</dependencies>
+		</profile>
+	</profiles>
+
+	<!-- ..:: DEPENDENCIES::.. -->
+	<dependencies>
+
+		<!-- Java Servlet Specifications -->
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>${javax.servlet.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- JavaServer Pages Specifications -->
+		<dependency>
+			<groupId>javax.servlet.jsp</groupId>
+			<artifactId>jsp-api</artifactId>
+			<version>${javax.servlet.jsp.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>4.5.1</version>
+			<exclusions>
+				<exclusion>
+					<artifactId>commons-logging</artifactId>
+					<groupId>commons-logging</groupId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpcore</artifactId>
+			<version>4.4.4</version>
+		</dependency>
+
+		<!-- Spring Framework -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-webmvc</artifactId>
+			<exclusions>
+				<exclusion>
+					<artifactId>commons-logging</artifactId>
+					<groupId>commons-logging</groupId>
+				</exclusion>
+			</exclusions>
+			<version>${org.springframework.version}</version>
+		</dependency>
+
+		<!-- Spring Security -->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-web</artifactId>
+			<version>${org.springframework.security.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-config</artifactId>
+			<version>${org.springframework.security.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-cas</artifactId>
+			<exclusions>
+				<exclusion>
+					<artifactId>log4j-over-slf4j</artifactId>
+					<groupId>org.slf4j</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>jul-to-slf4j</artifactId>
+					<groupId>org.slf4j</groupId>
+				</exclusion>
+			</exclusions>
+			<version>${org.springframework.security.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.security.oauth</groupId>
+			<artifactId>spring-security-oauth2</artifactId>
+			<version>2.0.9.RELEASE</version>
+		</dependency>
+
+
+		<!-- Spring Data MongoDB -->
+		<dependency>
+			<groupId>org.springframework.data</groupId>
+			<artifactId>spring-data-mongodb</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.data</groupId>
+			<artifactId>spring-data-rest-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.data</groupId>
+			<artifactId>spring-data-rest-webmvc</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.data</groupId>
+			<artifactId>spring-data-jpa</artifactId>
+		</dependency>
+
+		<!-- Javax Persistence -->
+		<dependency>
+			<groupId>javax.persistence</groupId>
+			<artifactId>persistence-api</artifactId>
+			<version>1.0.2</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Jackson 2.X -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-core</artifactId>
+			<version>2.6.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<version>2.6.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-annotations</artifactId>
+			<version>2.6.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.module</groupId>
+			<artifactId>jackson-module-jaxb-annotations</artifactId>
+			<version>2.6.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.datatype</groupId>
+			<artifactId>jackson-datatype-joda</artifactId>
+			<version>2.6.1</version>
+		</dependency>
+
+		<!-- JWT -->
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt</artifactId>
+			<version>0.6.0</version>
+		</dependency>
+
+		<!-- SLF4J -->
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>${org.slf4j.version}</version>
+			<scope>compile</scope>
+		</dependency>
+		<!-- Jakarta Commons Logging Over SLF4J -->
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>jcl-over-slf4j</artifactId>
+			<version>${org.slf4j.version}</version>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>${org.slf4j.version}</version>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!-- Log4j -->
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.17</version>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!-- Apache Commons Language -->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>3.3.2</version>
+		</dependency>
+
+		<!-- JSR303 Bean Validation -->
+		<dependency>
+			<groupId>javax.validation</groupId>
+			<artifactId>validation-api</artifactId>
+			<version>1.1.0.Final</version>
+		</dependency>
+
+		<!-- Hibernate JSR303 Implementation -->
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-validator</artifactId>
+			<version>5.2.2.Final</version>
+		</dependency>
+
+		<!-- JUNIT -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.8.2</version>
+		</dependency>
+
+		<!-- JSOUP -->
+		<dependency>
+			<groupId>org.jsoup</groupId>
+			<artifactId>jsoup</artifactId>
+			<version>1.8.3</version>
+		</dependency>
+
+	</dependencies>
+
+	<!-- ..:: DEPENDENCY MANAGEMENT ::.. -->
+	<dependencyManagement>
+		<dependencies>
+			<!-- Spring Data BOM -->
+			<dependency>
+				<groupId>org.springframework.data</groupId>
+				<artifactId>spring-data-releasetrain</artifactId>
+				<version>${org.springframework.data.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<!-- ..:: PROPERTIES ::.. -->
+	<properties>
+		<org.springframework.security.version>4.0.2.RELEASE</org.springframework.security.version>
+		<org.springframework.version>4.1.7.RELEASE</org.springframework.version>
+		<org.springframework.data.version>Gosling-RELEASE</org.springframework.data.version>
+		<org.slf4j.version>1.7.12</org.slf4j.version>
+		<!-- Maven 3.x -->
+		<mavenMinVersion>3.0.0</mavenMinVersion>
+		<mavenMaxVersion>4.0.0</mavenMaxVersion>
+		<sourceEncoding>UTF-8</sourceEncoding>
+		<!-- Build settings -->
+		<maven.compiler.source>${jdk.version}</maven.compiler.source>
+		<maven.compiler.target>${jdk.version}</maven.compiler.target>
+		<maven.compiler.encoding>UTF-8</maven.compiler.encoding>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<maven.build.timestamp.format>yyyy-MM-dd HH:mm</maven.build.timestamp.format>
+		<build.timestamp>${maven.build.timestamp}</build.timestamp>
+		<!-- Java settings -->
+		<jdk.version>1.8</jdk.version>
+		<jdk.vendor>oracle</jdk.vendor>
+		<jdk.level>${jdk.version}</jdk.level>
+		<javax.servlet.version>3.0.1</javax.servlet.version>
+		<javax.servlet.jsp.version>2.2</javax.servlet.jsp.version>
+		<javax.el.version>2.2</javax.el.version>
+	</properties>
+</project>

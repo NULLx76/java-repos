@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.prismtech.vortex.demos</groupId>
+    <artifactId>vortex-at-rest</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>play2</packaging>
+
+    <properties>
+        <project.built.sourceEncoding>UTF-8</project.built.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <play2.version>2.4.2</play2.version>
+        <scala.version>2.11.6</scala.version>
+        <gson.version>2.2.4</gson.version>
+        <vortex.cafe.version>2.1.1</vortex.cafe.version>
+        <vortex.commons.version>0.7.0</vortex.commons.version>
+        <vortex.rx.version>1.0.0-SNAPSHOT</vortex.rx.version>
+
+        <apache-spark-version>1.3.0</apache-spark-version>
+        <logback-classic-version>1.1.2</logback-classic-version>
+        <slf4j-api-version>1.7.10</slf4j-api-version>
+
+        <exec-maven-plugin-version>1.2.1</exec-maven-plugin-version>
+        <maven-shade-plugin-version>2.3</maven-shade-plugin-version>
+        <maven-compiler-plugin-version>3.3</maven-compiler-plugin-version>
+
+        <play2.plugin.version>1.0.0-beta3</play2.plugin.version>
+        <sbt-compiler.plugin.version>1.0.0-beta5</sbt-compiler.plugin.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.prismtech.cafe</groupId>
+            <artifactId>cafe</artifactId>
+            <version>${vortex.cafe.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.prismtech.vortex</groupId>
+            <artifactId>vortex-commons</artifactId>
+            <version>${vortex.commons.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.prismtech.vortex.demos</groupId>
+            <artifactId>rxvortex</artifactId>
+            <version>${vortex.rx.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>${gson.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <version>${scala.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.typesafe.play</groupId>
+            <artifactId>play_2.11</artifactId>
+            <version>${play2.version}</version>
+        </dependency>
+
+        <!-- only if using Java -->
+        <dependency>
+            <groupId>com.typesafe.play</groupId>
+            <artifactId>play-java_2.11</artifactId>
+            <version>${play2.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.goldmansachs</groupId>
+            <artifactId>gs-collections</artifactId>
+            <version>6.2.0</version>
+        </dependency>
+
+        <!-- required for: "run", "start" and "dist" -->
+        <dependency>
+            <groupId>com.typesafe.play</groupId>
+            <artifactId>play-netty-server_2.11</artifactId>
+            <version>${play2.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <sourceDirectory>${basedir}/app</sourceDirectory>
+        <testSourceDirectory>${basedir}/test</testSourceDirectory>
+        <resources>
+            <resource>
+                <directory>conf</directory>
+            </resource>
+            <resource>
+                <directory>${basedir}/public</directory>
+                <targetPath>public</targetPath>
+            </resource>
+        </resources>
+
+        <plugins>
+            <!-- Configure Maven to target Java 1.8 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven-compiler-plugin-version}</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>com.google.code.play2-maven-plugin</groupId>
+                <artifactId>play2-maven-plugin</artifactId>
+                <version>${play2.plugin.version}</version>
+                <extensions>true</extensions>
+                <executions>
+                    <!-- exploded distribution to be packaged in assembly,
+                         but also used directly by examples -->
+                    <execution>
+                        <id>build-dist-exploded</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>dist-exploded</goal>
+                        </goals>
+                    </execution>
+                    <!-- zipped distribution used by qualification tests -->
+                    <execution>
+                        <id>build-dist</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>dist</goal>
+                        </goals>
+                        <configuration>
+                            <distAttach>true</distAttach>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- do chmod +x on generated 'start' script -->
+            <!-- (as not done by play2-maven-plugin)     -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-artifact</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <chmod file="${project.build.directory}/dist/${project.artifactId}-${project.version}/start" perm="ugo+rx" />
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <repositories>
+        <repository>
+            <id>prismtech-repo</id>
+            <name>PrismTech Maven repository</name>
+            <url>https://prismtech.github.io/mvn-repo/releases/</url>
+        </repository>
+    </repositories>
+
+    <profiles>
+        <profile>
+            <id>cafe-build</id>
+            <activation>
+                <property>
+                    <name>dds.runtime</name>
+                    <value>cafe</value>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>com.prismtech.cafe</groupId>
+                    <artifactId>cafe</artifactId>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <!-- Cafe plugin for IDL file compilation -->
+                    <plugin>
+                        <groupId>com.prismtech.cafe</groupId>
+                        <artifactId>idl2j</artifactId>
+                        <executions>
+                            <execution>
+                                <id>idl-compile</id>
+                                <phase>generate-sources</phase>
+                                <configuration>
+                                    <idlDir>idl</idlDir>
+                                </configuration>
+                                <goals>
+                                    <goal>idl-compile</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>ospl-build</id>
+            <activation>
+                <property>
+                    <name>dds.runtime</name>
+                    <value>ospl</value>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>opensplice</groupId>
+                    <artifactId>dcpssaj</artifactId>
+                    <version>6.5.0p3</version>
+                    <scope>system</scope>
+                    <systemPath>${env.OSPL_HOME}/jar/dcpssaj5.jar</systemPath>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
+</project>

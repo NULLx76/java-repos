@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements. See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License. You may obtain a copy of the License at
+  http://www.apache.org/licenses/LICENSE-2.0
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.apache.nifi</groupId>
+        <artifactId>nifi-nar-bundles</artifactId>
+        <version>1.22.0</version>
+    </parent>
+
+    <groupId>net.acesinc.nifi</groupId>
+    <version>1.0.0-SNAPSHOT</version>
+    <artifactId>aces-nifi-processors-bundle</artifactId>
+    <packaging>pom</packaging>
+
+    <properties>
+        <nifi.version>1.22.0</nifi.version>
+        <java.version>11</java.version>
+        <maven.compiler.release>${java.version}</maven.compiler.release>
+       
+        <!-- WARNING: When upgrading past this version and w/ next version of nifi and Java 11, please attempt using new mongodb-driver-sync. However, this will require past Java 8. Until you switch to Java 11, mongo.version 3.12.5 seems to be the main version to use. -->
+        <mongo.version>4.9.1</mongo.version>
+        <!-- This is the same version of Jackson that the 1.15.3 processors use. -->
+        <jackson.version>2.15.0</jackson.version>
+        <owasp.dependency.check.plugin.version>8.2.1</owasp.dependency.check.plugin.version>
+    </properties>
+    
+    <pluginRepositories>
+        <pluginRepository>
+            <id>gcs-maven-central-mirror</id>
+            <!--
+            
+                          Google Mirror of Maven Central, placed first so that it's used instead of flaky Maven Central.
+                          See https://storage-download.googleapis.com/maven-central/index.html
+                        
+            -->
+            <name>GCS Maven Central mirror</name>
+            <url>
+                https://maven-central.storage-download.googleapis.com/repos/central/data/
+            </url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+        <pluginRepository>
+            <id>central</id>
+            <name>Central Repository</name>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <layout>default</layout>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <releases>
+                <updatePolicy>never</updatePolicy>
+            </releases>
+        </pluginRepository>
+        <pluginRepository>
+            <id>bintray</id>
+            <name>Groovy Bintray</name>
+            <url>https://dl.bintray.com/groovy/maven</url>
+            <releases>
+                <updatePolicy>never</updatePolicy>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+    
+    <modules>
+        <module>aces-nifi-processors</module>
+        <module>aces-nifi-nar</module>
+    </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>net.acesinc.nifi</groupId>
+                <artifactId>aces-nifi-processors</artifactId>
+                <version>1.0.0-SNAPSHOT</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+    
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.owasp</groupId>
+                    <artifactId>dependency-check-maven</artifactId>
+                    <version>${owasp.dependency.check.plugin.version}</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>check</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-enforcer-plugin</artifactId>
+                    <version>3.3.0</version>
+                    <executions>
+                        <execution>
+                            <id>enforce-no-snapshots</id>
+                            <goals>
+                                <goal>enforce</goal>
+                            </goals>
+                            <configuration>
+                                <rules>
+                                    <requireReleaseDeps>
+                                        <message>Other than net.acesinc.nifi components themselves no snapshot dependencies are allowed</message>
+                                        <onlyWhenRelease>true</onlyWhenRelease>
+                                        <excludes>
+                                            <exclude>net.acesinc.nifi:*</exclude>
+                                        </excludes>
+                                    </requireReleaseDeps>
+                                </rules>
+                                <!-- NOTE:Unable to avoid failure here due to the apache nifi master pom. You either have to add an exclusion of our package name or pass in
+                                the skip related command flag for skipping enforcement altogether. -->
+                                <!-- NOTE: The enforce hates snapshots: To avoid this complaint, build w/ mvn clean install -Denforcer.skip=true -->
+                                <fail>false</fail>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+    
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.owasp</groupId>
+                <artifactId>dependency-check-maven</artifactId>
+                <version>${owasp.dependency.check.plugin.version}</version>
+                <configuration>
+                    <name>Dependency Check</name>
+                </configuration>
+                <reportSets>
+                    <reportSet>
+                        <reports>
+                            <report>aggregate</report>
+                        </reports>
+                    </reportSet>
+                </reportSets>
+            </plugin>
+        </plugins>
+    </reporting>
+
+</project>

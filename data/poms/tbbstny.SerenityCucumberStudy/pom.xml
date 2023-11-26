@@ -1,0 +1,349 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.ttt.serenity</groupId>
+    <artifactId>SerenityStudy</artifactId>
+    <version>trunk-SNAPSHOT</version>
+    <name>SerenityStudy</name>
+    <packaging>jar</packaging>
+    <description>
+        A study in Cucumber and Serenity based Integration Tests.
+        This, the main pom, represents a CI build job where things such as code analyzers
+        and perhaps running tests in dry run mode can be done to validate the code on check-in.
+        Usage: mvn clean install
+    </description>
+
+    <properties>
+        <encoding>UTF-8</encoding>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <snapshot.version>trunk-SNAPSHOT</snapshot.version>
+
+        <jdk.version>1.7</jdk.version>
+        <slf4j.version>1.7.7</slf4j.version>
+        <serenity.version>1.2.2-rc.6</serenity.version>
+        <serenity.maven.version>1.2.2-rc.6</serenity.maven.version>
+        <serenity.cucumber.version>1.1.20</serenity.cucumber.version>
+
+        <webdriver.ie.driver>target/drivers/IEDriverServer.exe</webdriver.ie.driver>
+        <!-- Testing -->
+        <!--
+            .*()FeatureTest.class         <== Match all *FeatureTest.class runners
+            .*(Cat|Dog)FeatureTest.class  <== Match Cat AND Dog test runners
+            testrunner.prefixes default to empty (i.e. ALL), but can be overridden via command line / CI
+         -->
+        <testrunner.prefixes></testrunner.prefixes>
+        <failsafe.testrunner>%regex[.*(${testrunner.prefixes})FeatureTest.class]</failsafe.testrunner>
+        <parallel.tests>4</parallel.tests>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.2</version>
+                <configuration>
+                    <source>${jdk.version}</source>
+                    <target>${jdk.version}</target>
+                    <showWarnings>true</showWarnings>
+                    <showDeprecation>true</showDeprecation>
+                    <compilerArgs>
+                        <arg>-Werror</arg>
+                        <arg>-Xlint:all</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.19.1</version>
+                <executions>
+                    <execution>
+                        <id>default-test</id>
+                        <phase>none</phase>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>Serenity</id>
+            <build>
+                <plugins>
+                    <!--
+                        Because our test runners are in src/main/java, as opposed to src/test/java,
+                        the default location and where FailSafe looks for test code, we must point test source to src/main/java.
+                    -->
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <version>1.12</version>
+                        <executions>
+                            <execution>
+                                <id>add-test-source</id>
+                                <phase>generate-test-sources</phase>
+                                <goals>
+                                    <goal>add-test-source</goal>
+                                </goals>
+                                <configuration>
+                                    <sources>
+                                        <source>src/main/java</source>
+                                    </sources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!--  Copy serenityCI.properties to <root>/serenity.propertie as required by Serenity -->
+                    <plugin>
+                        <groupId>com.coderplus.maven.plugins</groupId>
+                        <artifactId>copy-rename-maven-plugin</artifactId>
+                        <version>1.0</version>
+                        <executions>
+                            <execution>
+                                <id>copy-file</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <sourceFile>src/main/resources/serenityCI.properties</sourceFile>
+                                    <destinationFile>serenity.properties</destinationFile>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Echo properties before launching failsafe integration tests -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>1.4</version>
+                        <executions>
+                            <execution>
+                                <phase>integration-test</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <tasks>
+                                        <echo>Test runner properties</echo>
+                                        <echo>prefixes.: ${testrunner.prefixes}</echo>
+                                        <echo>runners..: ${failsafe.testrunner}</echo>
+                                    </tasks>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>2.19.1</version>
+                        <configuration>
+                            <reportsDirectory>${project.build.directory}/failsafe-reports/e2e</reportsDirectory>
+                            <summaryFile>${project.build.directory}/failsafe-reports/e2e/failsafe-summary.xml</summaryFile>
+                            <forkCount>1</forkCount>
+                            <reuseForks>false</reuseForks>
+                            <argLine>-XX:MaxPermSize=2G</argLine>
+                            <failIfNoTests>false</failIfNoTests>
+                            <skipITs>false</skipITs>
+                            <includes>
+                                <include>${failsafe.testrunner}</include>
+                            </includes>
+                            <parallel>classes</parallel>
+                            <threadCount>${parallel.tests}</threadCount>
+                            <forkCount>${parallel.tests}</forkCount>
+                            <systemProperties>
+                                <webdriver.ie.driver>${webdriver.ie.driver}</webdriver.ie.driver>
+                            </systemProperties>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>net.serenity-bdd.maven.plugins</groupId>
+                        <artifactId>serenity-maven-plugin</artifactId>
+                        <version>${serenity.maven.version}</version>
+                        <executions>
+                            <execution>
+                                <id>serenity-reports</id>
+                                <phase>post-integration-test</phase>
+                                <goals>
+                                    <goal>aggregate</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>Serenity1.1.40</id>
+            <properties>
+                <!-- Override serenity versions to roll back to version 1.1.40 -->
+                <serenity.version>1.1.40</serenity.version>
+                <serenity.maven.version>1.1.40</serenity.maven.version>
+                <serenity.cucumber.version>1.1.10</serenity.cucumber.version>
+            </properties>
+
+            <build>
+                <plugins>
+                    <!--
+                        Because our test runners are in src/main/java, as opposed to src/test/java,
+                        the default location and where FailSafe looks for test code, we must point test source to src/main/java.
+                    -->
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <version>1.12</version>
+                        <executions>
+                            <execution>
+                                <id>add-test-source</id>
+                                <phase>generate-test-sources</phase>
+                                <goals>
+                                    <goal>add-test-source</goal>
+                                </goals>
+                                <configuration>
+                                    <sources>
+                                        <source>src/main/java</source>
+                                    </sources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!--  Copy serenityCI.properties to <root>/serenity.propertie as required by Serenity -->
+                    <plugin>
+                        <groupId>com.coderplus.maven.plugins</groupId>
+                        <artifactId>copy-rename-maven-plugin</artifactId>
+                        <version>1.0</version>
+                        <executions>
+                            <execution>
+                                <id>copy-file</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <sourceFile>src/main/resources/serenityCI.properties</sourceFile>
+                                    <destinationFile>serenity.properties</destinationFile>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Echo properties before launching failsafe integration tests -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>1.4</version>
+                        <executions>
+                            <execution>
+                                <phase>integration-test</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <tasks>
+                                        <echo>Test runner properties</echo>
+                                        <echo>prefixes.: ${testrunner.prefixes}</echo>
+                                        <echo>runners..: ${failsafe.testrunner}</echo>
+                                    </tasks>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>2.19.1</version>
+                        <configuration>
+                            <reportsDirectory>${project.build.directory}/failsafe-reports/e2e</reportsDirectory>
+                            <summaryFile>${project.build.directory}/failsafe-reports/e2e/failsafe-summary.xml</summaryFile>
+                            <forkCount>1</forkCount>
+                            <reuseForks>false</reuseForks>
+                            <argLine>-XX:MaxPermSize=2G</argLine>
+                            <failIfNoTests>false</failIfNoTests>
+                            <skipITs>false</skipITs>
+                            <includes>
+                                <include>${failsafe.testrunner}</include>
+                            </includes>
+                            <parallel>classes</parallel>
+                            <threadCount>${parallel.tests}</threadCount>
+                            <forkCount>${parallel.tests}</forkCount>
+                            <systemProperties>
+                                <webdriver.ie.driver>${webdriver.ie.driver}</webdriver.ie.driver>
+                            </systemProperties>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>net.serenity-bdd.maven.plugins</groupId>
+                        <artifactId>serenity-maven-plugin</artifactId>
+                        <version>${serenity.maven.version}</version>
+                        <executions>
+                            <execution>
+                                <id>serenity-reports</id>
+                                <phase>post-integration-test</phase>
+                                <goals>
+                                    <goal>aggregate</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>net.serenity-bdd</groupId>
+            <artifactId>serenity-core</artifactId>
+            <version>${serenity.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>net.serenity-bdd</groupId>
+            <artifactId>serenity-screenplay</artifactId>
+            <version>${serenity.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>net.serenity-bdd</groupId>
+            <artifactId>serenity-screenplay-webdriver</artifactId>
+            <version>${serenity.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>net.serenity-bdd</groupId>
+            <artifactId>serenity-cucumber</artifactId>
+            <version>${serenity.cucumber.version}</version>
+        </dependency>
+    </dependencies>
+</project>

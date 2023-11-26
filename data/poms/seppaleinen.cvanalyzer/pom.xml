@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>se.david.cvanalyzer</groupId>
+    <artifactId>cvanalyzer</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>CV-analyzer</name>
+    <description>CV-analyzer</description>
+
+    <modules>
+        <module>backend</module>
+        <module>elk</module>
+    </modules>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>com.spotify</groupId>
+                    <artifactId>docker-maven-plugin</artifactId>
+                    <version>1.0.0</version>
+                    <executions>
+                        <execution>
+                            <phase>post-integration-test</phase>
+                            <goals>
+                                <goal>build</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <imageName>seppaleinen/${project.artifactId}</imageName>
+                        <dockerDirectory>${project.basedir}/src/main/docker</dockerDirectory>
+                        <resources>
+                            <resource>
+                                <targetPath>/</targetPath>
+                                <directory>${project.build.directory}</directory>
+                                <include>**/*</include>
+                            </resource>
+                        </resources>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.owasp</groupId>
+                    <artifactId>dependency-check-maven</artifactId>
+                    <version>2.1.1</version>
+                    <configuration>
+                        <cveValidForHours>12</cveValidForHours>
+                        <failBuildOnCVSS>8</failBuildOnCVSS>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <phase>integration-test</phase>
+                            <id>OWASP - Dependency check</id>
+                            <goals>
+                                <goal>check</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>2.19</version>
+                    <configuration>
+                        <skipITs>false</skipITs>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>integration-test</goal>
+                                <goal>verify</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.pitest</groupId>
+                    <artifactId>pitest-maven</artifactId>
+                    <version>1.2.3</version>
+                    <configuration>
+                        <targetClasses>
+                            <param>se.david.cv.*</param>
+                        </targetClasses>
+                        <targetTests>
+                            <param>*</param>
+                        </targetTests>
+                        <mutators>
+                            <mutator>CONDITIONALS_BOUNDARY</mutator>
+                            <mutator>INCREMENTS</mutator>
+                            <mutator>INVERT_NEGS</mutator>
+                            <mutator>MATH</mutator>
+                            <mutator>NEGATE_CONDITIONALS</mutator>
+                            <mutator>RETURN_VALS</mutator>
+                            <mutator>VOID_METHOD_CALLS</mutator>
+                            <mutator>CONSTRUCTOR_CALLS</mutator>
+                            <mutator>INLINE_CONSTS</mutator>
+                            <mutator>NON_VOID_METHOD_CALLS</mutator>
+                            <mutator>REMOVE_CONDITIONALS</mutator>
+                            <mutator>EXPERIMENTAL_MEMBER_VARIABLE</mutator>
+                            <mutator>EXPERIMENTAL_SWITCH</mutator>
+                        </mutators>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <phase>integration-test</phase>
+                            <id>Pitest - Mutation Coverage</id>
+                            <goals>
+                                <goal>mutationCoverage</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>owasp</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.owasp</groupId>
+                        <artifactId>dependency-check-maven</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+
+</project>

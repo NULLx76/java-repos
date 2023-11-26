@@ -1,0 +1,581 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>au.com.sixtree.esb</groupId>
+	<artifactId>anypoint-demo-api</artifactId>
+	<version>${build.number}</version>
+	<packaging>mule</packaging>
+	
+	<!-- properties -->
+	<properties>
+		<build.number>1.0.0-SNAPSHOT</build.number>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<java.version>1.8</java.version>
+		<mule.version>3.7.2</mule.version>
+		<mule.tools.version>1.1</mule.tools.version>
+		<activemq.version>5.11.0</activemq.version>
+		<junit.version>4.12</junit.version>
+		<munit.version>1.0.0</munit.version>
+		<mule.munit.support.version>3.7.0</mule.munit.support.version>
+		<jasypt.version>1.9.2</jasypt.version>
+		
+		<eclipsePluginVersion>2.9</eclipsePluginVersion>
+		<vmtype>org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType</vmtype>
+		<jdkName>JavaSE-${java.version}</jdkName>
+		<jdk.version>${java.version}</jdk.version>
+    </properties>
+    
+    <description>Maven build script</description>
+	
+	<!-- add modules here -->
+	<!-- <modules>
+		<module>test-module</module>
+	</modules> -->
+	
+	<!-- Profile will be use by packaging -->
+	<profiles>
+		<profile>
+			<id>mule</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-eclipse-plugin</artifactId>
+						<version>${eclipsePluginVersion}</version>
+						<configuration>
+							<!-- by default download all sources/docs when generating project files -->
+							<downloadSources>true</downloadSources>
+							<downloadJavadocs>true</downloadJavadocs>
+							<classpathContainers>
+								<classpathContainer>org.eclipse.jdt.launching.JRE_CONTAINER/${vmtype}/${jdkName}</classpathContainer>
+								<!-- MuleStudio nature parameters -->
+								<classpathContainer>MULE_RUNTIME</classpathContainer>
+							</classpathContainers>
+							<additionalProjectnatures>
+								<projectnature>org.mule.tooling.core.muleNature</projectnature>
+							</additionalProjectnatures>
+							<additionalBuildcommands>
+								<buildcommand>org.mule.tooling.core.muleBuilder</buildcommand>
+							</additionalBuildcommands>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>	
+	</profiles>
+	
+	<build>
+		<!-- share the same configuration across plugins, other plugin outside can override this -->
+		<pluginManagement>
+			<plugins>
+				<!-- Plugin used to add artifact to local repository -->
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-install-plugin</artifactId>
+					<version>2.5.2</version>
+				</plugin>
+				<!-- Default to Java 1.8 level source and bytecode -->
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>3.2</version>
+					<configuration>
+						<source>${java.version}</source>
+						<target>${java.version}</target>
+					</configuration>
+				</plugin>
+				<!-- Version Number Management for Maven configuration units -->
+				<plugin>
+					<groupId>org.codehaus.mojo</groupId>
+					<artifactId>versions-maven-plugin</artifactId>
+					<version>2.1</version>
+					<configuration>
+						<!-- The Build process can only update to the latest build revision, 
+							no major/minor version bumps (these have to be done manually) -->
+						<allowMajorUpdates>false</allowMajorUpdates>
+						<allowMinorUpdates>false</allowMinorUpdates>
+						<allowIncrementalUpdates>true</allowIncrementalUpdates>
+						<!-- Don't consider SNAPSHOT versions - we need repeatable builds with 
+							unique version numbers -->
+						<allowSnapshots>false</allowSnapshots>
+						<!-- Only manage version numbers for configuration units (artifactIds under same groupId) in the CI 
+							process -->
+						<includes>
+							<include>au.com.sixtree.esb:*</include>
+						</includes>
+					</configuration>
+				</plugin>
+				<!--This plugin's configuration is used to store Eclipse m2e settings 
+					only. It has no influence on the Maven build itself. -->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>org.mule.tools</groupId>
+										<artifactId>maven-mule-plugin</artifactId>
+										<versionRange>[1.6,)</versionRange>
+										<goals>
+											<goal>attach-test-resources</goal>
+											<goal>filter-resources</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore></ignore>
+									</action>
+								</pluginExecution>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>org.mule.tools.appkit</groupId>
+										<artifactId>mule-appkit-maven-plugin</artifactId>
+										<versionRange>[3.3,)</versionRange>
+										<goals>
+											<goal>attach-test-resources</goal>
+											<goal>filter-resources</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore></ignore>
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+		
+		<plugins>
+			<!--Install clover-plugins for testing report -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<version>2.8</version>
+				<executions>
+					<execution>
+						<id>copy-clover-plugins</id>
+						<phase>validate</phase>
+						<goals>
+							<goal>copy</goal>
+						</goals>
+						<configuration>
+							<overWriteReleases>true</overWriteReleases>
+							<overWriteSnapshots>true</overWriteSnapshots>
+							<overWriteIfNewer>true</overWriteIfNewer>
+							<stripVersion>true</stripVersion>
+							<outputDirectory>${project.build.testOutputDirectory}</outputDirectory>
+							<artifactItems>
+								<artifactItem>
+									<groupId>com.cloveretl</groupId>
+									<artifactId>cloveretl-engine</artifactId>
+									<version>${mule.version}</version>
+									<type>zip</type>
+								</artifactItem>
+							</artifactItems>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- run Ant tasks from within Maven. You can even embed your Ant scripts in the POM! -->
+			<plugin>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>1.7</version>
+				<executions>
+					<execution>
+						<id>unpack-cloveretl</id>
+						<phase>compile</phase>
+						<inherited>true</inherited>
+						<configuration>
+							<tasks>
+								<!-- Using an ant task to deflate cloveretl-engine.zip -->
+								<unzip
+									src="${project.build.testOutputDirectory}/cloveretl-engine.zip"
+									dest="${project.build.testOutputDirectory}" />
+							</tasks>
+						</configuration>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- Maven plugin to deploy Mule applications to different kinds of servers -->
+			<plugin>
+				<groupId>org.mule.tools.maven</groupId>
+				<artifactId>mule-app-maven-plugin</artifactId>
+				<version>${mule.tools.version}</version>
+				<extensions>true</extensions>
+				<configuration>
+                    <copyToAppsDirectory>false</copyToAppsDirectory>
+					<exclusions>
+						<!-- Don't bundle ActiveMQ driver JARs -->
+						<exclusion>
+							<groupId>org.apache.activemq</groupId>
+							<artifactId>activemq-all</artifactId>
+						</exclusion>
+					</exclusions>
+				</configuration>
+			</plugin>
+			<!-- Allow users to aggregate the project output along with its dependencies, modules, site documentation, and other files into a single distributable archive -->
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.2.1</version>
+				<configuration>
+					<descriptorRefs>
+						<descriptorRef>project</descriptorRef>
+					</descriptorRefs>
+				</configuration>
+			</plugin>
+			<!-- Various small independent goals to assist with the Maven build lifecycle. -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<version>1.7</version>
+				<executions>
+					<execution>
+						<id>add-resource</id>
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>add-resource</goal>
+						</goals>
+						<configuration>
+							<resources>
+								<resource>
+									<directory>src/main/app/</directory>
+								</resource>
+								<resource>
+									<directory>mappings/</directory>
+								</resource>
+								<resource>
+                                    <directory>src/main/api/</directory>
+                                </resource>
+                            </resources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- Testing configuration -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-eclipse-plugin</artifactId>
+				<version>${eclipsePluginVersion}</version>
+				<configuration>
+					<!-- by default download all sources when generating project files -->
+					<downloadSources>true</downloadSources>
+				</configuration>
+			</plugin>
+		</plugins>
+		
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+			</resource>
+			<resource>
+				<directory>src/main/app</directory>
+			</resource>
+			<resource>
+				<directory>src/main/java</directory>
+			</resource>
+		</resources>
+		
+		<testResources>
+			<testResource>
+				<directory>src/test/java</directory>
+			</testResource>
+			<testResource>
+				<directory>src/test/resources</directory>
+			</testResource>
+			<testResource>
+				<directory>mappings</directory>
+			</testResource>
+		</testResources>
+	</build>
+	
+	<!-- plugins for creating site reports, run: mvn site -->
+	<reporting>
+		<plugins>
+			<!-- The Surefire Report Plugin parses the generated TEST-*.xml files under ${basedir}/target/surefire-reports and renders them using DOXIA, which creates the web interface version of the test results. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-report-plugin</artifactId>
+				<version>2.4.2</version>
+			</plugin>
+			<!-- Check code style plugin -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-checkstyle-plugin</artifactId>
+				<version>2.14</version>
+				<configuration>
+					<configLocation>http://www.mulesoft.org/docs/checkstyle.xml</configLocation>
+				</configuration>
+			</plugin>
+			<!-- Run code analysis tool PMD - source analyzer -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-pmd-plugin</artifactId>
+				<version>3.4</version>
+				<configuration>
+					<targetJdk>${jdk.version}</targetJdk>
+				</configuration>
+			</plugin>
+			<!-- Run code coverage tool Cobertura -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>cobertura-maven-plugin</artifactId>
+				<version>2.7</version>
+			</plugin>
+			<!-- Generates a report on various tags found in the code, like @todo or //TODO tags. -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>taglist-maven-plugin</artifactId>
+				<version>2.4</version>
+				<configuration>
+					<tags>
+						<tag>TODO</tag>
+						<tag>@todo</tag>
+						<tag>FIXME</tag>
+						<tag>@fixme</tag>
+						<tag>@deprecated</tag>
+					</tags>
+				</configuration>
+			</plugin>
+			<!-- Produces a cross-reference of the project's sources. - link between source line -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jxr-plugin</artifactId>
+				<version>2.5</version>
+			</plugin>
+			<!-- The Javadoc Plugin uses the Javadoc tool to generate javadocs for the specified project -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>2.10.1</version>
+				<configuration>
+					<source>${jdk.version}</source>
+					<links>
+						<link>http://docs.oracle.com/javase/7/docs/api/</link>
+					</links>
+				</configuration>
+			</plugin>
+			<!-- JDepend traverses Java class file directories and generates design quality metrics for each Java package. -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>jdepend-maven-plugin</artifactId>
+				<version>2.0</version>
+			</plugin>
+			<!-- FindBugs looks for bugs in Java programs. It is based on the concept of bug patterns. A bug pattern is a code idiom that is often an error. -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>findbugs-maven-plugin</artifactId>
+				<version>3.0.0</version>
+			</plugin>
+		</plugins>
+	</reporting>
+	
+	<dependencies>
+		<!-- Common ESB Dependencies -->
+		<dependency>
+			<groupId>com.mulesoft.muleesb.modules</groupId>
+			<artifactId>mule-module-boot-ee</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
+			<!-- don't use the EE licence check for unit testing -->
+			<exclusions>
+				<exclusion>
+					<groupId>com.mulesoft.licm</groupId>
+					<artifactId>licm</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<!-- Xml configuration -->
+		<dependency>
+			<groupId>com.mulesoft.muleesb</groupId>
+			<artifactId>mule-core-ee</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
+			<!-- don't use the EE licence check for unit testing -->
+			<exclusions>
+				<exclusion>
+					<groupId>com.mulesoft.licm</groupId>
+					<artifactId>licm</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>com.mulesoft.muleesb.modules</groupId>
+			<artifactId>mule-module-data-mapper</artifactId>
+			<version>${mule.version}</version>
+			<!-- don't use the EE licence check for unit testing -->
+			<exclusions>
+				<exclusion>
+					<groupId>com.mulesoft.licm</groupId>
+					<artifactId>licm</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<!-- Include the clover ETL library -->
+		<dependency>
+			<groupId>com.cloveretl</groupId>
+			<artifactId>cloveretl-engine</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>com.ibm.icu</groupId>
+					<artifactId>icu4j-normalizer_transliterator</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<!-- Xml configuration -->
+		<dependency>
+			<groupId>com.mulesoft.muleesb.modules</groupId>
+			<artifactId>mule-module-spring-config-ee</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Mule Transports -->
+	
+		<dependency>
+			<groupId>org.mule.transports</groupId>
+			<artifactId>mule-transport-jms</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.transports</groupId>
+			<artifactId>mule-transport-http</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.transports</groupId>
+			<artifactId>mule-transport-vm</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Mule Modules -->
+		<dependency>
+			<groupId>org.mule.modules</groupId>
+			<artifactId>mule-module-client</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.modules</groupId>
+			<artifactId>mule-module-scripting</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.mulesoft.muleesb.modules</groupId>
+			<artifactId>mule-module-cache-ee</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.modules</groupId>
+			<artifactId>mule-module-xml</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Encrypted properties -->
+		<dependency>
+			<groupId>org.jasypt</groupId>
+			<artifactId>jasypt</artifactId>
+			<version>${jasypt.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jasypt</groupId>
+			<artifactId>jasypt-spring31</artifactId>
+			<version>${jasypt.version}</version>
+		</dependency>
+
+		<!-- ActiveMQ -->
+		<dependency>
+			<groupId>org.apache.activemq</groupId>
+			<artifactId>activemq-all</artifactId>
+			<version>${activemq.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- For Testing -->
+		<dependency>
+		   <groupId>com.mulesoft.munit</groupId>
+		    <artifactId>mule-munit-support</artifactId>
+		    <version>${mule.munit.support.version}</version>
+		    <scope>test</scope>
+		</dependency>
+		<dependency>
+		    <groupId>com.mulesoft.munit</groupId>
+		    <artifactId>munit-runner</artifactId>
+		    <version>${munit.version}</version>
+		    <scope>test</scope>
+		</dependency>
+		<dependency>
+		    <groupId>org.mule.modules</groupId>
+		    <artifactId>mule-module-extensions-support</artifactId>
+		    <version>${mule.version}</version>
+		    <scope>test</scope>
+		</dependency>
+		<dependency>
+		    <groupId>org.mule.modules</groupId>
+		    <artifactId>mule-module-extensions-spring-support</artifactId>
+		    <version>${mule.version}</version>
+		    <scope>test</scope>
+		</dependency>
+	</dependencies>
+	
+	<!-- Repositories -->
+	<repositories>
+          <repository>
+            <id>Central</id>
+            <name>Central</name>
+            <url>http://repo1.maven.org/maven2/</url>
+            <layout>default</layout>
+        </repository>
+        <repository>
+			<id>mule-ee</id>
+			<name>MuleSoft EE Repository</name>
+			<url>https://repository.mulesoft.org/nexus-ee/content/repositories/releases-ee/</url>
+			<layout>default</layout>
+		</repository>
+        <repository>
+            <id>mulesoft-releases</id>
+            <name>MuleSoft Releases Repository</name>
+            <url>http://repository.mulesoft.org/releases/</url>
+            <layout>default</layout>
+        </repository>
+        <repository>
+            <id>mulesoft-snapshots</id>
+            <name>MuleSoft Snapshots Repository</name>
+            <url>http://repository.mulesoft.org/snapshots/</url>
+            <layout>default</layout>
+        </repository>
+        <repository>
+        	<id>mulesoft-public</id>
+        	<name>MuleSoft Public Repository</name>
+        	<url>http://repository.mulesoft.org/nexus/content/groups/public/</url>
+        </repository>
+    </repositories>
+    
+    <pluginRepositories>
+        <pluginRepository>
+            <id>mulesoft-release</id>
+            <name>mulesoft release repository</name>
+            <layout>default</layout>
+            <url>http://repository.mulesoft.org/releases/</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+    
+</project>

@@ -1,0 +1,359 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+<modelVersion>4.0.0</modelVersion>
+<groupId>it.burningboots.greeter</groupId>
+<artifactId>ibb-greeter</artifactId>
+<packaging>war</packaging>
+<version>4.0-SNAPSHOT</version>
+<name>IBB registration service</name>
+
+<properties>
+	<!-- Charset UTF-8 -->
+	<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	<!-- Convenience property to set the GWT version -->
+	<gwtVersion>2.8.1</gwtVersion>
+	<!-- Note: GWT needs at least java 1.6 -->
+	<maven.compiler.source>1.8</maven.compiler.source>
+	<maven.compiler.target>1.8</maven.compiler.target>
+	<!-- WAR content -->
+	<hostedWebapp>${basedir}/src/main/webapp</hostedWebapp>
+</properties>
+
+<dependencyManagement>
+	<dependencies>
+		<dependency>
+			<groupId>com.google.gwt</groupId>
+			<artifactId>gwt</artifactId>
+			<version>${gwtVersion}</version>
+			<type>pom</type>
+			<scope>import</scope>
+		</dependency>
+	</dependencies>
+</dependencyManagement>
+
+<dependencies>
+	<!-- HIBERNATE -->
+	<dependency>
+		<groupId>mysql</groupId>
+		<artifactId>mysql-connector-java</artifactId>
+		<version>5.1.23</version>
+	</dependency>
+	<dependency>
+		<groupId>org.hibernate</groupId>
+		<artifactId>hibernate-core</artifactId>
+		<version>4.1.12.Final</version>
+	</dependency>
+	<dependency>
+		<groupId>org.hibernate</groupId>
+		<artifactId>hibernate-c3p0</artifactId>
+		<version>5.0.6.Final</version>
+	</dependency>
+
+	<!-- GWT -->
+	<dependency>
+		<groupId>com.google.gwt</groupId>
+		<artifactId>gwt-servlet</artifactId>
+		<scope>runtime</scope>
+	</dependency>
+	<dependency>
+		<groupId>com.google.gwt</groupId>
+		<artifactId>gwt-user</artifactId>
+		<scope>provided</scope>
+	</dependency>
+	<dependency>
+		<groupId>com.google.gwt</groupId>
+		<artifactId>gwt-dev</artifactId>
+		<scope>provided</scope>
+	</dependency>
+	<dependency>
+		<groupId>com.google.gwt</groupId>
+		<artifactId>gwt-codeserver</artifactId>
+		<scope>provided</scope>
+	</dependency>
+			
+	<!--dependency>
+		<groupId>javax.servlet</groupId>
+		<artifactId>javax.servlet-api</artifactId>
+		<version>3.1.0</version>
+		<scope>provided</scope>
+    </dependency-->
+	<dependency>
+		<groupId>org.apache.httpcomponents</groupId>
+		<artifactId>httpclient</artifactId>
+		<version>4.5.1</version>
+	</dependency>
+	<dependency>
+		<groupId>org.apache.httpcomponents</groupId>
+		<artifactId>httpcore</artifactId>
+		<version>4.4.4</version>
+	</dependency>
+	<dependency>
+		<groupId>commons-logging</groupId>
+		<artifactId>commons-logging</artifactId>
+		<version>1.2</version>
+	</dependency>
+	<!--dependency>
+		<groupId>commons-io</groupId>
+		<artifactId>commons-io</artifactId>
+		<version>2.4</version>
+	</dependency-->
+	<dependency>
+		<groupId>commons-lang</groupId>
+		<artifactId>commons-lang</artifactId>
+		<version>2.4</version>
+	</dependency>
+	<dependency>
+		<groupId>commons-beanutils</groupId>
+		<artifactId>commons-beanutils</artifactId>
+		<version>1.9.2</version>
+	</dependency>
+	<dependency>
+		<groupId>javax.mail</groupId>
+		<artifactId>mail</artifactId>
+		<version>1.4.7</version>
+	</dependency>
+	<dependency>
+		<groupId>com.stripe</groupId>
+		<artifactId>stripe-java</artifactId>
+		<version>3.9.0</version>
+	</dependency>
+
+	<dependency>
+		<groupId>ch.qos.logback</groupId>
+		<artifactId>logback-classic</artifactId>
+		<version>1.1.2</version>
+	</dependency>
+</dependencies>
+<profiles>
+	<!-- PROD -->
+	<profile>
+		<id>prod</id>
+		<build>
+			<finalName>greeter</finalName>
+			<plugins>
+				<!-- GWT Maven Plugin -->
+				<plugin>
+					<groupId>org.codehaus.mojo</groupId>
+					<artifactId>gwt-maven-plugin</artifactId>
+					<version>${gwtVersion}</version>
+					<executions>
+						<execution>
+							<goals>
+								<goal>compile</goal>
+							</goals>
+						</execution>
+					</executions>
+					<!-- Plugin configuration. There are many available options, see gwt-maven-plugin 
+						documentation at codehaus.org -->
+					<configuration>
+						<modules>
+							<module>it.burningboots.greeter.Greeter</module>
+						</modules>
+						<!-- URL that should be opened by DevMode (gwt:run). -->
+						<runTarget>Greeter.html</runTarget>
+						<!-- Ask GWT to create the Story of Your Compile (SOYC) (gwt:compile) -->
+						<compileReport>false</compileReport>
+						<!-- some more memory and “workers” work in threads (instead of spawning new processes) -->
+						<extraJvmArgs>-Xms768m -Xmx768m -Dgwt.jjs.permutationWorkerFactory=com.google.gwt.dev.ThreadedPermutationWorkerFactory</extraJvmArgs>
+						<!-- Lowering the number of workers below your available cores -->
+						<localWorkers>3</localWorkers>
+					</configuration>
+				</plugin>
+
+				<!-- Skip normal test execution, we use gwt:test instead -->
+				<plugin>
+					<artifactId>maven-surefire-plugin</artifactId>
+					<version>2.17</version>
+					<configuration>
+						<skip>true</skip>
+					</configuration>
+				</plugin>
+
+				<!-- COPYING and MOVING FILES -->
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-resources-plugin</artifactId>
+					<version>2.6</version>
+					<executions>
+						<execution>
+							<id>copy-resources</id>
+							<phase>process-resources</phase>
+							<goals>
+								<goal>copy-resources</goal>
+							</goals>
+							<configuration>
+								<overwrite>true</overwrite>
+								<outputDirectory>${basedir}/target/classes</outputDirectory>
+								<resources>
+									<resource>
+										<directory>${basedir}/src/main/resources</directory>
+										<includes>
+											<include>*</include>
+										</includes>
+									</resource>
+								</resources>
+							</configuration>
+						</execution>
+					    <execution>
+					        <id>copy-webxml</id>
+					        <phase>process-resources</phase>
+					        <goals>
+					            <goal>copy-resources</goal>
+					        </goals>
+					        <configuration>
+					        	<overwrite>true</overwrite>
+					            <outputDirectory>${basedir}/target/WEB-INF</outputDirectory>
+					            <resources>
+					                <resource>
+					                    <directory>${basedir}/src/main/webapp/WEB-INF</directory>
+					                    <includes>
+					                        <include>web.xml</include>
+					                    </includes>
+					                </resource>
+					            </resources>
+					        </configuration>
+					    </execution>
+					</executions>
+				</plugin>
+				
+			</plugins>
+		</build>
+	</profile>
+	<!-- /PROD -->
+	
+	<!-- DEV -->
+	<profile>
+		<id>dev</id>
+		<activation>
+            <activeByDefault>true</activeByDefault>
+        </activation>
+		<build>
+			<finalName>greeter</finalName>
+			<plugins>
+				<!-- GWT Maven Plugin -->
+				<plugin>
+					<groupId>org.codehaus.mojo</groupId>
+					<artifactId>gwt-maven-plugin</artifactId>
+					<version>${gwtVersion}</version>
+					<executions>
+						<execution>
+							<goals>
+								<goal>compile</goal>
+							</goals>
+						</execution>
+						<execution>
+							<!-- Run tests through gwt:test, this allows reusing the plugin configuration 
+								for GWTTestCases -->
+							<id>gwt-tests</id>
+							<phase>test</phase>
+							<goals>
+								<goal>test</goal>
+							</goals>
+						</execution>
+					</executions>
+					<!-- Plugin configuration. There are many available options, see gwt-maven-plugin 
+						documentation at codehaus.org -->
+					<configuration>
+						<modules>
+							<module>it.burningboots.greeter.Greeter</module>
+						</modules>
+						<!-- URL that should be opened by DevMode (gwt:run). -->
+						<runTarget>Greeter.html</runTarget>
+						<!-- Ask GWT to create the Story of Your Compile (SOYC) (gwt:compile) -->
+						<compileReport>true</compileReport>
+						<!-- Run tests using HtmlUnit -->
+						<mode>htmlunit</mode>
+						<!-- Tests patterns -->
+						<includes>**/Test*.java,**/*Test.java,**/*TestCase.java</includes>
+						<!-- some more memory and “workers” work in threads (instead of spawning new processes) -->
+						<extraJvmArgs>-Xms768m -Xmx768m -Dgwt.jjs.permutationWorkerFactory=com.google.gwt.dev.ThreadedPermutationWorkerFactory</extraJvmArgs>
+						<!-- Lowering the number of workers below your available cores -->
+						<localWorkers>3</localWorkers>
+					</configuration>
+				</plugin>
+		
+				<!-- Skip normal test execution, we use gwt:test instead -->
+				<plugin>
+					<artifactId>maven-surefire-plugin</artifactId>
+					<version>2.17</version>
+					<configuration>
+						<skip>true</skip>
+					</configuration>
+				</plugin>
+		
+				<!-- NOTE: this is only needed if you use "mvn eclipse:eclipse". -->
+				<!-- You can remove this plugin if you intend to only use the Maven integration 
+					in Eclipse, or another IDE -->
+				<plugin>
+					<artifactId>maven-eclipse-plugin</artifactId>
+					<version>2.7</version>  <!-- Note 2.8 does not work with AspectJ aspect path -->
+					<configuration>
+						<downloadSources>true</downloadSources>
+						<downloadJavadocs>false</downloadJavadocs>
+						<wtpversion>2.0</wtpversion>
+						<additionalBuildcommands>
+							<buildCommand>
+								<name>com.google.gwt.eclipse.core.gwtProjectValidator</name>
+							</buildCommand>
+						</additionalBuildcommands>
+						<additionalProjectnatures>
+							<projectnature>com.google.gwt.eclipse.core.gwtNature</projectnature>
+						</additionalProjectnatures>
+					</configuration>
+				</plugin>
+		
+				<!-- COPYING and MOVING FILES -->
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-resources-plugin</artifactId>
+					<version>2.6</version>
+					<executions>
+						<execution>
+							<id>copy-resources</id>
+							<phase>process-resources</phase>
+							<goals>
+								<goal>copy-resources</goal>
+							</goals>
+							<configuration>
+								<overwrite>true</overwrite>
+								<outputDirectory>${basedir}/target/classes</outputDirectory>
+								<resources>
+									<resource>
+										<directory>${basedir}/src/main/resources</directory>
+										<includes>
+											<include>*</include>
+										</includes>
+									</resource>
+								</resources>
+							</configuration>
+						</execution>
+					    <execution>
+					        <id>copy-webxml</id>
+					        <phase>process-resources</phase>
+					        <goals>
+					            <goal>copy-resources</goal>
+					        </goals>
+					        <configuration>
+					        	<overwrite>true</overwrite>
+					            <outputDirectory>${basedir}/target/WEB-INF</outputDirectory>
+					            <resources>
+					                <resource>
+					                    <directory>${basedir}/src/main/webapp/WEB-INF</directory>
+					                    <includes>
+					                        <include>web.xml</include>
+					                    </includes>
+					                </resource>
+					            </resources>
+					        </configuration>
+					    </execution>
+					</executions>
+				</plugin>
+				
+			</plugins>
+		</build>
+	</profile>
+	<!-- /DEV -->
+</profiles>
+</project>

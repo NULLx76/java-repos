@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>jugame</groupId>
+	<artifactId>jiaoyi_ff</artifactId>
+	<version>1.0.0</version>
+	<packaging>war</packaging>
+	<name>jiaoyi_ff</name>
+	<description>jiaoyi_ff</description>
+
+	<properties>
+		<maven.build.timestamp.format>yyyyMMddHHmmss</maven.build.timestamp.format>
+		<timestamp>${maven.build.timestamp}</timestamp>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<skip>true</skip>
+				</configuration>
+			</plugin>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.7</source>
+					<target>1.7</target>
+				</configuration>
+			</plugin>
+			<!-- jetty:run 插件 -->
+			<plugin>
+				<groupId>org.mortbay.jetty</groupId>
+				<artifactId>jetty-maven-plugin</artifactId>
+				<version>8.1.9.v20130131</version>
+				<configuration>
+					<scanIntervalSeconds>10</scanIntervalSeconds>
+					<stopKey>stop</stopKey>
+					<stopPort>9999</stopPort>
+					<webAppConfig>
+						<contextPath>/${project.artifactId}</contextPath>
+					</webAppConfig>
+					<connectors>
+						<connector implementation="org.eclipse.jetty.server.nio.SelectChannelConnector">
+							<port>8888</port>
+							<maxIdleTime>60000</maxIdleTime>
+						</connector>
+					</connectors>
+				</configuration>
+			</plugin>
+
+			<!-- 压缩js、css -->
+			<plugin>
+				<groupId>net.alchim31.maven</groupId>
+				<artifactId>yuicompressor-maven-plugin</artifactId>
+				<version>1.3.0</version>
+				<executions>
+					<execution>
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>compress</goal>
+						</goals>
+						<configuration>
+							<!-- 读取js,css文件采用UTF-8编码 -->
+							<encoding>UTF-8</encoding>
+							<!-- 不显示js可能的错误 -->
+							<jswarn>false</jswarn>
+							<!-- 若存在已压缩的文件，会先对比源文件是否有改动。有改动便压缩，无改动就不压缩 -->
+							<force>true</force>
+							<!-- 在指定的列号后插入新行 -->
+							<linebreakpos>-1</linebreakpos>
+							<!-- 压缩后保存文件后缀 -->
+							<nosuffix>true</nosuffix>
+							<!-- 源目录，即需压缩的根目录 -->
+							<sourceDirectory>${basedir}/target/webapp/resources</sourceDirectory>
+							<!-- 压缩js和css文件 -->
+							<includes>
+								<include>**/*.js</include>
+								<include>**/*.css</include>
+							</includes>
+							<!-- 以下目录和文件不会被压缩 -->
+							<excludes>
+								<exclude>**/*.min.js</exclude>
+								<exclude>**/*.min.css</exclude>
+								<exclude>**/jquery.slides.js</exclude>
+							</excludes>
+							<!-- 压缩后输出文件目录 -->
+							<outputDirectory>${basedir}/target/webapp/resources</outputDirectory>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<configuration>
+					<warSourceDirectory>${basedir}/target/webapp/</warSourceDirectory>
+				</configuration>
+			</plugin>
+		</plugins>
+
+		<resources>
+			<resource>
+				<directory>${project.basedir}/src/main/resources</directory>
+				<filtering>true</filtering>
+			</resource>
+		</resources>
+	</build>
+
+
+	<!-- 
+		以下三个profile， 目的是在打包的时候映射不同环境的配置文件，默认使用开发环境配置文件， 可根据情况增加或者不用该配置；
+		 用法：打包命令时指定 
+		-P 参数[test|dev|online] 会替换相应环境的配置文件 例：mvn compile -P dev 则打包为开发环境包 
+	-->
+
+	<profiles>
+		<!-- 开发 (暂时用的是测试环境的地址) -->
+		<profile>
+			<id>dev</id>
+			<properties>
+				<!-- resources.properties -->
+				<rconnection.url>jdbc:mysql://192.168.0.81:3306/jiaoyi_zhifu?useUnicode=true&amp;amp;characterEncoding=UTF-8</rconnection.url>
+				<rconnection.username>jiaoyi_2015</rconnection.username>
+				<rconnection.password>123456</rconnection.password>
+				<!-- memcache -->
+				<memcache.ip>192.168.0.81</memcache.ip>
+				<memcache.port>11211</memcache.port>
+				<!-- spring-dubbo.xml -->
+				<zookeeper>zookeeper://192.168.0.81:2181</zookeeper>
+				<!-- log4j -->
+				<log4j.url>logs/</log4j.url>
+				<!-- remote.resource -->
+				<remote.resource>http://192.168.0.7/common/mobile/</remote.resource>
+			</properties>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+		</profile>
+		<!-- 测试 -->
+		<profile>
+			<id>test</id>
+			<properties>
+				<!-- resources.properties -->
+				<rconnection.url>jdbc:mysql://xxx.xxx.xxx.xxx:xxxx/xxx?useUnicode=true&amp;amp;characterEncoding=UTF-8</rconnection.url>
+				<rconnection.username>xxxxxx</rconnection.username>
+				<rconnection.password>xxxxxx</rconnection.password>
+				<!-- memcache -->
+				<memcache.ip>xxx.xxx.xxx.xx</memcache.ip>
+				<memcache.port>xxxx</memcache.port>
+				<!-- spring-dubbo.xml -->
+				<zookeeper>zookeeper://xxx.xxx.xxx.xxx:xxxx</zookeeper>
+				<!-- log4j -->
+				<log4j.url>xxxx/</log4j.url>
+				<!-- remote.resource -->
+				<remote.resource>http://xxx.xxx.xxx.xxx/common/mobile/</remote.resource>
+			</properties>
+		</profile>
+		<!-- 生产 -->
+		<profile>
+			<id>online</id>
+			<properties>
+				<!-- resources.properties -->
+				<rconnection.url>jdbc:mysql://xxx.xxx.xxx.xxx:xxxx/xxx?useUnicode=true&amp;amp;characterEncoding=UTF-8</rconnection.url>
+				<rconnection.username>xxxxxx</rconnection.username>
+				<rconnection.password>xxxxxx</rconnection.password>
+				<!-- memcache -->
+				<memcache.ip>xxx.xxx.xxx.xx</memcache.ip>
+				<memcache.port>xxxx</memcache.port>
+				<!-- spring-dubbo.xml -->
+				<zookeeper>zookeeper://xxx.xxx.xxx.xxx:xxxx</zookeeper>
+				<!-- log4j -->
+				<log4j.url>xxxx/</log4j.url>
+				<!-- remote.resource -->
+				<remote.resource>http://xxx.xxx.xxx.xxx/common/mobile/</remote.resource>
+			</properties>
+		</profile>
+	</profiles>
+
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.8.2</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>net.alchim31.maven</groupId>
+			<artifactId>yuicompressor-maven-plugin</artifactId>
+			<version>1.3.0</version>
+		</dependency>
+		<!-- freemarker -->
+		<dependency>
+			<groupId>org.freemarker</groupId>
+			<artifactId>freemarker</artifactId>
+			<version>2.3.20</version>
+		</dependency>
+
+		<!-- springframework -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-jdbc</artifactId>
+			<version>3.2.4.RELEASE</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context-support</artifactId>
+			<version>3.2.4.RELEASE</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-webmvc</artifactId>
+			<version>3.2.4.RELEASE</version>
+		</dependency>
+
+		<!-- json view 支持 -->
+		<dependency>
+			<groupId>org.codehaus.jackson</groupId>
+			<artifactId>jackson-all</artifactId>
+			<version>1.8.5</version>
+		</dependency>
+
+		<!-- mysql -->
+		<!-- 
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+			<version>5.1.26</version>
+		</dependency>
+ 		-->
+ 		
+		<!-- net.json -->
+		<dependency>
+			<groupId>net.sf.ezmorph</groupId>
+			<artifactId>ezmorph</artifactId>
+			<version>1.0.6</version>
+		</dependency>
+		<dependency>
+			<groupId>net.sf.json-lib</groupId>
+			<artifactId>json-lib</artifactId>
+			<version>2.4</version>
+		</dependency>
+
+		<!-- commons-* -->
+		<dependency>
+			<groupId>commons-net</groupId>
+			<artifactId>commons-net</artifactId>
+			<version>3.2</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-collections</groupId>
+			<artifactId>commons-collections</artifactId>
+			<version>3.1</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-fileupload</groupId>
+			<artifactId>commons-fileupload</artifactId>
+			<version>1.3</version>
+		</dependency>
+
+		<!-- dubbo相关 -->
+		<dependency>
+			<groupId>org.apache.zookeeper</groupId>
+			<artifactId>zookeeper</artifactId>
+			<version>3.4.6</version>
+		</dependency>
+		<dependency>
+			<groupId>com.alibaba</groupId>
+			<artifactId>dubbo</artifactId>
+			<version>2.4.10</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.springframework</groupId>
+					<artifactId>spring</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+
+		<!-- 其它 -->
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>servlet-api</artifactId>
+			<version>3.0-alpha-1</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>proxool</groupId>
+			<artifactId>proxool</artifactId>
+			<version>0.9.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.javassist</groupId>
+			<artifactId>javassist</artifactId>
+			<version>3.18.2-GA</version>
+		</dependency>
+		<dependency>
+			<groupId>org.aspectj</groupId>
+			<artifactId>aspectjweaver</artifactId>
+			<version>1.7.3</version>
+		</dependency>
+		<dependency>
+			<groupId>com.101tec</groupId>
+			<artifactId>zkclient</artifactId>
+			<version>0.4</version>
+		</dependency>
+
+		<!-- log4j -->
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.14</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>1.7.5</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.7.5</version>
+		</dependency>
+
+		<!-- 自家的包 -->
+		<dependency>
+			<groupId>cn.jugame</groupId>
+			<artifactId>commons</artifactId>
+			<version>0.0.9</version>
+		</dependency>
+
+		<dependency>
+			<groupId>cn.jugame</groupId>
+			<artifactId>jiaoyi_assist</artifactId>
+			<version>1.2.0</version>
+		</dependency>
+	</dependencies>
+</project>

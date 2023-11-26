@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.k15t.pat</groupId>
+    <artifactId>registration</artifactId>
+    <version>0.1.0</version>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jersey</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+        	<groupId>org.bouncycastle</groupId>
+        	<artifactId>bcprov-jdk15on</artifactId>
+        	<version>1.55</version>
+        </dependency>
+    </dependencies>
+
+    <properties>
+        <spring-boot.version>1.4.3.RELEASE</spring-boot.version>
+        <java.version>1.8</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <start-class>com.k15t.pat.ApplicationBootstrap</start-class>
+        <gen-res-dir>${project.build.directory}/generated-resources</gen-res-dir>
+        <frontend-plugin.version>1.3</frontend-plugin.version>
+        <frontend-plugin.workdir>src/main/frontend</frontend-plugin.workdir>
+        <frontend-plugin.distdir>${gen-res-dir}/static</frontend-plugin.distdir>
+        <frontend-plugin.installdir>target</frontend-plugin.installdir>
+    </properties>
+
+    <build>
+    
+    	<resources>
+    		<resource>
+    			<directory>${project.basedir}/src/main/resources</directory>
+    		</resource>
+    		<!-- a directory where gulp can generate the frontend stuff -->
+    		<resource>
+    			<directory>${gen-res-dir}</directory>
+    		</resource>
+    	</resources>
+    
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.0.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${spring-boot.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <mainClass>${start-class}</mainClass>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.6.0</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.0.2</version>
+                <configuration>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+            
+            <!-- For integrating gulp build for src/main/frontend -->
+            <plugin>
+            	<groupId>com.github.eirslett</groupId>
+				<artifactId>frontend-maven-plugin</artifactId>
+            	<version>${frontend-plugin.version}</version>
+            	<configuration>
+            		<workingDirectory>${frontend-plugin.workdir}</workingDirectory>
+            		<installDirectory>${frontend-plugin.installdir}</installDirectory>
+            	</configuration>
+            	
+            	<executions>
+            		<execution>
+            			<id>install node and npm</id>
+            			<goals>
+            				<goal>install-node-and-npm</goal>
+            			</goals>
+            			<configuration>
+            				<nodeVersion>v6.9.4</nodeVersion>
+            			</configuration>
+            		</execution>
+            		<execution>
+            			<id>npm install</id>
+            			<goals>
+            				<goal>npm</goal>
+            			</goals>
+            			<configuration>
+            				<arguments>install</arguments>
+            			</configuration>
+            		</execution>
+            		<!-- call gulp build task and instruct it where to store the result -->
+            		<execution>
+            			<id>gulp build</id>
+            			<goals>
+            				<goal>gulp</goal>
+            			</goals>
+            			<phase>generate-resources</phase>
+            			<configuration>
+            				<arguments>dist</arguments>
+            				<!-- this is for eclipse to avoid running gulp unnecessarily -->
+            				<srcdir>${frontend-plugin.workdir}</srcdir>
+            				<environmentVariables>
+            					<DIST_DIR>${frontend-plugin.distdir}</DIST_DIR>
+            				</environmentVariables>
+            			</configuration>
+            		</execution>
+            	</executions>
+            	
+            </plugin>
+            
+            <!-- JaCoCo to measure test coverage -->
+            <plugin>
+            	<groupId>org.jacoco</groupId>
+            	<artifactId>jacoco-maven-plugin</artifactId>
+            	<version>0.7.8</version>
+            	<executions>
+            		<execution>
+            			<id>prepare coverage agent</id>
+            			<goals>
+            				<goal>prepare-agent</goal>
+            			</goals>
+            		</execution>
+            		<execution>
+            			<id>report coverage</id>
+            			<phase>prepare-package</phase>
+            			<goals>
+            				<goal>report</goal>
+            			</goals>
+            		</execution>
+            		<execution>
+            			<id>check coverage</id>
+            			<goals>
+            				<goal>check</goal>
+            			</goals>
+            		</execution>
+            	</executions>
+			</plugin>
+            
+        </plugins>
+    </build>
+    
+    <reporting>
+    	<plugins>
+    		<plugin>
+    			<groupId>org.apache.maven.plugins</groupId>
+	            <artifactId>maven-project-info-reports-plugin</artifactId>
+	            <version>2.9</version>
+	            <configuration>
+	            	<!-- avoids problems when mvn site tries to resolve spring repository dependencies -->
+	                <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
+	            </configuration>
+	    	</plugin>
+	    	<plugin>
+	        	<groupId>org.apache.maven.plugins</groupId>
+	        	<artifactId>maven-javadoc-plugin</artifactId>
+	        	<version>2.10.4</version>
+	        	<configuration>
+	          		<show>private</show>
+	        	</configuration>
+	        	<!-- this avoids the heavy gulp task from being run twice -->
+	        	<reportSets>
+	        		<reportSet>
+	        			<reports>
+	        				<report>javadoc-no-fork</report>
+	        				<report>test-javadoc-no-fork</report>
+	        			</reports>
+	        		</reportSet>
+	        	</reportSets>
+	      	</plugin>
+	      	
+	    	<!-- FindBugs static code analysis tool -->
+	    	<plugin>
+	    		<groupId>org.codehaus.mojo</groupId>
+	    		<artifactId>findbugs-maven-plugin</artifactId>
+	    		<version>3.0.4</version>
+	    		<configuration>
+	    			<effort>Max</effort>
+	    		</configuration>
+	    	</plugin>
+	    </plugins>
+	</reporting>
+
+</project>

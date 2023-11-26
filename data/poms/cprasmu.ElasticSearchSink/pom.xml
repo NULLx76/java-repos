@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?> <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<modelVersion>4.0.0</modelVersion>
+<groupId>application</groupId>
+<artifactId>ElasticSink</artifactId>
+<version>0.0.1</version>
+<properties>
+	<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+	<streams.version>4.1.0.0</streams.version>
+	<!-- Where the jar files should be placed.  This is referenced by multiple plugins --> 
+	<libDir>${project.basedir}/impl/java/lib</libDir>
+</properties>
+<dependencies>
+	<!-- SPL -->
+	<!-- This assumes that you are building on a system that has Streams installed on it. It references the main Streams jar from wherever Streams is installed on your system. -->
+	<dependency>
+		<groupId>com.ibm</groupId>
+		<artifactId>com.ibm.streams.operator</artifactId>
+		<version>${streams.version}</version>
+		<scope>system</scope>
+		<systemPath>${env.STREAMS_INSTALL}/lib/com.ibm.streams.operator.jar</systemPath>
+	</dependency>
+	<!-- If you want to build your code somewhere Streams was not installed, like a continuous build system, then you should deploy the com.ibm.streams.operator jar to a repository that you can access and reference the jar like any other maven dependency. -->
+	<!-- <dependency> 
+	<groupId>com.ibm</groupId> 
+	<artifactId>com.ibm.streams.operator</artifactId> 
+	<version>${streams.version}</version> 
+	<scope>provided</scope> 
+	</dependency> -->   
+	<dependency>
+		<groupId>com.google.guava</groupId>
+		<artifactId>guava</artifactId>
+		<version>18.0</version>
+	</dependency>
+	<dependency>
+		<groupId>org.elasticsearch</groupId>
+		<artifactId>elasticsearch</artifactId>
+		<version>2.1.0</version>
+	</dependency>
+</dependencies>
+<build>
+	<!-- Tell maven to use the Streams standard location instead of the maven standard. This keeps everything in line with how the Streams documentation suggests laying out java projects. -->
+	<directory>${project.basedir}/impl/bin</directory> 
+	<sourceDirectory>${project.basedir}/impl/java/src</sourceDirectory> 
+	<testSourceDirectory>${project.basedir}/impl/src/test/java</testSourceDirectory>   
+	<plugins> 
+		<!-- Maven Compiler --> 
+		<plugin> 
+			<groupId>org.apache.maven.plugins</groupId>
+			<artifactId>maven-compiler-plugin</artifactId> 
+			<version>2.3.2</version> 
+			<configuration> 
+				<source>1.8</source> 
+				<target>1.8</target> 
+			</configuration> 
+		</plugin>   
+		<!-- When we build the jar, we need to include the classpath in the manifest. This lets us add only this jar to the operator XML file used by Streams--> 
+		<plugin> 
+			<groupId>org.apache.maven.plugins</groupId> 
+			<artifactId>maven-jar-plugin</artifactId> 
+			<version>2.3.1</version> 
+			<configuration> 
+				<archive> 
+					<manifest> 
+						<addClasspath>true</addClasspath> 
+					</manifest> 
+				</archive> 
+				<outputDirectory>${libDir}</outputDirectory> 
+			</configuration> 
+		</plugin>   
+		<!-- Copy all the dependencies to the lib folder. By doing this we ensure that the they will all be available to the SPL operator at runtime without needing to explicitly list them all out in the operator XML file--> 
+		<plugin> 
+			<artifactId>maven-dependency-plugin</artifactId> 
+			<version>2.1</version> 
+			<executions> 
+				<execution> 
+					<goals> 
+						<goal>copy-dependencies</goal> 
+					</goals> 
+				</execution> 
+			</executions> 
+			<configuration> 
+				<outputDirectory>${libDir}</outputDirectory> 
+				<overWriteSnapshots>true</overWriteSnapshots> 
+				<!-- We don't need to include the streams specific jar since the runtime provides it. --> 
+				<excludeArtifactIds>com.ibm.streams.operator</excludeArtifactIds> 
+			</configuration> 
+		</plugin>   
+		<!-- Clear out the lib directory when cleaning the project --> 
+		<plugin> 
+			<artifactId>maven-clean-plugin</artifactId> 
+			<version>2.4.1</version> 
+			<configuration> 
+				<filesets> 
+					<fileset> 
+						<directory>${libDir}</directory> 
+						<excludes> 
+							<exclude>.svn/**/*</exclude> 
+						</excludes> 
+						<followSymlinks>false</followSymlinks> 
+					</fileset> 
+				</filesets> 
+			</configuration> 
+		</plugin>   
+	</plugins> 
+</build>
+</project>

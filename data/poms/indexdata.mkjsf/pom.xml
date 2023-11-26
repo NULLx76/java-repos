@@ -1,0 +1,196 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.indexdata</groupId>
+  <artifactId>mkjsf</artifactId>
+  <version>0.0.8-SNAPSHOT</version>
+  <name>MasterKey JSF</name>
+  <packaging>jar</packaging>
+  <description>MKJSF - JavaServer Faces library for MasterKey</description>
+    <dependencies>
+    <dependency>
+      <groupId>javax</groupId>
+      <artifactId>javaee-api</artifactId>
+      <version>6.0</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- JSF 2, JSP tag library, Weld, CDI -->
+    <dependency>
+      <groupId>org.glassfish</groupId>
+      <artifactId>javax.faces</artifactId>
+      <version>2.1.21</version>
+    </dependency>
+    <dependency>
+      <groupId>javax.servlet.jsp.jstl</groupId>
+      <artifactId>javax.servlet.jsp.jstl-api</artifactId>
+      <version>1.2.1</version>      
+    </dependency>    
+    <dependency>
+      <groupId>org.jboss.weld.servlet</groupId>
+      <artifactId>weld-servlet</artifactId>
+      <version>1.1.10.Final</version>      
+    </dependency> 
+
+    <!-- File upload etc -->
+    <dependency>
+      <groupId>org.apache.myfaces.tomahawk</groupId>
+      <artifactId>tomahawk20</artifactId>
+      <version>1.1.10</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+      <version>4.2.3</version>
+    </dependency>
+     
+    <!-- Pazpar2 client -->   
+    <dependency>
+      <groupId>com.indexdata</groupId>
+      <artifactId>masterkey-common</artifactId>
+      <version>0.1.36</version>
+    </dependency>
+  </dependencies>
+  <build>
+    <directory>target</directory>
+    <outputDirectory>target/classes</outputDirectory>
+    <sourceDirectory>src/main/java</sourceDirectory>
+    <resources>
+      <resource>
+        <directory>src</directory>
+        <excludes>          
+          <exclude>main/</exclude>
+          <exclude>*.java</exclude>
+          <exclude>META-INF/beans.xml</exclude>
+        </excludes>
+      </resource>
+    </resources>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>2.3.2</version>
+        <configuration>
+          <excludes>
+             <exclude>src/META-INF/</exclude>
+          </excludes>
+          <source>1.6</source>
+          <target>1.6</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+        <version>2.2.2</version>
+        <configuration>
+          <preparationGoals>clean verify</preparationGoals>
+          <releaseProfiles>production</releaseProfiles>
+          <tagNameFormat>v@{project.version}</tagNameFormat>
+          <pushChanges>false</pushChanges>
+          <localCheckout>true</localCheckout>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>2.2</version>
+        <configuration>
+          <classifier>${env}</classifier>
+        </configuration>
+      </plugin>
+    </plugins>
+    <extensions>
+      <extension>
+        <groupId>org.apache.maven.wagon</groupId>
+        <artifactId>wagon-ssh</artifactId>
+        <version>2.8</version>
+      </extension>
+      <extension>
+        <groupId>org.apache.maven.wagon</groupId>
+        <artifactId>wagon-ssh-external</artifactId>
+        <version>2.2</version>
+      </extension>
+    </extensions>
+  </build>
+  <distributionManagement>
+    <repository>
+      <uniqueVersion>false</uniqueVersion>
+      <id>id-maven-repo</id>
+      <name>Index Data Maven Repository</name>
+      <url>scp://maven.indexdata.com:22/var/www/maven/repository</url>
+    </repository>
+    <site>
+      <id>id-website</id>
+      <url>scpexe://www.indexdata.com/var/www/software/mkjsf/project/</url>
+    </site>
+  </distributionManagement>  
+  <repositories>
+    <repository>
+      <id>id-maven-repo</id>
+      <url>http://maven.indexdata.com</url>
+    </repository>
+  </repositories>
+  <scm>
+    <connection>scm:git:ssh://git.indexdata.com:222/home/git/pub/mkjsf</connection>
+    <url>http://gitid.indexdata.com/?p=mkjsf.git</url>
+  </scm>
+  
+  <properties>
+    <env />
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>    
+  </properties>
+  
+  <profiles>
+    <profile>
+      <!-- Tomcat 7 profile, includes JSF 2.0 and Weld -->
+      <id>default</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <properties>
+        <env />
+      </properties>
+      <dependencies>
+      </dependencies>
+      <build>
+        <resources>
+          <resource>
+            <targetPath>META-INF</targetPath>
+            <directory>src/main/resources/tomcat</directory>
+            <includes>
+              <include>beans.xml</include>
+            </includes>
+          </resource>
+        </resources>
+      </build>
+    </profile>
+    <profile>
+      <!-- J2EE Application Server profile (Glassfish, JBoss) -->
+      <!-- beans.xml contains information of which configuration 
+           scheme to inject. Optimally this would be decided at 
+           the .war/application level, not at (this) jar/library
+           level, but for now this is necessary when using Glassfish
+           or JBoss -->
+      <id>as</id>
+      <properties>
+        <env>as</env>
+      </properties>
+      <dependencies>
+      </dependencies>
+      <build>
+        <resources>
+          <resource>
+            <targetPath>META-INF</targetPath>
+            <directory>src/main/resources/as</directory>
+            <includes>
+              <include>beans.xml</include>
+            </includes>
+          </resource>
+        </resources>
+      </build>      
+    </profile>
+  </profiles>
+</project>

@@ -1,0 +1,258 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.amazonaws.services.kinesis</groupId>
+    <artifactId>kinesis</artifactId>
+    <packaging>jar</packaging>
+    <name>Amazon Kinesis Data Visualization Sample Application</name>
+    <version>1.1.2</version>
+    <description>The Amazon Kinesis Data Visualization Sample
+        Application how to interact with Amazon Kinesis to generating
+        meaningful statistics across a time window.
+    </description>
+    <url>https://aws.amazon.com/kinesis/getting-started</url>
+
+
+    <licenses>
+        <license>
+            <name>Amazon Software License</name>
+            <url>https://aws.amazon.com/asl</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <properties>
+        <bidrg.aggregator.name>KCLDynamoDBTableImp</bidrg.aggregator.name>
+        <bidrq.stream>KinesisStreamImp</bidrq.stream>
+        <bidrq.counts-table>CountsDynamoDBTableImp</bidrq.counts-table>
+        <bidrq.servlet>GetImpressionCountsServlet</bidrq.servlet>
+        <bidrq.endpoint>GetImpCounts</bidrq.endpoint>
+
+        <bdwin.aggregator.name>KCLDynamoDBTableBwin</bdwin.aggregator.name>
+        <bdwin.stream>KinesisStreamBwin</bdwin.stream>
+        <bdwin.counts-table>CountsDynamoDBTableBwin</bdwin.counts-table>
+        <bdwin.servlet>GetBidWinCountsServlet</bdwin.servlet>
+        <bdwin.endpoint>GetWinCounts</bdwin.endpoint>
+
+        <bdresp.aggregator.name>KCLDynamoDBTableBrsp</bdresp.aggregator.name>
+        <bdresp.stream>KinesisStreamBrsp</bdresp.stream>
+        <bdresp.counts-table>CountsDynamoDBTableBrsp</bdresp.counts-table>
+        <bdresp.servlet>GetBidRspCountsServlet</bdresp.servlet>
+        <bdresp.endpoint>GetRspCounts</bdresp.endpoint>
+
+        <impression.aggregator.name>KCLDynamoDBTableImp</impression.aggregator.name>
+        <impression.stream>KinesisStreamImp</impression.stream>
+        <impression.counts-table>CountsDynamoDBTableImp</impression.counts-table>
+        <impression.servlet>GetImpressionCountsServlet</impression.servlet>
+        <impression.endpoint>GetImpCounts</impression.endpoint>
+
+        <clicks.aggregator.name>KCLDynamoDBTableCks</clicks.aggregator.name>
+        <clicks.stream>KinesisStreamCks</clicks.stream>
+        <clicks.counts-table>CountsDynamoDBTableCks</clicks.counts-table>
+        <clicks.servlet>GetClicksCountsServlet</clicks.servlet>
+        <clicks.endpoint>GetClicksCounts</clicks.endpoint>
+
+        <aws.region>eu-west-1</aws.region>
+        <amazon-kinesis-client.version>1.7.0</amazon-kinesis-client.version>
+        <jetty.version>8.1.9.v20130131</jetty.version>
+    </properties>
+
+
+    <dependencies>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>5.1.39</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>amazon-kinesis-client</artifactId>
+            <version>${amazon-kinesis-client.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-servlet</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
+            <version>1.9.5</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.16.10</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.apache.tomcat/dbcp -->
+        <dependency>
+            <groupId>org.apache.tomcat</groupId>
+            <artifactId>dbcp</artifactId>
+            <version>6.0.45</version>
+        </dependency>
+
+    </dependencies>
+
+    <developers>
+        <developer>
+            <id>amazonwebservices</id>
+            <organization>Amazon Web Services</organization>
+            <organizationUrl>https://aws.amazon.com</organizationUrl>
+            <roles>
+                <role>developer</role>
+            </roles>
+        </developer>
+    </developers>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <source>1.8</source>
+                        <target>1.8</target>
+                        <encoding>UTF-8</encoding>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.6</version>
+                <executions>
+                    <execution>
+                        <id>cloudformation-archive</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>src/main/assembly/cloudformation-archive-assembly.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+    <profiles>
+        <profile>
+            <!-- Start the Kinesis Client Application to calculate the top n referrers by resource -->
+            <id>bdrq-counter</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>1.5.0</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>java</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <mainClass>com.kinesis.datavis.app.ImpressionCounter</mainClass>
+                            <arguments>
+                                <argument>${bidrg.aggregator.name}</argument>
+                                <argument>${bidrq.stream}</argument>
+                                <argument>${bidrq.counts-table}</argument>
+                                <argument>${aws.region}</argument>
+                            </arguments>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <!-- Start the Kinesis record producer on a single thread -->
+            <id>brq-stream-writer</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>1.5.0</version>
+                        <configuration>
+                            <mainClass>com.kinesis.datavis.writer.ImpressionStreamWriter</mainClass>
+                            <arguments>
+                                <!-- Start a single thread to put records in to Amazon Kinesis -->
+                                <argument>1</argument>
+                                <argument>${bidrq.stream}</argument>
+                                <argument>${aws.region}</argument>
+                            </arguments>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <!-- Start a webserver to host the visualization web application -->
+            <id>brq-webserver</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>1.5.0</version>
+                        <configuration>
+                            <mainClass>com.kinesis.datavis.server.WebServer</mainClass>
+                            <arguments>
+                                <!-- Start Jetty on port 8080 -->
+                                <argument>8080</argument>
+                                <!-- Serve static resources from their root -->
+                                <argument>${project.basedir}/src/main/static-content/wwwroot</argument>
+                                <argument>${bidrq.counts-table}</argument>
+                                <argument>${bidrq.servlet}</argument>
+                                <argument>${bidrq.endpoint}</argument>
+                                <argument>${aws.region}</argument>
+                            </arguments>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <!-- Delete the Kinesis and DynamoDB resources the sample application creates -->
+            <id>delete-resources</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>1.5.0</version>
+                        <configuration>
+                            <mainClass>com.kinesis.datavis.utils.DeleteSampleResources</mainClass>
+                            <arguments>
+                                <argument>${bidrg.aggregator.name}</argument>
+                                <argument>${bidrq.stream}</argument>
+                                <argument>${bidrq.counts-table}</argument>
+                                <argument>${aws.region}</argument>
+                            </arguments>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+      </profile>
+    </profiles>
+</project>

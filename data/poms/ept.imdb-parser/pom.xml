@@ -1,0 +1,426 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <prerequisites>
+        <maven>3.0.0</maven>
+    </prerequisites>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <document.large.path>${project.basedir}/document-large</document.large.path>
+        <document.small.path>${project.basedir}/document-small</document.small.path>
+        <relational.large.path>${project.basedir}/relational-large</relational.large.path>
+        <relational.small.path>${project.basedir}/relational-small</relational.small.path>
+        <csv.large.path>${project.basedir}/csv-large</csv.large.path>
+        <csv.small.path>${project.basedir}/csv-small</csv.small.path>
+        <graph.large.path>${project.basedir}/graph-large</graph.large.path>
+        <graph.small.path>${project.basedir}/graph-small</graph.small.path>
+    </properties>
+
+    <groupId>uk.ac.cam.cl.databases.moviedb</groupId>
+    <artifactId>moviedb-exercises</artifactId>
+    <name>moviedb-exercises</name>
+    <version>0.0.1</version>
+    <packaging>jar</packaging>
+
+    <dependencies>
+        <!-- JSON encoding/decoding: https://github.com/google/gson/blob/master/UserGuide.md -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.6.2</version>
+        </dependency>
+
+        <!-- Berkeley DB: http://docs.oracle.com/cd/E17277_02/html/GettingStartedGuide/index.html
+             http://docs.oracle.com/cd/E17277_02/html/java/index.html?com/sleepycat/je/package-summary.html -->
+        <dependency>
+            <groupId>com.sleepycat</groupId>
+            <artifactId>je</artifactId>
+            <version>5.0.73</version>
+        </dependency>
+
+        <!-- HyperSQL database: http://hsqldb.org/ -->
+        <dependency>
+            <groupId>org.hsqldb</groupId>
+            <artifactId>hsqldb</artifactId>
+            <version>2.3.4</version>
+        </dependency>
+        <dependency>
+            <groupId>org.hsqldb</groupId>
+            <artifactId>sqltool</artifactId>
+            <version>2.3.4</version>
+        </dependency>
+
+        <!-- Postgres JDBC driver (for importing from Postgres to HyperSQL) -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>9.4.1208</version>
+        </dependency>
+
+        <!-- Neo4j graph database: http://neo4j.com/ -->
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-import-tool</artifactId>
+            <version>3.0.4</version>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-shell</artifactId>
+            <version>3.0.4</version>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-cypher</artifactId>
+            <version>3.0.4</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Allow use of Java 8 features -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+
+            <!-- Build Javadocs -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.10.4</version>
+                <configuration>
+                    <outputDirectory>target/site/apidocs</outputDirectory>
+                    <excludePackageNames>uk.ac.cam.cl.databases.moviedb.internal</excludePackageNames>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-javadoc</id>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>javadoc</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.6</version>
+                <executions>
+                    <!-- Build jar file that bundles document database code and dependencies -->
+                    <execution>
+                        <id>make-document-db</id>
+                        <phase>package</phase>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>src/main/assembly/document-db.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+
+                    <!-- Build jar file that bundles relational database code and dependencies -->
+                    <execution>
+                        <id>make-relational-db</id>
+                        <phase>package</phase>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>src/main/assembly/relational-db.xml</descriptor>
+                            </descriptors>
+                            <archive>
+                                <manifest>
+                                    <mainClass>uk.ac.cam.cl.databases.moviedb.internal.RelationalUI</mainClass>
+                                </manifest>
+                            </archive>
+                        </configuration>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+
+                    <!-- Build zip file of javadocs -->
+                    <execution>
+                        <id>make-javadoc-zip</id>
+                        <phase>package</phase>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>src/main/assembly/javadoc-zip.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Build jar file that bundles graph database code and dependencies -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>2.3</version>
+                <configuration>
+                    <outputFile>${project.build.directory}/${project.build.finalName}-graph-db.jar</outputFile>
+                    <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
+                    <artifactSet>
+                        <includes>
+                            <include>org.neo4j:*</include>
+                            <include>jline:jline</include>
+                            <include>org.apache.lucene:*</include>
+                            <!-- The following are required by org.neo4j:neo4j-cypher -->
+                            <include>org.scala-lang</include>
+                            <include>org.ow2.asm:asm</include>
+                            <include>org.apache.commons:commons-lang3</include>
+                            <include>org.parboiled:*</include>
+                            <include>net.sf.opencsv:opencsv</include>
+                            <include>com.googlecode.concurrentlinkedhashmap:*</include>
+                        </includes>
+                    </artifactSet>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>uk.ac.cam.cl.databases.moviedb.internal.GraphConsole</mainClass>
+                                </transformer>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!-- If the document-large directory does not exist, run the import tool to create it -->
+        <profile>
+            <id>import-document-large</id>
+            <activation>
+                <file>
+                    <missing>document-large</missing>
+                </file>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>1.2.1</version>
+                        <executions>
+                            <execution>
+                                <id>run-import-document-large</id>
+                                <phase>process-classes</phase>
+                                <goals>
+                                    <goal>java</goal>
+                                </goals>
+                                <configuration>
+                                    <mainClass>uk.ac.cam.cl.databases.moviedb.internal.ImportDocument</mainClass>
+                                    <arguments>
+                                        <argument>${project.basedir}/movies_doc.json.gz</argument>
+                                        <argument>${project.basedir}/people_doc.json.gz</argument>
+                                        <argument>${document.large.path}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- If the document-small directory does not exist, run the import tool to create it -->
+        <profile>
+            <id>import-document-small</id>
+            <activation>
+                <file>
+                    <missing>document-small</missing>
+                </file>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>1.2.1</version>
+                        <executions>
+                            <execution>
+                                <id>run-import-document-small</id>
+                                <phase>process-classes</phase>
+                                <goals>
+                                    <goal>java</goal>
+                                </goals>
+                                <configuration>
+                                    <mainClass>uk.ac.cam.cl.databases.moviedb.internal.ImportDocument</mainClass>
+                                    <arguments>
+                                        <argument>${project.basedir}/movies_doc_small.json.gz</argument>
+                                        <argument>${project.basedir}/people_doc_small.json.gz</argument>
+                                        <argument>${document.small.path}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- If the relational-large directory does not exist, run the import tool to create it -->
+        <profile>
+            <id>import-relational-large</id>
+            <activation>
+                <file>
+                    <missing>relational-large</missing>
+                </file>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>1.2.1</version>
+                        <executions>
+                            <execution>
+                                <id>run-import-relational-large</id>
+                                <phase>process-classes</phase>
+                                <goals>
+                                    <goal>java</goal>
+                                </goals>
+                                <configuration>
+                                    <mainClass>uk.ac.cam.cl.databases.moviedb.internal.ImportRelational</mainClass>
+                                    <arguments>
+                                        <argument>--large</argument>
+                                        <argument>${relational.large.path}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- If the relational-small directory does not exist, run the import tool to create it -->
+        <profile>
+            <id>import-relational-small</id>
+            <activation>
+                <file>
+                    <missing>relational-small</missing>
+                </file>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>1.2.1</version>
+                        <executions>
+                            <execution>
+                                <id>run-import-relational-small</id>
+                                <phase>process-classes</phase>
+                                <goals>
+                                    <goal>java</goal>
+                                </goals>
+                                <configuration>
+                                    <mainClass>uk.ac.cam.cl.databases.moviedb.internal.ImportRelational</mainClass>
+                                    <arguments>
+                                        <argument>--small</argument>
+                                        <argument>${relational.small.path}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- If the graph-large directory does not exist, run the import tool to create it -->
+        <profile>
+            <id>import-graph-large</id>
+            <activation>
+                <file>
+                    <missing>graph-large</missing>
+                </file>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>1.2.1</version>
+                        <executions>
+                            <execution>
+                                <id>run-import-graph-large</id>
+                                <phase>process-classes</phase>
+                                <goals>
+                                    <goal>java</goal>
+                                </goals>
+                                <configuration>
+                                    <mainClass>uk.ac.cam.cl.databases.moviedb.internal.ImportGraph</mainClass>
+                                    <arguments>
+                                        <argument>${document.large.path}</argument>
+                                        <argument>${csv.large.path}</argument>
+                                        <argument>${graph.large.path}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- If the graph-small directory does not exist, run the import tool to create it -->
+        <profile>
+            <id>import-graph-small</id>
+            <activation>
+                <file>
+                    <missing>graph-small</missing>
+                </file>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>1.2.1</version>
+                        <executions>
+                            <execution>
+                                <id>run-import-graph-small</id>
+                                <phase>process-classes</phase>
+                                <goals>
+                                    <goal>java</goal>
+                                </goals>
+                                <configuration>
+                                    <mainClass>uk.ac.cam.cl.databases.moviedb.internal.ImportGraph</mainClass>
+                                    <arguments>
+                                        <argument>${document.small.path}</argument>
+                                        <argument>${csv.small.path}</argument>
+                                        <argument>${graph.small.path}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

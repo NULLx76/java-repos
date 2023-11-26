@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.predic8.boot</groupId>
+	<artifactId>service-registry</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>service-registry</name>
+	<description>Service Registry</description>
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>1.4.1.RELEASE</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<java.version>1.8</java.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-netflix-eureka-server</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-eureka-server</artifactId>
+		</dependency>
+	</dependencies>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-dependencies</artifactId>
+				<version>Brixton.SR5</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>io.fabric8</groupId>
+				<artifactId>docker-maven-plugin</artifactId>
+				<extensions>true</extensions> <!-- enables using 'docker' packaging above -->
+				<configuration>
+					<watchInterval>500</watchInterval>
+					<logDate>default</logDate>
+					<verbose>true</verbose>
+					<autoPull>always</autoPull>
+					<watchPostGoal>org.apache.maven.plugins:maven-help-plugin:help</watchPostGoal>
+					<images>
+						<!-- Docker Image to use -->
+						<image>
+							<!-- App-Server Image -->
+							<alias>server</alias>
+							<name>service-registry-container</name>
+							<run>
+								<namingStrategy>none</namingStrategy>
+								<volumes>
+									<from>
+										<image>data</image>
+									</from>
+								</volumes>
+								<env>
+									<CATALINA_OPTS>-Xmx32m</CATALINA_OPTS>
+									<!-- Base starts jolokia by default. With this, it can be disabled -->
+									<JOLOKIA_OFF>1</JOLOKIA_OFF>
+									<EMPTY_PROP></EMPTY_PROP>
+								</env>
+								<envPropertyFile>${project.basedir}/src/main/docker/environment.properties</envPropertyFile>
+								<ports>
+									<!-- Port mappings: Container internal port (which must be exposed) will be
+                                   dynamically mapped and this (random) port will be assigned to the maven variable
+                                   ${jolokia.port}. Multiple port mappings can be specified here-->
+									<port>${jolokia.host}:${jolokia.port}:8080</port>
+								</ports>
+								<wait>
+									<!-- The plugin waits until this URL is reachable via HTTP ... -->
+									<log>Server startup</log>
+									<http>
+										<url>http://${jolokia.host}:${jolokia.port}/jolokia</url>
+										<method>GET</method>
+										<status>200</status>
+									</http>
+									<exec>
+										<postStart>ls -l /maven</postStart>
+									</exec>
+									<time>10000</time>
+									<shutdown>500</shutdown>
+								</wait>
+								<log>
+									<enabled>true</enabled>
+									<color>red</color>
+								</log>
+								<ulimits>
+									<ulimit>
+										<name>memlock</name>
+										<hard>2048</hard>
+										<soft>1024</soft>
+									</ulimit>
+								</ulimits>
+							</run>
+							<watch>
+								<mode>none</mode>
+							</watch>
+						</image>
+						<image>
+							<alias>data</alias>
+							<!-- Artifact Image-->
+							<name>fabric8/${project.artifactId}:latest</name>
+							<build>
+								<tags>
+									<tag>${project.version}</tag>
+								</tags>
+								<!-- The assembly descriptor prepares the "/maven" directory in the temporary data
+                                   container which will be made available to the specified container. The startup script in the
+                                   container (jolokia/tomcat-7.0) should check for files in this directory and use them
+                                   for deploying them. I.e. this image has a script 'deploy-and-run.sh' which exactly
+                                   does this. -->
+								<assembly>
+									<mode>tar</mode>
+									<user>www-data:www-data:www-data</user>
+									<descriptor>assembly.xml</descriptor>
+								</assembly>
+							</build>
+							<watch>
+								<interval>5000</interval>
+								<mode>both</mode>
+							</watch>
+						</image>
+					</images>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
+
+</project>

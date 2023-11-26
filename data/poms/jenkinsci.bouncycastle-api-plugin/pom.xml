@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ ~ The MIT License
+ ~
+ ~ Copyright (c) 2016-2021, CloudBees, Inc.
+ ~
+ ~ Permission is hereby granted, free of charge, to any person obtaining a copy
+ ~ of this software and associated documentation files (the "Software"), to deal
+ ~ in the Software without restriction, including without limitation the rights
+ ~ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ ~ copies of the Software, and to permit persons to whom the Software is
+ ~ furnished to do so, subject to the following conditions:
+ ~
+ ~ The above copyright notice and this permission notice shall be included in
+ ~ all copies or substantial portions of the Software.
+ ~
+ ~ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ ~ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ ~ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ ~ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ ~ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ ~ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ ~ THE SOFTWARE.
+ -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.jenkins-ci.plugins</groupId>
+    <artifactId>plugin</artifactId>
+    <version>4.75</version>
+    <relativePath />
+  </parent>
+
+  <artifactId>bouncycastle-api</artifactId>
+  <version>${revision}${changelist}</version>
+  <packaging>hpi</packaging>
+
+  <name>bouncycastle API Plugin</name>
+  <description>
+    This plugin provides an stable API to Bouncy Castle related tasks.
+  </description>
+  <url>https://github.com/jenkinsci/bouncycastle-api-plugin</url>
+  <licenses>
+    <license>
+      <name>The MIT license</name>
+      <url>https://www.opensource.org/licenses/mit-license.php</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>alvarolobato</id>
+      <name>Alvaro Lobato</name>
+      <email>alobato@cloudbees.com</email>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:https://github.com/jenkinsci/bouncycastle-api-plugin.git</connection>
+    <developerConnection>scm:git:git@github.com:jenkinsci/bouncycastle-api-plugin.git</developerConnection>
+    <url>https://github.com/jenkinsci/bouncycastle-api-plugin</url>
+    <tag>${scmTag}</tag>
+  </scm>
+
+  <properties>
+    <revision>2.30</revision>
+    <changelist>-SNAPSHOT</changelist>
+    <jenkins.version>2.361.4</jenkins.version>
+    <bouncycastleVersion>1.76</bouncycastleVersion>
+    <useBeta>true</useBeta>
+  </properties>
+
+  <repositories>
+    <repository>
+      <id>repo.jenkins-ci.org</id>
+      <url>https://repo.jenkins-ci.org/public/</url>
+    </repository>
+  </repositories>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>repo.jenkins-ci.org</id>
+      <url>https://repo.jenkins-ci.org/public/</url>
+    </pluginRepository>
+  </pluginRepositories>
+
+  <dependencies>
+    <!--
+      The BouncyCastle jars are exposed as regular dependencies to other plugins who depend on this plugin on the build classpath.
+      The JARs are not added to the plugin in the normal way though, rather they are conditionally injected into the classpath at initialisation time.
+      This allows plugin compilation etc to work as normal, however if the JVM has been configured using BouncyCastle FIPS jars for FIPS compliance we will not inject 
+      incompatible classes or try to register a non fips compliant Provider.
+      The FIPS and non FIPS versions of BouncyCastle are mostly but not completely API compatible if the consumer steers clear of any deprecated APIs or low level APIS.
+      This may cause some plugins that depend on this to blow up at runtime (e.g SAML), but without this even more things would go bang.
+    -->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk18on</artifactId>
+      <version>${bouncycastleVersion}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk18on</artifactId>
+      <version>${bouncycastleVersion}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcutil-jdk18on</artifactId>
+      <version>${bouncycastleVersion}</version>
+    </dependency>
+    <dependency>
+        <groupId>org.assertj</groupId>
+        <artifactId>assertj-core</artifactId>
+        <version>3.24.2</version>
+        <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <reuseForks>false</reuseForks>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <plugins>
+      <plugin>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <!--  copy the bouncycastle jars so they will be in the java archive -->
+            <id>copy-bc-jars</id>
+            <goals>
+              <goal>copy-dependencies</goal>
+            </goals>
+            <configuration>
+              <includeGroupIds>org.bouncycastle</includeGroupIds>
+              <excludeTransitive>true</excludeTransitive>
+              <outputDirectory>${project.build.directory}/extra-classes/WEB-INF/optional-lib/</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.jenkins-ci.tools</groupId>
+        <artifactId>maven-hpi-plugin</artifactId>
+        <configuration>
+          <!-- do not add bouncycastle jars to WEB-INF/lib as they get added dynamically to be compatible with bouncycastle fips-->
+          <warSourceExcludes>WEB-INF/lib/bc*.jar</warSourceExcludes>
+          <!-- and add them back in but in so they are in WEB-INF/optional-lib/ so we can load them dynamically -->
+          <webappDirectory>${project.build.directory}/extra-classes/</webappDirectory>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

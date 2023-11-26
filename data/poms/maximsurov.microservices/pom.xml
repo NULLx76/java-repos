@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-boot-microservice</artifactId>
+    <version>0.1.0</version>
+    <packaging>jar</packaging>
+    <name>Spring Microservice</name>
+    <description>Getting started with Spring Boot, Fabric8, kubernetres + docker</description>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>1.4.0.RELEASE</version>
+        <relativePath />
+    </parent>
+
+    <properties>
+        <docker.image.prefix>surov</docker.image.prefix>
+        <java.version>1.8</java.version>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+           
+            <plugin>
+                <groupId>com.spotify</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>0.4.11</version>
+                <configuration>
+                    <imageName>${docker.image.prefix}/${project.artifactId}</imageName>
+                    <dockerDirectory>src/main/docker</dockerDirectory>
+                    <resources>
+                        <resource>
+                            <targetPath>/</targetPath>
+                            <directory>${project.build.directory}</directory>
+                            <include>${project.build.finalName}.jar</include>
+                        </resource>
+                    </resources>
+                </configuration>
+            </plugin>
+            
+            <plugin>
+			  <groupId>io.fabric8</groupId>
+			  <artifactId>fabric8-maven-plugin</artifactId>
+			  <version>3.1.81</version>
+			
+			    <executions>
+	             <execution>
+	              <id>fabric8</id>
+	              <goals>
+	                  <goal>resource</goal>
+	                  <goal>build</goal>
+<!-- 	                  <goal>run</goal> -->
+	              </goals>
+	              <configuration>
+		              <excludes>
+		                <exclude>org.springframework.boot.actuate.health.HealthIndicator</exclude>
+		              </excludes>
+		            </configuration>
+                 </execution>    
+	           </executions>
+	           <configuration>
+					 <images> 
+	                  <image> 
+	                   <name>${docker.image.prefix}/${project.artifactId}</name>
+						<build>
+						  <from>java:8-jre-alpine</from>
+						  
+						  <maintainer>maxim_surov@epam.com</maintainer>
+						   <assembly> 
+		                    <basedir>/</basedir> 
+		                    <descriptorRef>artifact</descriptorRef> 
+		                   </assembly> 
+						  
+						   <tags>
+						     <tag>latest</tag>
+						     <tag>${project.version}</tag>
+						   </tags>
+						   
+						   <ports>
+						     <port>8080</port>						     
+						   </ports>
+						   
+						   <volumes>
+						     <volume>/tmp</volume>
+						   </volumes>
+						
+						   <entryPoint>
+						     exec form for ENTRYPOINT
+						     <exec>
+						       <arg>java</arg>
+<!-- 						       <arg>-Dspring.profiles.active=specificProp</arg> -->
+						       <arg>-jar</arg>
+						       <arg>/${project.build.finalName}.jar</arg>
+						     </exec>
+						   </entryPoint>
+						</build>
+<!-- 						<build> alternative way to use home grown Docker file to start service from fabric8 -->
+<!--                             <dockerFileDir></dockerFileDir> -->
+<!--                         </build> -->
+					</image>
+					</images>  
+	           </configuration> 
+			</plugin>
+        </plugins>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+</project>

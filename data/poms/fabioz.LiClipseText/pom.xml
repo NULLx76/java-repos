@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+
+   Copyright (C) 2013, Red Hat, Inc. and others
+
+   All rights reserved. This program and the accompanying materials
+   are made available under the terms of the Eclipse Public License v1.0
+   which accompanies this distribution, and is available at
+   http://www.eclipse.org/legal/epl-v10.html
+
+   Contributors:
+       Red Hat Incorporated - initial implementation
+       Jonah Graham - add testing, signing and deployment
+       Fabio Zadrozny - port for LiClipseText
+
+Using:
+
+  To run a LiClipseText build you need to:
+    1) Download Java (e.g. OpenJDK 8 or OracleJDK8)
+    2) Download Maven (http://maven.apache.org/download.html)
+    3) Run "mvn install"
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <properties>
+        <tycho-version>4.0.3</tycho-version>
+        <tycho-extras-version>4.0.3</tycho-extras-version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+    <prerequisites>
+        <maven>3.9</maven>
+    </prerequisites>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.brainwy.liclipsetext</groupId>
+    <artifactId>parent</artifactId>
+    <version>2.5.0-SNAPSHOT</version>
+    <name>LiClipseText Build Parent</name>
+    <packaging>pom</packaging>
+    <modules>
+        <module>plugins</module>
+        <module>features</module>
+    </modules>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.eclipse.tycho</groupId>
+                <artifactId>tycho-maven-plugin</artifactId>
+                <version>${tycho-version}</version>
+                <extensions>true</extensions>
+            </plugin>
+            <plugin>
+                <groupId>org.eclipse.tycho</groupId>
+                <artifactId>tycho-surefire-plugin</artifactId>
+                <version>${tycho-version}</version>
+                <configuration>
+                    <explodedBundles>
+                        <!-- languages is in org.brainwy.liclipsetext.editor, so explode it -->
+                        <explodedBundle>org.brainwy.liclipsetext.editor</explodedBundle>
+                        <explodedBundle>org.brainwy.liclipsetext.shared_core</explodedBundle>
+                        <explodedBundle>org.brainwy.liclipsetext.shared_ui</explodedBundle>
+                    </explodedBundles>
+                    <failIfNoTests>false</failIfNoTests>
+                    <useUIHarness>false</useUIHarness>
+                    <testFailureIgnore>true</testFailureIgnore>
+                    <argLine>-enableassertions</argLine>
+                    <systemProperties>
+                        <!-- We are in test mode when running JUnit (non-workbench) tests.
+                 See SharedCorePlugin.inTestMode().  -->
+                        <LiClipseInTestMode>true</LiClipseInTestMode>
+                    </systemProperties>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.eclipse.tycho</groupId>
+                <artifactId>target-platform-configuration</artifactId>
+                <version>${tycho-version}</version>
+                <configuration>
+                    <target>
+                        <extraRequirements>
+                            <requirement>
+                                <type>eclipse-feature</type>
+                                <artifactId>org.brainwy.liclipsetext.feature</artifactId>
+                                <version>0.0.0</version>
+                            </requirement>
+                        </extraRequirements>
+                    </target>
+                    <environments>
+                        <environment>
+                            <os>linux</os>
+                            <ws>gtk</ws>
+                            <arch>x86_64</arch>
+                        </environment>
+                        <environment>
+                            <os>linux</os>
+                            <ws>gtk</ws>
+                            <arch>x86</arch>
+                        </environment>
+                        <environment>
+                            <os>win32</os>
+                            <ws>win32</ws>
+                            <arch>x86_64</arch>
+                        </environment>
+                        <environment>
+                            <os>win32</os>
+                            <ws>win32</ws>
+                            <arch>x86</arch>
+                        </environment>
+                        <environment>
+                            <os>macosx</os>
+                            <ws>cocoa</ws>
+                            <arch>x86_64</arch>
+                        </environment>
+                        <environment>
+                            <os>macosx</os>
+                            <ws>cocoa</ws>
+                            <arch>aarch64</arch>
+                        </environment>
+                    </environments>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.eclipse.tycho</groupId>
+                <artifactId>tycho-versions-plugin</artifactId>
+                <version>${tycho-version}</version>
+            </plugin>
+            <plugin>
+                <groupId>org.eclipse.tycho</groupId>
+                <artifactId>tycho-source-plugin</artifactId>
+                <version>${tycho-version}</version>
+                <executions>
+                    <execution>
+                        <id>plugin-source</id>
+                        <goals>
+                            <goal>plugin-source</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+    <profiles>
+        <profile>
+            <!-- References to signing with hardware-based token -->
+            <!-- https://docs.digicert.com/en/software-trust-manager/ci-cd-integrations/script-integrations/maven-integration-with-pkcs11.html -->
+            <!-- https://stackoverflow.com/questions/44003975/ev-code-signing-extremely-slow/54928402#54928402 -->
+            <!-- https://stackoverflow.com/questions/43594938/maven-jnlp-creation-with-ev-code-signing -->
+            <!-- https://knowledge.digicert.com/tutorials/sign-java-jar-files-with-a-hardware-token-based-code-signing-certificate-in-windows.html -->
+            <!-- https://support.globalsign.com/code-signing/ev-code-signing-java-token-based -->
+            <id>sign-jars</id>
+            <activation>
+                <property>
+                    <!-- To use: mvn -Dsign-release=true -->
+                    <name>sign-release</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jarsigner-plugin</artifactId>
+                        <version>3.0.0</version>
+                        <configuration>
+                            <keystore>${env.SIGN_KEYSTORE}</keystore>
+                            <storetype>${env.SIGN_STORETYPE}</storetype>
+                            <tsa>${env.SIGN_TSA}</tsa>
+                            <providerClass>${env.SIGN_PROVIDER_CLASS}</providerClass>
+                            <providerArg>${env.SIGN_PROVIDER_ARG}</providerArg>
+                            <storepass>${env.SIGN_STOREPASS}</storepass>
+                            <keypass>${env.SIGN_KEYPASS}</keypass>
+                            <alias>${env.SIGN_ALIAS}</alias>
+                            <verbose>true</verbose>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>sign</id>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+    <repositories>
+        <repository>
+            <layout>p2</layout>
+            <id>orbit</id>
+            <url>https://download.eclipse.org/tools/orbit/downloads/drops/R20200831200620/repository/</url>
+        </repository>
+        <repository>
+            <layout>p2</layout>
+            <id>2023-09</id>
+            <url>https://download.eclipse.org/releases/2023-09/</url>
+        </repository>
+    </repositories>
+</project>

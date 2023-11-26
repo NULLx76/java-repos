@@ -1,0 +1,283 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.zebra.web</groupId>
+	<artifactId>clxBox</artifactId>
+	<packaging>war</packaging>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>clxBox Maven Webapp</name>
+	<url>http://maven.apache.org</url>
+	<!-- 公共属性 -->
+	<properties>
+		<!-- spring 版本 -->
+		<spring.version>3.2.0.RELEASE</spring.version>
+		<!-- jdk 版本 -->
+		<jdk.version>1.7</jdk.version>
+		<!-- 编码方式 -->
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<!-- nexus 地址 -->
+		<nexus.url>http://192.168.1.118:8081/nexus/content/groups/public/</nexus.url>
+		<!-- 可发布版本 -->
+		<nexus.deploy.release>http://192.168.1.118:8081/nexus/content/repositories/zebra-release/</nexus.deploy.release>
+		<!-- 开发版本 -->
+		<nexus.deploy.snapshorts>http://192.168.1.118:8081/nexus/content/repositories/zebra-snapshots/</nexus.deploy.snapshorts>
+		<!-- 打包路径 -->
+		<package.out.path>${project.build.directory}</package.out.path>
+		<!-- war包class 路径 -->
+		<package.war.class.buildPath>WEB-INF/classes</package.war.class.buildPath>
+		<!-- war 包lib 的路径 -->
+		<package.war.jar.buildPath>WEB-INF/lib</package.war.jar.buildPath>
+		<!-- 创建时间-时间戳 -->
+		<maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
+		<!-- 打包创建时间 -->
+		<timestamp>${maven.build.timestamp}</timestamp>
+		<!-- classfilter -->
+		<package.jar.classifier>service</package.jar.classifier>
+		<!-- 打包用户 -->
+		<package.author>zebra-admin</package.author>
+		<!-- 项目配置文件根目录 -->
+		<project.conf.baseDir>src/main/resources</project.conf.baseDir>
+		<!-- webapp 路径 -->
+		<web.root>src/main/webapp</web.root>
+		<!-- env -->
+		<!--项目db属性配置文件路径 -->
+		<env.db.path>conf/db</env.db.path>
+		<!-- 项目属性配置文件 -->
+		<env.prop.path>conf/prop/env</env.prop.path>
+		<!-- 打包所对应的属性配置文件路径 -->
+		<env.prop>${project.basedir}/env/${env}/${env.prop.path}</env.prop>
+		<!-- 打包所对应的db属性配置文件路径 -->
+		<env.db>${project.basedir}/env/${env}/${env.db.path}</env.db>
+		<!-- 属性文件打包目标位置 -->
+		<env.prop.target>${package.war.class.buildPath}/${env.prop.path}</env.prop.target>
+		<!-- db属性文件打包目标位置 -->
+		<env.db.target>${package.war.class.buildPath}/${env.db.path}</env.db.target>
+	</properties>
+	<!-- maven 仓库地址 nexus -->
+
+	<!-- 依赖 -->
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- servlet 依赖 jsp 需要此jar库的支持，但是tomcat中会自带，所以打包不放入此jar -->
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>3.0.1</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- jsp api -->
+		<dependency>
+			<groupId>javax.servlet.jsp</groupId>
+			<artifactId>jsp-api</artifactId>
+			<version>2.2</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- 斑马framework -->
+		<dependency>
+			<groupId>com.zebra.web</groupId>
+			<artifactId>zebra-framework</artifactId>
+			<version>0.0.4-RELEASE</version>
+		</dependency>
+	</dependencies>
+	<build>
+		<finalName>${project.artifactId}</finalName>
+		<plugins>
+			<!-- 编译插件 用jdk1.7来编译 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<encoding>${project.build.sourceEncoding}</encoding>
+					<source>${jdk.version}</source>
+					<target>${jdk.version}</target>
+				</configuration>
+			</plugin>
+			<!-- 测试 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<!-- <version>2.5</version> -->
+				<configuration>
+					<skipTests>true</skipTests>
+				</configuration>
+			</plugin>
+			<!-- maven assembly 打包插件 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.2-beta-5</version>
+				<executions>
+					<!-- 需要发布的jar包 -->
+					<execution>
+						<id>make-package</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+						<configuration>
+							<finalName></finalName>
+							<skipAssembly>false</skipAssembly>
+							<appendAssemblyId>true</appendAssemblyId>
+							<descriptors>
+								<descriptor>assembly/jar.xml</descriptor>
+							</descriptors>
+							<!-- 输出路径 -->
+							<outputDirectory>${package.out.path}</outputDirectory>
+							<!-- 描述信息 -->
+							<archive>
+								<manifest>
+									<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+									<addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+									<addClasspath>true</addClasspath>
+								</manifest>
+								<manifestEntries>
+									<!-- 这里面的标签可以自己定义 -->
+									<!-- 发布时间 -->
+									<Built-On>${timestamp}</Built-On>
+									<!-- 发布人 -->
+									<Built-By>${package.author}</Built-By>
+								</manifestEntries>
+							</archive>
+						</configuration>
+					</execution>
+					<!-- 打其他包 -->
+					<execution>
+						<id>make-local</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+						<configuration>
+							<skipAssembly>false</skipAssembly>
+							<appendAssemblyId>false</appendAssemblyId>
+							<descriptors>
+								<descriptor>assembly/zip.xml</descriptor>
+								<descriptor>assembly/war.xml</descriptor>
+								<descriptor>assembly/tar.gz.xml</descriptor>
+								<descriptor>assembly/dir.xml</descriptor>
+							</descriptors>
+							<!-- 输出路径 -->
+							<outputDirectory>${package.out.path}</outputDirectory>
+							<!-- 描述信息 -->
+							<archive>
+								<manifest>
+									<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+									<addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+									<addClasspath>true</addClasspath>
+								</manifest>
+								<manifestEntries>
+									<!-- 这里面的标签可以自己定义 -->
+									<!-- 发布时间 -->
+									<Built-On>${timestamp}</Built-On>
+									<!-- 发布人 -->
+									<Built-By>${package.author}</Built-By>
+								</manifestEntries>
+							</archive>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- 打入源码包 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<!-- <version>2.2.1</version> -->
+				<!-- 执行节点 -->
+				<executions>
+					<execution>
+						<id>source-jar</id>
+						<!-- 在哪个生命周期之后执行此插件 -->
+						<phase>package</phase>
+						<!-- 执行目标 就是生成什么东西 -->
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<!-- 输出路径 -->
+					<outputDirectory>${package.out.path}</outputDirectory>
+					<includes>
+						<include>com/zebra/business/db/**</include>
+					</includes>
+				</configuration>
+			</plugin>
+			<!-- cargo自动部署 -->
+			<plugin>
+				<groupId>org.codehaus.cargo</groupId>
+				<artifactId>cargo-maven2-plugin</artifactId>
+				<version>1.4.9</version>
+				<configuration>
+					<container>
+						<containerId>tomcat7x</containerId>
+						<type>remote</type>
+					</container>
+					<configuration>
+						<type>runtime</type>
+						<properties>
+							<cargo.hostname>${zebra.cargo.hostname}</cargo.hostname>
+							<cargo.servlet.port>${zebra.cargo.servlet.port}</cargo.servlet.port>
+							<cargo.protocol>http</cargo.protocol>
+							<cargo.rmi.port>1099</cargo.rmi.port>
+							<cargo.remote.username>${zebra.cargo.remote.username}</cargo.remote.username>
+							<cargo.remote.password>${zebra.cargo.remote.pwd}</cargo.remote.password>
+							<cargo.tomcat.manager.url>${zebra.cargo.tomcat.manager.url}</cargo.tomcat.manager.url>
+							<cargo.jvmargs>
+								-Xdebug
+								-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=${zebra.cargo.servlet.port}
+							</cargo.jvmargs>
+						</properties>
+					</configuration>
+					<deployables>
+						<deployable>
+							<groupId>${project.groupId}</groupId>
+							<artifactId>${project.artifactId}</artifactId>
+							<type>war</type>
+							<properties>
+								<context>/${project.artifactId}</context>
+							</properties>
+							<!-- 可选：验证是否部署成功 -->
+							<pingURL>${zebra.cargo.tomcat.baseURL}/${project.artifactId}</pingURL>
+							<!-- 可选：验证超时时间，默认是120000 毫秒 -->
+							<pingTimeout>30000</pingTimeout>
+						</deployable>
+					</deployables>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+	<!-- 条件启动 -->
+	<profiles>
+		<!-- 生产环境 -->
+		<profile>
+			<id>prod</id>
+			<properties>
+				<env>PROD</env>
+			</properties>
+		</profile>
+		<!-- 测试环境 -->
+		<profile>
+			<id>test</id>
+			<properties>
+				<env>TEST</env>
+			</properties>
+		</profile>
+		<!-- 开发环境 -->
+		<profile>
+			<id>dev</id>
+			<properties>
+				<env.prop>${project.conf.baseDir}/${env.prop.path}</env.prop>
+				<env.db>${project.conf.baseDir}/${env.db.path}</env.db>
+			</properties>
+			<activation>
+				<!-- 默认激活 -->
+				<activeByDefault>true</activeByDefault>
+			</activation>
+		</profile>
+	</profiles>
+</project>

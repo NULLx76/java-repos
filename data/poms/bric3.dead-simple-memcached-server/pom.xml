@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.github.bric3</groupId>
+    <artifactId>dead-simple-memcached-server</artifactId>
+    <version>0.1-SNAPSHOT</version>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+
+        <netty-all.version>4.1.4.Final</netty-all.version>
+        <caffeine.version>2.3.2</caffeine.version>
+        <spymemcached.version>2.12.1</spymemcached.version>
+        <mockito-core.version>2.0.0-beta.115</mockito-core.version>
+        <junit.version>4.12</junit.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>${netty-all.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+            <version>${caffeine.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.spy</groupId>
+            <artifactId>spymemcached</artifactId>
+            <version>${spymemcached.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${mockito-core.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>3.5.2</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>appassembler-maven-plugin</artifactId>
+                <version>1.10</version>
+                <executions>
+                    <execution>
+                        <id>assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>assemble</goal>
+                        </goals>
+                        <configuration>
+                            <repositoryLayout>flat</repositoryLayout>
+                            <repositoryName>lib</repositoryName>
+                            <useWildcardClassPath>true</useWildcardClassPath>
+                            <binFileExtensions>
+                                <unix>.sh</unix>
+                            </binFileExtensions>
+
+                            <assembleDirectory>${project.build.directory}/simple-memcached-server</assembleDirectory>
+                            <platforms>
+                                <platform>unix</platform>
+                            </platforms>
+                            <programs>
+                                <program>
+                                    <mainClass>com.github.bric3.memcached.server.DeadSimpleTextMemcachedServer</mainClass>
+                                    <id>simple-memcached-server</id>
+                                    <jvmSettings>
+                                        <!-- a bit arbitrary max memory size, probably to define relatively to the cache size -->
+                                        <maxMemorySize>5g</maxMemorySize>
+                                        <extraArguments>
+                                            <!--<extraArgument>-Dio.netty.leakDetectionLevel=advanced</extraArgument>-->
+                                            <!--
+                                            This one is a bit arbitrary too, as G1 is said to help bigger heap.
+                                            We may want to switch to CMS instead.
+                                             -->
+                                            <extraArgument>-XX:+UseG1GC</extraArgument>
+                                            <extraArgument>-verbose:gc</extraArgument>
+                                            <extraArgument>-Xloggc:simple-memcached-server-gc.log</extraArgument>
+                                            <extraArgument>-XX:+PrintGCDetails</extraArgument>
+                                            <extraArgument>-XX:+PrintGCDateStamps</extraArgument>
+                                            <extraArgument>-XX:+PrintTenuringDistribution</extraArgument>
+                                            <extraArgument>-XX:+PrintHeapAtGC</extraArgument>
+                                            <extraArgument>-XX:+PrintGCCause</extraArgument>
+                                            <extraArgument>-XX:+PrintGCApplicationStoppedTime</extraArgument>
+                                            <extraArgument>-XX:+HeapDumpOnOutOfMemoryError</extraArgument>
+                                        </extraArguments>
+                                    </jvmSettings>
+                                </program>
+                            </programs>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.6</version>
+                <configuration>
+                    <descriptor>src/main/assembly/assembly.xml</descriptor>
+                    <archive>
+                        <manifest>
+                            <mainClass>com.github.bric3.memcached.server.DeadSimpleTextMemcachedServer</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

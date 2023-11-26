@@ -1,0 +1,549 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <!-- ========================================================
+       Parent POM for all projects
+       Purpose:
+       Organizational identity, licenses, etc.
+       Plugin Management
+       Dependency Management
+      ========================================================= -->
+  <groupId>com.neopragma</groupId>
+  <artifactId>enterprise-pom</artifactId>
+  <packaging>pom</packaging>
+  <version>1.0</version>
+  <modules>
+    <module>categories</module>
+    <module>helloworld-main</module>
+  </modules>
+  <properties>
+    <main.basedir>${project.basedir}</main.basedir>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+  <name>Parent</name>
+  <description>Provides dependency management and plugin management definitions for all projects.</description>
+  <url>http://github.com/neopragma/helloworld</url>
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+      <distribution>repo</distribution>
+      <comments>MIT open source license</comments>
+    </license>
+  </licenses>
+  <organization>
+    <name>Neo Pragma LLC</name>
+    <url>http://neopragma.com</url>
+  </organization>
+  <developers>
+    <developer>
+      <id>neopragma</id>
+      <name>Dave Nicolette</name>
+      <email>dave@neopragma.com</email>
+      <url>http://neopragma.com/index.php/about/</url>
+      <organization>Neo Pragma LLC</organization>
+      <organizationUrl>http://neopragma.com</organizationUrl>
+      <roles>
+        <role>architect</role>
+        <role>developer</role>
+      </roles>
+      <timezone>America/Phoenix</timezone>
+      <properties>
+        <picUrl>https://media.licdn.com/mpr/mpr/shrink_100_100/AAEAAQAAAAAAAAb4AAAAJDA3MzYyY2UxLWQ3ODYtNDBmZS1hZDRkLTk5MzJjY2M5MTUzOA.jpg</picUrl>
+      </properties>
+    </developer>
+  </developers>
+
+  <distributionManagement>
+    <site>
+      <id>website</id>
+      <url>http://localhost/helloworld-site</url>
+    </site>
+  </distributionManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <!-- Set the Java compiler version -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.5.1</version>
+          <configuration>
+            <source>1.8</source>
+            <target>1.8</target>
+          </configuration>
+        </plugin>
+
+        <!-- Validate that code follows stylistic standards -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-checkstyle-plugin</artifactId>
+          <version>2.17</version>
+          <configuration>
+            <configLocation>${main.basedir}/checkstyle/google_checks.xml</configLocation>
+            <maxAllowedViolations>1000</maxAllowedViolations>
+            <encoding>UTF-8</encoding>
+            <consoleOutput>true</consoleOutput>
+            <failsOnError>true</failsOnError>
+            <linkXRef>false</linkXRef>
+          </configuration>
+          <executions>
+            <execution>
+              <id>checkstyle-validate</id>
+              <phase>validate</phase>
+              <goals>
+                <goal>check</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+
+        <!-- Customize Maven lifecycle -->
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>build-helper-maven-plugin</artifactId>
+          <version>1.10</version>
+          <executions>
+            <!-- Add integration test source directory -->
+            <execution>
+          	  <id>add-integration-test-sources</id>
+          	  <phase>generate-test-sources</phase>
+          	  <goals>
+          	    <goal>add-test-source</goal>
+          	  </goals>
+          	  <configuration>
+          	    <sources>
+          	      <source>src/integration-test/java</source>
+          	    </sources>
+          	  </configuration>
+            </execution>
+            <!-- Copy integration test resources -->
+            <execution>
+            	<id>add-integration-test-resources</id>
+            	<phase>generate-test-resources</phase>
+          	  <goals>
+          	    <goal>add-test-resource</goal>
+          	  </goals>
+          	  <configuration>
+          	    <resources>
+          	      <resource>
+          	        <filtering>true</filtering>
+          	        <directory>src/integration-test/resources</directory>
+          	      </resource>
+          	    </resources>
+          	  </configuration>
+            </execution>
+          </executions>
+        </plugin>
+
+        <!-- Execute system commands -->
+        <plugin>
+         <artifactId>exec-maven-plugin</artifactId>
+         <groupId>org.codehaus.mojo</groupId>
+         <version>1.5.0</version>
+         <executions>
+           <!-- Create local database for integration tests -->
+           <execution>
+             <id>Create database for integration tests</id>
+             <phase>pre-integration-test</phase>
+             <goals>
+               <goal>exec</goal>
+             </goals>
+             <configuration>
+               <executable>${basedir}/scripts/hello</executable>
+             </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Check for version-related problems and fail/warn accordingly -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>1.4.1</version>
+        <configuration>
+          <rules>
+            <bannedDependencies>
+              <searchTransitive>true</searchTransitive>
+              <excludes>
+                <exclude>junit:junit</exclude>
+              </excludes>
+              <includes>
+                <include>junit:junit:4.12</include>
+              </includes>
+            </bannedDependencies>
+            <requireUpperBoundDeps/>
+            <dependencyConvergence/>
+            <requireJavaVersion>
+              <version>[9,)</version>
+            </requireJavaVersion>
+          </rules>
+        </configuration>
+        <executions>
+          <execution>
+            <id>enforce</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <phase>validate</phase>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Exclude integration tests from the unit test goal -->
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.18.1</version>
+        <configuration>
+          <excludedGroups>com.neopragma.helloworld.IntegrationTest</excludedGroups>
+        </configuration>
+      </plugin>
+
+      <!-- Include integration tests in the integration-test and verify goals -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>2.19.1</version>
+        <configuration>
+          <includes>
+            <include>**/*.java</include>
+          </includes>
+          <groups>com.neopragma.helloworld.IntegrationTest</groups>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Control the generation of the Maven site for this project
+           mvn site:run -->
+      <plugin>
+         <groupId>org.apache.maven.plugins</groupId>
+         <artifactId>maven-site-plugin</artifactId>
+         <version>3.5.1</version>
+         <configuration>
+           <port>9000</port>
+           <tempWebappDirectory>${basedir}/target/site/staging</tempWebappDirectory>
+         </configuration>
+       </plugin>
+
+        <!-- This declaration suppresses a warning message on 'mvn site'
+             due to missing version for the artifact. -->
+        <plugin>
+          <artifactId>maven-project-info-reports-plugin</artifactId>
+          <version>2.9</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+  <dependencyManagement>
+    <dependencies>
+
+      <!-- local -->
+      <!-- Tagging interfaces for @Category annotations -->
+      <dependency>
+        <groupId>com.neopragma</groupId>
+        <artifactId>categories</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!-- https://mvnrepository.com/artifact/junit/junit -->
+      <!-- Unit testing framework -->
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.12</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!-- Mocking library for unit tests -->
+      <!-- https://mvnrepository.com/artifact/org.mockito/mockito-all -->
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-all</artifactId>
+        <version>1.10.19</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!-- Control the Java compiler version -->
+      <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-compiler-plugin -->
+      <dependency>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.5.1</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.codehaus.plexus</groupId>
+            <artifactId>plexus-component-annotations</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.codehaus.plexus</groupId>
+            <artifactId>plexus-interpolation</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.codehaus.plexus</groupId>
+            <artifactId>plexus-utils</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-artifact</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-core</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-model</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-plugin-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-settings</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-toolchain</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.maven.shared</groupId>
+            <artifactId>maven-shared-utils</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+
+      <!-- Disallow nonstandard coding style from being promoted. -->
+      <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-checkstyle-plugin -->
+      <dependency>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-checkstyle-plugin</artifactId>
+          <version>2.17</version>
+          <exclusions>
+            <exclusion>
+              <groupId>org.apache.maven</groupId>
+              <artifactId>maven-artifact</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.maven</groupId>
+              <artifactId>maven-core</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.maven</groupId>
+              <artifactId>maven-model</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.maven</groupId>
+              <artifactId>maven-profile</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.maven</groupId>
+              <artifactId>maven-project</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.maven</groupId>
+              <artifactId>maven-settings</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.maven</groupId>
+              <artifactId>maven-plugin-descriptor</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.maven.doxia</groupId>
+              <artifactId>doxia-decoration-model</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.maven.doxia</groupId>
+              <artifactId>doxia-integration-tools</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.maven.doxia</groupId>
+              <artifactId>doxia-sink-api</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.maven.doxia</groupId>
+              <artifactId>doxia-site-renderer</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.maven.reporting</groupId>
+              <artifactId>maven-reporting-api</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.maven.reporting</groupId>
+              <artifactId>maven-reporting-impl</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.velocity</groupId>
+              <artifactId>velocity</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.codehaus.plexus</groupId>
+              <artifactId>plexus-resources</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.codehaus.plexus</groupId>
+              <artifactId>plexus-utils</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.codehaus.plexus</groupId>
+              <artifactId>plexus-velocity</artifactId>
+            </exclusion>
+          </exclusions>
+      </dependency>
+
+      <!-- Control unit test execution -->
+      <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-surefire-plugin -->
+      <dependency>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>2.19.1</version>
+          <exclusions>
+            <exclusion>
+              <groupId>org.codehaus.plexus</groupId>
+              <artifactId>plexus.container.default</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.maven</groupId>
+              <artifactId>maven-core</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.maven</groupId>
+              <artifactId>maven-project</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.maven</groupId>
+              <artifactId>maven-toolchain</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.maven.plugin-tools</groupId>
+              <artifactId>maven-plugin-annotations</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.maven.surefire</groupId>
+              <artifactId>maven-surefire-common</artifactId>
+            </exclusion>
+          </exclusions>
+      </dependency>
+
+      <!-- Control integration test execution -->
+      <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-failsafe-plugin -->
+      <dependency>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>2.19.1</version>
+          <exclusions>
+            <exclusion>
+              <groupId>org.apache.maven.plugin-tools</groupId>
+              <artifactId>maven-plugin-annotations</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.apache.maven.surefire</groupId>
+              <artifactId>maven-surefire-common</artifactId>
+            </exclusion>
+          </exclusions>
+      </dependency>
+
+      <!-- Execute system commands during the Maven lifecycle -->
+      <!-- https://mvnrepository.com/artifact/org.codehaus.mojo/exec-maven-plugin -->
+      <dependency>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.5.0</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.codehaus.plexus</groupId>
+            <artifactId>plexus-utils</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-artifact-manager</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-core</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-model</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-project</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-toolchain</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+
+      <!-- Customize the Maven build environment -->
+      <!-- https://mvnrepository.com/artifact/org.codehaus.mojo/build-helper-maven-plugin -->
+      <dependency>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>1.10</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-core</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-model</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-project</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+
+      <!-- Enforce dependency convergence -->
+      <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-enforcer-plugin -->
+      <dependency>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>1.4.1</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.codehaus.plexus</groupId>
+            <artifactId>plexus-interactivity-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-core</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-project</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.maven.enforcer</groupId>
+            <artifactId>enforcer-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.maven.enforcer</groupId>
+            <artifactId>enforcer-rules</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.maven.plugin-testing</groupId>
+            <artifactId>maven-plugin-testing-harness</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+</project>

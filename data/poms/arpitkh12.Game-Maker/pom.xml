@@ -1,0 +1,243 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>org.p532</groupId>
+	<artifactId>fall2016_a6_team1</artifactId>
+	<version>0.1</version>
+
+	<properties>
+		<!-- Sonar/Reportng settings -->
+		<sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
+		<jacoco.version>0.7.4.201502262128</jacoco.version>
+		<sonar-jacoco-listeners.version>1.4</sonar-jacoco-listeners.version>
+		<!-- Don't let Sonar execute tests. We will ask it to Maven -->
+		<sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
+
+		<jacoco.outputDir>${project.build.directory}</jacoco.outputDir>
+		<!-- Jacoco output file for UTs -->
+		<jacoco.out.ut.file>jacoco-ut.exec</jacoco.out.ut.file>
+		<!-- Tells Sonar where the Jacoco coverage result file is located for Unit 
+			Tests -->
+		<sonar.jacoco.reportPath>${jacoco.outputDir}/${jacoco.out.ut.file}</sonar.jacoco.reportPath>
+		<!-- Jacoco output file for ITs -->
+		<jacoco.out.it.file>jacoco-it.exec</jacoco.out.it.file>
+		<!-- Tells Sonar where the Jacoco coverage result file is located for Integration 
+			Tests -->
+		<sonar.jacoco.itReportPath>${jacoco.outputDir}/${jacoco.out.it.file}</sonar.jacoco.itReportPath>
+
+		<!-- webstart and getdown properties -->
+		<base.project.name>fall2016_a6_team1</base.project.name>
+		<base.project.name.friendly>team1</base.project.name.friendly>
+		<assignment.name>fall2016/a6</assignment.name>
+		<code-root>.</code-root>
+		<wwwroot>/u/kspace/www/fluency</wwwroot>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.8.2</version>
+		</dependency>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-all</artifactId>
+			<version>1.9.5</version>
+		</dependency>
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.17</version>
+		</dependency>
+		<dependency>
+			<groupId>com.googlecode.json-simple</groupId>
+			<artifactId>json-simple</artifactId>
+			<version>1.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.codehaus.sonar-plugins.java</groupId>
+			<artifactId>sonar-jacoco-listeners</artifactId>
+			<version>${sonar-jacoco-listeners.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.reflections/reflections -->
+		<dependency>
+			<groupId>org.reflections</groupId>
+			<artifactId>reflections</artifactId>
+			<version>0.9.5</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.reflections/reflections-maven -->
+		<dependency>
+			<groupId>org.reflections</groupId>
+			<artifactId>reflections-maven</artifactId>
+			<version>0.9.8</version>
+		</dependency>
+
+
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.1</version>
+				<configuration>
+					<source>1.7</source>
+					<target>1.7</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<argLine>${jacoco.agent.ut.arg}</argLine>
+					<!-- Specific to generate mapping between tests and covered code -->
+					<properties>
+						<property>
+							<name>listener</name>
+							<value>org.sonar.java.jacoco.JUnitListener</value>
+						</property>
+						<systemPropertyVariables>
+							<java.awt.headless>true</java.awt.headless>
+						</systemPropertyVariables>
+					</properties>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<configuration>
+					<argLine>-Xmx1024m -XX:MaxPermSize=256m ${jacoco.agent.it.arg}</argLine>
+					<!-- Specific to generate mapping between tests and covered code -->
+					<properties>
+						<property>
+							<name>listener</name>
+							<value>org.sonar.java.jacoco.JUnitListener</value>
+						</property>
+					</properties>
+					<!-- Let's put failsafe reports with surefire to have access to tests 
+						failures/success reports in sonar -->
+					<reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>${jacoco.version}</version>
+				<executions>
+					<!-- Prepares a variable, jacoco.agent.ut.arg, that contains the info 
+						to be passed to the JVM hosting the code being tested. -->
+					<execution>
+						<id>prepare-ut-agent</id>
+						<phase>process-test-classes</phase>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+						<configuration>
+							<destFile>${sonar.jacoco.reportPath}</destFile>
+							<propertyName>jacoco.agent.ut.arg</propertyName>
+							<append>true</append>
+						</configuration>
+					</execution>
+					<!-- Prepares a variable, jacoco.agent.it.arg, that contains the info 
+						to be passed to the JVM hosting thecode being tested -->
+					<execution>
+						<id>prepare-it-agent</id>
+						<phase>pre-integration-test</phase>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+						<configuration>
+							<destFile>${sonar.jacoco.itReportPath}</destFile>
+							<propertyName>jacoco.agent.it.arg</propertyName>
+							<append>true</append>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>webstart-maven-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>prepare-jnlp</id>
+						<phase>post-integration-test</phase>
+						<goals>
+							<goal>jnlp-inline</goal> <!-- use jnlp, jnlp-inline or jnlp-single as appropriate -->
+						</goals>
+					</execution>
+				</executions>
+
+				<configuration>
+					<jnlp>
+						<mainClass>com.p532.launcher.GameMaker</mainClass>
+					</jnlp>
+					<sign>
+						<keystore>${project.basedir}/src/main/jnlp/foo1.jks</keystore>
+						<keypass>123abc</keypass>
+						<storepass>123abc</storepass>
+						<storetype>jks</storetype>
+						<alias>foo1</alias>
+						<verify>true</verify>
+					</sign>
+					<verbose>true</verbose>
+				</configuration>
+
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>1.7</version>
+				<executions>
+					<execution>
+						<phase>verify</phase>
+						<configuration>
+							<target>
+								<copy
+									file="${basedir}/target/jnlp/${base.project.name}-${version}.jar"
+									toDir="${wwwroot}/student-files/${assignment.name}/${base.project.name}" />
+								<copy file="${basedir}/target/jnlp/launch.jnlp"
+									toDir="${wwwroot}/student-files/${assignment.name}/${base.project.name}" />
+							</target>
+						</configuration>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<configuration>
+					<archive>
+						<manifest>
+							<mainClass>com.p532.launcher.GameMaker</mainClass>
+						</manifest>
+					</archive>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+
+					<appendAssemblyId>false</appendAssemblyId>
+
+
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-assembly</id> <!-- this is used for inheritance merges -->
+						<phase>package</phase> <!-- bind to the packaging phase -->
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+</project> 
+ 
+ 
+ 

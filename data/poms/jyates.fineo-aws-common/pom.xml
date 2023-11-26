@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>io.fineo.aws</groupId>
+  <artifactId>aws-common</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <description>Common utilities for java projects that access amazon</description>
+
+  <properties>
+    <!-- dependency versions -->
+    <aws-java-sdk.version>1.11.38</aws-java-sdk.version>
+    <surefire.version>2.19</surefire.version>
+    <slf4j.version>1.7.21</slf4j.version>
+    <!-- test setup properties -->
+    <test.output.to.file>true</test.output.to.file>
+    <test.exclude.pattern></test.exclude.pattern>
+    <surefire.s3tests>org.apache.storm.s3.S3DependentTests</surefire.s3tests>
+    <surefire.skipSimpleTests>false</surefire.skipSimpleTests>
+    <surefire.skipS3Tests>true</surefire.skipS3Tests>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk-core</artifactId>
+      <version>${aws-java-sdk.version}</version>
+      <exclusions>
+        <exclusion>
+          <artifactId>commons-logging</artifactId>
+          <groupId>commons-logging</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk-s3</artifactId>
+      <version>${aws-java-sdk.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.12</version>
+    </dependency>
+    <dependency>
+      <groupId>org.yaml</groupId>
+      <artifactId>snakeyaml</artifactId>
+      <version>1.16</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.3</version>
+          <configuration>
+            <source>1.8</source>
+            <target>1.8</target>
+          </configuration>
+        </plugin>
+        <plugin>
+          <!-- Configuration for two distinct phases of test execution. First phase just
+           supports local, non-s3 requiring tests. The second phase is just the tests
+           that require a connection to s3 manipulate buckets/files there. -->
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${surefire.version}</version>
+          <!-- Generic testing configuration for all packages -->
+          <configuration>
+            <redirectTestOutputToFile>${test.output.to.file}</redirectTestOutputToFile>
+            <skip>true</skip>
+            <argLine>-enableassertions -Djava.security.egd=file:/dev/./urandom</argLine>
+            <excludes>
+              <!-- users can add -D option to skip particular test classes
+             ex: mvn test -Dtest.exclude.pattern=**/TestFoo.java,**/TestBar.java
+              -->
+              <exclude>${test.exclude.pattern}</exclude>
+            </excludes>
+          </configuration>
+          <executions>
+            <execution>
+              <id>local-tests</id>
+              <goals>
+                <goal>test</goal>
+              </goals>
+              <configuration>
+                <excludedGroups>${surefire.s3tests}</excludedGroups>
+                <skip>${surefire.skipSimpleTests}</skip>
+              </configuration>
+            </execution>
+            <execution>
+              <id>s3tests</id>
+              <goals>
+                <goal>test</goal>
+              </goals>
+              <configuration>
+                <groups>${surefire.s3tests}</groups>
+                <skip>${surefire.skipS3Tests}</skip>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <plugins>
+      <!-- Create the test jar -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>2.6</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>test-jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>s3Tests</id>
+      <activation>
+        <property>
+          <name>s3Tests</name>
+        </property>
+      </activation>
+      <properties>
+        <surefire.skipS3Tests>false</surefire.skipS3Tests>
+      </properties>
+
+    </profile>
+    <profile>
+      <id>skipLocalTests</id>
+      <activation>
+        <property>
+          <name>skipLocalTests</name>
+        </property>
+      </activation>
+      <properties>
+        <surefire.skipSimpleTests>true</surefire.skipSimpleTests>
+      </properties>
+
+    </profile>
+  </profiles>
+</project>

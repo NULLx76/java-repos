@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>ro.cbn.it</groupId>
+    <artifactId>cbn-address-server</artifactId>
+    <version>1.0.0</version>
+	<packaging>war</packaging>
+    <prerequisites>
+        <maven>3.1.0</maven>
+    </prerequisites>
+	
+    <properties>
+        <app.id>cbn-adresa</app.id>
+        <app.module>default</app.module>
+		
+        <app.configSettings>
+            <![CDATA[-->
+				<instance-class>F1</instance-class>
+				<automatic-scaling>
+					<min-idle-instances>automatic</min-idle-instances>
+					<max-idle-instances>1</max-idle-instances>
+					<min-pending-latency>2s</min-pending-latency>
+    				<max-pending-latency>10s</max-pending-latency>
+				</automatic-scaling>
+			<!--]]>
+        </app.configSettings>
+		
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<webappDirectory>${project.build.directory}/${project.build.finalName}</webappDirectory>
+		<maven.compiler.source>1.7</maven.compiler.source>
+		<maven.compiler.target>1.7</maven.compiler.target>
+		
+        <plugin.appengine.version>1.9.38</plugin.appengine.version>
+        <maven.compiler.showDeprecation>true</maven.compiler.showDeprecation>
+    </properties>
+    <dependencies>
+		<dependency>
+			<!--our framework-->
+			<groupId>ro.cbn.it</groupId>
+			<artifactId>appengine-framework</artifactId>
+			<version>[1.0.0,]</version>
+		</dependency>
+		
+        <!-- Compile/runtime dependencies -->
+        <dependency>
+            <groupId>com.google.appengine</groupId>
+            <artifactId>appengine-api-1.0-sdk</artifactId>
+            <version>${plugin.appengine.version}</version>
+        </dependency>
+		
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
+            <version>2.5</version>
+            <scope>provided</scope>
+        </dependency>
+		
+		<dependency>
+			<groupId>com.googlecode.concurrent-trees</groupId>
+			<artifactId>concurrent-trees</artifactId>
+			<version>2.5.0</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.github.jbellis</groupId>
+			<artifactId>jamm</artifactId>
+			<version>0.3.1</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.esotericsoftware</groupId>
+			<artifactId>kryo</artifactId>
+			<version>3.0.3</version>
+		</dependency>
+		
+	</dependencies>
+
+    <build>
+        <!-- for hot reload of the web application-->
+		<outputDirectory>${webappDirectory}/WEB-INF/classes</outputDirectory>
+        <plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<version>2.3</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>properties</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.4.0</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<phase>package</phase>
+					</execution>
+				</executions>
+				<configuration>
+					<executable>java</executable>
+					<arguments>
+						<argument>-classpath</argument>
+						<classpath/>
+						<!--suppress MavenModelInspection (the property is defined by maven-dependency-plugin) -->
+						<argument>-javaagent:${com.github.jbellis:jamm:jar}</argument>
+						<argument>ro.cbn.it.adrese.model.siruta.SirutaGenerator</argument>
+						<argument>${project.basedir}/src/main/webapp/siruta/siruta_parsat.json</argument>
+						<argument>${project.basedir}/src/main/webapp/siruta/judete.json</argument>
+						<argument>${project.build.directory}/${project.build.finalName}/siruta/database</argument>
+						<argument>${project.build.directory}/${project.build.finalName}/siruta/processed.csv</argument>
+					</arguments>
+					<workingDirectory>${project.build.directory}/${project.build.finalName}</workingDirectory>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>ro.appengine</groupId>
+				<artifactId>web-generator-maven-plugin</artifactId>
+				<version>1.0.0</version>
+				<executions>
+					<execution>
+						<id>create_mappings</id>
+						<goals>
+							<goal>web_mapping</goal>
+						</goals>
+						<phase>package</phase>
+					</execution>
+					<execution>
+						<id>increment</id>
+						<goals>
+							<goal>increment_version</goal>
+						</goals>
+						<phase>package</phase>
+					</execution>
+				</executions>
+				<configuration>
+					<extendedClass>ro.cbn.it.framework.servlet.AbstractIController</extendedClass>
+					<annotationClass>ro.cbn.it.framework.annotation.UrlPattern</annotationClass>
+					<suffix>${user.name}</suffix>
+				</configuration>
+			</plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <version>3.1</version>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.7</source>
+                    <target>1.7</target>
+                    <excludes>
+                        <exclude>**/deprecated/**</exclude>
+                        <!--<exclude>**/utils/ReadJsFile.java</exclude>
+                        <exclude>**/utils/ReadCssFile.java</exclude>
+                        <exclude>**/utils/GenerateWebXml.java</exclude>-->
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>2.4</version>
+                <configuration>
+
+                    <archiveClasses>true</archiveClasses>
+                    <webResources>
+                        <resource>
+                            <directory>${basedir}/src/main/webapp/WEB-INF</directory>
+                            <filtering>true</filtering>
+                            <targetPath>WEB-INF</targetPath>
+                        </resource>
+                    </webResources>
+                    <nonFilteredFileExtensions>
+                        <nonFilteredFileExtension>p12</nonFilteredFileExtension>
+                    </nonFilteredFileExtensions>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.google.appengine</groupId>
+                <artifactId>appengine-maven-plugin</artifactId>
+                <version>${plugin.appengine.version}</version>
+
+                <configuration>
+					<!--<jvmFlags>-->
+						<!--<jvmFlag>-Xdebug</jvmFlag>-->
+						<!--<jvmFlag>-agentlib:jdwp=transport=dt_socket,address=8000,server=y,suspend=y</jvmFlag>-->
+					<!--</jvmFlags>-->
+                    <enableJarClasses>false</enableJarClasses>
+                    <!-- Comment in the below snippet to bind to all IPs instead of just localhost -->
+                    <!-- address>0.0.0.0</address>-->
+                    <port>8888</port>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+	<pluginRepositories>
+		<pluginRepository>
+			<id>cbn-mvn</id>
+			<name>>cbn-it</name>
+			<releases>
+				<enabled>true</enabled>
+				<updatePolicy>always</updatePolicy>
+			</releases>
+			<url>https://api.bitbucket.org/1.0/repositories/cbn-it/mvn-repo/raw/releases</url>
+		</pluginRepository>
+	</pluginRepositories>
+	<repositories>
+		<repository>
+			<id>cbn-mvn</id>
+			<name>>cbn-it</name>
+			<releases>
+				<enabled>true</enabled>
+				<updatePolicy>always</updatePolicy>
+			</releases>
+			<url>https://api.bitbucket.org/1.0/repositories/cbn-it/mvn-repo/raw/releases</url>
+		</repository>
+	</repositories>
+</project>

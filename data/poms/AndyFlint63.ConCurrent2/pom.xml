@@ -1,0 +1,193 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.af.test</groupId>
+  <artifactId>Concurrent2</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>war</packaging>
+  <name>concurrent2</name>
+  <properties>
+		<jersey.version>2.24.1</jersey.version>
+		<jersey.config.test.container.port>9998</jersey.config.test.container.port>
+		<jaxrs.version>2.0.1</jaxrs.version>
+		<log4j.version>2.7</log4j.version>
+		<jackson.version>2.8.4</jackson.version>
+
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+		<maven.compiler.source>1.8</maven.compiler.source>
+		<maven.compiler.target>1.8</maven.compiler.target>
+		<maven.compiler.debuglevel>lines,vars,source</maven.compiler.debuglevel>
+		<sonar.language>java</sonar.language>
+		<sonar.java.source>8</sonar.java.source>
+		<sonar.sourceEncoding>UTF-8</sonar.sourceEncoding>
+		<sonar.junit.reportsPath>target/surefire-reports</sonar.junit.reportsPath>
+		<sonar.cobertura.reportPath>target/site/cobertura/coverage.xml</sonar.cobertura.reportPath>
+	</properties>
+  	  <dependencies>
+		<dependency>
+    		<groupId>javax.servlet</groupId>
+    		<artifactId>javax.servlet-api</artifactId>
+   			 <version>3.0.1</version>
+    		<scope>provided</scope>
+		</dependency>
+
+  </dependencies>
+  <build>
+  
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.5.1</version>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-war-plugin</artifactId>
+        <version>3.0.0</version>
+        <configuration>
+          <warSourceDirectory>WebContent</warSourceDirectory>
+        </configuration>
+      </plugin>
+      			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				
+				<configuration>
+				<webXml>WebContent\WEB-INF\web.xml</webXml>
+				
+					<webResources>
+						<resource>
+							<directory>${project.build.directory}/site</directory>
+						</resource>
+						<resource>
+							<directory>${project.basedir}/WebContent</directory>
+						</resource>
+						  <!--  <resource>
+							<directory>${project.build.directory}/jaxrs-analyzer</directory>
+						</resource> -->
+					</webResources>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<inherited>false</inherited>
+				<executions>
+					<execution>
+						<id>package.patch</id>
+						<phase>prepare-package</phase>
+						<configuration>
+							<target>
+								<mkdir dir="${project.build.directory}/site" />
+								<mkdir dir="${project.build.directory}/jaxrs-analyzer" />
+							</target>
+						</configuration>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			
+    </plugins>
+  </build>
+   <profiles>
+		<profile>
+			<id>free-bird</id>
+			<build>
+				<plugins>
+					<plugin>
+						<!-- TODO: Move to seperate profile. Will not work behind firewall -->
+						<!-- https://github.com/mulesoft/raml-for-jax-rs/issues/89 -->
+						<!-- https://github.com/mulesoft/raml-for-jax-rs/issues/84 -->
+						<groupId>org.raml.plugins</groupId>
+						<artifactId>jaxrs-raml-maven-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>rest.api.doc.jaxrs-raml-maven-plugin</id>
+								<phase>prepare-package</phase>
+								<goals>
+									<goal>generate-raml</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+								<plugin>
+				<!-- Available backends are plaintext (default), swagger and asciidoc -->
+				<groupId>com.sebastian-daschner</groupId>
+				<artifactId>jaxrs-analyzer-maven-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>rest.api.doc.jaxrs-analyzer-maven-plugin</id>
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>analyze-jaxrs</goal>
+						</goals>
+						<configuration>
+							<backend>plaintext</backend>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>rest-api-testing-dhc-maven-plugin</id>
+			<build>
+				<plugins>
+					<!-- https://jenkins.io/blog/2016/04/11/run-your-api-tests-continuously-with-jenkins-and-dhc/ -->
+					<plugin>
+						<groupId>com.restlet.dhc</groupId>
+						<artifactId>dhc-maven-plugin</artifactId>
+						<executions>
+							<execution>
+								<phase>test</phase>
+								<goals>
+									<goal>test</goal>
+								</goals>
+								<!-- FIXME add some tests -->
+								<configuration>
+									<file>companies-scenario.json</file>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<!-- http://docs.sonarqube.org/display/SCAN/Analyzing+with+SonarQube+Scanner+for+Maven -->
+			<id>code-quality-management</id>
+			<activation>
+				<property>
+					<name>sonar.host.url</name>
+				</property>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.sonarsource.scanner.maven</groupId>
+						<artifactId>sonar-maven-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>code.quality.unit.test.sonar-maven-plugin</id>
+								<phase>test</phase>
+								<goals>
+									<goal>sonar</goal>
+								</goals>
+							</execution>
+							<!-- FIXME Restore when have integration tests -->
+							<!-- <execution> <id>code.quality.integration.test.sonar-maven-plugin</id> 
+								<phase>post-integration-test</phase> <goals> <goal>sonar</goal> </goals> 
+								</execution> -->
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+</project>

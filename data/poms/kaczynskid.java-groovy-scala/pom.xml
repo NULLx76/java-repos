@@ -1,0 +1,288 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>org.ducklings</groupId>
+	<artifactId>polyglot</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<maven.compiler.source>1.7</maven.compiler.source>
+		<maven.compiler.target>1.7</maven.compiler.target>
+
+        <groovy.version>2.1.1</groovy.version>
+		<groovy.eclipse.version>2.1.1-01</groovy.eclipse.version>
+        <groovy.eclipse.compiler.version>2.7.0-01</groovy.eclipse.compiler.version>
+		<scala.version>2.10.1</scala.version>
+
+		<groovy.stubs.output.directory>${project.build.directory}/generated-sources/groovy-stubs/main</groovy.stubs.output.directory>
+		<groovy.test.stubs.output.directory>${project.build.directory}/generated-sources/groovy-stubs/test</groovy.test.stubs.output.directory>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-all</artifactId>
+			<version>${groovy.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.scala-lang</groupId>
+			<artifactId>scala-library</artifactId>
+			<version>${scala.version}</version>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+            <!-- 0) Enforce proper tools versions-->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>enforce-versions</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireMavenVersion>
+                                    <version>3.0.5</version>
+                                </requireMavenVersion>
+                                <requireJavaVersion>
+                                    <version>1.7</version>
+                                </requireJavaVersion>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- 1) Generate Java stubs from Groovy sources -->
+			<plugin>
+				<groupId>org.codehaus.gmaven</groupId>
+				<artifactId>gmaven-plugin</artifactId>
+				<configuration>
+					<sources>
+						<source>
+							<directory>src/main/java</directory>
+							<includes>
+								<include>**/*.groovy</include>
+							</includes>
+						</source>
+					</sources>
+					<testSources>
+						<testSource>
+							<directory>src/test/java</directory>
+							<includes>
+								<include>**/*.groovy</include>
+							</includes>
+						</testSource>
+					</testSources>
+					<stubsOutputDirectory>${groovy.stubs.output.directory}</stubsOutputDirectory>
+					<testStubsOutputDirectory>${groovy.test.stubs.output.directory}</testStubsOutputDirectory>
+				</configuration>
+				<executions>
+					<execution>
+						<id>generate-groovy-stubs</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>generateStubs</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>generate-test-groovy-stubs</id>
+						<phase>generate-test-sources</phase>
+						<goals>
+							<goal>generateTestStubs</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+            <!-- 2) Compile Scala code using Java sources and generated stubs on the way -->
+            <plugin>
+                <groupId>org.scala-tools</groupId>
+                <artifactId>maven-scala-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>scala-compile</id>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDir>src/main/java</sourceDir>
+                            <sourceDir>${groovy.stubs.output.directory}</sourceDir>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>scala-test-compile</id>
+                        <phase>process-test-sources</phase>
+                        <goals>
+                            <goal>testCompile</goal>
+                        </goals>
+                        <configuration>
+                            <testSourceDir>src/test/java</testSourceDir>
+                            <testSourceDir>${groovy.test.stubs.output.directory}</testSourceDir>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- 3) Could not use groovy-eclipse-compiler as it tries to compile the stubs generated in step 1.
+                If you can find a way to remove the sourceRoot added by gmaven-plugin, or make it not add it,
+                or make the compiler to ignore the stubs and compile only from src/main/java, this should work.
+                Util than, I use maven-antrun-plugin instead. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerId>groovy-eclipse-compiler</compilerId>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>default-compile</id>
+                        <phase>none</phase>
+                    </execution>
+                    <execution>
+                        <id>default-testCompile</id>
+                        <phase>none</phase>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.codehaus.groovy</groupId>
+                        <artifactId>groovy-eclipse-compiler</artifactId>
+                        <version>${groovy.eclipse.compiler.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.codehaus.groovy</groupId>
+                        <artifactId>groovy-eclipse-batch</artifactId>
+                        <version>${groovy.eclipse.version}</version>
+                    </dependency>
+                </dependencies>
+			</plugin>
+
+             <!-- 4) Compile Groovy & Java code with already compiled Scala classes -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.7</version>
+                <executions>
+                    <execution>
+                        <id>groovy-compile</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc"
+                                    classpathref="maven.compile.classpath" />
+                                <groovyc srcdir="${basedir}/src/main/java" destdir="${project.build.outputDirectory}"
+                                    listfiles="true" classpathref="maven.test.classpath">
+                                    <javac source="${maven.compiler.source}" target="${maven.compiler.target}" />
+                                </groovyc>
+                            </target>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>groovy-test-compile</id>
+                        <phase>test-compile</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc"
+                                    classpathref="maven.compile.classpath" />
+                                <groovyc srcdir="${basedir}/src/test/java/" destdir="${project.build.testOutputDirectory}"
+                                    listfiles="true" classpathref="maven.test.classpath">
+                                </groovyc>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Main-Class>org.ducklings.polyglot.Main</Main-Class>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>jar-with-dependencies</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <descriptorRefs>
+                                <descriptorRef>jar-with-dependencies</descriptorRef>
+                            </descriptorRefs>
+                            <archive>
+                                <manifestEntries>
+                                    <Main-Class>org.ducklings.polyglot.Main</Main-Class>
+                                </manifestEntries>
+                            </archive>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+		</plugins>
+
+		<pluginManagement>
+			<plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-enforcer-plugin</artifactId>
+                    <version>1.2</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-assembly-plugin</artifactId>
+                    <version>2.4</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>2.4</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.gmaven</groupId>
+                    <artifactId>gmaven-plugin</artifactId>
+                    <version>1.5</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>build-helper-maven-plugin</artifactId>
+                    <version>1.8</version>
+                </plugin>
+				<plugin>
+					<groupId>org.scala-tools</groupId>
+					<artifactId>maven-scala-plugin</artifactId>
+					<version>2.15.2</version>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+
+</project>

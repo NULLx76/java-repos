@@ -1,0 +1,348 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.jobscience</groupId>
+  <artifactId>search</artifactId>
+  <packaging>war</packaging>
+  <version>0.1</version>
+  <name>jss</name>
+  <url>http://maven.apache.org</url>
+  
+  <build>
+	<finalName>jss</finalName>
+	<plugins>
+	  <plugin>
+		<artifactId>maven-compiler-plugin</artifactId>
+		<version>2.3.2</version>
+		<configuration>
+		  <source>1.8</source>
+		  <target>1.8</target>
+		</configuration>
+	  </plugin>
+
+	  <!-- mvn jetty:* plugin. See http://wiki.eclipse.org/Jetty/Feature/Jetty_Maven_Plugin -->
+	  <plugin>
+		<groupId>org.eclipse.jetty</groupId>
+		<artifactId>jetty-maven-plugin</artifactId>
+		  <version>9.3.0.M2</version>
+		<!-- Uncomment to enable auto java class reload on java changes
+		<configuration>
+			<scanIntervalSeconds>1</scanIntervalSeconds>
+		</configuration>
+		 -->
+		<configuration>
+		  <connectors>
+			<connector implementation="org.eclipse.jetty.server.nio.SelectChannelConnector">
+			  <port>8080</port>
+			  <maxIdleTime>60000</maxIdleTime>
+			</connector>
+			<connector implementation="org.eclipse.jetty.server.ssl.SslSocketConnector">
+			  <port>8443</port>
+			  <maxIdleTime>60000</maxIdleTime>
+			  <Acceptors>2</Acceptors>
+			  <AcceptQueueSize>100</AcceptQueueSize>
+			  <keystore>${basedir}/keystore</keystore>
+			  <password>123456</password>
+			  <keyPassword>123456</keyPassword>
+			</connector>
+		  </connectors>
+		</configuration>
+	  </plugin>
+
+	  <plugin>
+		<artifactId>maven-antrun-plugin</artifactId>
+		<version>1.8</version>
+		<executions>
+
+		  <!-- clean the compile HTML assets -->
+		  <execution>
+			<id>delete-html-assets</id>
+			<phase>prepare-package</phase>
+			<goals>
+				<goal>run</goal>
+			</goals>
+			<configuration>
+			  <tasks>
+			  <delete>
+				<fileset dir="src/main/webapp/css">
+				  <include name="*.css"/>
+				</fileset>
+			  </delete>
+			  </tasks>
+			</configuration>
+		  </execution>
+		  <!-- /clean the compile HTML assets -->
+
+		  <!-- jCruncher -->
+		  <execution>
+			<id>compile-html-assets</id>
+			<phase>prepare-package</phase>
+			<goals>
+				<goal>run</goal>
+			</goals>
+			<configuration>
+			  <tasks>
+				<exec executable="java">
+				  <arg line="-jar"/>
+				  <arg line="${JCRUNCHER_HOME}/jcruncherEx.jar"/>
+				</exec>
+			  </tasks>
+			</configuration>
+		  </execution>
+		  <!-- /jCruncher -->
+
+		  <!-- Copy to War -->
+		  <execution>
+			<id>copy-to-war</id>
+			<phase>package</phase>
+			<goals>
+			  <goal>run</goal>
+			</goals>
+			<configuration>
+			  <tasks>
+				<mkdir dir="../war" />
+				<delete includeemptydirs="true">
+				  <fileset dir="../war" includes="**/*" excludes=".git/"/>
+				</delete>
+				<copy todir="../war">
+				  <fileset dir="target/jss"/>
+				</copy>
+			  </tasks>
+			</configuration>
+		  </execution>
+		  <!-- /Copy to War -->
+
+		  <!-- Copy to heroku-deploy -->
+		  <execution>
+			<id>copy-to-heroku</id>
+			<phase>package</phase>
+			<goals>
+			  <goal>run</goal>
+			</goals>
+			<configuration>
+			  <tasks>
+				<mkdir dir="../heroku-deploy" />
+				<mkdir dir="../heroku-deploy/src" />
+				<delete includeemptydirs="true">
+				  <fileset dir="../heroku-deploy" includes="**/*" excludes=".git/"/>
+				</delete>
+				<!-- copy to java sources -->
+				<copy todir="../heroku-deploy/src" >
+				  <fileset dir="src/" />
+				</copy>
+				<!-- /copy to java sources -->
+				<copy todir="../heroku-deploy" overwrite="true">
+				  <fileset dir="heroku/" />
+				</copy>
+			  </tasks>
+			</configuration>
+		  </execution>
+		  <!-- Copy to heroku-deploy -->
+
+		</executions>
+	  </plugin>
+
+	</plugins>
+
+
+   
+  </build>
+  
+  <dependencies>
+	<!-- Provided Dependencies -->
+	<dependency>
+	  <groupId>junit</groupId>
+	  <artifactId>junit</artifactId>
+	  <version>4.12</version>
+	  <scope>provided</scope>
+	</dependency>
+
+	<dependency>
+	  <groupId>javax.servlet</groupId>
+	  <artifactId>servlet-api</artifactId>
+	  <version>2.5</version>
+	  <scope>provided</scope>
+	</dependency>
+	<!-- /Provided Dependencies -->
+
+	<!-- Snow -->
+	<dependency>
+	  <groupId>com.britesnow</groupId>
+	  <artifactId>snow</artifactId>
+	  <version>2.0.6</version>
+	</dependency>
+	<!-- /Snow -->
+
+	<dependency>
+	  <groupId>org.jasql</groupId>
+	  <artifactId>jasql</artifactId>
+	  <version>0.4.0-SNAPSHOT</version>
+	</dependency>
+
+	<dependency>
+	  <groupId>org.slf4j</groupId>
+	  <artifactId>slf4j-log4j12</artifactId>
+	  <version>1.7.12</version>
+	</dependency>
+	<dependency>
+		  <groupId>org.scribe</groupId>
+		  <artifactId>scribe</artifactId>
+		  <version>1.3.7</version>
+	  </dependency>
+
+	<!--salesforce api -->
+	<dependency>
+	  <groupId>com.force.api</groupId>
+	  <artifactId>force-metadata-api</artifactId>
+	  <version>29.0.0</version>
+	</dependency>
+	<dependency>
+	  <groupId>com.force.api</groupId>
+	  <artifactId>force-wsc</artifactId>
+	  <version>29.0.0</version>
+	</dependency>
+	<!--/salesforce api -->
+
+	<!-- http -->
+	<dependency>
+		<groupId>org.apache.httpcomponents</groupId>
+		<artifactId>httpclient</artifactId>
+		<version>4.4.1</version>
+	</dependency>
+	<!-- /http -->
+
+	<!-- Database Dependencies -->
+	<!--
+	<dependency>
+	  <groupId>org.postgresql</groupId>
+	  <artifactId>postgresql</artifactId>
+	  <version>9.2-1002-jdbc4</version>
+	</dependency>
+	-->
+	<dependency>
+		<groupId>org.postgresql</groupId>
+		<artifactId>postgresql</artifactId>
+		<version>9.3-1101-jdbc41</version>
+	</dependency>
+	
+	<dependency>
+		<groupId>com.zaxxer</groupId>
+		<artifactId>HikariCP</artifactId>
+		<version>2.3.6</version>
+	</dependency> 
+	<!-- /Database Dependencies -->                
+
+	<!-- for the DAO Registry -->
+	<dependency>
+	  <groupId>com.googlecode.gentyref</groupId>
+	  <artifactId>gentyref</artifactId>
+	  <version>1.2.0</version>
+	</dependency>
+	<!-- /for the DAO Registry -->
+
+	<!-- for canvasSDK -->
+	<dependency>
+	  <groupId>commons-codec</groupId>
+	  <artifactId>commons-codec</artifactId>
+	  <version>1.4</version>
+	</dependency>
+	<!-- Jackson -->
+	<dependency>
+	  <groupId>org.codehaus.jackson</groupId>
+	  <artifactId>jackson-mapper-asl</artifactId>
+	  <version>1.9.13</version>
+	</dependency>
+
+	<dependency>
+		<groupId>com.codahale.metrics</groupId>
+		<artifactId>metrics-core</artifactId>
+		<version>3.0.2</version>
+	</dependency>
+
+  </dependencies>
+  
+  <repositories>
+	<repository>
+	  <id>Sonatype Snapshot</id>
+	  <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+	</repository>
+	 <!-- for jasql -->
+	<repository>
+	  <id>BriteSnow Releases</id>
+	  <url>http://nexus.britesnow.com/nexus/content/repositories/releases/</url>
+	</repository>
+
+	<!-- for josql -->
+	<repository>
+	  <id>BriteSnow Snapshots</id>
+	  <url>http://nexus.britesnow.com/nexus/content/repositories/snapshots/</url>
+	</repository>
+
+  </repositories>
+
+	<profiles>
+		<profile>
+			<id>prod</id>
+			<build>
+				<plugins>
+					<!-- Overwrite default config for snow.properties -->
+					<plugin>
+						<groupId>com.google.code.maven-replacer-plugin</groupId>
+						<artifactId>replacer</artifactId>
+						<version>1.5.3</version>
+						<executions>
+							<execution>
+								<phase>prepare-package</phase>
+								<goals>
+									<goal>replace</goal>
+								</goals>
+							</execution>
+						</executions>
+						<configuration>
+							<file>${JSS_CONFIG_HOME}/application.properties</file>
+							<tokenValueMap>${JSS_CONFIG_HOME}/${JSS_FILTER_NAME}-config-filter.properties
+							</tokenValueMap>
+							<outputFile>${basedir}/src/main/webapp/WEB-INF/snow.properties</outputFile>
+						</configuration>
+					</plugin>
+					<!-- cargo plug-in to deploy remotely to JETTY-->
+					<plugin>
+						<groupId>org.codehaus.cargo</groupId>
+						<artifactId>cargo-maven2-plugin</artifactId>
+						<version>1.4.9</version>
+						<configuration>
+							<container>
+								<containerId>jetty9x</containerId>
+								<type>remote</type>
+							</container>
+							<configuration>
+								<type>runtime</type>
+								<properties>
+									<cargo.protocol>https</cargo.protocol>
+									<cargo.hostname>${hostToDeploy}</cargo.hostname>
+									<cargo.servlet.port>8443</cargo.servlet.port>
+									<cargo.remote.username>jenkins</cargo.remote.username>
+									<cargo.remote.password>2a828c51606c649b9aea86211d4dc216</cargo.remote.password>
+								</properties>
+							</configuration>
+							<deployer>
+								<type>remote</type>
+							</deployer>
+							<deployables>
+								<deployable>
+									<groupId>com.jobscience</groupId>
+									<artifactId>search</artifactId>
+									<type>war</type>
+									<properties>
+										<context>/</context>
+									</properties>
+								</deployable>
+							</deployables>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+  
+</project>

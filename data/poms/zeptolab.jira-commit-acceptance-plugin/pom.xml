@@ -1,0 +1,337 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.atlassian.jira.ext</groupId>
+    <artifactId>commitacceptance-zeptolab</artifactId>
+    <version>1.7.0-SNAPSHOT</version>
+    <name>JIRA Commit Acceptance Plugin</name>
+    <packaging>atlassian-plugin</packaging>
+    <description>This plug-in lets you define certain basic rules that will determine whether a commit to your version control system will be accepted based on the issues in JIRA. For example, you can define a rule that no commit will be accepted unless it contains a valid issue key. Or you can set a rule that no commit would be accepted if the issue was not in an "open" state.
+    Forked to support JIRA 7.</description>
+    <url>https://ecosystem.atlassian.net/wiki/display/CMMT</url>
+    <developers>
+        <developer>
+            <id>jartur</id>
+            <name>Ilya Pavlenkov</name>
+            <email>j@rtur.me</email>
+        </developer>
+    </developers>
+    <scm>
+        <connection>scm:git:git@bitbucket.org:atlassian/jira-commit-acceptance-plugin.git</connection>
+        <developerConnection>scm:git:git@bitbucket.org:atlassian/jira-commit-acceptance-plugin.git</developerConnection>
+        <url>https://bitbucket.org/atlassian/jira-commit-acceptance-plugin</url>
+    </scm>
+    <distributionManagement>
+        <repository>
+            <id>atlassian-contrib</id>
+            <url>https://maven.atlassian.com/contrib</url>
+        </repository>
+        <snapshotRepository>
+            <id>atlassian-contrib-snapshot</id>
+            <url>https://maven.atlassian.com/contrib-snapshot</url>
+        </snapshotRepository>
+    </distributionManagement>
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>atlassian-plugin.xml</include>
+                    <include>client/perl/svn/*.*</include>
+                    <include>client/python/svn/*.*</include>
+                    <include>client/perl/cvs/*</include>
+                    <include>client/python/cvs/*</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <includes>
+                    <include>**/*.*</include>
+                </includes>
+                <excludes>
+                    <exclude>atlassian-plugin.xml</exclude>
+                    <exclude>client/perl/svn/*.*</exclude>
+                    <exclude>client/python/svn/*.*</exclude>
+                    <exclude>client/python/svn/advanced/*.*</exclude>
+                    <exclude>client/python/cvs/*</exclude>
+                    <exclude>client/python/cvs/advanced/*.*</exclude>
+                    <exclude>client/perl/cvs/*</exclude>
+                </excludes>
+            </resource>
+        </resources>
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <filtering>false</filtering>
+                <includes>
+                    <include>**/*</include>
+                </includes>
+            </testResource>
+        </testResources>
+        <!--
+            The following plugin definitions are required to invoke functions that
+            build run-time environment for running integration tests against JIRA
+        -->
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.2-beta-2</version>
+                <executions>
+                    <execution>
+                        <id>create-distribution-zip</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>attached</goal>
+                        </goals>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>src/assemble/client-scripts.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.1</version>
+                <executions>
+                    <execution>
+                        <id>pre-integration-test-user-ant-tasks</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <tasks>
+                                <!-- Perl + CVS -->
+                                <replace file="${project.build.directory}/classes/client/perl/cvs/jira-client.pl">
+                                    <replacefilter token="&lt;JIRA base URL&gt;" value="${atlassian.product.url}"/>
+                                    <replacefilter token="&lt;JIRA user name&gt;" value="admin"/>
+                                    <replacefilter token="&lt;JIRA password&gt;" value="admin"/>
+                                    <replacefilter token="&lt;JIRA project key&gt;" value="*"/>
+                                </replace>
+                                <!-- Perl + SVN -->
+                                <replace file="${project.build.directory}/classes/client/perl/svn/jira-client.pl">
+                                    <replacefilter token="&lt;JIRA base URL&gt;" value="${atlassian.product.url}"/>
+                                    <replacefilter token="&lt;JIRA user name&gt;" value="admin"/>
+                                    <replacefilter token="&lt;JIRA password&gt;" value="admin"/>
+                                    <replacefilter token="&lt;JIRA project key&gt;" value="*"/>
+                                    <replacefilter token="&lt;Full path to svnlook&gt;" value="${project.build.directory}/test-classes/svnlook"/>
+                                </replace>
+                                <!-- Python + CVS -->
+                                <replace file="${project.build.directory}/classes/client/python/cvs/jira-client.py">
+                                    <replacefilter token="&lt;JIRA base URL&gt;" value="${atlassian.product.url}"/>
+                                    <replacefilter token="&lt;JIRA user name&gt;" value="admin"/>
+                                    <replacefilter token="&lt;JIRA password&gt;" value="admin"/>
+                                    <replacefilter token="&lt;JIRA project key&gt;" value="*"/>
+                                </replace>
+                                <!-- Python + SVN -->
+                                <replace file="${project.build.directory}/classes/client/python/svn/jira-client.py">
+                                    <replacefilter token="&lt;JIRA base URL&gt;" value="${atlassian.product.url}"/>
+                                    <replacefilter token="&lt;JIRA user name&gt;" value="admin"/>
+                                    <replacefilter token="&lt;JIRA password&gt;" value="admin"/>
+                                    <replacefilter token="&lt;JIRA project key&gt;" value="*"/>
+                                    <replacefilter token="&lt;Full path to svnlook&gt;" value="${project.build.directory}/test-classes/svnlook"/>
+                                </replace>
+                                <echo file="${project.build.directory}/test-classes/test-configuration.properties"><![CDATA[
+client.scm.svn.svnlook.path=${project.build.directory}/test-classes/svnlook
+client.scm.python.path=${test.python.path}
+client.scm.perl.path=${test.perl.path}
+]]></echo>
+                            </tasks>
+                        </configuration>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>ant</groupId>
+                        <artifactId>ant-nodeps</artifactId>
+                        <version>1.6.5</version>
+                        <scope>compile</scope>
+                    </dependency>
+                    <dependency>
+                        <groupId>ant</groupId>
+                        <artifactId>ant-optional</artifactId>
+                        <version>1.5.2</version>
+                        <scope>compile</scope>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>com.atlassian.maven.plugins</groupId>
+                <artifactId>maven-clover2-plugin</artifactId>
+                <version>4.0.6</version>
+                <configuration>
+                    <targetPercentage>50%</targetPercentage>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.atlassian.maven.plugins</groupId>
+                <artifactId>maven-jira-plugin</artifactId>
+                <version>${amps.version}</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <productVersion>${jira.version}</productVersion>
+                    <productDataVersion>${jira.version}</productDataVersion>
+                    <enableFastdev>false</enableFastdev>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
+                <configuration>
+                    <source>${jdkLevel}</source>
+                    <target>${jdkLevel}</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.7</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.shared</groupId>
+                        <artifactId>maven-filtering</artifactId>
+                        <version>1.3</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+        </plugins>
+    </build>
+    <dependencies>
+        <dependency>
+            <groupId>jmock</groupId>
+            <artifactId>jmock-cglib</artifactId>
+            <version>1.2.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>1.2</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- JIRA -->
+        <dependency>
+            <groupId>com.atlassian.jira</groupId>
+            <artifactId>jira-api</artifactId>
+            <version>${jira.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- This oone is only for tests -->
+        <dependency>
+            <groupId>com.atlassian.jira</groupId>
+            <artifactId>jira-core</artifactId>
+            <version>${jira.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.atlassian.plugin</groupId>
+            <artifactId>atlassian-spring-scanner-annotation</artifactId>
+            <version>${atlassian.spring.scanner.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.atlassian.plugin</groupId>
+            <artifactId>atlassian-spring-scanner-runtime</artifactId>
+            <version>${atlassian.spring.scanner.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+            <version>1</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- WIRED TEST RUNNER DEPENDENCIES -->
+        <dependency>
+            <groupId>com.atlassian.plugins</groupId>
+            <artifactId>atlassian-plugins-osgi-testrunner</artifactId>
+            <version>${plugin.testrunner.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>jsr311-api</artifactId>
+            <version>1.1.1</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.2.2-atlassian-1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.atlassian.plugins.rest</groupId>
+            <artifactId>atlassian-rest-common</artifactId>
+            <version>1.0.2</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.atlassian.jira</groupId>
+            <artifactId>jira-tests</artifactId>
+            <version>${atlassian.product.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.atlassian.jira</groupId>
+            <artifactId>jira-func-tests</artifactId>
+            <version>${atlassian.product.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
+            <version>2.4</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.1</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.atlassian.sal</groupId>
+            <artifactId>sal-api</artifactId>
+            <version>2.6.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.wink</groupId>
+            <artifactId>wink-client</artifactId>
+            <version>1.1.3-incubating</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
+            <version>1.8.5</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    <properties>
+        <jira.version>7.1.2</jira.version>
+        <amps.version>6.2.3</amps.version>
+        <plugin.testrunner.version>1.2.3</plugin.testrunner.version>
+        <atlassian.spring.scanner.version>1.2.6</atlassian.spring.scanner.version>
+        <!-- This key is used to keep the consistency between the key in atlassian-plugin.xml and the key to generate bundle. -->
+        <atlassian.plugin.key>${project.groupId}.${project.artifactId}</atlassian.plugin.key>
+        <!-- TestKit version 6.x for JIRA 6.x -->
+        <testkit.version>6.3.11</testkit.version>
+        <atlassian.plugin.application.version.min>5.0</atlassian.plugin.application.version.min>
+        <test.perl.path>/usr/bin/perl</test.perl.path>
+        <test.python.path>/usr/bin/python</test.python.path>
+        <atlassian.product.version>7.1.2</atlassian.product.version>
+        <atlassian.product.test-lib.version>${atlassian.product.version}</atlassian.product.test-lib.version>
+        <atlassian.product.data.version>${atlassian.product.version}</atlassian.product.data.version>
+        <atlassian.test.harness.version>0.11-beta3</atlassian.test.harness.version>
+        <jdkLevel>1.6</jdkLevel>
+        <jvmargs>-XX:MaxPermSize=384m -Xms128m -Xmx564m -Djira.dev.mode=true</jvmargs>
+        <atlassian.product.url>http://localhost:2990/jira</atlassian.product.url>
+    </properties>
+</project>

@@ -1,0 +1,400 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.emc.awg</groupId>
+    <artifactId>hello-world</artifactId>
+    <version>1.0.0</version>
+
+    <description>To run java -jar XXX.jar -Dserver.port=XXXX</description>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>1.3.3.RELEASE</version>
+    </parent>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <scm>
+        <connection>scm:git:git@github.com:imamchishty/hello-world.git</connection>
+        <developerConnection>scm:git:git@github.com:imamchishty/hello-world.git</developerConnection>
+        <url>git@github.com:imamchishty/hello-world.git</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <distributionManagement>
+        <repository>
+            <id>deployment</id>
+            <name>Internal Releases</name>
+            <url>http://dc01-jenkins-01:8081/nexus/content/repositories/releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>deployment</id>
+            <name>Internal Snapshots</name>
+            <url>http://dc01-jenkins-01:8081/nexus/content/repositories/snapshots/</url>
+        </snapshotRepository>
+        <site>
+            <id>site</id>
+            <url>dav:http://dc01-jenkins-01:8081/nexus/content/sites/site/${project.groupId}/${project.artifactId}</url>
+        </site>
+    </distributionManagement>
+
+    <dependencies>
+
+        <!-- Spring -->
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Shedhack -->
+
+        <dependency>
+            <groupId>com.shedhack.trace</groupId>
+            <artifactId>trace-request-api</artifactId>
+            <version>1.0.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.shedhack.trace</groupId>
+            <artifactId>trace-request-filter</artifactId>
+            <version>1.0.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.shedhack.trace</groupId>
+            <artifactId>trace-request-jpa</artifactId>
+            <version>1.0.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.shedhack.exception</groupId>
+            <artifactId>exception-controller-spring</artifactId>
+            <version>1.0.4</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.shedhack.exception</groupId>
+            <artifactId>exception-core</artifactId>
+            <version>1.0.4</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.shedhack.thread</groupId>
+            <artifactId>thread-context-aspect</artifactId>
+            <version>1.0.8</version>
+        </dependency>
+
+        <!-- Postgres -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>9.4-1206-jdbc42</version>
+        </dependency>
+
+    </dependencies>
+
+    <properties>
+        <java.version>1.8</java.version>
+
+        <!-- JMeter properties (defaulted - can be override via command line args) -->
+        <host>localhost</host>
+        <port>8080</port>
+        <docker.image.prefix>${pom.groupId}</docker.image.prefix>
+
+        <ci.build>${BUILD_NUMBER}</ci.build>
+        <ci.url>${BUILD_URL}</ci.url>
+    </properties>
+
+    <build>
+
+        <finalName>hello-world</finalName>
+
+        <!-- Added to override properties-->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>**/*.properties</include>
+                    <include>**/*.yml</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>**/*.xml</exclude>
+                </excludes>
+            </resource>
+        </resources>
+
+        <plugins>
+
+            <!-- Filtering, mvn resources:resources -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.7</version>
+                <configuration>
+                    <delimiters>
+                        <delimiter>@</delimiter>
+                    </delimiters>
+                    <useDefaultDelimiters>false</useDefaultDelimiters>
+                </configuration>
+            </plugin>
+
+            <!-- mvn spring-boot:run -Dserver.port=8081 -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+
+                    <!-- Helps with automatic restart when files are changed.-->
+                    <fork>true</fork>
+                </configuration>
+            </plugin>
+
+            <!-- Integration/Specification Tests -->
+            <!-- mvn failsafe:integration-test -->
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>failsafe-integration-tests</id>
+                        <phase>integration-test</phase>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <excludes>
+                        <exclude>none</exclude>
+                    </excludes>
+                    <includes>
+                        <include>**/*IT.java</include>
+                        <include>**/*IntegrationTest.java</include>
+                        <include>**/*ST.java</include>
+                        <include>**/*SpecTest.java</include>
+                        <include>**/*SpecificationTest.java</include>
+                        <include>**/*Spec.java</include>
+                        <include>**/*Specification.java</include>
+                    </includes>
+                </configuration>
+            </plugin>
+
+            <!-- JMeter tests -->
+            <!-- mvn clean jmeter:jmeter -Dhost=localhost -Dport=8080 -->
+            <!-- Please note that this will run with mvn site, you should modify this accordingly -->
+            <plugin>
+                 <groupId>com.lazerycode.jmeter</groupId>
+                 <artifactId>jmeter-maven-plugin</artifactId>
+                 <version>1.10.1</version>
+                 <executions>
+                     <execution>
+                         <id>jmeter-tests</id>
+                         <phase>site</phase>
+                         <goals>
+                             <goal>jmeter</goal>
+                         </goals>
+                     </execution>
+                 </executions>
+                 <configuration>
+                     <skipTests>false</skipTests>
+                     <goal>-t</goal>
+
+                     <propertiesUser>
+                         <host>${host}</host>
+                         <port>${port}</port>
+                     </propertiesUser>
+
+                     <propertiesJMeter>
+                         <log_level.jmeter>DEBUG</log_level.jmeter>
+                     </propertiesJMeter>
+
+                  <jMeterProcessJVMSettings>
+                         <xms>1024</xms>
+                         <xmx>1024</xmx>
+                         <arguments>
+                             <argument>-Xprof</argument>
+                             <argument>-Xfuture</argument>
+                         </arguments>
+                     </jMeterProcessJVMSettings>
+
+                     <jmeterPlugins>
+                         <plugin>
+                             <groupId>kg.apc</groupId>
+                             <artifactId>jmeter-plugins</artifactId>
+                         </plugin>
+                     </jmeterPlugins>
+
+                 </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>pl.project13.maven</groupId>
+                <artifactId>git-commit-id-plugin</artifactId>
+                <version>2.1.5</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>revision</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <dotGitDirectory>${project.basedir}/.git</dotGitDirectory>
+                    <generateGitPropertiesFile>true</generateGitPropertiesFile>
+                    <generateGitPropertiesFilename>src/main/resources/git.properties</generateGitPropertiesFilename>
+                    <format>properties</format>
+                    <dateFormat>dd.MM.yyyy HH:mm:ss z</dateFormat>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>2.5</version>
+                <configuration>
+                    <useReleaseProfile>false</useReleaseProfile>
+                    <releaseProfiles>release</releaseProfiles>
+                    <autoVersionSubmodules>true</autoVersionSubmodules>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.9</version>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Creates the necessary docker file -->
+            <plugin>
+                <groupId>com.spotify</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>0.4.5</version>
+                <configuration>
+
+                    <!-- You might need to remove dockerHost and let it default. This has been set for boot2docker -->
+                    <!-- When boot2docker starts you'll see, so export them!:
+                            To connect the Docker client to the Docker daemon, please set:
+                            export DOCKER_HOST=tcp://192.168.59.103:2376
+                            export DOCKER_CERT_PATH=/Users/ichishty/.boot2docker/certs/boot2docker-vm
+                            export DOCKER_TLS_VERIFY=1
+                    -->
+                    <dockerHost>https://192.168.59.103:2376</dockerHost>
+                    <imageName>hello-world</imageName>
+                    <dockerDirectory>src/main/docker</dockerDirectory>
+                    <resources>
+                        <resource>
+                            <targetPath>/</targetPath>
+                            <directory>${project.build.directory}</directory>
+                            <include>${project.build.finalName}.jar</include>
+                        </resource>
+                    </resources>
+                </configuration>
+            </plugin>
+
+            <!-- Manifest -->
+            <plugin>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.4</version>
+
+                <configuration>
+
+                    <!-- Manifest -->
+                    <archive>
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            <addClasspath>false</addClasspath>
+                            <classpathPrefix>lib</classpathPrefix>
+                        </manifest>
+                        <manifestEntries>
+                            <Specification-Title>${project.name}</Specification-Title>
+                            <Specification-Version>${project.version}</Specification-Version>
+                            <Implementation-Version>${project.version}</Implementation-Version>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+
+            </plugin>
+
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- When the app runs outside of a CI server then we don't have access
+            to certain properties, so we just give defaults -->
+        <profile>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+                <property>
+                    <name>default-property-setter</name>
+                </property>
+            </activation>
+
+            <properties>
+                <ci.build>unknown</ci.build>
+                <ci.url>unknown</ci.url>
+            </properties>
+        </profile>
+    </profiles>
+
+</project>

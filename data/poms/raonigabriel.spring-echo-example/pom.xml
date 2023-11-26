@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.waiamu.open</groupId>
+	<artifactId>spring-echo-example</artifactId>
+	<version>1.1.0</version>
+
+	<name>spring-echo-example</name>
+	<description>Spring Boot Echo Example</description>
+	<url>https://github.com/raonigabriel/spring-echo-example/README.md</url>
+
+	<licenses>
+		<license>
+			<name>Apache License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0</url>
+		</license>
+	</licenses>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<java.version>1.8</java.version>
+		<spring.boot.version>2.6.7</spring.boot.version>
+		<docker.registry>ghcr.io/</docker.registry>
+		<docker.project.id>raonigabriel/${project.artifactId}</docker.project.id>
+		<docker.image.tag>${project.version}</docker.image.tag>
+		<docker.image.name>${docker.registry}${docker.project.id}</docker.image.name>
+	</properties>
+
+	<dependencies>
+		<!-- use Jetty instead of default Tomcat -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+			<version>${spring.boot.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-tomcat</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-validation</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-jetty</artifactId>
+			<version>${spring.boot.version}</version>
+		</dependency>
+		<!-- https://docs.spring.io/spring-boot/docs/current/reference/html/build-tool-plugins-maven-plugin.html -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<optional>true</optional>
+			<version>${spring.boot.version}</version>
+		</dependency>
+		<!-- https://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-testing.html -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<version>${spring.boot.version}</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+	
+	
+	<build>
+		<plugins>
+			<!--  Compilation options -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.10.1</version>
+				<configuration>
+					<source>${java.version}</source>
+					<target>${java.version}</target>
+					<compilerArgument>-Xlint:all</compilerArgument>
+					<showWarnings>true</showWarnings>
+					<showDeprecation>true</showDeprecation>
+				</configuration>
+			</plugin>
+		
+			<!-- Packages into single jar -->
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<version>${spring.boot.version}</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>repackage</goal>
+						</goals>
+					</execution>
+				</executions>				
+			</plugin>
+
+			<!-- Skips the default execution of Maven install -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-install-plugin</artifactId>
+				<version>3.0.0-M1</version>
+				<executions>
+					<execution>
+						<id>default-install</id>
+						<phase>none</phase>
+					</execution>
+				</executions>
+			</plugin>
+			
+			<!-- Skips the default execution of Maven deploy -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-deploy-plugin</artifactId>
+				<version>3.0.0-M2</version>
+				<executions>
+					<execution>
+						<id>default-deploy</id>
+						<phase>none</phase>
+					</execution>
+				</executions>
+			</plugin>
+			
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>3.0.0</version>
+				<executions>
+					<!-- Lints the Dockerfile (requires hadolint to be installed) -->
+					<execution>
+						<phase>pre-integration-test</phase>
+						<id>lint-docker-file</id>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<workingDirectory>${project.basedir}</workingDirectory>
+							<executable>hadolint</executable>
+							<arguments>
+								<argument>Dockerfile</argument>
+							</arguments>
+						</configuration>
+					</execution>					
+					<!-- Builds the versioned docker image (requires docker to be installed) -->
+					<execution>
+						<phase>integration-test</phase>
+						<id>build-versioned-image</id>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<workingDirectory>${project.basedir}</workingDirectory>
+							<executable>docker</executable>
+							<arguments>
+								<argument>build</argument>
+								<argument>.</argument>
+								<argument>--build-arg</argument>
+								<argument>JAR_FILE=${project.build.finalName}.jar</argument>
+								<argument>-t</argument>
+								<argument>${docker.image.name}:${docker.image.tag}</argument>
+							</arguments>
+						</configuration>
+					</execution>
+					<!-- Tags the docker image as latest (requires docker to be installed) -->
+					<execution>
+						<phase>integration-test</phase>
+						<id>tag-latest-image</id>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<workingDirectory>${project.basedir}</workingDirectory>
+							<executable>docker</executable>
+							<arguments>
+								<argument>tag</argument>
+								<argument>${docker.image.name}:${docker.image.tag}</argument>
+								<argument>${docker.image.name}:latest</argument>
+							</arguments>
+						</configuration>
+					</execution>					
+					<!-- Pushes the versioned docker image (requires previous docker login) -->
+					<execution>
+						<phase>deploy</phase>
+						<id>push-versioned-image</id>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<workingDirectory>${project.basedir}</workingDirectory>
+							<executable>docker</executable>
+							<arguments>
+								<argument>image</argument>
+								<argument>push</argument>
+								<argument>${docker.image.name}:${docker.image.tag}</argument>
+							</arguments>
+						</configuration>
+					</execution>
+					<!-- Pushes the latest docker image (requires previous docker login) -->
+					<execution>
+						<phase>deploy</phase>
+						<id>push-latest-image</id>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<workingDirectory>${project.basedir}</workingDirectory>
+							<executable>docker</executable>
+							<arguments>
+								<argument>image</argument>
+								<argument>push</argument>
+								<argument>${docker.image.name}:latest</argument>
+							</arguments>
+						</configuration>
+					</execution>					
+				</executions>
+			</plugin>
+		</plugins>
+
+	</build>	
+
+</project>

@@ -1,0 +1,148 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.lzz.demo</groupId>
+	<artifactId>cloud-demo</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+	<modules>
+		<module>cloud-demo-eurekaserver</module>
+		<module>cloud-demo-configserver</module>
+		<module>cloud-demo-config-client</module>
+		<module>cloud-demo-client</module>
+		<module>cloud-demo-user-service</module>
+		<module>cloud-demo-apigateway</module>
+		<module>cloud-demo-webapp</module>
+	</modules>
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-dependencies</artifactId>
+				<version>Camden.RELEASE</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-starter-parent</artifactId>
+				<version>1.4.1.RELEASE</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+	<build>
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<!-- 根据profile环境来替换占位符 -->
+				<filtering>true</filtering>
+			</resource>
+		</resources>
+		<plugins>
+			<plugin>
+				<groupId>com.spotify</groupId>
+				<artifactId>docker-maven-plugin</artifactId>
+				<version>0.4.13</version>
+				<configuration>
+					<dockerHost>${dockerHost}</dockerHost>
+					<imageName>lzz/${project.artifactId}</imageName>
+					<baseImage>docker.xgqq.com/java</baseImage>
+					<entryPoint>["java", "-Djava.security.egd=file:/dev/./urandom",
+						"-jar", "/${project.build.finalName}.jar"]</entryPoint>
+					<!-- copy the service's jar file from target into the root directory of the image -->
+					<resources>
+						<resource>
+							<targetPath>/</targetPath>
+							<directory>${project.build.directory}</directory>
+							<include>${project.build.finalName}.jar</include>
+						</resource>
+					</resources>
+					<imageTags>
+						<imageTag>${project.version}</imageTag>
+						<imageTag>latest</imageTag>
+					</imageTags>
+					<serverId>docker-hub</serverId>
+					<registryUrl>https://docker.xgqq.com/</registryUrl>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<version>1.4.0.RELEASE</version>
+				<configuration>
+					<maimClass>com.lzz.demo.docker.App</maimClass>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>repackage</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+	<profiles>
+		<!-- 本地 -->
+		<profile>
+			<id>local</id>
+			<properties>
+				<dockerHost></dockerHost>
+			</properties>
+			<!-- 默认激活本环境 -->
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+		</profile>
+
+		<!-- 开发 -->
+		<profile>
+			<id>dev</id>
+			<properties>
+				<dockerHost>http://192.168.0.111:2375</dockerHost>
+			</properties>
+		</profile>
+
+		<!-- 测试 -->
+		<profile>
+			<id>test</id>
+			<properties>
+				<dockerHost>http://192.168.0.111:2375</dockerHost>
+			</properties>
+		</profile>
+
+		<!-- 预发布 -->
+		<profile>
+			<id>pre</id>
+			<properties>
+				<dockerHost>http://192.168.0.111:2375</dockerHost>
+			</properties>
+		</profile>
+
+		<!-- 生产 -->
+		<profile>
+			<id>prod</id>
+			<properties>
+				<dockerHost>http://192.168.0.111:2375</dockerHost>
+			</properties>
+		</profile>
+	</profiles>
+</project>

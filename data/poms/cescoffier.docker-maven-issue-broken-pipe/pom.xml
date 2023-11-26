@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.acme</groupId>
+  <artifactId>vertx-hybrid-docker-test</artifactId>
+  <version>1.0-SNAPSHOT</version>
+
+  <packaging>pom</packaging>
+
+  <properties>
+    <vertx.version>3.2.1</vertx.version>
+
+    <docker.group.name>vertx-acme-example</docker.group.name>
+    <docker.image>${docker.group.name}/${project.artifactId}:${project.version}</docker.image>
+  </properties>
+
+  <modules>
+    <module>A</module>
+  </modules>
+
+  <dependencies>
+
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-core</artifactId>
+      <version>${vertx.version}</version>
+    </dependency>
+
+    <!-- Add hazelcast deps if you want it clusterable -->
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-hazelcast</artifactId>
+      <version>${vertx.version}</version>
+    </dependency>
+
+  </dependencies>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <!-- We specify the Maven compiler plugin as we need to set it to Java 1.8 -->
+        <plugin>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.1</version>
+          <configuration>
+            <source>1.8</source>
+            <target>1.8</target>
+          </configuration>
+        </plugin>
+
+        <!--
+        You only need the part below if you want to build your application into a fat executable jar.
+        This is a jar that contains all the dependencies required to run it, so you can just run it with
+        java -jar
+        -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>2.3</version>
+          <executions>
+            <execution>
+              <phase>package</phase>
+              <goals>
+                <goal>shade</goal>
+              </goals>
+              <configuration>
+                <transformers>
+                  <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                    <manifestEntries>
+                      <Main-Class>io.vertx.core.Launcher</Main-Class>
+                      <Main-Verticle>${main.verticle}</Main-Verticle>
+                    </manifestEntries>
+                  </transformer>
+                  <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                    <resource>META-INF/services/io.vertx.core.spi.VerticleFactory</resource>
+                  </transformer>
+                </transformers>
+                <artifactSet>
+                </artifactSet>
+                <outputFile>${project.build.directory}/${project.artifactId}-${project.version}-fat.jar</outputFile>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+
+        <plugin>
+          <groupId>io.fabric8</groupId>
+          <artifactId>docker-maven-plugin</artifactId>
+          <version>0.14.2</version>
+          <configuration>
+            <images>
+              <image>
+                <name>${docker.image}</name>
+                <build>
+                  <from>java:8</from>
+                  <tags>
+                    <tag>latest</tag>
+                    <tag>${project.version}</tag>
+                  </tags>
+                  <ports>
+                    <port>8080</port>
+                    <port>5701</port>
+                  </ports>
+                  <workdir>/opt</workdir>
+                  <entryPoint>
+                    <exec>
+                      <arg>java</arg>
+                      <arg>-jar</arg>
+                      <arg>${project.artifactId}-${project.version}-fat.jar</arg>
+                      <arg>-cluster</arg>
+                      <arg>-conf</arg>
+                      <arg>config.json</arg>
+                      <arg>-cp</arg>
+                      <arg>.</arg>
+                    </exec>
+                  </entryPoint>
+                  <runCmds>
+                    <runcmd>chmod -R 777 /opt</runcmd>
+                    <runcmd>chmod -R 777 /opt/*</runcmd>
+                  </runCmds>
+                  <assembly>
+                    <basedir>/</basedir>
+                    <inline>
+                      <files>
+                        <file>
+                          <source>${project.build.directory}/${project.artifactId}-${project.version}-fat.jar</source>
+                          <outputDirectory>/opt</outputDirectory>
+                          <fileMode>0755</fileMode>
+                        </file>
+                      </files>
+                      <fileSets>
+                        <fileSet>
+                          <directory>${project.basedir}/src/openshift/</directory>
+                          <outputDirectory>/opt</outputDirectory>
+                          <fileMode>0755</fileMode>
+                        </fileSet>
+                      </fileSets>
+                    </inline>
+                  </assembly>
+                </build>
+                <run>
+                  <ports>
+                    <port>http.port:8080</port>
+                    <port>eventbus.port:5701</port>
+                  </ports>
+                </run>
+              </image>
+            </images>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+
+</project>

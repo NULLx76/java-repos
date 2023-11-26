@@ -1,0 +1,332 @@
+<!--
+
+     Copyright 2005-2016 Red Hat, Inc.
+
+     Red Hat licenses this file to you under the Apache License, version
+     2.0 (the "License"); you may not use this file except in compliance
+     with the License.  You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+     implied.  See the License for the specific language governing
+     permissions and limitations under the License.
+
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>io.fabric8.quickstarts</groupId>
+  <artifactId>karaf-camel-rest-sql</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>bundle</packaging>
+  <name>Fabric8 :: Quickstarts :: Karaf :: Camel Rest using SQL</name>
+  <description>Camel Example using Rest DSL with SQL Database in Karaf container</description>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <!-- configure the versions you want to use here -->
+    <fuse.bom.version>7.12.0.fuse-7_12_0-00016-redhat-00001</fuse.bom.version>
+    <docker.image.version>1.13</docker.image.version>
+
+    <mysql.version>5.1.26</mysql.version>
+
+    <!-- Maven plugin versions -->
+    <maven-compiler-plugin.version>3.7.0</maven-compiler-plugin.version>
+    <maven-surefire-plugin.version>2.22.2</maven-surefire-plugin.version>
+    <maven-bundle-plugin.version>2.3.7</maven-bundle-plugin.version>
+    <maven-install-plugin.version>2.5.2</maven-install-plugin.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.jboss.redhat-fuse</groupId>
+        <artifactId>fuse-karaf-bom</artifactId>
+        <version>${fuse.bom.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+
+    <!-- Camel -->
+    <dependency>
+      <groupId>org.apache.camel</groupId>
+      <artifactId>camel-sql</artifactId>
+    </dependency>
+
+    <!-- MySQL database -->
+    <dependency>
+      <groupId>mysql</groupId>
+      <artifactId>mysql-connector-java</artifactId>
+      <version>${mysql.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-pool</groupId>
+      <artifactId>commons-pool</artifactId>
+      <version>1.6</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.servicemix.bundles</groupId>
+      <artifactId>org.apache.servicemix.bundles.commons-dbcp</artifactId>
+      <version>1.4_3</version>
+    </dependency>
+
+    <!-- Karaf microcontainer dependencies -->
+    <dependency>
+      <!-- scope is compile so all features (there is only one) are installed into startup.properties,
+      and the feature repo itself is not added in etc/org.apache.karaf.features.cfg file -->
+      <groupId>org.jboss.fuse</groupId>
+      <artifactId>fuse-karaf-framework</artifactId>
+      <type>kar</type>
+    </dependency>
+    <dependency>
+      <groupId>io.fabric8</groupId>
+      <artifactId>fabric8-karaf-features</artifactId>
+      <classifier>features</classifier>
+      <type>xml</type>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
+
+    <plugins>
+
+      <!-- Compiler plugin enforces Java 1.8 compatibility -->
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>${maven-compiler-plugin.version}</version>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <version>${maven-bundle-plugin.version}</version>
+        <extensions>true</extensions>
+      </plugin>
+
+      <!-- plugin goals have to be executed in order -->
+      <!-- 1. install the bundle -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-install-plugin</artifactId>
+        <version>${maven-install-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>default-install</id>
+            <goals>
+              <goal>install</goal>
+            </goals>
+            <phase>install</phase>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- 2. create Karaf assembly -->
+      <!-- karaf-maven-plugin creates custom micro-service distribution -->
+      <plugin>
+        <groupId>org.jboss.redhat-fuse</groupId>
+        <artifactId>karaf-maven-plugin</artifactId>
+        <version>${fuse.bom.version}</version>
+        <extensions>true</extensions>
+        <executions>
+          <execution>
+            <id>karaf-assembly</id>
+            <goals>
+              <goal>assembly</goal>
+            </goals>
+            <phase>install</phase>
+          </execution>
+        </executions>
+        <configuration>
+          <javase>1.8</javase>
+          <karafVersion>v4x</karafVersion>
+          <framework>framework</framework>
+          <useReferenceUrls>true</useReferenceUrls>
+          <archiveTarGz>false</archiveTarGz>
+          <!-- do not include build output directory -->
+          <includeBuildOutputDirectory>false</includeBuildOutputDirectory>
+          <startupFeatures>
+            <feature>framework</feature>
+            <feature>scr</feature>
+            <feature>jaas</feature>
+            <feature>log</feature>
+            <feature>shell</feature>
+            <feature>management</feature>
+            <feature>aries-blueprint</feature>
+            <feature>camel-blueprint</feature>
+            <feature>camel-servlet</feature>
+            <feature>camel-sql</feature>
+            <feature>camel-jackson</feature>
+            <feature>camel-swagger-java</feature>
+            <feature>fabric8-karaf-blueprint</feature>
+            <feature>jkube-karaf-checks</feature>
+            <!-- the following features (instance and system) are optional and can be omitted if you don't need to
+                 see the OSGi Server information on Fuse Console -->
+            <feature>instance</feature>
+            <feature>system</feature>
+          </startupFeatures>
+          <startupBundles>
+            <bundle>mvn:${project.groupId}/${project.artifactId}/${project.version};start-level=80</bundle>
+          </startupBundles>
+          <libraries>
+              <library>mvn:javax.annotation/javax.annotation-api/1.3;type:=endorsed;export:=true</library>
+          </libraries>
+        </configuration>
+      </plugin>
+    </plugins>
+
+  </build>
+
+  <profiles>
+    <profile>
+      <id>openshift</id>
+      <properties>
+        <jkube.generator.from>registry.redhat.io/fuse7/fuse-karaf-openshift-rhel8:${docker.image.version}</jkube.generator.from>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.jboss.redhat-fuse</groupId>
+            <artifactId>openshift-maven-plugin</artifactId>
+            <version>${fuse.bom.version}</version>
+            <executions>
+              <execution>
+                <id>generate-resource</id>
+                <phase>generate-resources</phase>
+                <goals>
+                  <goal>resource</goal>
+                </goals>
+              </execution>
+              <execution>
+                <id>build-image</id>
+                <phase>install</phase>
+                <goals>
+                  <goal>build</goal>
+                </goals>
+              </execution>
+              <execution>
+                <id>apply-image</id>
+                <phase>install</phase>
+                <goals>
+                  <goal>apply</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <resources>
+                <labels>
+                  <pod>
+                    <property>
+                      <name>com.company</name>
+                      <value>Red_Hat</value>
+                    </property>
+                    <property>
+                      <name>rht.prod_name</name>
+                      <value>Red_Hat_Integration</value>
+                    </property>
+                    <property>
+                      <name>rht.prod_ver</name>
+                      <value>7.13.0</value>
+                    </property>
+                    <property>
+                      <name>rht.comp</name>
+                      <value>karaf-camel-rest-sql</value>
+                    </property>
+                    <property>
+                      <name>rht.comp_ver</name>
+                      <value>${fuse.bom.version}</value>
+                    </property>
+                  </pod>
+                </labels>
+              </resources>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>java11</id>
+      <properties>
+        <jkube.generator.from>registry.redhat.io/fuse7/fuse-karaf-openshift-jdk11-rhel8:${docker.image.version}</jkube.generator.from>
+      </properties>
+      <activation>
+        <jdk>[11,17)</jdk>
+      </activation>
+    </profile>
+    <profile>
+      <id>java17</id>
+      <properties>
+        <jkube.generator.from>registry.redhat.io/fuse7/fuse-karaf-openshift-jdk17-rhel8:${docker.image.version}</jkube.generator.from>
+      </properties>
+      <activation>
+        <jdk>[17,)</jdk>
+      </activation>
+    </profile>
+  </profiles>
+
+  <repositories>
+    <repository>
+      <id>redhat-ga-repository</id>
+      <url>https://maven.repository.redhat.com/ga</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+    <repository>
+      <id>redhat-ea-repository</id>
+      <url>https://maven.repository.redhat.com/earlyaccess/all</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>redhat-ga-repository</id>
+      <url>https://maven.repository.redhat.com/ga</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </pluginRepository>
+    <pluginRepository>
+      <id>redhat-ea-repository</id>
+      <url>https://maven.repository.redhat.com/earlyaccess/all</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </pluginRepository>
+  </pluginRepositories>
+
+</project>

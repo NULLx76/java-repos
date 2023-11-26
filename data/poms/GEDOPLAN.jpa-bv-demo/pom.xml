@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>de.gedoplan</groupId>
+    <artifactId>build-master</artifactId>
+    <version>7.2.3</version>
+  </parent>
+
+  <artifactId>jpa-bv-demo</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+
+  <properties>
+
+    <!-- Maven-Scope der JPA-Provider. Der Default 'test' kann von abgeleiteten POMs ggf. überschrieben werden (i. A. passend zur Dependency JPA_UTIL). -->
+    <maven.scope.jpaprovider>test</maven.scope.jpaprovider>
+
+    <!-- JPA-Provider-GAV -->
+    <eclipselink.groupId>org.eclipse.persistence</eclipselink.groupId>
+    <eclipselink.artifactId>org.eclipse.persistence.jpa</eclipselink.artifactId>
+    <eclipselink.version>2.6.0</eclipselink.version>
+
+    <hibernate.groupId>org.hibernate</hibernate.groupId>
+    <hibernate.artifactId>hibernate-entitymanager</hibernate.artifactId>
+    <hibernate.version>4.3.10.Final</hibernate.version>
+
+    <!-- Die folgenden Properties werden durch das aktive Profil ggf. überschrieben. -->
+    <!-- Für persistence.xml: Provider-Klasse -->
+    <javax.persistence.provider>jpa.provider.unset.please.activate.maven.profile</javax.persistence.provider>
+
+    <!-- Für persistence.xml: <jar-file>-Element für die Hauptklassen der Anwendung. Kann in src/test/java/META-INF/persistence.xml genutzt werden,
+      um die normalen Entity-Klassen der Anwendung automatisch erkennen zu lassen.
+      Funktioniert nicht bei allen Providern. Für die anderen muss eine explizite KLassenliste in <jpa.se.classes> eingetragen sein -->
+    <jpa.se.mainjarfile><![CDATA[<jar-file>file:///${project.build.outputDirectory}</jar-file>]]></jpa.se.mainjarfile>
+
+    <!-- Für persistence.xml: <class>-Elemente und/oder <exclude-unlisted-classes>-Element. Kann für die Erkennung der Entity-Klassen der Anwendung
+      genutzt werden. Je nach Provider müssen die Klassen explizit aufgeführt werden. -->
+    <jpa.se.classes></jpa.se.classes>
+
+    <!-- Properties zur Steuerung von JpaUtil.getEntityManagerFactory -->
+    <jpaprovider.properties></jpaprovider.properties>
+
+  </properties>
+
+  <dependencies>
+
+    <dependency>
+      <groupId>javax</groupId>
+      <artifactId>javaee-api</artifactId>
+      <version>7.0</version>
+    </dependency>
+
+    <!-- Die Provider-Bibliotheken werden hier alle im Scope provided eingebunden.
+      Dadurch stehen i. W. die providerspezifischen Annotationen immer zur Verfügung, unabhängig vom aktiven
+      Provider, der durch eines der u. a. Profile gewählt wird.
+    -->
+
+    <dependency>
+      <groupId>${eclipselink.groupId}</groupId>
+      <artifactId>${eclipselink.artifactId}</artifactId>
+      <version>${eclipselink.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>${hibernate.groupId}</groupId>
+      <artifactId>${hibernate.artifactId}</artifactId>
+      <version>${hibernate.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <version>1.3.171</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.glassfish</groupId>
+      <artifactId>javax.el</artifactId>
+      <version>3.0.0</version>
+      <scope>runtime</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.hibernate</groupId>
+      <artifactId>hibernate-validator</artifactId>
+      <version>5.0.3.Final</version>
+      <scope>runtime</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.12</version>
+      <scope>test</scope>
+    </dependency>
+    
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <version>1.2.16</version>
+      <scope>test</scope>
+    </dependency>
+
+  </dependencies>
+
+  <profiles>
+
+    <!-- Profile für verschiedene JPA-Provider, von denen genau eines aktiviert sein muss -->
+
+    <profile>
+      <id>jpa_eclipselink</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <properties>
+        <javax.persistence.provider>org.eclipse.persistence.jpa.PersistenceProvider</javax.persistence.provider>
+        <jpa.se.classes><![CDATA[<exclude-unlisted-classes>false</exclude-unlisted-classes>]]></jpa.se.classes>
+        <jpaprovider.properties>
+          jpaprovider.name=EclipseLink
+          jpaprovider.version=${eclipselink.version}
+          jpaprovider.agent=org.eclipse.persistence:org.eclipse.persistence.jpa:${eclipselink.version}
+        </jpaprovider.properties>
+      </properties>
+      <dependencies>
+        <dependency>
+          <groupId>${eclipselink.groupId}</groupId>
+          <artifactId>${eclipselink.artifactId}</artifactId>
+          <version>${eclipselink.version}</version>
+          <scope>${maven.scope.jpaprovider}</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+
+    <profile>
+      <id>jpa_hibernate</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <hibernate.scope>${maven.scope.jpaprovider}</hibernate.scope>
+        <javax.persistence.provider>org.hibernate.jpa.HibernatePersistenceProvider</javax.persistence.provider>
+        <jpa.se.classes></jpa.se.classes>
+        <jpaprovider.properties>
+          jpaprovider.name=Hibernate
+          jpaprovider.version=${hibernate.version}
+        </jpaprovider.properties>
+      </properties>
+      <dependencies>
+        <dependency>
+          <groupId>${hibernate.groupId}</groupId>
+          <artifactId>${hibernate.artifactId}</artifactId>
+          <version>${hibernate.version}</version>
+          <scope>${maven.scope.jpaprovider}</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+
+  </profiles>
+
+</project>

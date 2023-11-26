@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>net.habereder.web</groupId>
+	<artifactId>docker-wildflyswarm</artifactId>
+	<packaging>war</packaging>
+	<name>app</name>
+	<version>1.0.0-SNAPSHOT</version>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<wildfly.swarm.version>1.0.0.Alpha8</wildfly.swarm.version>
+		<weld.extensions.version>1.0.0-CR2</weld.extensions.version>
+		
+		<!-- Docker  -->
+		<docker.image.prefix>rhabereder</docker.image.prefix>
+	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<!-- Import scope will provide versions for dependencies below. -->
+			<dependency>
+				<groupId>org.jboss.weld</groupId>
+				<artifactId>weld-extensions-bom</artifactId>
+				<version>${weld.extensions.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<dependencies>
+		<!-- Wildfly Swarm -->
+		<dependency>
+			<groupId>org.wildfly.swarm</groupId>
+			<artifactId>jsf</artifactId>
+			<version>${wildfly.swarm.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.wildfly.swarm</groupId>
+			<artifactId>weld</artifactId>
+			<version>${wildfly.swarm.version}</version>
+		</dependency>
+		<!-- CDI (JSR-299) -->
+		<dependency>
+			<groupId>javax.enterprise</groupId>
+			<artifactId>cdi-api</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		<!-- Common annotations (e.g., @PostConstruct, @PreDestroy, @Generated, 
+			@Resource) -->
+		<dependency>
+			<groupId>javax.annotation</groupId>
+			<artifactId>jsr250-api</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		<!-- JSF -->
+		<dependency>
+			<groupId>javax.faces</groupId>
+			<artifactId>jsf-api</artifactId>
+			<scope>provided</scope>
+			<version>2.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.primefaces</groupId>
+			<artifactId>primefaces</artifactId>
+			<version>5.3</version>
+		</dependency>
+	</dependencies>
+	<build>
+		<finalName>${project.artifactId}</finalName>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.wildfly.swarm</groupId>
+				<artifactId>wildfly-swarm-plugin</artifactId>
+				<version>${wildfly.swarm.version}</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>package</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>com.spotify</groupId>
+				<artifactId>docker-maven-plugin</artifactId>
+				<version>0.4.3</version>
+				<configuration>
+					<imageName>${docker.registry.host}:${docker.registry.port}/${docker.image.prefix}/${project.artifactId}</imageName>
+					<baseImage>java</baseImage>
+        			<entryPoint>["java", "-Dswarm.http.port=8180", "-jar", "/${project.build.finalName}-swarm.jar"]</entryPoint>
+					<!-- copy the service's jar file from target into the root directory of the image --> 
+					<resources>
+						<resource>
+							<targetPath>/</targetPath>
+							<directory>${project.build.directory}</directory>
+							<include>${project.build.finalName}-swarm.jar</include>
+						</resource>
+					</resources>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+</project>

@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.github.tjheslin1</groupId>
+    <artifactId>BankOfTomGateway</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <prerequisites>
+        <maven>3.0.4</maven>
+    </prerequisites>
+
+    <properties>
+        <!-- Project -->
+        <java.language.level>1.8</java.language.level>
+        <project.file.encoding>UTF-8</project.file.encoding>
+
+        <!-- Plugins -->
+        <maven.compiler.plugin.version>3.5</maven.compiler.plugin.version>
+
+        <skipTests>false</skipTests>
+        <root.package>io.github.tjheslin1.gateway.*</root.package>
+    </properties>
+
+    <build>
+        <defaultGoal>clean test org.pitest:pitest-maven:mutationCoverage package</defaultGoal>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.5.1</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+
+            <!-- Unit tests -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.12.1</version>
+                <configuration>
+                    <skip>${skipTests}</skip>
+                    <excludes>
+                        <exclude>**/acceptance/*.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.19.1</version>
+                <configuration>
+                    <includes>
+                        <include>**/acceptance/*.java</include>
+                    </includes>
+                    <skip>${skipTests}</skip>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin><!-- mongo_build.sh -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.8</version>
+                <executions>
+                    <execution>
+                        <id>generate-resources</id>
+                        <phase>generate-resources</phase>
+                        <configuration>
+                            <target>
+                                <exec dir="${project.basedir}/scripts" executable="/bin/bash">
+                                    <arg value="mongo_remove.sh"/>
+                                </exec>
+                                <exec dir="${project.basedir}/scripts" executable="/bin/bash">
+                                    <arg value="mongo_build.sh"/>
+                                </exec>
+                                <exec dir="${project.basedir}/scripts" executable="/bin/bash">
+                                    <arg value="mongo_start.sh"/>
+                                </exec>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>pre-integration-test</id>
+                        <phase>pre-integration-test</phase>
+                        <configuration>
+                            <target>
+                                <exec dir="${project.basedir}/scripts" executable="/bin/bash">
+                                    <arg value="aggregate_remove.sh"/>
+                                </exec>
+                                <exec dir="${project.basedir}/scripts" executable="/bin/bash">
+                                    <arg value="aggregate_build.sh"/>
+                                </exec>
+                                <exec dir="${project.basedir}/scripts" executable="/bin/bash">
+                                    <arg value="aggregate_start.sh"/>
+                                </exec>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>3.4.1</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
+            <version>1.10.19</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.7</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.github.theangrydev</groupId>
+            <artifactId>yatspec-fluent</artifactId>
+            <version>1.6.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>3.4.1</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongo-java-driver</artifactId>
+            <version>3.2.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-server</artifactId>
+            <version>9.3.9.M1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-servlet</artifactId>
+            <version>9.3.9.M1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20160212</version>
+        </dependency>
+    </dependencies>
+
+    <profiles>
+        <profile>
+            <id>test</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>1.1</version>
+                        <executions>
+                            <execution>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <tasks>
+                                    </tasks>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-maven</artifactId>
+                        <version>1.1.9</version>
+                        <configuration>
+                            <reportsDirectory>${project.build.directory}/pit-output</reportsDirectory>
+                            <skip>${skipTests}</skip>
+                            <threads>4</threads>
+                            <withHistory>false</withHistory>
+                            <mutationThreshold>100</mutationThreshold>
+                            <verbose>false</verbose>
+                            <timestampedReports>false</timestampedReports>
+                            <failWhenNoMutations>true</failWhenNoMutations>
+                            <timeoutFactor>1.25</timeoutFactor>
+                            <timeoutConstant>3000</timeoutConstant>
+                            <mutators>
+                                <mutator>INVERT_NEGS</mutator>
+                                <mutator>RETURN_VALS</mutator>
+                                <mutator>MATH</mutator>
+                                <mutator>VOID_METHOD_CALLS</mutator>
+                                <mutator>NEGATE_CONDITIONALS</mutator>
+                                <mutator>CONDITIONALS_BOUNDARY</mutator>
+                                <mutator>INCREMENTS</mutator>
+                                <mutator>REMOVE_CONDITIONALS</mutator>
+                            </mutators>
+                            <parseSurefireConfig>false</parseSurefireConfig>
+                            <targetClasses>
+                                <param>io.github.tjheslin1.gateway.*</param>
+                            </targetClasses>
+                            <targetTests>
+                                <param>io.github.tjheslin1.gateway.*</param>
+                            </targetTests>
+                            <jvmArgs>
+                                <jvmArg>-Dsilent.process.errors=true</jvmArg>
+                            </jvmArgs>
+                            <exportLineCoverage>true</exportLineCoverage>
+                            <excludedClasses>
+                                <excludedClass>io.github.tjheslin1.gateway.infrastructure.domain.eventstore.BankingEventServer</excludedClass>
+                                <excludedClass>io.github.tjheslin1.gateway.settings.Settings</excludedClass>
+                                <excludedClass>io.github.tjheslin1.gateway.Wiring</excludedClass>
+                                <excludedClass>io.github.tjheslin1.gateway.Gateway</excludedClass>
+                            </excludedClasses>
+                            <excludedMethods>
+                                <excludedMethod>equals</excludedMethod>
+                                <excludedMethod>hashCode</excludedMethod>
+                            </excludedMethods>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>mutationCoverage</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

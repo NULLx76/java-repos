@@ -1,0 +1,765 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.drew</groupId>
+    <artifactId>demo</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <name>Java on Rails</name>
+
+
+    <description>
+        This example shows you how to use migrations along with JOOQ's code generation
+        feature to develop applications that understand the changes in your db as well
+        as removing all work from the DAO layer. It also showcases the use of HikariCP
+        for connection pools, Guice for dependency injection, and lombok to remove the
+        need to write getters and setters (It feels a lot like Rails now).
+    </description>
+
+
+    <issueManagement>
+        <url>https://github.com/jdrew1303/</url>
+        <system>GitHub Issues</system>
+    </issueManagement>
+
+
+    <scm>
+        <url>https://github.com/drewj1303/</url>
+        <connection>scm:git:git://github.com/drewj1303/dropwizard-debpkg-maven-plugin.git</connection>
+        <developerConnection>scm:git:git@github.com:drewj1303/dropwizard-debpkg-maven-plugin.git</developerConnection>
+    </scm>
+
+
+    <licenses>
+        <license>
+            <name>Apache License 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+        </license>
+    </licenses>
+
+
+    <developers>
+        <developer>
+            <name>James Drew</name>
+            <email>j.drew1303@gmail.com</email>
+        </developer>
+    </developers>
+
+
+    <repositories>
+        <repository>
+            <id>oss-sonatype</id>
+            <name>oss-sonatype</name>
+            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+
+    <properties>
+        <jdk.version>1.8</jdk.version>
+
+
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+
+        <!-- ISO format so we can parse it into a DateTime. -->
+        <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ssZ</maven.build.timestamp.format>
+        <!-- Assign the build timestamp to a new property to work around a Maven bug (http://jira.codehaus.org/browse/MRESOURCES-99).-->
+        <build.timestamp>${maven.build.timestamp}</build.timestamp>
+
+
+        <database.connection.url>jdbc:h2:~/db/appirio-flyway-test.db</database.connection.url>
+        <database.connection.username>sa</database.connection.username>
+        <database.connection.password></database.connection.password>
+        <!-- leave this empty to generate all available schemata from the target database -->
+        <database.schema></database.schema>
+
+        <jooq.generated.packagename>org.jooq.example.flyway.db.h2</jooq.generated.packagename>
+        <jooq.generated.directory>target/generated-sources/jooq-h2</jooq.generated.directory>
+
+
+        <dropwizard.version>0.8.0</dropwizard.version>
+        <dropwizard.debpkg.version>0.7</dropwizard.debpkg.version>
+        <lombok.version>1.14.8</lombok.version>
+        <guava.version>18.0</guava.version>
+        <jooq.version>3.6.0</jooq.version>
+        <h2driver.version>1.4.185</h2driver.version>
+        <hikaricp.version>2.3.6</hikaricp.version>
+        <jbcrypt.version>0.3m</jbcrypt.version>
+        <jjschema.version>0.6</jjschema.version>
+        <dropwizard.jooq.bundle.version>0.8.1-0</dropwizard.jooq.bundle.version>
+
+        <logback.over.slf4j.version>1.7.12</logback.over.slf4j.version>
+        <dropwizard.raven.sentry.bundle>0.1.1-20141022.175302-2</dropwizard.raven.sentry.bundle>
+
+
+        <junit.version>4.12</junit.version>
+        <assertj.core.version>1.7.1</assertj.core.version>
+        <assertj.jodatime.version>1.1.0</assertj.jodatime.version>
+        <mockito.version>1.10.19</mockito.version>
+        <faker.version>0.5</faker.version>
+        <fixture.factory.version>3.0.0</fixture.factory.version>
+
+    </properties>
+
+
+
+        <dependencies>
+
+            <!-- ============== CORE ============== -->
+
+            <!-- DROPWIZARD -->
+            <dependency>
+                <groupId>io.dropwizard</groupId>
+                <artifactId>dropwizard-core</artifactId>
+                <version>${dropwizard.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.dropwizard</groupId>
+                <artifactId>dropwizard-db</artifactId>
+                <version>${dropwizard.version}</version>
+            </dependency>
+
+            <!-- SWAGGER API-->
+            <dependency>
+                <groupId>io.federecio</groupId>
+                <artifactId>dropwizard-swagger</artifactId>
+                <version>0.7.0</version>
+            </dependency>
+
+            <!-- Authentication support -->
+            <dependency>
+                <groupId>io.dropwizard</groupId>
+                <artifactId>dropwizard-auth</artifactId>
+                <version>${dropwizard.version}</version>
+            </dependency>
+
+            <!-- Password Hashing-->
+            <dependency>
+                <groupId>org.mindrot</groupId>
+                <artifactId>jbcrypt</artifactId>
+                <version>${jbcrypt.version}</version>
+            </dependency>
+
+            <!-- ============== HELPERS ============== -->
+
+            <!-- GENERATE GETTERS/SETTERS ETC -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+            </dependency>
+
+            <!-- IOC CONTAINER -->
+            <dependency>
+                <groupId>com.hubspot.dropwizard</groupId>
+                <artifactId>dropwizard-guice</artifactId>
+                <version>${dropwizard.version}</version>
+            </dependency>
+
+            <!-- HELPERS AND COLLECTIONS -->
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava.version}</version>
+            </dependency>
+
+            <!-- ============== DATABASE ============== -->
+
+            <!-- GENERATION OF DAOS AND DATA ACCESS-->
+            <dependency>
+                <groupId>org.jooq</groupId>
+                <artifactId>jooq</artifactId>
+                <version>${jooq.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.bendb.dropwizard</groupId>
+                <artifactId>dropwizard-jooq</artifactId>
+                <version>${dropwizard.jooq.bundle.version}</version>
+            </dependency>
+
+            <!-- DATABASE DRIVER -->
+            <dependency>
+                <groupId>com.h2database</groupId>
+                <artifactId>h2</artifactId>
+                <version>${h2driver.version}</version>
+            </dependency>
+
+            <!-- CONNECTION POOL -->
+            <dependency>
+                <groupId>com.zaxxer</groupId>
+                <artifactId>HikariCP</artifactId>
+                <version>${hikaricp.version}</version>
+                <scope>compile</scope>
+            </dependency>
+
+            <!-- FLYWEIGHT DATABASE MIGRATIONS -->
+            <dependency>
+                <groupId>io.dropwizard.modules</groupId>
+                <artifactId>dropwizard-flyway</artifactId>
+                <version>0.8.0-2</version>
+            </dependency>
+
+            <!-- ============== TESTING ============== -->
+            <dependency>
+                <groupId>io.dropwizard</groupId>
+                <artifactId>dropwizard-testing</artifactId>
+                <version>${dropwizard.version}</version>
+                <scope>test</scope>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.easytesting</groupId>
+                        <artifactId>fest-assert-core</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>${junit.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.assertj</groupId>
+                <artifactId>assertj-core</artifactId>
+                <version>${assertj.core.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.assertj</groupId>
+                <artifactId>assertj-joda-time</artifactId>
+                <version>${assertj.jodatime.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-core</artifactId>
+                <version>${mockito.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- DUMMY TEST DATA GENERATION -->
+            <!-- https://github.com/DiUS/java-faker -->
+            <dependency>
+                <groupId>com.github.javafaker</groupId>
+                <artifactId>javafaker</artifactId>
+                <version>${faker.version}</version>
+            </dependency>
+
+            <!-- FIXTURE FACTORIES (SIMILAR TO FACTORY-GIRL) -->
+            <!-- https://github.com/six2six/fixture-factory -->
+            <dependency>
+                <groupId>br.com.six2six</groupId>
+                <artifactId>fixture-factory</artifactId>
+                <version>${fixture.factory.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>commons-logging</groupId>
+                        <artifactId>commons-logging</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+
+
+            <!-- REPLACE COMMONS LOGGING WITH SLF4J -->
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>jcl-over-slf4j</artifactId>
+                <version>1.7.12</version>
+            </dependency>
+
+            <!-- HOOK OUR APPLICATION IN SENTRY FOR ERROR HANDLING-->
+            <!-- TODO need to take a look at a better versioning scheme or to create fork -->
+            <dependency>
+                <groupId>com.tradier</groupId>
+                <artifactId>dropwizard-raven</artifactId>
+                <version>${dropwizard.raven.sentry.bundle}</version>
+            </dependency>
+
+            <!-- THIS IS USED TO GENERATE A JSON SCHEMA REPRESENTATION OF AN OBJECT. FROM HERE
+                 YOU CAN THEN AUTOMAGICALLY GENERATE FORMS IN ANGULAR :)-->
+            <dependency>
+                <groupId>com.github.reinert</groupId>
+                <artifactId>jjschema</artifactId>
+                <version>${jjschema.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.jackson.module</groupId>
+                <artifactId>jackson-module-jsonSchema</artifactId>
+                <version>2.5.0</version>
+            </dependency>
+
+            <!-- GETTING FULL ACCESS TO THE JERSEY DI CONTAINER -->
+            <dependency>
+                <groupId>org.glassfish.hk2</groupId>
+                <artifactId>hk2-api</artifactId>
+                <version>2.4.0-b10</version>
+            </dependency>
+
+
+        </dependencies>
+
+
+
+    <build>
+        <!-- FILTERING RESOURCES ADDS BUILD INFO TO org.drew.service.health/build.json. THIS ALLOWS US TO EXPOSE
+             BUILD INFORMATION THROUGH HEALTH CHECKS IN THE ADMIN API -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+
+        <plugins>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+
+            <!-- CHECK THE ENVIRONMENT FOR HARD DEPENDENCIES (JAVA VERSION, MAVEN VERSION, ETC) -->
+            <!-- Note: you can use this section to force
+                 removal of certain 'banned' libraries.
+                 In this case we force the removal of
+                 commons-logging. We replace this then
+                 with slf4j plugins. You can configure
+                 this for all logging libraries to allow
+                 for central configuration of all logging.
+                 In the case of dropwizard we configure
+                 all the logging in a single place and
+                 expose it through the management interface. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>1.3.1</version>
+                <executions>
+                    <execution>
+                        <id>enforce-versions</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireMavenVersion>
+                                    <version>3.0</version>
+                                </requireMavenVersion>
+                                <requireJavaVersion>
+                                    <version>1.8</version>
+                                </requireJavaVersion>
+
+                                <requireReleaseDeps>
+                                    <onlyWhenRelease>true</onlyWhenRelease>
+                                </requireReleaseDeps>
+                                <bannedDependencies>
+                                    <excludes>
+                                        <exclude>commons-logging</exclude>
+                                    </excludes>
+                                </bannedDependencies>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+
+
+            <!-- ALLOWS US TO EXPOSE A BUILD VERSION THROUGH METRICS AND AS PART OF THE SITE ITSELF -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>versions-maven-plugin</artifactId>
+                <version>2.1</version>
+                <configuration>
+                    <generateBackupPoms>false</generateBackupPoms>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>pl.project13.maven</groupId>
+                <artifactId>git-commit-id-plugin</artifactId>
+                <version>2.1.12</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>revision</goal>
+                        </goals>
+                        <phase>validate</phase>
+                    </execution>
+                </executions>
+                <configuration>
+                    <skipPoms>false</skipPoms>
+                    <gitDescribe>
+                        <skip>true</skip>
+                    </gitDescribe>
+                </configuration>
+                <inherited>false</inherited>
+            </plugin>
+
+
+            <!-- HANDLING DATABASE MIGRATIONS AS PART OF THE BUILD PROCESS-->
+            <plugin>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-maven-plugin</artifactId>
+                <version>3.0</version>
+
+                <!-- Note that we're executing the Flyway
+                     plugin in the "generate-sources" phase.
+                     While the official Flyway documentation
+                     suggests that migrations be done in the
+                     compile phase, the jOOQ code generator
+                     relies on such migrations having been
+                     done prior to code generation -->
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>migrate</goal>
+                        </goals>
+                    </execution>
+                </executions>
+
+                <!-- Note that we need to prefix the db/migration
+                     path with filesystem: to prevent Flyway
+                     from looking for our migration scripts
+                     only on the classpath -->
+                <configuration>
+                    <url>${database.connection.url}</url>
+                    <user>${database.connection.username}</user>
+                    <locations>
+                        <location>filesystem:src/main/resources/db/migrations</location>
+                    </locations>
+                </configuration>
+
+                <!-- Note you may want to swap this out for
+                     another driver depending on the database
+                     you use.-->
+                <dependencies>
+                    <dependency>
+                        <groupId>com.h2database</groupId>
+                        <artifactId>h2</artifactId>
+                        <version>${h2driver.version}</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+
+
+            <!-- GENERATES DAO LAYER FROM A GIVEN DATABASE, ALSO ALLOWS YOU TO USE THE JOOQ DSL.
+                 THIS WILL GIVE YOU A CERTAIN TYPE SAFETY WITH SQL WHEN PAIRED WITH MIGRATIONS. -->
+            <plugin>
+                <groupId>org.jooq</groupId>
+                <artifactId>jooq-codegen-maven</artifactId>
+                <version>${jooq.version}</version>
+
+                <!-- The jOOQ code generation plugin is also
+                     executed in the generate-sources phase,
+                     prior to compilation -->
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                    </execution>
+                </executions>
+
+                <!-- This is a minimal working configuration.
+                     See the manual's section about the code
+                     generator for more details -->
+                <configuration>
+                    <jdbc>
+                        <url>${database.connection.url}</url>
+                        <user>${database.connection.username}</user>
+                        <password>${database.connection.password}</password>
+                    </jdbc>
+                    <generator>
+                        <database>
+                            <!-- The database dialect from jooq-meta. Available dialects are
+                                 named org.util.[database].[database]Database. Known values are:
+
+                                 org.jooq.util.ase.ASEDatabase (to be used with Sybase ASE)
+                                 org.jooq.util.cubrid.CUBRIDDatabase
+                                 org.jooq.util.db2.DB2Database
+                                 org.jooq.util.derby.DerbyDatabase
+                                 org.jooq.util.h2.H2Database
+                                 org.jooq.util.hsqldb.HSQLDBDatabase
+                                 org.jooq.util.ingres.IngresDatabase
+                                 org.jooq.util.mysql.MySQLDatabase
+                                 org.jooq.util.oracle.OracleDatabase
+                                 org.jooq.util.postgres.PostgresDatabase
+                                 org.jooq.util.sqlite.SQLiteDatabase
+                                 org.jooq.util.sqlserver.SQLServerDatabase
+                                 org.jooq.util.sybase.SybaseDatabase (to be used with Sybase SQL Anywhere)
+
+                                 You can also provide your own org.jooq.util.Database implementation
+                                 here, if your database is currently not supported or if you wish to
+                                 read the database schema from a file, such as a Hibernate .hbm.xml file -->
+                            <name>org.jooq.util.h2.H2Database</name>
+
+                            <!-- All elements that are generated from your schema (A Java regular expression.
+                                 Use the pipe to separate several expressions) Watch out for
+                                 case-sensitivity. Depending on your database, this might be
+                                 important! You can create case-insensitive regular expressions
+                                 using this syntax: (?i:expr) -->
+                            <includes>.*</includes>
+
+                            <!-- All elements that are excluded from your schema (A Java regular expression.
+                                 Use the pipe to separate several expressions). Excludes match before
+                                 includes -->
+                            <!--<excludes></excludes>-->
+
+                            <!-- The schema that is used locally as a source for meta information.
+                                 This could be your development schema or the production schema, etc
+                                 This cannot be combined with the schemata element.
+
+                                 If left empty, jOOQ will generate all available schemata. -->
+                            <inputSchema>${database.schema}</inputSchema>
+
+
+                            <customTypes>
+                                <!--<customType>-->
+                                    <!--<name>DateTime</name>-->
+                                    <!--<type>org.joda.time.DateTime</type>-->
+                                    <!--<converter>converters.TimestampToJodaDateTimeConverter</converter>-->
+                                <!--</customType>-->
+
+                                <!--<customType>-->
+                                    <!--<name>DateTime</name>-->
+                                    <!--<type>org.joda.time.DateTime</type>-->
+                                    <!--<converter>converters.SqlDateToJodaDateTime</converter>-->
+                                <!--</customType>-->
+                            </customTypes>
+
+                            <forcedTypes>
+                                <!--<forcedType>-->
+                                    <!--<name>DateTime</name>-->
+                                    <!--<types>(?i:timestamp).*</types>-->
+                                <!--</forcedType>-->
+                                <!--<forcedType>-->
+                                    <!--<name>DateTime</name>-->
+                                    <!--<types>(?i:date).*</types>-->
+                                <!--</forcedType>-->
+                            </forcedTypes>
+                        </database>
+
+                        <generate>
+                            <!-- Primary key / foreign key relations should be generated and used.
+                                 This is a prerequisite for various advanced features.
+                                 Defaults to true -->
+                            <relations>true</relations>
+
+                            <!-- Generate deprecated code for backwards compatibility
+                                 Defaults to true -->
+                            <deprecated>true</deprecated>
+
+                            <!-- Generate the javax.annotation.Generated annotation to indicate
+                                 jOOQ version used for source code.
+                                 Defaults to true -->
+                            <generatedAnnotation>true</generatedAnnotation>
+
+                            <!-- Generate jOOQ Record classes for type-safe querying. You can
+                                 turn this off, if you don't need "active records" for CRUD
+                                 Defaults to true -->
+                            <records>true</records>
+
+                            <!-- Generate POJOs in addition to Record classes for usage of the
+                                 ResultQuery.fetchInto(Class) API
+                                 Defaults to false -->
+                            <pojos>true</pojos>
+
+                            <!-- Generate immutable POJOs for usage of the ResultQuery.fetchInto(Class) API
+                                 This overrides any value set in <pojos/>
+                                 Defaults to false -->
+                            <immutablePojos>true</immutablePojos>
+
+                            <!-- Generate interfaces that will be implemented by records and/or pojos.
+                                 You can also use these interfaces in Record.into(Class<?>) and similar
+                                 methods, to let jOOQ return proxy objects for them.
+                                 Defaults to false -->
+                            <interfaces>true</interfaces>
+
+                            <!-- Generate DAOs in addition to POJO classes
+                                 Defaults to false -->
+                            <daos>true</daos>
+
+                            <!-- Annotate POJOs and Records with JPA annotations for increased
+                                 compatibility and better integration with JPA/Hibernate, etc
+                                 Defaults to false -->
+                            <jpaAnnotations>false</jpaAnnotations>
+
+                            <!-- Annotate POJOs and Records with JSR-303 validation annotations
+                                 Defaults to false -->
+                            <validationAnnotations>true</validationAnnotations>
+
+                            <!-- Allow to turn off the generation of global object references, which include
+
+                                 - Tables.java
+                                 - Sequences.java
+                                 - UDTs.java
+
+                                 Turning off the generation of the above files may be necessary for very
+                                 large schemas, which exceed the amount of allowed constants in a class's
+                                 constant pool (64k) or, whose static initialiser would exceed 64k of
+                                 byte code
+
+                                 Defaults to true -->
+                            <globalObjectReferences>true</globalObjectReferences>
+
+                            <!-- Generate fluent setters in
+
+                                 - records
+                                 - pojos
+                                 - interfaces
+
+                                 Fluent setters are against the JavaBeans specification, but can be quite
+                                 useful to those users who do not depend on EL, JSP, JSF, etc.
+
+                                 Defaults to false -->
+                            <fluentSetters>false</fluentSetters>
+                        </generate>
+
+                        <target>
+                            <!-- The destination package of your generated classes (within the
+                                 destination directory) -->
+                            <packageName>${jooq.generated.packagename}</packageName>
+
+                            <!-- The destination directory of your generated classes -->
+                            <directory>${jooq.generated.directory}</directory>
+                        </target>
+                    </generator>
+
+                </configuration>
+
+                <!-- Note you may want to swap this out for
+                     another driver depending on the database
+                     you use.-->
+                <dependencies>
+                    <dependency>
+                        <groupId>com.h2database</groupId>
+                        <artifactId>h2</artifactId>
+                        <version>${h2driver.version}</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+
+
+            <!-- CREATING A FAT JAR FILE FOR EASY DEPLOYMENT -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>2.3</version>
+                <configuration>
+                    <createDependencyReducedPom>true</createDependencyReducedPom>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>org.drew.service.DemoApplication</mainClass>
+                                </transformer>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- GENERATE A DEBIAN PACKAGE FROM YOUR APPLICATION -->
+            <!-- https://github.com/reines/dropwizard-debpkg-maven-plugin -->
+            <!-- http://search.maven.org/#artifactdetails%7Ccom.jamierf.dropwizard%7Cdropwizard-debpkg-maven-plugin%7C0.7%7Cmaven-plugin -->
+            <plugin>
+                <groupId>com.jamierf.dropwizard</groupId>
+                <artifactId>dropwizard-debpkg-maven-plugin</artifactId>
+                <version>${dropwizard.debpkg.version}</version>
+
+                <configuration>
+                    <deb>
+                        <maintainer>James Drew</maintainer><!-- Optional: The person responsible for this service. -->
+                        <!--<name />&lt;!&ndash; Optional: the .deb package name. If not specified, project.artifactId is used. &ndash;&gt;-->
+                    </deb>
+                    <jvm>
+                        <memory>2g</memory><!-- Optional: JVM heap size to allocate, once deployed. -->
+                        <packageName>openjdk-8-jdk</packageName><!-- Optional: JRE package to ensure installed as part of deployment. -->
+                        <packageVersion>any</packageVersion><!-- Optional: Version of JRE package to require, defaults to the latest. -->
+                        <server>true</server><!-- Optional: If the JVM should run in server mode. -->
+                    </jvm>
+                    <unix>
+                        <user>${project.artifactId}</user><!-- Optional: The unix user to create and run as. -->
+                    </unix>
+                    <!--<pgp>&lt;!&ndash; Optional: Not present by default. If present, all children are required. &ndash;&gt;-->
+                        <!--<alias />&lt;!&ndash; Required: Alias of PGP key to sign with. &ndash;&gt;-->
+                        <!--<keyring />&lt;!&ndash; Required: Path to PGP keyring file. &ndash;&gt;-->
+                        <!--<passphrase />&lt;!&ndash; Required: Pass phrase of PGP keyring. &ndash;&gt;-->
+                    <!--</pgp>-->
+                    <path>
+                        <jarFile>/usr/share/java/${project.artifactId}.jar</jarFile><!-- Optional: Path to the service jar, once deployed. -->
+                        <startScript>/usr/bin/${project.artifactId}</startScript><!-- Optional Path to the start script, once deployed. -->
+                        <configFile>/etc/${project.artifactId}.yml</configFile><!-- Optional: Path to your service configuration, once deployed. -->
+                        <jvmConfigFile>/etc/${project.artifactId}.jvm.conf</jvmConfigFile><!-- Optional: Path to your JVM parameter configuration, once deployed. -->
+                        <logDirectory>/var/log/${project.artifactId}</logDirectory><!-- Optional: Directory for service logs, once deployed. -->
+                        <upstartFile>/etc/init/${project.artifactId}.conf</upstartFile><!-- Optional: Path to the service upstart configuration, once deployed. -->
+                        <sysVinitFile>/etc/init.d/${project.artifactId}</sysVinitFile><!-- Optional: Path to the service init configuration, once deployed. -->
+                    </path>
+                    <!--<files>&lt;!&ndash; Optional: Empty by default. &ndash;&gt;-->
+                        <!--<file>-->
+                            <!--<source />&lt;!&ndash; Required: Path to the resource file. &ndash;&gt;-->
+                            <!--<target />&lt;!&ndash; Required: Path to the resource, once deployed. &ndash;&gt;-->
+                            <!--<filter>true</filter>&lt;!&ndash; Optional: If this resource should be treated as a template. &ndash;&gt;-->
+                            <!--<user>${project.artifactId}</user>&lt;!&ndash; Optional: The user the resource should be owned by. &ndash;&gt;-->
+                            <!--<mode>0600</mode>&lt;!&ndash; Optional: The filemode for this resource. &ndash;&gt;-->
+                        <!--</file>-->
+                    <!--</files>-->
+                    <!--<dropwizard />&lt;!&ndash; Optional: Map of parameters to substitute in to your configuration template on packaging. &ndash;&gt;-->
+                    <!-- Required: Path to your service configuration template. -->
+                    <configTemplate>${basedir}/example.yml</configTemplate>
+                    <artifactFile>${project.build.directory}/${project.artifactId}-${project.version}.jar</artifactFile><!-- Optional: Path to the service jar to package. -->
+                    <outputFile>${project.build.directory}/${project.artifactId}-${project.version}.deb</outputFile><!-- Optional: The path to output the Debian package to. -->
+                    <validate>false</validate><!-- Optional: Enable validation of your service configuration at package time. -->
+                </configuration>
+
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>dwpackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
+</project>

@@ -1,0 +1,236 @@
+<!--
+Copyright (C) 2015 Advanced Micro Devices, Inc.  All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.amd.gerrit.plugins.manifestsubscription</groupId>
+  <artifactId>manifest-subscription</artifactId>
+  <packaging>jar</packaging>
+  <version>${gitdescribe}</version>
+  <name>manifestSubscription</name>
+
+  <properties>
+    <Gerrit-ApiType>plugin</Gerrit-ApiType>
+    <Gerrit-ApiVersion>2.15.2</Gerrit-ApiVersion>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <jaxb2-basics-runtime.version>0.6.4</jaxb2-basics-runtime.version>
+    <jacoco.version>0.7.5.201505241946</jacoco.version>
+    <gitdescribe-maven-plugin.version>3.0</gitdescribe-maven-plugin.version>
+    <maven-jaxb2-plugin.version>0.7.0</maven-jaxb2-plugin.version>
+    <truth.version>0.27</truth.version>
+    <jgit.junit.version>4.9.0.201710071750-r</jgit.junit.version>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>2.4</version>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Gerrit-PluginName>manifest-subscription</Gerrit-PluginName>
+              <Gerrit-Module>
+                com.amd.gerrit.plugins.manifestsubscription.Module
+              </Gerrit-Module>
+              <Gerrit-SshModule>
+                com.amd.gerrit.plugins.manifestsubscription.SshModule
+              </Gerrit-SshModule>
+              <Gerrit-HttpModule>
+                com.amd.gerrit.plugins.manifestsubscription.HttpModule
+              </Gerrit-HttpModule>
+
+              <Implementation-Title>Manifest Subscription plugin
+              </Implementation-Title>
+              <Implementation-Vendor>AMD</Implementation-Vendor>
+              <Implementation-URL>https://gerrit.googlesource.com/plugins/manifest-subscription/</Implementation-URL>
+
+              <Implementation-Version>${project.version}
+              </Implementation-Version>
+
+              <Gerrit-ApiType>${Gerrit-ApiType}</Gerrit-ApiType>
+              <Gerrit-ApiVersion>${Gerrit-ApiVersion}</Gerrit-ApiVersion>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>2.3.2</version>
+        <configuration>
+          <source>1.7</source>
+          <target>1.7</target>
+          <encoding>UTF-8</encoding>
+        </configuration>
+      </plugin>
+
+      <!-- Generate code coverage report-->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${jacoco.version}</version>
+        <executions>
+          <execution>
+            <id>default-prepare-agent</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>default-report</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>default-check</id>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <rule>
+                  <element>BUNDLE</element>
+                  <limits>
+                    <limit>
+                      <counter>COMPLEXITY</counter>
+                      <value>COVEREDRATIO</value>
+                      <minimum>0.60</minimum>
+                    </limit>
+                  </limits>
+                </rule>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Use git-describe for version -->
+      <plugin>
+        <groupId>com.lukegb.mojo</groupId>
+        <artifactId>gitdescribe-maven-plugin</artifactId>
+        <version>${gitdescribe-maven-plugin.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>gitdescribe</goal>
+            </goals>
+            <id>git-describe</id>
+            <phase>initialize</phase>
+            <configuration>
+              <descriptionProperty>gitdescribe</descriptionProperty>
+              <extraArguments>
+                <param>--dirty</param>
+                <param>--tags</param>
+              </extraArguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- create uber jar-->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>2.4.2</version>
+        <configuration>
+          <minimizeJar>true</minimizeJar>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+
+      <!--  For code gen: DTD to Java class with JAXB -->
+      <!--  http://confluence.highsource.org/display/J2B/User+Guide -->
+      <plugin>
+        <groupId>org.jvnet.jaxb2.maven2</groupId>
+        <artifactId>maven-jaxb2-plugin</artifactId>
+        <version>${maven-jaxb2-plugin.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <schemaDirectory>src/main/resources/schemas</schemaDirectory>
+          <schemaLanguage>DTD</schemaLanguage>
+          <schemaIncludes>
+            <schemaInclude>*.dtd</schemaInclude>
+          </schemaIncludes>
+          <generatePackage>
+            com.amd.gerrit.plugins.manifestsubscription.manifest
+          </generatePackage>
+          <args>
+            <arg>-XtoString</arg>
+            <arg>-Xequals</arg>
+            <arg>-Xcopyable</arg>
+          </args>
+          <plugins>
+            <plugin>
+              <groupId>org.jvnet.jaxb2_commons</groupId>
+              <artifactId>jaxb2-basics</artifactId>
+              <version>${jaxb2-basics-runtime.version}</version>
+            </plugin>
+          </plugins>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.google.gerrit</groupId>
+      <artifactId>gerrit-${Gerrit-ApiType}-api</artifactId>
+      <version>${Gerrit-ApiVersion}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.truth</groupId>
+      <artifactId>truth</artifactId>
+      <version>${truth.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.eclipse.jgit</groupId>
+      <artifactId>org.eclipse.jgit.junit</artifactId>
+      <version>${jgit.junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.jvnet.jaxb2_commons</groupId>
+      <artifactId>jaxb2-basics-runtime</artifactId>
+      <version>${jaxb2-basics-runtime.version}</version>
+    </dependency>
+  </dependencies>
+</project>

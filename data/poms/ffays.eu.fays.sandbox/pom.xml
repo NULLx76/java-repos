@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+<!-- Regular build
+mvn -Djava.util.logging.config.file=logging.properties clean package
+-->
+
+<!-- Print dependency tree
+mvn dependency:tree -Dverbose
+-->
+
+	<groupId>eu.fays</groupId>
+	<artifactId>eu.fays.sandbox</artifactId>
+	<version>1.0.0</version>
+
+	<packaging>jar</packaging>
+
+	<properties>
+		<maven.compiler.source>11</maven.compiler.source>
+		<maven.compiler.target>11</maven.compiler.target>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<timestamp>${maven.build.timestamp}</timestamp>
+		<maven.build.timestamp.format>dd MMM yyyy HH:mm:ss</maven.build.timestamp.format>
+		<junit.version>5.10.0</junit.version>
+		<maven-antrun-plugin.version>3.0.0</maven-antrun-plugin.version>
+		<adoptopenjdk.jre.x64.windows.zip>OpenJDK11U-jre_x64_windows_hotspot_11.0.11_9.zip</adoptopenjdk.jre.x64.windows.zip>
+		<adoptopenjdk.jre.folder.name>jdk-11.0.11+9-jre</adoptopenjdk.jre.folder.name>
+	<!--  
+		<maven-surefire-report-plugin.version>3.0.0-M5</maven-surefire-report-plugin.version>
+	-->
+	</properties>
+	
+	<scm>
+		<connection>scm:git://github.com:ffays/eu.fays.sandbox.git</connection>
+		<url>https://github.com/ffays/eu.fays.sandbox</url>
+	</scm>
+
+	<!--  
+	<repositories>
+		<repository>
+			<id></id>
+			<name></name>
+			<url></url>
+		</repository>
+	</repositories>
+	-->
+	
+	<dependencies>
+		<!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api -->
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-api</artifactId>
+			<version>${junit.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-params -->
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-params</artifactId>
+			<version>${junit.version}</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<!-- https://maven.apache.org/surefire/maven-surefire-plugin/usage.html -->
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-surefire-plugin</artifactId>
+					<version>3.1.2</version>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>${maven-antrun-plugin.version}</version>
+				<executions>
+					<execution>
+						<id>echo-properties</id>
+						<!-- "pre-integration-test" phase can be used as "post-package" phase (not-existing in Maven Build Lifecycle) -->
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<target>
+								<echoproperties />
+							</target>
+						</configuration>
+					</execution>				
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>3.2.0</version>
+				<configuration>
+					<archive>
+						<manifest>
+							<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+						</manifest>
+						<manifestEntries>
+							<Implementation-Version>${project.version}.${buildNumber}</Implementation-Version>
+							<Java-VM-Version>${java.vm.version} (${java.vm.vendor})</Java-VM-Version>
+							<Software-Version>${project.version}</Software-Version>
+							<Built-By>${user.name}</Built-By>
+							<Built-Date>${timestamp}</Built-Date>
+						</manifestEntries>
+					</archive>
+				</configuration>
+    		</plugin>
+			<plugin>
+				<!-- plugin used to extract the git hash and store it in ${buildNumber} -->
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>buildnumber-maven-plugin</artifactId>
+				<version>1.4</version>
+				<executions>
+					<execution>
+						<phase>validate</phase>
+						<goals>
+							<goal>create</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<doCheck>false</doCheck>
+					<doUpdate>false</doUpdate>
+					<!-- place a lower number if you want shorter commit numbers in the archive filenames -->
+					<shortRevisionLength>40</shortRevisionLength>
+				</configuration>
+			</plugin>    		
+		</plugins>
+	</build>
+	<profiles>
+		<profile>
+			<id>unzip-adoptopenjdk-jre-x64-windows</id>
+			<activation>
+				<file>
+					<exists>${user.home}/Downloads/${adoptopenjdk.jre.x64.windows.zip}</exists>
+				</file>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-antrun-plugin</artifactId>
+						<version>${maven-antrun-plugin.version}</version>
+						<executions>
+							<execution>
+								<id>unzip-adoptopenjdk-jre</id>
+								<phase>pre-integration-test</phase>
+								<goals>
+									<goal>run</goal>
+								</goals>
+								<configuration>
+									<target>
+										<echo message="(cd ${project.build.directory}; unzip ${user.home}/Downloads/${adoptopenjdk.jre.x64.windows.zip})" level="info" />
+										<unzip src="${user.home}/Downloads/${adoptopenjdk.jre.x64.windows.zip}" dest="${project.build.directory}" />
+										<echo message="mv ${project.build.directory}/${adoptopenjdk.jre.folder.name} ${project.build.directory}/jre" level="info" />
+										<move file="${project.build.directory}/${adoptopenjdk.jre.folder.name}" tofile="${project.build.directory}/jre"/>
+									</target>
+								</configuration>
+							</execution>					
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+</project>

@@ -1,0 +1,256 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>nflpicks</groupId>
+	<artifactId>nflpicks</artifactId>
+	<packaging>war</packaging>
+	<version>1.0.0-SNAPSHOT</version>
+	<name>nflpicks Maven Webapp</name>
+	<url>http://maven.apache.org</url>
+	<properties>
+		<nflpicks.jdbc.driverClassName>org.postgresql.Driver</nflpicks.jdbc.driverClassName>
+		<nflpicks.jdbc.url>jdbc:postgresql://localhost:5432/nflpicks</nflpicks.jdbc.url>
+		<nflpicks.jdbc.username>nflpicks</nflpicks.jdbc.username>
+		<nflpicks.jdbc.password></nflpicks.jdbc.password>
+		<nflpicks.log.location>/var/log/nflpicks/nflpicks.log</nflpicks.log.location>
+		<nflpicks.edit.key></nflpicks.edit.key>
+	</properties>
+	<profiles>
+		<!-- The profile to use to build the nflpicks jar by itself and use the picks "data manager" to import or export stuff.
+			 To use it:
+			 	1. Build the jar:
+			 		 mvn clean compile org.apache.maven.plugins:maven-dependency-plugin:copy-dependencies@copy-libraries jar:jar -Pnflpicks-data-manager
+			 	   This cleans the target folder, compiles it, copies the dependencies, jars the classes folder, and makes it so the resulting jar will 
+			 	   run the NFLPicksDataManager class.
+			 	   You should set the nflpicks.jdbc.password in your settings.xml in order for it to get put in the nflpicks.properties (or set it manually afterwards).
+			 	2. Copy the nflpicks.jar and lib folder to where you want to run it.
+			 	3. Run it with:
+			 		java -jar nflpicks.jar
+			 		
+			 It's a separate profile and not part of the normal build because:
+			 	1. We don't want to do it every time (we usually just want to build the war).
+			 	2. We need it to refer to a different log file and not /var/log/nflpicks/nflpicks.log
+			 	
+			 The best and cleanest way to do those two things is to put them both in a separate profile. 
+			 
+			 It will make this structure when it's finished:
+			 
+			 	nflpicks-data-manager
+			 		bin
+			 			nflpicks.jar
+			 			lib
+		 			conf
+		 				nflpicks.properties
+	 				input
+	 					sql
+	 						nflpicks_create_tables.sql
+    						nflpicks_create_views.sql
+    						nflpicks_insert_teams.sql
+    					data
+    						nflpicks_conference.csv
+    						nflpicks_division.csv
+    						nflpicks_team.csv
+    				output
+	 			
+	 			And that should have everything we need to do any importing/exporting of the data.
+		 -->
+		<profile>
+			<id>nflpicks-data-manager</id>
+			<properties>
+				<nflpicks.log.location>nflpicks-data-manager.log</nflpicks.log.location>
+			</properties>
+			<build>
+				<plugins>
+					<!-- This copies the dependencies into the target/lib folder so they'll be on the classpath
+						 referred to by the runnable jar.  The classpath being "lib/" is put into the "manifest"
+						 that's stuffed in the jar by the jar plugin.  Whatever we call it here should match that.
+					 -->
+					<plugin>
+    					<groupId>org.apache.maven.plugins</groupId>
+    					<artifactId>maven-dependency-plugin</artifactId>
+    					<version>3.1.2</version>
+    					<executions>
+        					<execution>
+            					<id>copy-libraries</id>
+            					<phase>prepare-package</phase>
+            					<goals>
+                					<goal>copy-dependencies</goal>
+            					</goals>
+            					<configuration>
+                					<outputDirectory>${project.build.directory}/nflpicks-data-manager/bin/lib</outputDirectory>
+                					<overWriteReleases>true</overWriteReleases>
+                					<overWriteSnapshots>true</overWriteSnapshots>
+                					<overWriteIfNewer>true</overWriteIfNewer>
+            					</configuration>
+        					</execution>
+    					</executions>
+					</plugin>
+					<!-- This plugin will build a runnable jar file with the nflpicks classes in it.
+						 It will cause the jar to run the main function in nflpicks.NFLPicksDataManager when you run it.
+						 It will also cause everything in the "lib" folder to be included on the classpath so we don't have
+						 to list it out manually.
+						 All the dependencies should be copied to the "lib" folder by the copy-dependencies plugin.
+					 -->
+					<plugin>
+    					<groupId>org.apache.maven.plugins</groupId>
+    					<artifactId>maven-jar-plugin</artifactId>
+    					<version>3.2.0</version>
+    					<configuration>
+        					<archive>
+            					<manifest>
+                					<addClasspath>true</addClasspath>
+                					<classpathPrefix>lib/</classpathPrefix>
+                					<mainClass>nflpicks.NFLPicksDataManager</mainClass>
+            					</manifest>
+        					</archive>
+        					<outputDirectory>${project.build.directory}/nflpicks-data-manager/bin</outputDirectory>
+    					</configuration>
+					</plugin>
+					<!-- This plugin will copy the nflpicks.properties to the "conf" folder and the sql and initial data
+						 files to the input directory so everything is good to go.
+						 The nflpicks.properties will get filtered but the sql and initial data won't.  
+					 -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+    					<artifactId>maven-resources-plugin</artifactId>
+    					<version>3.1.0</version>
+    					<executions>
+    						<execution>
+    							<id>copy-nflpicks-properties</id>
+    							<phase>compile</phase>
+    							<goals>
+    								<goal>copy-resources</goal>
+    							</goals>
+    							<configuration>
+    								<outputDirectory>${project.build.directory}/nflpicks-data-manager/conf</outputDirectory>
+    								<resources>
+    									<resource>
+    										<directory>src/main/resources</directory>
+    										<includes>
+    											<include>nflpicks.properties</include>
+    										</includes>
+    										<filtering>true</filtering>
+    									</resource>
+    								</resources>
+    							</configuration>
+    						</execution>
+    						<execution>
+    							<id>copy-nflpicks-sql</id>
+    							<phase>compile</phase>
+    							<goals>
+    								<goal>copy-resources</goal>
+    							</goals>
+    							<configuration>
+    								<outputDirectory>${project.build.directory}/nflpicks-data-manager/input/sql</outputDirectory>
+    								<resources>
+    									<resource>
+    										<directory>src/main/sql</directory>
+    										<includes>
+    											<include>nflpicks_create_tables.sql</include>
+    											<include>nflpicks_create_views.sql</include>
+    											<include>nflpicks_create_materialized_views.sql</include>
+    										</includes>
+    										<filtering>false</filtering>
+    									</resource>
+    								</resources>
+    							</configuration>
+    						</execution>
+    						<execution>
+    							<id>copy-nflpicks-initial-data</id>
+    							<phase>compile</phase>
+    							<goals>
+    								<goal>copy-resources</goal>
+    							</goals>
+    							<configuration>
+    								<outputDirectory>${project.build.directory}/nflpicks-data-manager/input/data</outputDirectory>
+    								<resources>
+    									<resource>
+    										<directory>src/main/data</directory>
+    										<includes>
+    											<include>**/*</include>
+    										</includes>
+    										<filtering>false</filtering>
+    									</resource>
+    								</resources>
+    							</configuration>
+    						</execution>
+    					</executions>
+					</plugin>
+					<!-- Creates an empty directory called "output" so we have bin, conf, input, and output directories. -->
+					<plugin>
+  						<groupId>org.apache.maven.plugins</groupId>
+  						<artifactId>maven-antrun-plugin</artifactId>
+  						<version>3.0.0</version>
+  						<executions>
+    						<execution>
+      							<id>create-output-directory</id>
+      							<phase>compile</phase>
+      							<goals>
+        							<goal>run</goal>
+      							</goals>
+      							<configuration>
+        							<target>
+          								<mkdir dir="${project.build.directory}/nflpicks-data-manager/output" />
+        							</target>
+      							</configuration>
+    						</execution>
+  						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+	<build>
+		<finalName>nflpicks</finalName>
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>true</filtering>
+			</resource>
+		</resources>
+		<pluginManagement>
+		</pluginManagement>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.8.1</version>
+				<configuration>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>3.8.1</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>3.0.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20160810</version>
+		</dependency>
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>9.4.1208</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.tomcat</groupId>
+			<artifactId>tomcat-jdbc</artifactId>
+			<version>7.0.70</version>
+		</dependency>
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.17</version>
+		</dependency>
+	</dependencies>
+</project>

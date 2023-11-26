@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.shedhack.cloud</groupId>
+    <artifactId>cloud-servers</artifactId>
+    <version>1.0.0</version>
+
+    <modules>
+        <module>zipkin-server</module>
+        <module>config-server</module>
+        <module>eureka-server</module>
+        <module>security-server</module>
+        <module>session-server</module>
+        <module>turbine-server</module>
+        <module>zuul-server</module>
+    </modules>
+
+    <packaging>pom</packaging>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>1.4.0.RELEASE</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <java.version>1.8</java.version>
+        <start-class>com.shedhack.cloud.Application</start-class>
+
+        <!-- Docker properties -->
+        <docker.image.name>imamchishty/${project.artifactId}</docker.image.name>
+        <docker.from>iron/java:1.8</docker.from>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>Brixton.SR5</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <!-- Docker plugin - docker:build ALWAYS requires to be called after mvn package!!!!!-->
+            <!-- docker:build, docker:start, docker:stop, docker:watch, docker:remove, docker:logs, docker:source -->
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>0.15.16</version>
+                <configuration>
+
+                    <!-- If you have a different reg set it here
+                    <registry>hub.docker.com</registry> -->
+                    <verbose>true</verbose>
+                    <logDate>default</logDate>
+                    <autoPull>true</autoPull>
+                    <verbose>true</verbose>
+                    <images>
+
+                        <image>
+                            <alias>${project.artifactId}</alias>
+                            <name>${docker.image.name}</name>
+
+                            <build>
+                                <from>${docker.from}</from>
+
+                                <assembly>
+                                    <basedir>/maven</basedir>
+                                    <inline xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                                            xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2"
+                                            xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 http://maven.apache.org/xsd/assembly-1.1.2.xsd">
+
+                                        <dependencySets>
+                                            <dependencySet>
+                                                <includes>
+                                                    <include>${project.groupId}:${project.artifactId}</include>
+                                                </includes>
+                                                <outputDirectory>.</outputDirectory>
+                                                <outputFileNameMapping>app.jar</outputFileNameMapping>
+                                            </dependencySet>
+                                        </dependencySets>
+                                    </inline>
+                                </assembly>
+
+                                <ports>
+                                    <port>${docker.container.port}</port>
+                                </ports>
+
+                                <entryPoint>
+                                    <arg>java</arg>
+                                    <arg>-Djava.security.egd=file:/dev/./urandom</arg>
+                                    <arg>-jar</arg>
+                                    <arg>/maven/app.jar</arg>
+                                </entryPoint>
+
+                            </build>
+
+                            <run>
+                                <ports>
+                                    <port>${docker.host.port}:${docker.container.port}</port>
+                                </ports>
+
+                                <log>
+                                    <prefix>TC</prefix>
+                                    <color>cyan</color>
+                                </log>
+
+                            </run>
+                        </image>
+
+                    </images>
+                </configuration>
+
+            </plugin>
+
+        </plugins>
+    </build>
+
+</project>

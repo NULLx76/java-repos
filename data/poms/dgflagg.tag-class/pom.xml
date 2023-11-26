@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.github.dgflagg</groupId>
+    <artifactId>tag-class</artifactId>
+    <version>0.5</version>
+
+    <developers>
+        <developer>
+            <name>dgflagg</name>
+        </developer>
+    </developers>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>1.4.3.RELEASE</version>
+    </parent>
+
+    <properties>
+        <!-- common versions -->
+        <logback.version>1.1.7</logback.version>
+        <springfox.version>2.4.0</springfox.version>
+
+        <!-- docker properties -->
+        <docker.repository>dgflagg</docker.repository>
+        <docker.image.name>${docker.repository}/${artifactId}</docker.image.name>
+        <docker.image.tag.name>${docker.image.name}:${project.version}</docker.image.tag.name>
+        <docker.app.home>/usr/local/${artifactId}</docker.app.home>
+        <jar.name>${project.build.finalName}.jar</jar.name>
+    </properties>
+
+    <dependencies>
+        <!-- spring-boot -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.jayway.jsonpath</groupId>
+            <artifactId>json-path</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- swagger -->
+        <dependency>
+            <groupId>io.springfox</groupId>
+            <artifactId>springfox-swagger2</artifactId>
+            <version>${springfox.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.springfox</groupId>
+            <artifactId>springfox-swagger-ui</artifactId>
+            <version>${springfox.version}</version>
+        </dependency>
+        <!-- logging -->
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-core</artifactId>
+            <version>${logback.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${logback.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.20</version>
+        </dependency>
+        <!-- logback -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.16.10</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- unit testing -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-core</artifactId>
+            <version>1.3</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.6.0</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+            <!-- allows automated creation of Dockerfile and pushing to docker repo -->
+            <plugin>
+                <groupId>com.spotify</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>0.4.13</version>
+                <configuration>
+                    <!-- use the local docker hub config to authenticate -->
+                    <useConfigFile>true</useConfigFile>
+                    <maintainer>dgflagg</maintainer>
+                    <imageName>${docker.image.name}</imageName>
+                    <baseImage>openjdk:8</baseImage>
+                    <!-- create the dir where jar will be copied into and run from -->
+                    <runs>mkdir -p ${docker.app.home}</runs>
+                    <workdir>${docker.app.home}</workdir>
+                    <entryPoint>["java", "-jar", "${jar.name}"]</entryPoint>
+                    <!-- copy the jar file from target dir into the docker app home directory -->
+                    <resources>
+                        <resource>
+                            <!-- dir in docker image jar will be copied into -->
+                            <targetPath>${docker.app.home}</targetPath>
+                            <!-- local build dir from which to copy jar from -->
+                            <directory>${project.build.directory}</directory>
+                            <!-- the jar in the local build dir that will be added into docker image -->
+                            <include>${jar.name}</include>
+                        </resource>
+                    </resources>
+                    <imageTags>
+                        <!-- creates a tag with the current project version -->
+                        <imageTag>${project.version}</imageTag>
+                        <!-- creates a tag for latest -->
+                        <imageTag>latest</imageTag>
+                    </imageTags>
+                </configuration>
+                <executions>
+                    <!-- build docker image in package phase -->
+                    <execution>
+                        <id>build-image</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                    </execution>
+                    <!-- tag docker image in install phase -->
+                    <execution>
+                        <id>tag-image</id>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>tag</goal>
+                        </goals>
+                        <configuration>
+                            <!-- creates a tag with the last git commit id -->
+                            <useGitCommitId>true</useGitCommitId>
+                            <!-- name of the docker image that will be tagged -->
+                            <image>${docker.image.tag.name}</image>
+                            <!-- name of new tag - by not explicitly specifying a tag here it will use git commit id -->
+                            <newName>${docker.image.name}</newName>
+                        </configuration>
+                    </execution>
+                    <!-- pushes docker image and tag to remote repo -->
+                    <execution>
+                        <id>push-image-version</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>push</goal>
+                        </goals>
+                        <configuration>
+                            <useConfigFile>true</useConfigFile>
+                            <!-- push the docker image with project version tag -->
+                            <imageName>${docker.image.tag.name}</imageName>
+                        </configuration>
+                    </execution>
+                    <!-- pushes docker image and tag to remote repo -->
+                    <execution>
+                        <id>push-image-latest</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>push</goal>
+                        </goals>
+                        <configuration>
+                            <useConfigFile>true</useConfigFile>
+                            <!-- push the docker image with latest tag -->
+                            <imageName>${docker.image.name}:latest</imageName>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <!-- mvn deploy would not run without this -->
+    <distributionManagement>
+        <repository>
+            <id>internal.repo</id>
+            <name>Internal repo</name>
+            <url>file:///tmp/repo</url>
+        </repository>
+    </distributionManagement>
+
+</project>

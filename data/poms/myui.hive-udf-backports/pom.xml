@@ -1,0 +1,193 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>io.github.myui</groupId>
+	<artifactId>hive-udf-backports</artifactId>
+	<version>0.0.2</version>
+	<name>Backports of Hive UDFs</name>
+    <url>https://github.com/myui/hive-udf-backports</url>
+    <inceptionYear>2016</inceptionYear>
+    
+    <scm>
+        <url>https://github.com/myui/hive-udf-backports.git</url>
+        <connection>scm:git:https://github.com/myui/hive-udf-backports.git</connection>
+        <developerConnection>scm:git:https://github.com/myui/hive-udf-backports.git</developerConnection>
+    </scm>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://opensource.org/licenses/Apache-2.0</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>myui</id>
+            <name>Makoto Yui</name>
+            <email>myui[at]apache.org</email>
+            <url>http://myui.github.io/</url>
+            <organization>Treasure Data, Inc.</organization>
+            <organizationUrl>https://www.treasuredata.com/</organizationUrl>
+            <roles>
+                <role>Initial developer</role>
+            </roles>
+            <timezone>+9</timezone>
+        </developer>
+    </developers>
+
+	<properties>
+		<java.version>1.7</java.version>
+		<hadoop.version>2.4.0</hadoop.version>
+		<hive.version>0.13.0</hive.version>
+	</properties>
+
+	<dependencies>
+        <!-- provided scope -->
+		<dependency>
+			<groupId>org.apache.hadoop</groupId>
+			<artifactId>hadoop-common</artifactId>
+			<version>${hadoop.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.hive</groupId>
+			<artifactId>hive-exec</artifactId>
+			<version>${hive.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		
+        <!-- test scope -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<distributionManagement>
+		<snapshotRepository>
+			<id>ossrh</id>
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
+
+	<profiles>
+		<profile>
+			<id>doclint-java8-disable</id>
+			<activation>
+				<jdk>[1.8,)</jdk>
+			</activation>
+			<properties>
+				<javadoc.opts>-Xdoclint:none</javadoc.opts>
+			</properties>
+		</profile>
+        <!-- start maven central -->
+		<profile>
+			<id>release-sign-artifacts</id>
+			<activation>
+				<property>
+					<name>performRelease</name>
+					<value>true</value>
+				</property>
+			</activation>
+			<build>
+				<plugins>
+                    <!-- sources.jar -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-source-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>attach-sources</id>
+								<goals>
+									<goal>jar</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+                    <!-- javadoc.jar -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-javadoc-plugin</artifactId>
+						<configuration>
+							<locale>en_US</locale>
+							<docencoding>UTF-8</docencoding>
+							<show>protected</show>
+							<linksource>true</linksource>
+						</configuration>
+						<executions>
+							<execution>
+								<id>attach-javadocs</id>
+								<goals>
+									<goal>jar</goal>
+								</goals>
+								<configuration>
+                                    <!-- workaround for Java 8 -->
+                                    <!-- see http://stackoverflow.com/questions/15886209/maven-is-not-working-in-java-8-when-javadoc-tags-are-incomplete -->
+									<additionalparam>${javadoc.opts}</additionalparam>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+                    <!-- gpg sign -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-gpg-plugin</artifactId>
+						<version>1.5</version>
+						<executions>
+							<execution>
+								<id>sign-artifacts</id>
+								<phase>verify</phase>
+								<goals>
+									<goal>sign</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+        <!-- end maven central -->
+	</profiles>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.1</version>
+				<configuration>
+					<source>${java.version}</source>
+					<target>${java.version}</target>
+					<debug>true</debug>
+					<debuglevel>lines,vars,source</debuglevel>
+					<encoding>UTF-8</encoding>
+				</configuration>
+			</plugin>
+            <!-- start sonatype deploy -->
+            <!-- mvn clean deploy -DperformRelease=true -Dskiptests=true -Dmaven.test.skip=true -->
+			<plugin>
+				<groupId>org.sonatype.plugins</groupId>
+				<artifactId>nexus-staging-maven-plugin</artifactId>
+				<version>1.6.7</version>
+				<extensions>true</extensions>
+				<configuration>
+					<serverId>ossrh</serverId>
+					<nexusUrl>https://oss.sonatype.org/</nexusUrl>
+					<autoReleaseAfterClose>true</autoReleaseAfterClose>
+				</configuration>
+			</plugin>
+            <!-- end sonatype deploy -->
+		</plugins>
+	</build>
+
+	<issueManagement>
+		<url>https://github.com/myui/hive-udf-backports/issues</url>
+		<system>Github Issues</system>
+	</issueManagement>
+	<description>Backports of recent Hive UDF functions to Hive 0.13.0</description>
+</project>

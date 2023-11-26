@@ -1,0 +1,294 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>de.tehame</groupId>
+	<artifactId>tehame</artifactId>
+	<version>0.0.3-SNAPSHOT</version>
+	<packaging>war</packaging>
+
+	<name>tehame</name>
+	<inceptionYear>2016</inceptionYear>
+	<scm>
+		<connection>scm:git:https://github.com/booorgy/tehame.git</connection>
+	</scm>
+
+	<developers>
+		<developer>
+			<name>Manuel Kunze</name>
+		</developer>
+		<developer>
+			<name>Benjamin Schinzel</name>
+		</developer>
+	</developers>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<maven.compiler.source>1.8</maven.compiler.source>
+		<maven.compiler.target>1.8</maven.compiler.target>
+		<failOnMissingWebXml>true</failOnMissingWebXml>
+		<wfly.management.http.port>9990</wfly.management.http.port>
+	</properties>
+
+	<profiles>
+		<profile>
+			<id>dev</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.wildfly.plugins</groupId>
+						<artifactId>wildfly-maven-plugin</artifactId>
+						<version>1.0.2.Final</version>
+						<configuration>
+							<hostname>localhost</hostname>
+							<port>9990</port>
+							<filename>${project.name}.war</filename>
+						</configuration>
+						<executions>
+							<execution>
+								<id>undeploy</id>
+								<phase>clean</phase>
+								<goals>
+									<goal>undeploy</goal>
+								</goals>
+								<configuration>
+									<ignoreMissingDeployment>true</ignoreMissingDeployment>
+								</configuration>
+							</execution>
+							<execution>
+								<id>deploy</id>
+								<phase>install</phase>
+								<goals>
+									<goal>deploy</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.codehaus.cargo</groupId>
+						<artifactId>cargo-maven2-plugin</artifactId>
+						<version>1.6.0</version>
+						<configuration>
+							<container>
+								<containerId>wildfly10x</containerId>
+								<type>remote</type>
+							</container>
+							<configuration>
+								<type>runtime</type>
+								<properties>
+									<!-- https://codehaus-cargo.github.io/cargo/WildFly+10.x.html -->
+									<cargo.hostname>localhost</cargo.hostname>
+									<cargo.remote.username>gude</cargo.remote.username>
+									<cargo.remote.password>moin</cargo.remote.password>
+									<cargo.jboss.management-http.port>${wfly.management.http.port}</cargo.jboss.management-http.port>
+									<cargo.logging>high</cargo.logging>
+								</properties>
+							</configuration>
+							<deployables>
+								<deployable>
+									<groupId>${project.groupId}</groupId>
+									<artifactId>${project.artifactId}</artifactId>
+									<type>war</type>
+									<properties>
+										<context>/tehame</context>
+									</properties>
+								</deployable>
+							</deployables>
+						</configuration>
+						<dependencies>
+							<!-- Achtung: Der Client ist in Java 8 geschrieben, deswegen muss in 
+								der Maven Run Configuration ein JRE/JDK 8 verwendet werden. -->
+							<dependency>
+								<groupId>org.wildfly.core</groupId>
+								<artifactId>wildfly-controller-client</artifactId>
+								<version>2.2.0.Final</version>
+							</dependency>
+						</dependencies>
+					</plugin>
+					<!-- Integrations-Tests müssen das Suffix 'IT' haben -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-failsafe-plugin</artifactId>
+						<version>2.19.1</version>
+						<executions>
+							<execution>
+								<goals>
+									<goal>integration-test</goal>
+									<goal>verify</goal>
+								</goals>
+							</execution>
+						</executions>
+						<configuration>
+							<classpathDependencyExcludes>
+								<!-- Die folgende (provided) Dependency muss für den Integrations-Test 
+									entfernt werden, weil sie nur eine API ist und keine Implementierung. Ansonsten 
+									bekommt man einen ClassFormatError: Absent Code ... Die JAX-RS API bringt 
+									bereits der RESTeasy Client mit, welcher im Test-Scope geladen wird. -->
+								<classpathDependencyExclude>javax:javaee-api</classpathDependencyExclude>
+							</classpathDependencyExcludes>
+						</configuration>
+					</plugin>
+					<!-- Unit-Tests müssen das Suffix 'Test' haben -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<version>2.19.1</version>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
+	<repositories>
+		<repository>
+			<id>apache.snapshots</id>
+			<name>Apache Development Snapshot Repository</name>
+			<url>https://repository.apache.org/content/repositories/snapshots/</url>
+			<releases>
+				<enabled>false</enabled>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
+		<repository>
+			<id>prime-repo</id>
+			<name>PrimeFaces Maven Repository</name>
+			<url>http://repository.primefaces.org</url>
+			<layout>default</layout>
+		</repository>		
+	</repositories>
+
+	<build>
+		<finalName>${project.name}</finalName>
+		<plugins>
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.6</version>
+				<configuration>
+					<descriptors>
+						<descriptor>/src/assembly/aws-eb-docker-zip.xml</descriptor>
+					</descriptors>
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-assembly</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+	<dependencies>
+		<!--  
+			Apache HttpClient Artifact wird vom AWS SDK benötigt, anonsten folgendes Problem:
+			java.lang.NoClassDefFoundError: org/apache/http/conn/socket/ConnectionSocketFactory
+			at com.amazonaws.http.apache.client.impl.ApacheHttpClientFactory
+		-->
+		<dependency>
+		    <groupId>org.apache.httpcomponents</groupId>
+		    <artifactId>httpclient</artifactId>
+		    <version>4.5.2</version>
+		</dependency>
+		<!-- 
+			Seit 1.9.0 ist das AWS SDK Modular, 
+			somit kann die Package-Size stark reduziert werden 
+		-->
+		<dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-core</artifactId>
+            <version>1.11.73</version>
+        </dependency>
+		<dependency>
+		    <groupId>com.amazonaws</groupId>
+		    <artifactId>aws-java-sdk-s3</artifactId>
+		    <version>1.11.59</version>
+		</dependency>
+		<dependency>
+		    <groupId>com.amazonaws</groupId>
+		    <artifactId>aws-java-sdk-ses</artifactId>
+		    <version>1.11.66</version>
+		</dependency>
+		<dependency>
+		    <groupId>com.amazonaws</groupId>
+		    <artifactId>aws-java-sdk-rekognition</artifactId>
+		    <version>1.11.73</version>
+		</dependency>
+		<dependency>
+			<groupId>org.mongodb</groupId>
+			<artifactId>mongodb-driver</artifactId>
+			<version>3.3.0</version>
+		</dependency>
+		<dependency>
+			<groupId>javax</groupId>
+			<artifactId>javaee-api</artifactId>
+			<version>7.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.jboss.resteasy</groupId>
+			<artifactId>resteasy-jaxrs</artifactId>
+			<version>2.3.2.Final</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.jboss.resteasy</groupId>
+			<artifactId>resteasy-multipart-provider</artifactId>
+			<version>2.3.2.Final</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-imaging</artifactId>
+			<version>1.0-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.sanselan</groupId>
+			<artifactId>sanselan</artifactId>
+			<version>0.97-incubator</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jboss.logging</groupId>
+			<artifactId>jboss-logging</artifactId>
+			<version>3.3.0.Final</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.4</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jboss.resteasy</groupId>
+			<artifactId>jaxrs-api</artifactId>
+			<version>3.0.2.Final</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.jboss.resteasy</groupId>
+			<artifactId>resteasy-client</artifactId>
+			<version>3.0.19.Final</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.picketbox</groupId>
+			<artifactId>picketbox</artifactId>
+			<version>4.9.6.Final</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>  
+		    <groupId>org.primefaces</groupId>  
+		    <artifactId>primefaces</artifactId>  
+		    <version>6.0</version>  
+		</dependency> 		
+	</dependencies>
+</project>

@@ -1,0 +1,323 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.j32bit</groupId>
+	<artifactId>CamelExample</artifactId>
+	<version>v1.0</version>
+	<packaging>war</packaging>
+
+	<properties>
+
+		<!-- Main Project Properties -->
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.java.version>1.7</project.java.version>
+		<maven.build.timestamp.format>yyyy-MM-dd HH.mm</maven.build.timestamp.format>
+		<buildnumber>${maven.build.timestamp}</buildnumber>
+		<timestamp>${maven.build.timestamp}</timestamp>
+
+		<!-- Dependency Specific Properties -->
+		<camel.version>2.14.0</camel.version>
+		<cxf.version>3.0.2</cxf.version>
+		<log4j.version>1.2.17</log4j.version>
+		<spring.version>4.1.2.RELEASE</spring.version>
+
+		<!-- Tomcat 7/8 Configuration see Maven profiles below -->
+		<tomcat.deploy.context.path>/CamelExample</tomcat.deploy.context.path>
+		<tomcat.username>tomcat</tomcat.username>
+		<tomcat.password>tomcat</tomcat.password>
+		<tomcat.local.url>http://localhost:8080/manager/text</tomcat.local.url>
+
+	</properties>
+
+	<profiles>
+		<!-- This profile is for local tomcat deployment -->
+		<profile>
+			<id>Local</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<properties>
+				<tomcat.manager.url>${tomcat.local.url}</tomcat.manager.url>
+			</properties>
+		</profile>
+	</profiles>
+
+	<build>
+
+		<defaultGoal>tomcat7:undeploy clean generate-sources install compile package tomcat7:deploy</defaultGoal>
+		<finalName>CamelExample</finalName>
+
+		<testSourceDirectory>src/test/java</testSourceDirectory>
+
+		<resources>
+			<resource>
+				<directory>${basedir}/Resources/WSDL</directory>
+				<targetPath>${basedir}/target/classes/WSDL</targetPath>
+				<filtering>false</filtering>
+			</resource>
+
+			<resource>
+				<directory>${basedir}/Resources/spring</directory>
+				<targetPath>${basedir}/target/classes/spring</targetPath>
+				<filtering>false</filtering>
+			</resource>
+
+			<resource>
+				<directory>${basedir}/Resources/configuration</directory>
+				<targetPath>${basedir}/target/classes/configuration</targetPath>
+				<filtering>false</filtering>
+			</resource>
+		</resources>
+
+		<plugins>
+			<plugin>
+				<groupId>org.apache.tomcat.maven</groupId>
+				<artifactId>tomcat7-maven-plugin</artifactId>
+				<version>2.2</version>
+				<configuration>
+					<path>${tomcat.deploy.context.path}</path>
+					<update>true</update>
+					<url>${tomcat.manager.url}</url>
+					<username>${tomcat.username}</username>
+					<password>${tomcat.password}</password>
+					<systemProperties>
+						<JAVA_OPTS>-Xmx1024m -Xms256m -XX:MaxPermSize=256m -Xnoagent
+							-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=8000</JAVA_OPTS>
+					</systemProperties>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.cxf</groupId>
+				<artifactId>cxf-codegen-plugin</artifactId>
+				<version>${cxf.version}</version>
+				<executions>
+					<execution>
+						<id>generate-sources</id>
+						<phase>generate-sources</phase>
+						<configuration>
+							<sourceRoot>${basedir}/target/generated/src/main/java</sourceRoot>
+							<wsdlOptions>
+								<wsdlOption>
+									<wsdl>${basedir}/Resources/WSDL/ExampleService.wsdl</wsdl>
+									<extraargs>
+										<extraarg>-xjc-Xcollection-setter-injector</extraarg>
+										<extraarg>-verbose</extraarg>
+									</extraargs>
+								</wsdlOption>
+							</wsdlOptions>
+						</configuration>
+						<goals>
+							<goal>wsdl2java</goal>
+						</goals>
+					</execution>
+				</executions>
+
+				<dependencies>
+					<dependency>
+						<groupId>org.andromda.thirdparty.jaxb2_commons</groupId>
+						<artifactId>collection-setter-injector</artifactId>
+						<version>1.0</version>
+					</dependency>
+
+				</dependencies>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<version>2.5</version>
+				<configuration>
+					<failOnMissingWebXml>false</failOnMissingWebXml>
+				</configuration>
+			</plugin>
+
+		</plugins>
+
+		<!-- Specify Java version of the project -->
+
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>3.1</version>
+					<configuration>
+						<source>${project.java.version}</source>
+						<target>${project.java.version}</target>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+
+
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>${log4j.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>3.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.camel</groupId>
+			<artifactId>camel-core</artifactId>
+			<version>${camel.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.camel</groupId>
+			<artifactId>camel-cxf</artifactId>
+			<version>${camel.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.camel</groupId>
+			<artifactId>camel-servlet</artifactId>
+			<version>${camel.version}</version>
+		</dependency>
+
+		<!-- Spring Related Dependencies -->
+
+		<dependency>
+			<groupId>org.apache.camel</groupId>
+			<artifactId>camel-spring</artifactId>
+			<version>${camel.version}</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.apache.camel</groupId>
+			<artifactId>camel-sql</artifactId>
+			<version>${camel.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-core</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-web</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-beans</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-aop</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-tx</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+
+		<!-- JAXB for Overriding Apache Camel's -->
+
+		<dependency>
+			<groupId>com.sun.xml.bind</groupId>
+			<artifactId>jaxb-impl</artifactId>
+			<version>2.2.11</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.sun.xml.bind</groupId>
+			<artifactId>jaxb-core</artifactId>
+			<version>2.2.11</version>
+		</dependency>
+
+		<!-- Slf4j to Log4j Routing -->
+
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.6.6</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>1.7.7</version>
+		</dependency>
+
+		<!-- Web Service Deployment -->
+
+		<dependency>
+			<groupId>org.apache.cxf</groupId>
+			<artifactId>cxf-rt-frontend-jaxws</artifactId>
+			<version>${cxf.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.cxf</groupId>
+			<artifactId>cxf-rt-transports-http</artifactId>
+			<version>${cxf.version}</version>
+		</dependency>
+
+
+		<!-- HTTP Servlet Dependency / Tomcat -->
+
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>3.1.0</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.apache.derby/derby -->
+		<dependency>
+			<groupId>org.apache.derby</groupId>
+			<artifactId>derby</artifactId>
+			<version>10.8.1.2</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.derby</groupId>
+			<artifactId>derbyclient</artifactId>
+			<version>10.8.1.2</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.derby</groupId>
+			<artifactId>derbynet</artifactId>
+			<version>10.8.1.2</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.derby</groupId>
+			<artifactId>derbytools</artifactId>
+			<version>10.8.1.2</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.apache.commons/commons-dbcp2 -->
+		<!-- <dependency> <groupId>org.apache.commons</groupId> <artifactId>commons-dbcp2</artifactId> 
+			<version>2.1.1</version> </dependency> -->
+		<!-- https://mvnrepository.com/artifact/commons-dbcp/commons-dbcp -->
+		<dependency>
+			<groupId>commons-dbcp</groupId>
+			<artifactId>commons-dbcp</artifactId>
+			<version>1.4</version>
+		</dependency>
+
+	</dependencies>
+
+</project>

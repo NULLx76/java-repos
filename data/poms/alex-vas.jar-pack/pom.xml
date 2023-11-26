@@ -1,0 +1,310 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>private</groupId>
+
+    <!-- Artifact Id must be in a form of "${product}.${vendor}.${platform}", those properties will be extracted from it later by regexp -->
+    <!-- The product is "jre", the vendor is one of {oracle, openjdk}, and the platform is one of {masOS, win32, win64, linux32, linux64} -->
+    <artifactId>jre.intellij.macOS</artifactId>
+
+    <!-- JRE version, e.g.,1.8.0_102, ... -->
+    <version>8u152b1056.10</version>
+
+    <name>The entire JRE packed into the JAR.</name>
+    <description>This is handy for building installers or deploy as required. Helps reducing the size of the source code repository.</description>
+
+    <!--name>Nuix Native Launcher.</name>
+    <description>This is handy for inclusion with an HTTP  Server. Helps reducing the size of the source code repository.</description-->
+
+    <organization>
+        <name>Individual</name>
+        <url>https://github.com/alex-vas/jar-pack</url>
+    </organization>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.12</version>
+                <executions>
+
+                    <!-- Perform series of regular expressions to set up some properties -->
+                    <execution>
+                        <id>regex-product-property</id>
+                        <goals>
+                            <goal>regex-property</goal>
+                        </goals>
+                        <configuration>
+                            <name>packed.product</name>
+                            <value>${project.artifactId}</value>
+                            <regex>^([^.]+)\.([^.]+)\.([^.]+)$</regex>
+                            <replacement>$1</replacement>
+                            <failIfNoMatch>true</failIfNoMatch>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>regex-vendor-property</id>
+                        <goals>
+                            <goal>regex-property</goal>
+                        </goals>
+                        <configuration>
+                            <name>packed.vendor</name>
+                            <value>${project.artifactId}</value>
+                            <regex>^([^.]+)\.([^.]+)\.([^.]+)$</regex>
+                            <replacement>$2</replacement>
+                            <failIfNoMatch>true</failIfNoMatch>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>regex-platform-property</id>
+                        <goals>
+                            <goal>regex-property</goal>
+                        </goals>
+                        <configuration>
+                            <name>packed.platform</name>
+                            <value>${project.artifactId}</value>
+                            <regex>^([^.]+)\.([^.]+)\.([^.]+)$</regex>
+                            <replacement>$3</replacement>
+                            <failIfNoMatch>true</failIfNoMatch>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>regex-path-property</id>
+                        <goals>
+                            <goal>regex-property</goal>
+                        </goals>
+                        <configuration>
+                            <name>packed.path</name>
+                            <value>${project.artifactId}-${project.version}</value>
+                            <regex>.*</regex>
+                            <replacement>$0</replacement>
+                            <failIfNoMatch>true</failIfNoMatch>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>regex-classname-property</id>
+                        <goals>
+                            <goal>regex-property</goal>
+                        </goals>
+                        <configuration>
+                            <name>packed.class.name</name>
+                            <value>JarPack_${packed.product}_${packed.vendor}_${packed.platform}_${project.version}</value>
+                            <regex>\W</regex>
+                            <replacement>_</replacement>
+                            <failIfNoMatch>false</failIfNoMatch>
+                        </configuration>
+                    </execution>
+
+                    <!-- Include generated source with compile -->
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.build.directory}/generated-sources/replacer</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Generate the source code -->
+            <plugin>
+                <groupId>com.google.code.maven-replacer-plugin</groupId>
+                <artifactId>replacer</artifactId>
+                <version>1.5.3</version>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>replace</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <file>${basedir}/src/main/java/com/nuix/utils/jarpack/impl/JarPackImplementationTemplate.java</file>
+                    <outputFile>${basedir}/target/generated-sources/replacer/com/nuix/utils/jarpack/impl/${packed.class.name}.java</outputFile>
+                    <replacements>
+                        <replacement>
+                            <token>JarPackImplementationTemplate</token>
+                            <value>\${packed.class.name}</value>
+                        </replacement>
+                        <replacement>
+                            <token>"product"</token>
+                            <value>"\${packed.product}"</value>
+                        </replacement>
+                        <replacement>
+                            <token>"vendor"</token>
+                            <value>"\${packed.vendor}"</value>
+                        </replacement>
+                        <replacement>
+                            <token>"platform"</token>
+                            <value>"\${packed.platform}"</value>
+                        </replacement>
+                        <replacement>
+                            <token>"version"</token>
+                            <value>"\${project.version}"</value>
+                        </replacement>
+                        <replacement>
+                            <token>"path"</token>
+                            <value>"\${packed.path}"</value>
+                        </replacement>
+                    </replacements>
+                </configuration>
+            </plugin>
+
+            <!-- Specify Java Source code level -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.5.1</version>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+
+            <!-- Copy data/ directory into the jar  -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <id>copy-resources</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <!-- XXX Check the progress of https://issues.apache.org/jira/browse/MRESOURCES-132 and https://issues.apache.org/jira/browse/MRESOURCES-236
+                             What we really want is to copy permissions (specifically chmod +x) into the archive -->
+                            <outputDirectory>${basedir}/target/classes/${packed.path}</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>data</directory>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Set JRE permissions for files (specifically chmod +x) // this is to compensate for the fact that resource copy routine above doesn't copy permissions, see the comment above -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.8</version>
+                <executions>
+                    <execution>
+                        <id>chmod-resources</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <!-- JRE files -->
+                                <chmod dir="${basedir}/target/classes" includes="**/bin/*" perm="+x"/>
+                                <chmod dir="${basedir}/target/classes" includes="**/lib/jspawnhelper" perm="+x"/> <!-- macOS -->
+                                <chmod dir="${basedir}/target/classes" includes="**/lib/**/*.dylib*" perm="+x"/> <!-- macOS -->
+                                <chmod dir="${basedir}/target/classes" includes="**/lib/jexec" perm="+x"/> <!-- Linux -->
+                                <chmod dir="${basedir}/target/classes" includes="**/lib/**/*.so" perm="+x"/> <!-- Linux -->
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Generate list and MD5s for the data/ files -->
+            <plugin>
+                <groupId>net.ju-n.maven.plugins</groupId>
+                <artifactId>checksum-maven-plugin</artifactId>
+                <version>1.3</version>
+                <executions>
+                    <execution>
+                        <id>generate-artifact-checksum</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>files</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <fileSets>
+                        <fileSet>
+                            <directory>data</directory>
+                        </fileSet>
+                    </fileSets>
+                    <includeRelativePath>true</includeRelativePath>
+                    <individualFiles>false</individualFiles>
+                    <csvSummary>false</csvSummary>
+                    <xmlSummary>true</xmlSummary>
+                    <xmlSummaryFile>${basedir}/target/classes/META-INF/${packed.path}/file-list.xml</xmlSummaryFile>
+                </configuration>
+            </plugin>
+
+        </plugins>
+
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+
+        <!-- Eclipse auto-generated code -->
+        <pluginManagement>
+            <plugins>
+                <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+                <plugin>
+                    <groupId>org.eclipse.m2e</groupId>
+                    <artifactId>lifecycle-mapping</artifactId>
+                    <version>1.0.0</version>
+                    <configuration>
+                        <lifecycleMappingMetadata>
+                            <pluginExecutions>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.codehaus.mojo</groupId>
+                                        <artifactId>build-helper-maven-plugin</artifactId>
+                                        <versionRange>[1.12,)</versionRange>
+                                        <goals>
+                                            <goal>regex-property</goal>
+                                            <goal>add-source</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <execute />
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>com.google.code.maven-replacer-plugin</groupId>
+                                        <artifactId>replacer</artifactId>
+                                        <versionRange>[1.5.3,)</versionRange>
+                                        <goals>
+                                            <goal>replace</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <execute />
+                                    </action>
+                                </pluginExecution>
+                            </pluginExecutions>
+                        </lifecycleMappingMetadata>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+</project>

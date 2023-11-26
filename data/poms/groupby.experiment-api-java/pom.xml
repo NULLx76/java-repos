@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.groupbyinc</groupId>
+    <artifactId>parent-oss</artifactId>
+    <version>36</version>
+  </parent>
+
+  <artifactId>experiment-api-java</artifactId>
+  <version>1.0.24-SNAPSHOT</version>
+
+  <packaging>jar</packaging>
+
+  <name>GroupBy - API - Experiment - Java</name>
+  <description>${project.name}</description>
+
+  <scm>
+    <url>https://github.com/groupby/experiment-api-java</url>
+    <connection>scm:git:git@github.com:groupby/experiment-api-java.git</connection>
+    <developerConnection>scm:git:git@github.com:groupby/experiment-api-java.git</developerConnection>
+    <tag>HEAD</tag>
+  </scm>
+
+  <properties>
+    <github.release.artifact>${github.release.uber.artifact}</github.release.artifact>
+    <codacy.project.token>92b63890601b492d9b8ce78e3c933059</codacy.project.token>
+    <repo.upload.retryAttempts>3</repo.upload.retryAttempts>
+
+    <!-- ### Versions -->
+    <junit.version>4.12</junit.version>
+    <jackson.version>2.9.6</jackson.version>
+
+    <!-- ### Test -->
+    <test.coverage.ratio>0</test.coverage.ratio>
+    <test.threadLocal>true</test.threadLocal>
+    <test.threadCount>4</test.threadCount>
+    <test.parallel>classesAndMethods</test.parallel>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.sangupta</groupId>
+      <artifactId>murmur</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+
+    <!-- ### Test -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <version>${jackson.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>${jackson.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+
+    <defaultGoal>clean install</defaultGoal>
+
+    <plugins>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+      </plugin>
+
+      <plugin>
+        <groupId>org.sonatype.plugins</groupId>
+        <artifactId>nexus-staging-maven-plugin</artifactId>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <artifactSet>
+                <includes>
+                  <include>com.groupbyinc:*</include>
+                  <include>com.sangupta*</include>
+                </includes>
+              </artifactSet>
+              <relocations>
+                <relocation>
+                  <pattern>com.sangupta</pattern>
+                  <shadedPattern>com.groupbyinc.common.sangupta</shadedPattern>
+                </relocation>
+              </relocations>
+              <shadeTestJar>true</shadeTestJar>
+              <shadedArtifactAttached>true</shadedArtifactAttached>
+              <shadedClassifierName>uber</shadedClassifierName>
+              <createSourcesJar>true</createSourcesJar>
+              <createDependencyReducedPom>true</createDependencyReducedPom>
+              <dependencyReducedPomLocation>${project.build.directory}/${project.build.finalName}.pom</dependencyReducedPomLocation>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <!-- excludes for preventing OSGi bundles from complaining -->
+                  <excludes>
+                    <exclude>com/groupbyinc/common/apache/commons/logging/impl/Avalon*</exclude>
+                    <exclude>com/groupbyinc/common/apache/commons/logging/impl/LogKit*</exclude>
+                    <exclude>com/groupbyinc/common/apache/commons/logging/impl/Log4J*</exclude>
+                  </excludes>
+                </filter>
+                <filter>
+                  <artifact>${project.groupId}:${project.parent.artifactId}-common</artifact>
+                  <includes>
+                    <include>com/groupbyinc/**</include>
+                  </includes>
+                </filter>
+              </filters>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <manifestEntries>
+                    <Archive-Type>Uber JAR</Archive-Type>
+                  </manifestEntries>
+                </transformer>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <finalName>experiment-api-java-${project.version}</finalName>
+          <descriptors>
+            <descriptor>${project.basedir}/bin.xml</descriptor>
+          </descriptors>
+        </configuration>
+        <executions>
+          <execution>
+            <id>create-compressed-packages</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <version>1.5.3</version>
+        <executions>
+          <execution>
+            <phase>deploy</phase>
+            <goals>
+              <goal>replace</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <includes>
+            <include>README.md</include>
+          </includes>
+          <replacements>
+            <replacement>
+              <token>(version(&gt;).*(&lt;))</token>
+              <value>version&gt;${project.version}&lt;</value>
+            </replacement>
+          </replacements>
+        </configuration>
+      </plugin>
+
+    </plugins>
+
+  </build>
+
+  <repositories>
+
+    <repository>
+      <id>sonatype-releases</id>
+      <name>Sonatype - Releases</name>
+      <url>https://oss.sonatype.org/content/repositories/releases/</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+
+  </repositories>
+
+  <pluginRepositories>
+
+    <pluginRepository>
+      <id>sonatype-releases</id>
+      <name>Sonatype - Releases</name>
+      <url>https://oss.sonatype.org/content/repositories/releases/</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </pluginRepository>
+
+  </pluginRepositories>
+
+  <distributionManagement>
+
+    <repository>
+      <id>ossrh</id>
+      <name>Sonatype OSS - Releases</name>
+      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+    </repository>
+
+    <snapshotRepository>
+      <id>ossrh</id>
+      <name>Sonatype OSS - Snapshots</name>
+      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+    </snapshotRepository>
+
+  </distributionManagement>
+
+</project>

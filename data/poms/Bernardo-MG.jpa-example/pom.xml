@@ -1,0 +1,777 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+   <modelVersion>4.0.0</modelVersion>
+
+   <!-- ********************************************** -->
+   <!-- ****************** BASE POM ****************** -->
+   <!-- ********************************************** -->
+
+   <parent>
+      <groupId>com.bernardomg.maven</groupId>
+      <artifactId>base-pom</artifactId>
+      <version>1.4.4</version>
+   </parent>
+
+   <!-- ********************************************** -->
+   <!-- **************** PROJECT INFO **************** -->
+   <!-- ********************************************** -->
+
+   <groupId>com.bernardomg.example</groupId>
+   <artifactId>jpa-example</artifactId>
+   <version>1.6.1</version>
+   <packaging>jar</packaging>
+
+   <name>JPA Example</name>
+   <description>An example showing how to set up and use JPA classes</description>
+   <url>https://github.com/bernardo-mg/jpa-example</url>
+   <inceptionYear>2016</inceptionYear>
+
+   <licenses>
+      <license>
+         <name>MIT License</name>
+         <url>http://www.opensource.org/licenses/mit-license.php</url>
+         <distribution>repo</distribution>
+      </license>
+   </licenses>
+
+   <!-- ********************************************** -->
+   <!-- ************ RESOURCES AND SERVICES ********** -->
+   <!-- ********************************************** -->
+
+   <scm>
+      <connection>scm:git:https://github.com/bernardo-mg/jpa-example.git</connection>
+      <developerConnection>scm:git:https://github.com/bernardo-mg/jpa-example.git</developerConnection>
+      <tag>head</tag>
+      <url>https://www.github.com/bernardo-mg/jpa-example</url>
+   </scm>
+
+   <issueManagement>
+      <system>GitHub</system>
+      <url>https://www.github.com/bernardo-mg/jpa-example/issues</url>
+   </issueManagement>
+
+   <ciManagement>
+      <system>Travis CI</system>
+      <url>https://travis-ci.org/bernardo-mg/jpa-example</url>
+      <notifiers />
+   </ciManagement>
+
+   <!-- ********************************************** -->
+   <!-- ****************** PROFILES ****************** -->
+   <!-- ********************************************** -->
+
+   <profiles>
+      <profile>
+         <!-- Profile for the Eclipse Maven plugin -->
+         <!-- Sets the POM so this plugin does not give the usual unregistered 
+            goals errors -->
+         <!-- It will be activated automatically on Eclipse if this has the 
+            m2e plugin, by detecting the version property -->
+         <id>eclipse-maven</id>
+         <activation>
+            <property>
+               <name>m2e.version</name>
+            </property>
+         </activation>
+         <build>
+            <pluginManagement>
+               <plugins>
+                  <plugin>
+                     <!-- m2e lifecycle mapping -->
+                     <!-- This is used to configure the Maven plugin for 
+                        Eclipse. -->
+                     <!-- Among other things, it allows registering goals, 
+                        which Eclipse would otherwise reject. -->
+                     <!-- It has no real effect on Maven. -->
+                     <groupId>org.eclipse.m2e</groupId>
+                     <artifactId>lifecycle-mapping</artifactId>
+                     <version>${plugin.lifecycle.version}</version>
+                     <configuration>
+                        <lifecycleMappingMetadata>
+                           <pluginExecutions>
+                              <pluginExecution>
+                                 <!-- Maven processor plugin configuration -->
+                                 <!-- Fixes the errors with Eclipse not recognizing 
+                                    the plugin configuration -->
+                                 <pluginExecutionFilter>
+                                    <groupId>org.bsc.maven</groupId>
+                                    <artifactId>maven-processor-plugin</artifactId>
+                                    <versionRange>[0,)</versionRange>
+                                    <goals>
+                                       <!-- The goals are registered to m2e. -->
+                                       <goal>process</goal>
+                                    </goals>
+                                 </pluginExecutionFilter>
+                                 <action>
+                                    <!-- As m2e doesn't know what to do with 
+                                       the plugin, it is ignored to avoid error warnings. -->
+                                    <ignore />
+                                 </action>
+                              </pluginExecution>
+                              <pluginExecution>
+                                 <!-- Build helper plugin configuration -->
+                                 <pluginExecutionFilter>
+                                    <groupId>org.codehaus.mojo</groupId>
+                                    <artifactId>build-helper-maven-plugin</artifactId>
+                                    <versionRange>[1.0,)</versionRange>
+                                    <goals>
+                                       <goal>add-source</goal>
+                                       <goal>add-test-source</goal>
+                                       <goal>add-resource</goal>
+                                       <goal>add-test-resource</goal>
+                                       <goal>maven-version</goal>
+                                       <goal>parse-version</goal>
+                                       <goal>timestamp-property</goal>
+                                    </goals>
+                                 </pluginExecutionFilter>
+                                 <action>
+                                    <execute>
+                                       <runOnConfiguration>true</runOnConfiguration>
+                                       <runOnIncremental>true</runOnIncremental>
+                                    </execute>
+                                 </action>
+                              </pluginExecution>
+                           </pluginExecutions>
+                        </lifecycleMappingMetadata>
+                        <downloadSources>true</downloadSources>
+                        <downloadJavadocs>true</downloadJavadocs>
+                     </configuration>
+                  </plugin>
+               </plugins>
+            </pluginManagement>
+         </build>
+      </profile>
+      <!-- ============================================== -->
+      <!-- ============= DATABASE PROFILES ============== -->
+      <!-- ============================================== -->
+      <profile>
+         <!-- H2 database profile -->
+         <!-- Prepares the project to make use of an H2 in-memory database -->
+         <id>h2</id>
+         <properties>
+            <!-- Access data -->
+            <database.url>jdbc:h2:mem:jpa_test</database.url>
+            <database.username>sa</database.username>
+            <database.password></database.password>
+            <!-- Spring context -->
+            <spring.profile.database>h2</spring.profile.database>
+         </properties>
+         <dependencies>
+            <dependency>
+               <!-- H2 database -->
+               <groupId>com.h2database</groupId>
+               <artifactId>h2</artifactId>
+               <version>${h2.version}</version>
+               <scope>test</scope>
+            </dependency>
+         </dependencies>
+      </profile>
+      <profile>
+         <!-- HSQLDB database profile -->
+         <!-- Prepares the project to make use of an HSQLDB in-memory database -->
+         <id>hsqldb</id>
+         <properties>
+            <!-- Access data -->
+            <database.url>jdbc:hsqldb:mem:jpa_test</database.url>
+            <database.username>sa</database.username>
+            <database.password></database.password>
+            <!-- Spring context -->
+            <spring.profile.database>hsqldb</spring.profile.database>
+         </properties>
+         <dependencies>
+            <dependency>
+               <!-- HSQLDB driver -->
+               <groupId>org.hsqldb</groupId>
+               <artifactId>hsqldb</artifactId>
+               <version>${hsqldb.version}</version>
+               <scope>test</scope>
+            </dependency>
+         </dependencies>
+      </profile>
+      <profile>
+         <!-- MySQL database profile -->
+         <!-- Prepares the project to make use of an H2 in-memory database -->
+         <id>mysql</id>
+         <properties>
+            <!-- Access data -->
+            <database.url>jdbc:mysql://localhost:3306/jpa_test</database.url>
+            <database.username>root</database.username>
+            <database.password>root</database.password>
+            <!-- Spring context -->
+            <spring.profile.database>mysql</spring.profile.database>
+         </properties>
+         <dependencies>
+            <dependency>
+               <!-- MySQL connector -->
+               <groupId>mysql</groupId>
+               <artifactId>mysql-connector-java</artifactId>
+               <version>${mysql.version}</version>
+               <scope>test</scope>
+            </dependency>
+         </dependencies>
+      </profile>
+      <profile>
+         <!-- Postgres database profile -->
+         <!-- Prepares the project to make use of a Postgres database -->
+         <id>postgres</id>
+         <properties>
+            <!-- Access data -->
+            <database.url>jdbc:postgresql://localhost:5432/jpa_test</database.url>
+            <database.username>postgres</database.username>
+            <database.password>postgres</database.password>
+            <!-- Spring context -->
+            <spring.profile.database>postgres</spring.profile.database>
+         </properties>
+         <dependencies>
+            <dependency>
+               <!-- Postgres connector -->
+               <groupId>org.postgresql</groupId>
+               <artifactId>postgresql</artifactId>
+               <version>${postgresql.version}</version>
+               <scope>test</scope>
+            </dependency>
+         </dependencies>
+      </profile>
+      <!-- ============================================== -->
+      <!-- ============ JPA PROVIDER PROFILES =========== -->
+      <!-- ============================================== -->
+      <profile>
+         <!-- Hibernate JPA provider profile -->
+         <!-- Prepares the project to connect to the DB through Hibernate -->
+         <id>hibernate</id>
+         <properties>
+            <jpa.provider>hibernate</jpa.provider>
+         </properties>
+         <dependencies>
+            <dependency>
+               <!-- Hibernate Core -->
+               <groupId>org.hibernate</groupId>
+               <artifactId>hibernate-core</artifactId>
+               <version>${hibernate.version}</version>
+               <scope>test</scope>
+            </dependency>
+            <dependency>
+               <!-- Hibernate Ehcache -->
+               <groupId>org.hibernate</groupId>
+               <artifactId>hibernate-ehcache</artifactId>
+               <version>${hibernate.version}</version>
+               <scope>test</scope>
+            </dependency>
+         </dependencies>
+      </profile>
+      <profile>
+         <!-- EclipseLink JPA provider profile -->
+         <!-- Prepares the project to connect to the DB through EclipseLink -->
+         <id>eclipselink</id>
+         <properties>
+            <jpa.provider>eclipselink</jpa.provider>
+         </properties>
+         <dependencies>
+            <dependency>
+               <!-- Eclipselink -->
+               <groupId>org.eclipse.persistence</groupId>
+               <artifactId>eclipselink</artifactId>
+               <version>${eclipselink.version}</version>
+               <scope>test</scope>
+            </dependency>
+         </dependencies>
+      </profile>
+      <!-- ============================================== -->
+      <!-- ============= DEPLOYMENT PROFILES ============ -->
+      <!-- ============================================== -->
+      <profile>
+         <!-- Site deployment profile -->
+         <!-- Sets the site repository to point to the releases repo -->
+         <id>deployment-site</id>
+         <activation>
+            <!-- Active by default so the repository appears in the reports -->
+            <activeByDefault>true</activeByDefault>
+         </activation>
+         <distributionManagement>
+            <site>
+               <id>site</id>
+               <name>Project Documentation Site</name>
+               <!-- The URL should be set externally -->
+               <url>${site.url}</url>
+            </site>
+         </distributionManagement>
+         <properties>
+            <!-- Access data -->
+            <database.url>jdbc:h2:mem:jpa_test</database.url>
+            <database.username>sa</database.username>
+            <database.password></database.password>
+            <!-- Provider -->
+            <jpa.provider>hibernate</jpa.provider>
+            <!-- Spring context -->
+            <spring.profile.database>h2</spring.profile.database>
+         </properties>
+         <dependencies>
+            <dependency>
+               <!-- H2 database -->
+               <groupId>com.h2database</groupId>
+               <artifactId>h2</artifactId>
+               <version>${h2.version}</version>
+               <scope>test</scope>
+            </dependency>
+            <dependency>
+               <!-- Hibernate Core -->
+               <groupId>org.hibernate</groupId>
+               <artifactId>hibernate-core</artifactId>
+               <version>${hibernate.version}</version>
+               <scope>test</scope>
+            </dependency>
+            <dependency>
+               <!-- Hibernate Ehcache -->
+               <groupId>org.hibernate</groupId>
+               <artifactId>hibernate-ehcache</artifactId>
+               <version>${hibernate.version}</version>
+               <scope>test</scope>
+            </dependency>
+         </dependencies>
+      </profile>
+   </profiles>
+
+   <!-- ********************************************** -->
+   <!-- *********** ORGANIZATION AND MEMBERS ********* -->
+   <!-- ********************************************** -->
+
+   <organization>
+      <name>Bernardo Martínez Garrido</name>
+      <url>https://github.com/Bernardo-MG</url>
+   </organization>
+
+   <developers>
+      <developer>
+         <id>bmg</id>
+         <name>Bernardo Martínez Garrido</name>
+         <email>programming@bernardomg.com</email>
+         <url>https://github.com/Bernardo-MG</url>
+         <organization>Bernardo Martínez Garrido</organization>
+         <organizationUrl>https://github.com/Bernardo-MG</organizationUrl>
+         <roles>
+            <role>Developer</role>
+         </roles>
+         <timezone>+1</timezone>
+         <properties />
+      </developer>
+   </developers>
+
+   <!-- ********************************************** -->
+   <!-- **************** PROPERTIES ****************** -->
+   <!-- ********************************************** -->
+
+   <properties>
+      <!-- ============================================== -->
+      <!-- =============== MAVEN VERSION ================ -->
+      <!-- ============================================== -->
+      <maven.version>3.5.2</maven.version>
+      <!-- ============================================== -->
+      <!-- ================ JAVA VERSION ================ -->
+      <!-- ============================================== -->
+      <java.version>11</java.version>
+      <!-- ============================================== -->
+      <!-- =============== MANIFEST DATA ================ -->
+      <!-- ============================================== -->
+      <manifest.name>com/bernardomg/example/jpa</manifest.name>
+      <!-- ============================================== -->
+      <!-- =========== DEPENDENCIES VERSIONS ============ -->
+      <!-- ============================================== -->
+      <eclipselink.version>2.7.9</eclipselink.version>
+      <h2.version>1.4.200</h2.version>
+      <hibernate.version>5.5.7.Final</hibernate.version>
+      <hikari.version>5.0.0</hikari.version>
+      <hsqldb.version>2.6.0</hsqldb.version>
+      <javaee.api.version>2.2</javaee.api.version>
+      <javax.annotation.version>1.3.2</javax.annotation.version>
+      <jaxb.version>2.3.1</jaxb.version>
+      <junit.jupiter.version>5.8.1</junit.jupiter.version>
+      <junit.platform.version>1.8.1</junit.platform.version>
+      <liquibase.version>4.4.3</liquibase.version>
+      <log4j.version>2.14.1</log4j.version>
+      <mysql.version>8.0.21</mysql.version>
+      <postgresql.version>42.2.24</postgresql.version>
+      <slf4j.version>2.0.0-alpha5</slf4j.version>
+      <snakeyaml.version>1.29</snakeyaml.version>
+      <spring.version>5.3.10</spring.version>
+      <!-- ============================================== -->
+      <!-- ============== PLUGINS VERSIONS ============== -->
+      <!-- ============================================== -->
+      <plugin.processor.version>4.5</plugin.processor.version>
+      <!-- ============================================== -->
+      <!-- ================= MAVEN SITE ================= -->
+      <!-- ============================================== -->
+      <site.skin.version>2.2.4</site.skin.version>
+   </properties>
+
+   <!-- ********************************************** -->
+   <!-- *************** DEPENDENCIES ***************** -->
+   <!-- ********************************************** -->
+
+   <dependencyManagement>
+      <dependencies>
+         <dependency>
+            <!-- JUnit BOM -->
+            <groupId>org.junit</groupId>
+            <artifactId>junit-bom</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+         </dependency>
+         <dependency>
+            <!-- Spring Framework BOM -->
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-framework-bom</artifactId>
+            <version>${spring.version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+         </dependency>
+      </dependencies>
+   </dependencyManagement>
+
+   <dependencies>
+      <!-- ============================================== -->
+      <!-- ==================== JPA ===================== -->
+      <!-- ============================================== -->
+      <dependency>
+         <!-- JPA API -->
+         <groupId>javax.persistence</groupId>
+         <artifactId>javax.persistence-api</artifactId>
+         <version>${javaee.api.version}</version>
+      </dependency>
+      <!-- ============================================== -->
+      <!-- ==================== JAVAX =================== -->
+      <!-- ============================================== -->
+      <dependency>
+         <!-- JavaX Annotation -->
+         <groupId>javax.annotation</groupId>
+         <artifactId>javax.annotation-api</artifactId>
+         <version>${javax.annotation.version}</version>
+      </dependency>
+      <!-- ============================================== -->
+      <!-- ======= TEST ENVIRONMENT DEPENDENCIES ======== -->
+      <!-- ============================================== -->
+      <dependency>
+         <!-- Hikari CP -->
+         <groupId>com.zaxxer</groupId>
+         <artifactId>HikariCP</artifactId>
+         <version>${hikari.version}</version>
+         <scope>test</scope>
+      </dependency>
+      <dependency>
+         <!-- Liquibase -->
+         <groupId>org.liquibase</groupId>
+         <artifactId>liquibase-core</artifactId>
+         <version>${liquibase.version}</version>
+         <exclusions>
+            <exclusion>
+               <groupId>ch.qos.logback</groupId>
+               <artifactId>logback-classic</artifactId>
+            </exclusion>
+         </exclusions>
+         <scope>test</scope>
+      </dependency>
+      <dependency>
+         <!-- SnakeYAML -->
+         <groupId>org.yaml</groupId>
+         <artifactId>snakeyaml</artifactId>
+         <version>${snakeyaml.version}</version>
+         <scope>test</scope>
+      </dependency>
+      <dependency>
+         <!-- JUnit Jupiter Engine -->
+         <groupId>org.junit.jupiter</groupId>
+         <artifactId>junit-jupiter-engine</artifactId>
+         <scope>test</scope>
+      </dependency>
+      <dependency>
+         <!-- JUnit Jupiter Platform -->
+         <groupId>org.junit.platform</groupId>
+         <artifactId>junit-platform-runner</artifactId>
+         <scope>test</scope>
+         <exclusions>
+            <exclusion>
+               <!-- JUnit 3 -->
+               <groupId>junit</groupId>
+               <artifactId>junit</artifactId>
+            </exclusion>
+         </exclusions>
+      </dependency>
+      <dependency>
+         <!-- Spring AOP -->
+         <groupId>org.springframework</groupId>
+         <artifactId>spring-aop</artifactId>
+         <scope>test</scope>
+      </dependency>
+      <dependency>
+         <!-- Spring Beans -->
+         <groupId>org.springframework</groupId>
+         <artifactId>spring-beans</artifactId>
+         <scope>test</scope>
+      </dependency>
+      <dependency>
+         <!-- Spring Framework Context -->
+         <groupId>org.springframework</groupId>
+         <artifactId>spring-context</artifactId>
+         <scope>test</scope>
+      </dependency>
+      <dependency>
+         <!-- Spring ORM -->
+         <groupId>org.springframework</groupId>
+         <artifactId>spring-orm</artifactId>
+         <scope>test</scope>
+      </dependency>
+      <dependency>
+         <!-- Spring Test -->
+         <groupId>org.springframework</groupId>
+         <artifactId>spring-test</artifactId>
+         <scope>test</scope>
+      </dependency>
+      <dependency>
+         <!-- Spring Transactions -->
+         <groupId>org.springframework</groupId>
+         <artifactId>spring-tx</artifactId>
+         <scope>test</scope>
+      </dependency>
+      <!-- ********************************************** -->
+      <!-- ****************** LOGGERS ******************* -->
+      <!-- ********************************************** -->
+      <dependency>
+         <!-- SLF4J API -->
+         <groupId>org.slf4j</groupId>
+         <artifactId>slf4j-api</artifactId>
+         <version>${slf4j.version}</version>
+         <scope>test</scope>
+      </dependency>
+      <dependency>
+         <!-- Log4j SLF4J Bridge -->
+         <groupId>org.apache.logging.log4j</groupId>
+         <artifactId>log4j-slf4j18-impl</artifactId>
+         <version>${log4j.version}</version>
+         <scope>test</scope>
+      </dependency>
+      <dependency>
+         <!-- Log4j core -->
+         <groupId>org.apache.logging.log4j</groupId>
+         <artifactId>log4j-core</artifactId>
+         <version>${log4j.version}</version>
+         <scope>test</scope>
+      </dependency>
+      <!-- ********************************************** -->
+      <!-- ************ VERSION ENFORCEMENT ************* -->
+      <!-- ********************************************** -->
+      <dependency>
+         <!-- JAXB API -->
+         <groupId>javax.xml.bind</groupId>
+         <artifactId>jaxb-api</artifactId>
+         <version>${jaxb.version}</version>
+         <scope>test</scope>
+      </dependency>
+   </dependencies>
+
+   <!-- ********************************************** -->
+   <!-- ******************* BUILD ******************** -->
+   <!-- ********************************************** -->
+
+   <build>
+      <defaultGoal>clean package</defaultGoal>
+      <testResources>
+         <testResource>
+            <directory>src/test/resources/</directory>
+         </testResource>
+         <testResource>
+            <!-- Test resources -->
+            <directory>src/test/resources/</directory>
+            <includes>
+               <!-- Filter the contexts -->
+               <include>context/**/*.xml</include>
+               <!-- Filter the properties -->
+               <include>config/**/*.properties</include>
+            </includes>
+            <filtering>true</filtering>
+         </testResource>
+      </testResources>
+      <plugins>
+         <plugin>
+            <!-- Changes -->
+            <!-- Takes care of the changes log -->
+            <!-- It is set to also validate the changes log file -->
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-changes-plugin</artifactId>
+            <executions>
+               <!-- Changes plugin is bound to the pre-site phase -->
+               <execution>
+                  <id>check-changes</id>
+                  <phase>pre-site</phase>
+                  <goals>
+                     <goal>changes-check</goal>
+                  </goals>
+               </execution>
+               <execution>
+                  <id>validate-changes</id>
+                  <phase>pre-site</phase>
+                  <goals>
+                     <goal>changes-validate</goal>
+                  </goals>
+                  <configuration>
+                     <failOnError>true</failOnError>
+                  </configuration>
+               </execution>
+            </executions>
+         </plugin>
+         <plugin>
+            <!-- Site -->
+            <!-- Generates the Maven Site -->
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-site-plugin</artifactId>
+            <dependencies>
+               <dependency>
+                  <!-- Docs Maven Skin -->
+                  <groupId>com.bernardomg.maven.skins</groupId>
+                  <artifactId>docs-maven-skin</artifactId>
+                  <version>${site.skin.version}</version>
+               </dependency>
+            </dependencies>
+         </plugin>
+         <plugin>
+            <!-- Build helper -->
+            <!-- Adds the generated files to the Maven classpath -->
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <executions>
+               <execution>
+                  <id>add-source</id>
+                  <goals>
+                     <goal>add-source</goal>
+                  </goals>
+                  <configuration>
+                     <sources>
+                        <!-- JPA meta-model -->
+                        <source>${project.build.directory}/generated-sources/apt</source>
+                     </sources>
+                  </configuration>
+               </execution>
+            </executions>
+         </plugin>
+         <plugin>
+            <!-- Maven processor -->
+            <!-- Processes Java annotations -->
+            <groupId>org.bsc.maven</groupId>
+            <artifactId>maven-processor-plugin</artifactId>
+            <version>${plugin.processor.version}</version>
+            <executions>
+               <execution>
+                  <id>generate-jpa-metamodel</id>
+                  <goals>
+                     <goal>process</goal>
+                  </goals>
+                  <phase>generate-sources</phase>
+                  <configuration>
+                     <processors>
+                        <processor>org.hibernate.jpamodelgen.JPAMetaModelEntityProcessor</processor>
+                     </processors>
+                  </configuration>
+               </execution>
+            </executions>
+            <dependencies>
+               <dependency>
+                  <!-- Hibernate JPA model generator -->
+                  <!-- This is used to generate the metamodel -->
+                  <groupId>org.hibernate</groupId>
+                  <artifactId>hibernate-jpamodelgen</artifactId>
+                  <version>${hibernate.version}</version>
+               </dependency>
+            </dependencies>
+         </plugin>
+         <plugin>
+            <!-- Resources -->
+            <!-- Handles the project resources. -->
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-resources-plugin</artifactId>
+            <configuration>
+               <!-- Variables to to override will be delimited with a @. -->
+               <!-- This avoids collisions with Spring variables. -->
+               <!-- So instead of replacing ${project.name} Maven will replace 
+                  @project.name@. -->
+               <useDefaultDelimiters>false</useDefaultDelimiters>
+               <delimiters>
+                  <delimiter>@</delimiter>
+               </delimiters>
+            </configuration>
+         </plugin>
+      </plugins>
+   </build>
+
+   <!-- ********************************************** -->
+   <!-- ****************** REPORTS ******************* -->
+   <!-- ********************************************** -->
+
+   <reporting>
+      <plugins>
+         <plugin>
+            <!-- Checkstyle -->
+            <!-- Checks that the source files comply with style standards -->
+            <!-- It is using a customized rules file -->
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-checkstyle-plugin</artifactId>
+            <configuration>
+               <!-- The customized rules file -->
+               <configLocation>${project.basedir}/src/config/checkstyle/checkstyle-rules.xml</configLocation>
+               <!-- Excludes generated code -->
+               <excludes>**/generated/**/*</excludes>
+               <!-- Excludes metamodel -->
+               <exclude>**/*_.java</exclude>
+            </configuration>
+         </plugin>
+         <plugin>
+            <!-- Javadoc -->
+            <!-- Generates the javadocs -->
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <configuration>
+               <links>
+                  <link>https://javadoc.io/doc/org.eclipse.persistence/javax.persistence/</link>
+               </links>
+               <sourceFileExcludes>
+                  <!-- Excludes generated code -->
+                  <exclude>**/generated/**/*</exclude>
+                  <!-- Excludes metamodel -->
+                  <exclude>**/*_.java</exclude>
+               </sourceFileExcludes>
+            </configuration>
+         </plugin>
+         <plugin>
+            <!-- PMD -->
+            <!-- Checks that the code complies with a series of code quality 
+               rules -->
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-pmd-plugin</artifactId>
+            <configuration>
+               <rulesets>
+                  <!-- The customized rules file -->
+                  <ruleset>${project.basedir}/src/config/pmd/pmd-rules.xml</ruleset>
+               </rulesets>
+               <excludes>
+                  <!-- Excludes generated code -->
+                  <exclude>**/generated/**/*</exclude>
+                  <!-- Excludes metamodel -->
+                  <exclude>**/*_.java</exclude>
+               </excludes>
+            </configuration>
+         </plugin>
+         <plugin>
+             <!-- SpotBugs -->
+             <!-- Checks for patterns which are prone to errors -->
+            <groupId>com.github.spotbugs</groupId>
+            <artifactId>spotbugs-maven-plugin</artifactId>
+            <configuration>
+               <!-- Exclusion patterns -->
+               <excludeFilterFile>${project.basedir}/src/config/spotbugs/spotbugs-exclude.xml</excludeFilterFile>
+            </configuration>
+         </plugin>
+      </plugins>
+   </reporting>
+
+</project>

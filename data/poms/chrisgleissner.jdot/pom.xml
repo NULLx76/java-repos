@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.github.jdot</groupId>
+    <artifactId>jdot</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>JDot</name>
+    <description>Java Domain Object Templater (JDot) is a code generator for domain objects which
+        keeps classes concise like a dot. Generated code Data Transfer Objects (DTOs) with Java Bean getters/setters,
+        builders for immutable domain objects, mappers between domain and DTO classes, as well as
+        standard Java methods such as hashCode and equals. The generation is driven by annotations
+        and uses the compile-time Java 6 Annotation Processor.
+    </description>
+
+    <url>http://code.google.com/p/jdot/</url>
+    <inceptionYear>2010</inceptionYear>
+
+    <licenses>
+        <license>
+            <name>ASL 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+            <distribution>repo</distribution>
+            <comments>Apache License, Version 2.0</comments>
+        </license>
+    </licenses>
+
+    <properties>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <annotations.directory>${project.build.directory}/generated-sources/annotations</annotations.directory>
+        <test-annotations.directory>${project.build.directory}/generated-test-sources/test-annotations
+        </test-annotations.directory>
+    </properties>
+
+    <build>
+        <plugins>
+            <!--
+                Generates sources via the javac annotation processor, then compiles them. The compile and testCompile
+                goals gets referenced in two different phases each. Phase 1: Generates (test) sources and attempts
+                compilation whilst ignoring benign javac warnings. Phase 2: Compiles if necessary and breaks the build
+                if javac reports any errors. This two-phase approach is required because the Maven compiler plugin 2.2
+                interpretes benign javac warnings generated during the annotation processing phase as errors and breaks
+                the build. Such warnings get generated if a module's sources reference generated sources which the same
+                module generates.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.0</version>
+                <configuration>
+                    <release>11</release>
+                </configuration>
+                <executions>
+                    <!-- Generation and compilation of main sources -->
+                    <execution>
+                        <id>generate-sources</id>
+                        <!--
+                            Needs to occur after the META-DATA file gets copied which drives the annotation processor
+                        -->
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <generatedSourcesDirectory>${annotations.directory}</generatedSourcesDirectory>
+                            <failOnError>false</failOnError>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>default-compile</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <proc>none</proc>
+                        </configuration>
+                    </execution>
+
+                    <!-- Generation and compilation of test sources -->
+                    <execution>
+                        <id>generate-test-sources</id>
+                        <!--
+                            Needs to occur after the META-DATA file gets copied which drives the annotation processor
+                        -->
+                        <phase>process-test-resources</phase>
+                        <goals>
+                            <goal>testCompile</goal>
+                        </goals>
+                        <configuration>
+                            <generatedTestSourcesDirectory>${test-annotations.directory}</generatedTestSourcesDirectory>
+                            <failOnError>false</failOnError>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>default-testCompile</id>
+                        <phase>test-compile</phase>
+                        <goals>
+                            <goal>testCompile</goal>
+                        </goals>
+                        <configuration>
+                            <proc>none</proc>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.eluder.coveralls</groupId>
+                <artifactId>coveralls-maven-plugin</artifactId>
+                <version>4.3.0</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>javax.xml.bind</groupId>
+                        <artifactId>jaxb-api</artifactId>
+                        <version>2.2.3</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!--
+            Profile to register the generated sources under the target folder as source folders, enabled by default. If
+            the generated folders are not automatically recognized by your IDE, try the "gen2src" profile instead, see
+            below.
+        -->
+        <profile>
+            <id>gen2target</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <version>3.0.0</version>
+                        <executions>
+                            <execution>
+                                <id>add-source</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>add-source</goal>
+                                </goals>
+                                <configuration>
+                                    <sources>
+                                        <source>${annotations.directory}</source>
+                                    </sources>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>add-test-source</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>add-test-source</goal>
+                                </goals>
+                                <configuration>
+                                    <sources>
+                                        <source>${test-annotations.directory}</source>
+                                    </sources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!--
+            Enable this profile if your IDE fails to recognize generated sources under the target folder. Sample usage:
+            mvn install -Pgen2src. This profile generates sources under the src rather than target folder and thus
+            prepares them for a later commit. The approach of committing generated sources is not elegant, but can be
+            used to avoid problems with some IDEs that fail to register generated sources properly.
+            Enabling this profile will automatically disable the default profile "gen2target".
+        -->
+        <profile>
+            <id>gen2src</id>
+            <properties>
+                <annotations.directory>${basedir}/src/main/java</annotations.directory>
+                <test-annotations.directory>${basedir}/src/test/java</test-annotations.directory>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>jacoco</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>0.8.2</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>report</id>
+                                <phase>prepare-package</phase>
+                                <goals>
+                                    <goal>report</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>prepare-integration-test-agent</id>
+                                <goals>
+                                    <goal>prepare-agent-integration</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>generate-integration-test-report</id>
+                                <goals>
+                                    <goal>report-integration</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>26.0-jre</version>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.8.1</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.8.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>3.11.1</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <scm>
+        <url>https://github.com/chrisgleissner/jdot</url>
+        <connection>scm:git:git://github.com/chrisgleissner/jdot.git</connection>
+        <developerConnection>scm:git:git@github.com:chrisgleissner/jdot.git</developerConnection>
+    </scm>
+</project>

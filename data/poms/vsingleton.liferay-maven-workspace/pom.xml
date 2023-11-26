@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.liferay.maven.workspace</groupId>
+    <artifactId>liferay-maven-workspace</artifactId>
+    <packaging>pom</packaging>
+    <version>1.0.0</version>
+    <name>Liferay Maven Workspace</name>
+
+    <modules>
+        <module>configs</module>
+        <module>modules</module>
+        <module>themes</module>
+        <module>wars</module>
+    </modules>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.commonjava.maven.plugins</groupId>
+                <artifactId>directory-maven-plugin</artifactId>
+                <version>0.1</version>
+                <executions>
+                    <execution>
+                        <id>set-clean-root</id>
+                        <goals>
+                            <goal>directory-of</goal>
+                        </goals>
+                        <phase>pre-clean</phase>
+                        <configuration>
+                            <property>liferay.workspace.basedir</property>
+                            <project>
+                                <groupId>com.liferay.maven.workspace</groupId>
+                                <artifactId>liferay-maven-workspace</artifactId>
+                            </project>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>set-default-root</id>
+                        <goals>
+                            <goal>directory-of</goal>
+                        </goals>
+                        <phase>initialize</phase>
+                        <configuration>
+                            <property>liferay.workspace.basedir</property>
+                            <project>
+                                <groupId>com.liferay.maven.workspace</groupId>
+                                <artifactId>liferay-maven-workspace</artifactId>
+                            </project>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-antrun-plugin</artifactId>
+                    <version>1.8</version>
+                    <executions>
+                        <execution>
+                            <id>clean-liferay-artifacts</id>
+                            <phase>clean</phase>
+                            <goals>
+                                <goal>run</goal>
+                            </goals>
+                            <configuration>
+                                <target name="clean">
+                                    <delete failonerror="false" file="${liferay.workspace.deploy.war.dir}/${project.artifactId}.war"/>
+                                    <delete failonerror="false" file="${liferay.workspace.deploy.modules.dir}/${project.artifactId}.jar"/>
+                                </target>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>deploy-liferay-artifacts</id>
+                            <phase>install</phase>
+                            <goals>
+                                <goal>run</goal>
+                            </goals>
+                            <configuration>
+                                <target name="deploy">
+                                    <copy failonerror="false" file="${project.build.directory}/${project.artifactId}-${project.version}.war" tofile="${liferay.workspace.deploy.war.dir}/${project.artifactId}.war"/>
+                                    <copy failonerror="false" file="${project.build.directory}/${project.artifactId}-${project.version}.jar" tofile="${liferay.workspace.deploy.modules.dir}/${project.artifactId}.jar"/>
+                                </target>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>init-bundle</id>
+                            <phase>initialize</phase>
+                            <goals>
+                                <goal>run</goal>
+                            </goals>
+                            <configuration>
+                                <target name="init-bundle">
+                                    <get src="${liferay.workspace.bundle.url}" dest="${liferay.workspace.bundle.dest}" skipexisting="true" usetimestamp="true"/>
+                                    <unzip src="${liferay.workspace.bundle.dest}" dest="${liferay.workspace.home.dir}" overwrite="false">
+                                        <cutdirsmapper dirs="1"/>
+                                    </unzip>
+                                </target>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <properties>
+        <liferay.workspace.home.dir>${liferay.workspace.basedir}/bundles</liferay.workspace.home.dir>
+        <liferay.workspace.bundle.dest>${user.home}/.liferay/bundles/liferay-ce-portal-tomcat-7.0-ga3-20160804222206210.zip</liferay.workspace.bundle.dest>
+        <liferay.workspace.bundle.url>http://downloads.sourceforge.net/project/lportal/Liferay%20Portal/7.0.2%20GA3/liferay-ce-portal-tomcat-7.0-ga3-20160804222206210.zip</liferay.workspace.bundle.url>
+        <liferay.workspace.deploy.war.dir>${liferay.workspace.home.dir}/osgi/war</liferay.workspace.deploy.war.dir>
+        <liferay.workspace.deploy.modules.dir>${liferay.workspace.home.dir}/osgi/modules</liferay.workspace.deploy.modules.dir>
+        <liferay.workspace.environment>local</liferay.workspace.environment>
+    </properties>
+
+    <profiles>
+        <profile>
+            <id>dev</id>
+            <activation>
+                <property>
+                    <name>environment</name>
+                    <value>dev</value>
+                </property>
+            </activation>
+            <properties>
+                <liferay.workspace.environment>dev</liferay.workspace.environment>
+            </properties>
+        </profile>
+        <profile>
+            <id>prod</id>
+            <activation>
+                <property>
+                    <name>environment</name>
+                    <value>prod</value>
+                </property>
+            </activation>
+            <properties>
+                <liferay.workspace.environment>prod</liferay.workspace.environment>
+                <liferay.workspace.home.dir>/opt/liferay</liferay.workspace.home.dir>
+                <liferay.workspace.deploy.war.dir>${liferay.home}/osgi/war</liferay.workspace.deploy.war.dir>
+                <liferay.workspace.deploy.modules.dir>${liferay.home}/osgi/modules</liferay.workspace.deploy.modules.dir>
+            </properties>
+        </profile>
+        <profile>
+            <id>uat</id>
+            <activation>
+                <property>
+                    <name>environment</name>
+                    <value>uat</value>
+                </property>
+            </activation>
+            <properties>
+                <liferay.workspace.environment>uat</liferay.workspace.environment>
+                <liferay.workspace.home.dir>/opt/liferay</liferay.workspace.home.dir>
+                <liferay.workspace.deploy.war.dir>${liferay.home}/osgi/war</liferay.workspace.deploy.war.dir>
+                <liferay.workspace.deploy.modules.dir>${liferay.home}/osgi/modules</liferay.workspace.deploy.modules.dir>
+            </properties>
+        </profile>
+    </profiles>
+</project>

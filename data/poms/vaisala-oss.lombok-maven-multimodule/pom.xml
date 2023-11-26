@@ -1,0 +1,290 @@
+<?xml version="1.0"?>
+<!--
+  Copyright (c) Vaisala Oyj 2015-2016.
+  Retaining this copyright notice is not required.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>io.github</groupId>
+  <artifactId>lombok-maven-multimodule</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>lombok-maven-multimodule</name>
+  <url>http://maven.apache.org</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.maven-dependency-plugin.version>2.10</project.maven-dependency-plugin.version>
+    <project.lombok.version>1.16.8</project.lombok.version>
+    <project.lombok-maven-plugin.version>1.16.8.0</project.lombok-maven-plugin.version>
+  </properties>
+
+  <modules>
+    <module>lombok-maven-multimodule-lomboklib</module>
+    <module>lombok-maven-multimodule-other</module>
+  </modules>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <version>${project.lombok.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.ant</groupId>
+      <artifactId>ant</artifactId>
+      <version>1.9.4</version>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <profiles>
+    <profile>
+      <id>child-resources</id>
+      <activation>
+        <file>
+          <exists>../README.md</exists>
+        </file>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-resources-plugin</artifactId>
+            <version>2.7</version>
+            <executions>
+              <execution>
+                <id>copy-resources</id>
+                <phase>validate</phase>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <configuration>
+                  <outputDirectory>../target/aggregated-sources</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>src/main/java</directory>
+                    </resource>
+                  </resources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <version>${project.maven-dependency-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>copy-dependencies</id>
+                <phase>compile</phase>
+                <!-- If reactor modules are excluded, this works. See MDEP-187 -->
+                <goals>
+                  <goal>copy-dependencies</goal>
+                </goals>
+                <configuration>
+                  <outputDirectory>../target/dependency</outputDirectory>
+                  <excludeGroupIds>${project.groupId}</excludeGroupIds>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>parent-delombok</id>
+      <activation>
+        <file>
+          <exists>${basedir}/README.md</exists>
+        </file>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <version>${project.maven-dependency-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>copy-dependencies</id>
+                <phase>compile</phase>
+                <goals>
+                  <goal>copy-dependencies</goal>
+                </goals>
+                <configuration>
+                  <outputDirectory>target/dependency</outputDirectory>
+                  <includeScope>provided</includeScope>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>1.8</version>
+            <executions>
+              <execution>
+                <id>parent-antrun</id>
+                <phase>pre-site</phase>
+                <inherited>false</inherited>
+                <configuration>
+                  <target name="build_classpath">
+                    <property name="compile_classpath" refid="maven.compile.classpath" />
+                    <path id="project.class.path">
+                      <pathelement path="${java.home}/../lib/tools.jar" />
+                      <pathelement path="${compile_classpath}" />
+                      <fileset dir="target/dependency">
+                        <include name="*.jar" />
+                      </fileset>
+                    </path>
+                    <pathconvert property="ant_classpath"
+                      refid="project.class.path" />
+                    <echo message="ant_classpath:  ${ant_classpath}" />
+                  </target>
+                  <exportAntProperties>true</exportAntProperties>
+                </configuration>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>1.4.0</version>
+            <executions>
+              <execution>
+                <id>parent-ant-javadoc</id>
+                <phase>pre-site</phase>
+                <inherited>false</inherited>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <executable>java</executable>
+              <!-- optional -->
+              <workingDirectory>.</workingDirectory>
+              <arguments>
+                <argument>-classpath</argument>
+                <argument>${ant_classpath}</argument>
+                <argument>org.apache.tools.ant.Main</argument>
+                <argument>-buildfile</argument>
+                <argument>aggregate-javadocs.xml</argument>
+              </arguments>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.5.1</version>
+        <configuration>
+          <source>1.7</source>
+          <target>1.7</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok-maven-plugin</artifactId>
+        <version>${project.lombok-maven-plugin.version}</version>
+        <dependencies>
+          <dependency>
+            <groupId>sun.jdk</groupId>
+            <artifactId>tools</artifactId>
+            <version>${java.version}</version>
+            <scope>system</scope>
+            <systemPath>${java.home}/../lib/tools.jar</systemPath>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>delombok</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>delombok</goal>
+            </goals>
+            <configuration>
+              <addOutputDirectory>false</addOutputDirectory>
+              <sourceDirectory>src/main/java</sourceDirectory>
+            </configuration>
+          </execution>
+          <execution>
+            <id>test-delombok</id>
+            <phase>generate-test-sources</phase>
+            <goals>
+              <goal>testDelombok</goal>
+            </goals>
+            <configuration>
+              <addOutputDirectory>false</addOutputDirectory>
+              <sourceDirectory>src/test/java</sourceDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+
+    <pluginManagement>
+      <plugins>
+        <!--This plugin's configuration is used to store Eclipse m2e settings 
+          only. It has no influence on the Maven build itself. -->
+        <plugin>
+          <groupId>org.eclipse.m2e</groupId>
+          <artifactId>lifecycle-mapping</artifactId>
+          <version>1.0.0</version>
+          <configuration>
+            <lifecycleMappingMetadata>
+              <pluginExecutions>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.projectlombok</groupId>
+                    <!-- This tells Eclipse not to execute lombok-maven-plugin 
+                      during the build -->
+                    <!-- In Eclipse, you should use the lombok plugin directly. -->
+                    <artifactId>
+                      lombok-maven-plugin
+                    </artifactId>
+                    <versionRange>
+                      [1.14.8.0,)
+                    </versionRange>
+                    <goals>
+                      <goal>delombok</goal>
+                      <goal>testDelombok</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore />
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <versionRange>[2.10,)</versionRange>
+                    <goals>
+                      <goal>copy-dependencies</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <execute />
+                  </action>
+                </pluginExecution>
+              </pluginExecutions>
+            </lifecycleMappingMetadata>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>

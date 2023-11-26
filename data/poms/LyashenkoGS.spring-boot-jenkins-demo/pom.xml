@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.example</groupId>
+    <artifactId>spring-boot-jenkins-workshop</artifactId>
+    <version>0.0.3</version>
+    <packaging>jar</packaging>
+
+    <name>spring-boot-jenkins-workshop</name>
+    <description>spring-boot-jenkins-workshop</description>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>1.4.2.RELEASE</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <java.version>1.8</java.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <!-- Generate code coverage reports-->
+        <plugins>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.7.7.201606060606</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <!--Dockerize the application -->
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>0.22.1</version>
+                <configuration>
+                    <!--Specify a private docker registry name. Comment this out if need-->
+                    <registry>docker.artifactory</registry>
+                    <verbose>true</verbose>
+                    <images>
+                        <image>
+                            <name>lyashenkogs/${project.artifactId}:${project.version}</name>
+                            <build>
+                                <from>frolvlad/alpine-oraclejdk8:slim</from>
+                                <ports>
+                                    <port>8080</port>
+                                </ports>
+                                <entryPoint>
+                                    <exec>
+                                        <arg>java</arg>
+                                        <!-- This extra argument is so Tomcat can start faster due to lack of entropy -->
+                                        <arg>-Djava.security.egd=file:/dev/./urandom</arg>
+                                        <arg>-jar</arg>
+                                        <!-- /maven/ is the default dir that the plugin copies your artifact to -->
+                                        <arg>/maven/${project.artifactId}-${project.version}.${project.packaging}</arg>
+                                    </exec>
+                                </entryPoint>
+                                <assembly>
+                                    <!-- This is a predefined assembly.xml that will only copy your final artifact to the Docker image -->
+                                    <descriptorRef>artifact</descriptorRef>
+                                </assembly>
+                            </build>
+                        </image>
+                    </images>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <!--Specify an Artifactory instance -->
+    <distributionManagement>
+        <repository>
+            <id>central</id>
+            <name>e349839cbdc7-releases</name>
+            <url>http://172.0.0.2:8081/artifactory/libs-release</url>
+        </repository>
+        <snapshotRepository>
+            <id>snapshots</id>
+            <name>e349839cbdc7-snapshots</name>
+            <url>http://172.0.0.2:8081/artifactory/libs-snapshot</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+</project>

@@ -1,0 +1,117 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>sample.wlp.mvn</groupId>
+  <artifactId>bootstrapped-jee7-app-w-liberty</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <as.port>8080</as.port>
+    <db.name>${project.build.directory}/jee7-app-db</db.name>
+    <derby.version>10.12.1.1</derby.version>
+  </properties>
+
+  <build>
+    <!-- <finalName>${project.name}</finalName> -->
+    <plugins>
+      <!-- Windows環境パスの区切り文字の変換処理 (\ -> /) -->
+      <plugin>
+        <groupId>org.codehaus.gmaven</groupId>
+        <artifactId>groovy-maven-plugin</artifactId>
+        <version>2.0</version>
+        <executions>
+          <execution>
+            <id>convert-path-separator</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>execute</goal>
+            </goals>
+            <configuration>
+              <source>
+                project.properties['converted.build.directory']=project.build.directory.replace(File.separator,'/');
+                project.properties['converted.localRepository']=settings.localRepository.replace(File.separator,'/');
+              </source>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-war-plugin</artifactId>
+        <version>2.4</version>
+        <configuration>
+          <failOnMissingWebXml>false</failOnMissingWebXml>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.2</version>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+        </configuration>
+      </plugin>
+      <!-- Liberty Mavenプラグイン。run-serverを使うので1.2-SNAPSHOTを使用。SNAPSHOTリポジトリ追加要 -->
+      <plugin>
+        <groupId>net.wasdev.wlp.maven.plugins</groupId>
+        <artifactId>liberty-maven-plugin</artifactId>
+        <version>1.2-SNAPSHOT</version>
+        <configuration>
+          <!-- <appArchive>${project.build.directory}/${project.name}.war</appArchive> -->
+          <!-- 導入元LibertyランタイムのMavenアーティファクトを指定。IBMリポジトリ追加要 -->
+          <assemblyArtifact>
+            <groupId>com.ibm.websphere.appserver.runtime</groupId>
+            <artifactId>wlp-javaee7</artifactId>
+            <version>8.5.5.8</version>
+            <type>zip</type>
+          </assemblyArtifact>
+          <!-- <assemblyInstallDirectory>/opt/ibm</assemblyInstallDirectory> -->
+          <!-- 起動プロパティ : Libertyのserver.xmlから変数参照するための定義 -->
+          <bootstrapProperties>
+            <appLocation>${converted.build.directory}/${project.build.finalName}</appLocation>
+            <appName>${project.artifactId}</appName>
+            <localRepository>${converted.localRepository}</localRepository>
+            <as.port>8080</as.port>
+            <db.name>${converted.build.directory}/derby/jee7-app-db</db.name>
+            <derby.version>10.12.1.1</derby.version>
+          </bootstrapProperties>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+  <packaging>war</packaging>
+  <!-- コンパイル用のJava EE7 API, DBMSとして組み込みDerbyの依存関係を追加 -->
+  <dependencies>
+    <dependency>
+      <groupId>javax</groupId>
+      <artifactId>javaee-api</artifactId>
+      <version>7.0</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.derby</groupId>
+      <artifactId>derby</artifactId>
+      <version>${derby.version}</version>
+    </dependency>
+  </dependencies>
+
+  <!-- SNAPSHOT用リポジトリ, IBMリポジトリを追加 -->
+  <repositories>
+    <repository>
+      <id>ibm-maven-repo</id>
+      <url>http://public.dhe.ibm.com/ibmdl/export/pub/software/websphere/wasdev/maven/repository/</url>
+    </repository>
+  </repositories>
+  <pluginRepositories>
+    <pluginRepository>
+      <id>ibm-maven-repo</id>
+      <url>http://public.dhe.ibm.com/ibmdl/export/pub/software/websphere/wasdev/maven/repository/</url>
+    </pluginRepository>
+    <pluginRepository>
+      <id>sonatype-nexus-snapshots</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+    </pluginRepository>
+  </pluginRepositories>
+
+</project>

@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <name>Cosmic Microservices</name>
+    <groupId>com.github.missioncriticalcloud</groupId>
+    <artifactId>cosmic-microservices</artifactId>
+    <version>0.0.2-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <scm>
+        <connection>scm:git:git@github.com:MissionCriticalCloud/cosmic-microservices.git</connection>
+        <developerConnection>scm:git:git@github.com:MissionCriticalCloud/cosmic-microservices.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
+
+    <distributionManagement>
+        <repository>
+            <id>beta-nexus</id>
+            <name>MCC Nexus</name>
+            <url>https://beta-nexus.mcc.schubergphilis.com/content/repositories/releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>beta-nexus</id>
+            <name>MCC Nexus</name>
+            <url>https://beta-nexus.mcc.schubergphilis.com/content/repositories/snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+    <repositories>
+        <repository>
+            <id>Maven Central</id>
+            <url>central.maven.org/maven2/</url>
+            <releases>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </releases>
+        </repository>
+    </repositories>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>1.5.1.RELEASE</version>
+        <relativePath />
+    </parent>
+
+    <modules>
+        <module>cosmic-config-server</module>
+        <module>cosmic-metrics-collector</module>
+        <module>cosmic-usage-core</module>
+        <module>cosmic-usage-api</module>
+        <module>cosmic-usage-test-resources</module>
+        <module>cosmic-bill-viewer</module>
+    </modules>
+
+    <properties>
+        <cosmic.timezone>UTC</cosmic.timezone>
+        <cosmic.encoding>UTF-8</cosmic.encoding>
+        <cosmic.httpPort>8080</cosmic.httpPort>
+        <cosmic.debugPort>8000</cosmic.debugPort>
+        <cosmic.containerTargetDir>/missioncriticalcloud</cosmic.containerTargetDir>
+        <cosmic.containerNetwork>cosmic-network</cosmic.containerNetwork>
+        <argLine>-Duser.timezone=${cosmic.timezone} -Dfile.encoding=${cosmic.encoding}</argLine>
+
+        <project.build.sourceEncoding>${cosmic.encoding}</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>${cosmic.encoding}</project.reporting.outputEncoding>
+
+        <coverage.reports.dir>${cosmic-microservices.dir}/target/coverage-reports</coverage.reports.dir>
+        <unit.tests.report>${coverage.reports.dir}/jacoco-ut.exec</unit.tests.report>
+        <integration.tests.report>${coverage.reports.dir}/jacoco-it-merged.exec</integration.tests.report>
+
+        <java.version>1.8</java.version>
+        <spring-cloud.version>Camden.SR4</spring-cloud.version>
+        <docker-maven-plugin.version>0.20.0</docker-maven-plugin.version>
+        <cs.jacoco-maven-plugin.version>0.7.6.201602180812</cs.jacoco-maven-plugin.version>
+        <cs.maven-release-plugin.version>2.5.3</cs.maven-release-plugin.version>
+        <cs.org.jacoco.agent.rt.version>0.7.6.201602180812</cs.org.jacoco.agent.rt.version>
+        <cs.org.jacoco.agent.version>0.7.6.201602180812</cs.org.jacoco.agent.version>
+        <cs.sonar-maven-plugin.version>3.0.2</cs.sonar-maven-plugin.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.github.missioncriticalcloud</groupId>
+                <artifactId>cosmic-usage-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.missioncriticalcloud</groupId>
+                <artifactId>cosmic-usage-test-resources</artifactId>
+                <version>${project.version}</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-release-plugin</artifactId>
+                    <version>${cs.maven-release-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>io.fabric8</groupId>
+                    <artifactId>docker-maven-plugin</artifactId>
+                    <version>${docker-maven-plugin.version}</version>
+                    <executions>
+                        <execution>
+                            <id>build-image</id>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>build</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>start-container</id>
+                            <phase>pre-integration-test</phase>
+                            <goals>
+                                <goal>start</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>stop-container</id>
+                            <phase>post-integration-test</phase>
+                            <goals>
+                                <goal>stop</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>sonar-ci-cosmic-microservices</id>
+            <properties>
+                <maven.test.failure.ignore>true</maven.test.failure.ignore>
+
+                <sonar.jacoco.reportPath>${unit.tests.report}</sonar.jacoco.reportPath>
+                <sonar.jacoco.itReportPath>${integration.tests.report}</sonar.jacoco.itReportPath>
+                <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
+                <sonar.language>java</sonar.language>
+                <sonar.links.homepage>https://github.com/MissionCriticalCloud</sonar.links.homepage>
+                <sonar.links.ci>https://beta-jenkins.mcc.schubergphilis.com/job/cosmic-microservices/</sonar.links.ci>
+                <sonar.links.scm>https://github.com/MissionCriticalCloud/cosmic-microservices</sonar.links.scm>
+                <sonar.host.url>https://beta-sonar.mcc.schubergphilis.com</sonar.host.url>
+                <sonar.login>sonar-runner</sonar.login>
+                <sonar.password>${ci.sonar-runner.password}</sonar.password>
+                <sonar.exclusions>**/target/**.java</sonar.exclusions>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>org.jacoco.agent</artifactId>
+                </dependency>
+            </dependencies>
+            <dependencyManagement>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>org.jacoco.agent</artifactId>
+                        <version>${cs.org.jacoco.agent.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>org.jacoco.agent.rt</artifactId>
+                        <version>${cs.org.jacoco.agent.rt.version}</version>
+                    </dependency>
+                </dependencies>
+            </dependencyManagement>
+            <build>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <groupId>org.sonarsource.scanner.maven</groupId>
+                            <artifactId>sonar-maven-plugin</artifactId>
+                            <version>${cs.sonar-maven-plugin.version}</version>
+                        </plugin>
+                        <plugin>
+                            <groupId>org.jacoco</groupId>
+                            <artifactId>jacoco-maven-plugin</artifactId>
+                            <version>${cs.jacoco-maven-plugin.version}</version>
+                        </plugin>
+                        <plugin>
+                            <groupId>org.apache.maven.plugins</groupId>
+                            <artifactId>maven-surefire-plugin</artifactId>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
+                <plugins>
+                    <plugin>
+                        <groupId>org.sonarsource.scanner.maven</groupId>
+                        <artifactId>sonar-maven-plugin</artifactId>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <executions>
+                            <!-- Prepares the property pointing to the JaCoCo runtime agent which is passed as VM argument when unit tests run. -->
+                            <execution>
+                                <id>setup-unit-tests-javaagent</id>
+                                <phase>test-compile</phase>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                                <configuration>
+                                    <!-- Sets the path to the file which contains the execution data. -->
+                                    <destFile>${unit.tests.report}</destFile>
+                                    <!-- Sets the name of the property containing the settings for JaCoCo runtime agent. -->
+                                    <propertyName>surefireArgLine</propertyName>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>default-prepare-agent-integration</id>
+                                <goals>
+                                    <goal>prepare-agent-integration</goal>
+                                </goals>
+                                <configuration>
+                                    <destFile>${integration.tests.report}</destFile>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <!-- Sets the VM argument line used when unit tests are run. -->
+                            <argLine>${surefireArgLine}</argLine>
+                            <!-- Excludes integration tests when unit tests are run. -->
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.wildfly-okta</groupId>
+    <artifactId>wildfly-okta</artifactId>
+    <version>0.0.1</version>
+
+    <packaging>pom</packaging>
+
+    <name>wildfly-okta</name>
+    <description>SAML Service Provider on base of Wildfly/Picketlink authenticates users through Okta Identity Provider</description>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <distribution>repo</distribution>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
+        </license>
+    </licenses>
+
+    <modules>
+        <module>sp-redirect</module>
+        <module>sp-post</module>
+    </modules>
+
+    <properties>
+        <version.wildfly.maven.plugin>1.0.1.Final</version.wildfly.maven.plugin>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.wildfly.plugins</groupId>
+                <artifactId>wildfly-maven-plugin</artifactId>
+                <version>${version.wildfly.maven.plugin}</version>
+                <inherited>true</inherited>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>conf</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-enforcer-plugin</artifactId>
+                        <version>1.4.1</version>
+                        <executions>
+                            <execution>
+                                <id>enforce-property</id>
+                                <goals>
+                                    <goal>enforce</goal>
+                                </goals>
+                                <phase>validate</phase>
+                                <configuration>
+                                    <rules>
+                                        <requireProperty>
+                                            <property>service.url</property>
+                                            <message>You must set a service.url property!</message>
+                                        </requireProperty>
+                                        <requireProperty>
+                                            <property>idp.url</property>
+                                            <message>You must set an idp.url property!</message>
+                                        </requireProperty>
+                                    </rules>
+                                    <fail>true</fail>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.wildfly.plugins</groupId>
+                        <artifactId>wildfly-maven-plugin</artifactId>
+                        <version>${version.wildfly.maven.plugin}</version>
+                        <executions>
+                            <execution>
+                                <id>execute-commands</id>
+                                <goals>
+                                    <goal>execute-commands</goal>
+                                </goals>
+                                <phase>install</phase>
+                                <configuration>
+                                    <execute-commands>
+                                        <commands>
+                                            <command>/subsystem=security/security-domain=sp/:add(cache-type=default)</command>
+                                            <command>/subsystem=security/security-domain=sp/authentication=classic:add(login-modules=[{"code"=>"org.picketlink.identity.federation.bindings.wildfly.SAML2LoginModule", "flag"=>"required"}])</command>
+                                            <command>/system-property=service.url:add(value=${service.url}})</command>
+                                            <command>/system-property=idp.url:add(value=${idp.url}})</command>
+                                            <command timeout="120">:shutdown(restart=true)</command>
+                                        </commands>
+                                    </execute-commands>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>clean</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.wildfly.plugins</groupId>
+                        <artifactId>wildfly-maven-plugin</artifactId>
+                        <version>${version.wildfly.maven.plugin}</version>
+                        <executions>
+                            <execution>
+                                <id>execute-commands</id>
+                                <goals>
+                                    <goal>execute-commands</goal>
+                                </goals>
+                                <phase>install</phase>
+                                <configuration>
+                                    <execute-commands>
+                                        <commands>
+                                            <command>/subsystem=security/security-domain=sp:remove</command>
+                                            <command>/system-property=service.url:remove</command>
+                                            <command>/system-property=idp.url:remove</command>
+                                            <command timeout="120">:shutdown(restart=true)</command>
+                                        </commands>
+                                    </execute-commands>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

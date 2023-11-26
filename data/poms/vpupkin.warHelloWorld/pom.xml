@@ -1,0 +1,377 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>eu.blky</groupId>
+	<artifactId>hello-world</artifactId>
+	<version>1.0.1-SNAPSHOT</version>
+	<packaging>war</packaging>
+	<name>Hello World Web Application With Buildnumber</name>
+	<description>Simplest possible Java Webapp</description>
+
+	<!-- If you have access to scm then you can place actual url's. Otherwise 
+		with <revisionOnScmFailure /> you can give some fake URLs as follows. -->
+	<scm>
+		<!-- <connection>scm:hg:${scm.base}/${pom.artifactId}</connection> -->
+		<connection>
+scm:git:git://github.com/vpupkin/warHelloWorld.git
+</connection>
+		<developerConnection>
+scm:git:git://github.com/vpupkin/warHelloWorld.git
+		</developerConnection>
+		<url>${l.base}/JSPWiki/Wiki.jsp?page=${pom.artifactId}</url>
+	</scm>
+
+	<properties>
+		<myOwnName>
+			A-${pom.groupId}.${pom.artifactId}#${pom.version}
+		</myOwnName>
+		<tomcat-jasper.version>7.0.30</tomcat-jasper.version>
+		<tomcat.version>6.0.35</tomcat.version>
+		<gae.api.scope>provided</gae.api.scope>
+		<gae.application.version>xxx</gae.application.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>servlet-api</artifactId>
+			<version>2.5</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>javax.servlet.jsp</groupId>
+			<artifactId>jsp-api</artifactId>
+			<version>2.1</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>taglibs</groupId>
+			<artifactId>standard</artifactId>
+			<version>1.1.2</version>
+		</dependency>
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>jstl</artifactId>
+			<version>1.2</version>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<!-- <finalName>W-${pom.groupId}.${pom.artifactId}-${pom.version}#${buildNumber}.war</finalName> -->
+		<!-- <finalName>Must Be Same with warName!!! <finalName>A-${pom.groupId}.${pom.artifactId}#${pom.version}-Z</finalName> -->
+		<finalName>${myOwnName}</finalName>
+		<!-- <finalName>Must Be Same with warName!!! -->
+
+		<resources>
+			<!-- TODO -->
+		</resources>
+		<filters>
+			<!-- TODO -->
+		</filters>
+
+
+		<plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>buildnumber-maven-plugin</artifactId>
+				<version>1.1</version>
+				<executions>
+					<execution>
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>create</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<!-- doCheck and doUpdate actually talk to repository if it's true, 
+						Check would check that there are no local changes. Update would update it -->
+					<docheck>true</docheck>
+					<doupdate>true</doupdate>
+					<!-- This ensures that even if we are not connected to scm than also 
+						take the version from local .svn file -->
+					<shortRevisionLength>5</shortRevisionLength>
+					<revisiononscmfailure>
+
+						<!-- Generate sequence build number based on: build number and timestamp -->
+						<format>Build: #{0} ({1,date})</format>
+						<items>
+							<item>buildNumber\d*</item>
+							<item>timestamp</item>
+						</items>
+					</revisiononscmfailure>
+				</configuration>
+			</plugin>
+
+
+
+			<!-- http://portofino.manydesigns.com/en/docs/portofino3/tutorials/using-maven-profiles-and-resource-filtering -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId> 
+				<configuration>
+					<!-- specify UTF-8, ISO-8859-1 or any other file encoding -->
+					<encoding>UTF-8</encoding>
+				</configuration>
+			</plugin>
+
+
+
+			<!-- deploy to tomcat app server plugin -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>tomcat-maven-plugin</artifactId>
+				<version>1.0</version>
+				<configuration>
+					<url>${tomcat.deploy.url}</url>
+					<server>${tomcat.principal}</server>
+					<!-- If a version is specified then the context path remains unchanged 
+						and both the context name and the base name have the string '##' appended 
+						to them followed by the version identifier. <path>/helloworld##${maven.build.timestamp}</path> -->
+
+					<webapps>
+						<webapp>
+							<!-- <finalName>Must Be Same with warName!!! <finalName>A-${pom.groupId}.${pom.artifactId}#${pom.version}-Z.war</finalName> -->
+							<finalName>${myOwnName}</finalName>
+							<!-- <finalName>Must Be Same with warName!!! -->
+						</webapp>
+					</webapps>
+
+
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>com.github.github</groupId>
+				<artifactId>downloads-maven-plugin</artifactId>
+				<version>0.6</version>
+				<configuration>
+					<description>Official ${project.name} build of the
+						${project.version} release</description>
+					<override>true</override>
+					<includeAttached>true</includeAttached>
+					<server>github</server>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>upload</goal>
+						</goals>
+						<phase>install</phase>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>com.github.github</groupId>
+				<artifactId>site-maven-plugin</artifactId>
+				<version>0.7</version>
+				<configuration>
+					<message>Building site for ${project.version}</message>
+					<server>github</server>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>site</goal>
+						</goals>
+						<phase>site</phase>
+					</execution>
+				</executions>
+			</plugin>
+
+
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<configuration>
+					<!-- war-NAME -->
+					<warName>${myOwnName}</warName>
+					<!-- <finalName>myAdminFileName</finalName> -->
+
+					<!-- filtering -->
+
+					<webResources>
+						<resource>
+							<directory>${basedir}/target/</directory>
+							<filtering>true</filtering>
+							<targetPath>WEB-INF/</targetPath>
+							<includes>
+								<include>jspweb.xml</include>
+							</includes>
+						</resource>
+					</webResources>
+					<!-- filtering -->
+					<!-- <warName>A-${pom.groupId}.${pom.artifactId}-${pom.version}#${buildNumber}-Z</warName> 
+						${basedir}/target/A-${pom.groupId}.${pom.artifactId}#${pom.version}-Z/WEB-INF/jspweb.xml -->
+					<webXml>
+						${basedir}/target/${myOwnName}/WEB-INF/jspweb.xml
+					</webXml>
+
+					<archive>
+						<manifest>
+							<addDefaultImplementationEntries>
+								true
+							</addDefaultImplementationEntries>
+						</manifest>
+						<manifestEntries>
+							<Build-Number>${buildNumber}</Build-Number>
+							<Implementation-Build>
+								${buildNumber}
+							</Implementation-Build>
+							<pomVersion>${pom.version}</pomVersion>
+							<artifactId>${pom.artifactId}</artifactId>
+							<groupId>${pom.groupId}</groupId>
+
+							<buildTimestamp>
+								${maven.build.timestamp}
+							</buildTimestamp>
+							<!-- <basedir>${basedir}</basedir> -->
+						</manifestEntries>
+					</archive>
+				</configuration>
+			</plugin>
+
+		</plugins>
+
+
+		<pluginManagement>
+			<plugins>
+				<!--This plugin's configuration is used to store Eclipse m2e settings 
+					only. It has no influence on the Maven build itself. -->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>
+											org.codehaus.mojo
+										</groupId>
+										<artifactId>
+											jspc-maven-plugin
+										</artifactId>
+										<versionRange>
+											[1.4.6,)
+										</versionRange>
+										<goals>
+											<goal>compile</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore></ignore>
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+
+
+
+
+	<profiles>
+
+		<profile>
+			<id>TOMCAT_DEPLOY_V_7_xxx</id>
+			<activation>
+				<activeByDefault>false</activeByDefault>
+				<property>
+					<name>TOMCAT7</name>
+				</property>
+			</activation>
+			<properties>
+				<gae.api.scope>provided</gae.api.scope>
+				<gae.application.version>xxx</gae.application.version>
+			</properties>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.codehaus.mojo.jspc</groupId>
+						<artifactId>jspc-maven-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>jspc</id>
+								<phase>compile</phase>
+								<goals>
+									<goal>compile</goal>
+								</goals>
+							</execution>
+						</executions>
+						<configuration>
+							<packageName>org.apache.jsp</packageName>
+							<source>1.5</source>
+							<target>1.5</target>
+							<!-- webXml>${basedir}/target/jspCweb.xml</webXml> -->
+							<injectString>
+								&lt;!-- [INSERT FRAGMENT HERE] --&gt; </injectString>
+							<trimSpaces>false</trimSpaces>
+						</configuration>
+						<dependencies>
+							<!-- Hack the jspc plugin, which only supports Tomcat 6, to work for 
+								Tomcat 7. See: http://hasini-gunasinghe.blogspot.com/2011/09/how-to-use-pre-compiled-jsps-in-webapp.html -->
+							<dependency>
+								<groupId>org.codehaus.mojo.jspc</groupId>
+								<artifactId>jspc-compiler-tomcat6</artifactId>
+								<version>2.0-alpha-3</version>
+
+								<exclusions>
+									<exclusion>
+										<groupId>org.apache.tomcat</groupId>
+										<artifactId>jasper</artifactId>
+									</exclusion>
+									<exclusion>
+										<groupId>org.apache.tomcat</groupId>
+										<artifactId>jasper-el</artifactId>
+									</exclusion>
+									<exclusion>
+										<groupId>org.apache.tomcat</groupId>
+										<artifactId>jasper-jdt</artifactId>
+									</exclusion>
+									<exclusion>
+										<groupId>org.apache.tomcat</groupId>
+										<artifactId>servlet-api</artifactId>
+									</exclusion>
+									<exclusion>
+										<groupId>org.apache.tomcat</groupId>
+										<artifactId>jsp-api</artifactId>
+									</exclusion>
+									<exclusion>
+										<groupId>org.apache.tomcat</groupId>
+										<artifactId>el-api</artifactId>
+									</exclusion>
+									<exclusion>
+										<groupId>org.apache.tomcat</groupId>
+										<artifactId>annotations-api</artifactId>
+									</exclusion>
+								</exclusions>
+							</dependency>
+
+							<dependency>
+								<groupId>org.apache.tomcat</groupId>
+								<artifactId>tomcat-jasper</artifactId>
+								<version>${tomcat-jasper.version}</version>
+							</dependency>
+
+							<dependency>
+								<groupId>org.eclipse.jdt.core.compiler</groupId>
+								<artifactId>ecj</artifactId>
+								<version>3.5.1</version>
+							</dependency>
+						</dependencies>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+
+	</profiles>
+
+</project>

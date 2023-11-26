@@ -1,0 +1,191 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.jvs.pi4j.test</groupId>
+	<artifactId>Pi4JTestProject</artifactId>
+	<version>1.0.0</version>
+	<packaging>jar</packaging>
+	<name>Pi4JTestProject</name>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+		<!-- DEFAULT RASPBERRY PI PROPERTIES -->
+		<pi.host>192.168.1.165</pi.host>
+		<pi.port>22</pi.port>
+		<pi.user>pi</pi.user>
+		<pi.password>raspberry</pi.password>
+
+		<!-- SETTINGS FOR COPYING Pi4J ARTIFACTS TO DEVELOPMENT RASPBERRY PI -->
+		<pi.host.dev>${pi.host}</pi.host.dev>
+		<pi.port.dev>${pi.port}</pi.port.dev>
+		<pi.user.dev>${pi.user}</pi.user.dev>
+		<pi.password.dev>${pi.password}</pi.password.dev>
+		<pi.dirCopyTo.dev>/home/pi/raspberry/projects/java/Pi4JTestProject</pi.dirCopyTo.dev>
+
+		<!-- DEPENDENCY VERSIONS -->
+		<ant-jsch.version>1.7.1</ant-jsch.version>
+		<jsch.version>0.1.51</jsch.version>
+		<antelopetasks.version>3.2.10</antelopetasks.version>
+		<log4j.version>1.2.17</log4j.version>
+		<pi4j.version>1.1</pi4j.version>
+
+		<!-- JAVA COMPILER VERSIONS -->
+		<jdk.source.version>1.7</jdk.source.version>
+		<jdk.target.version>1.7</jdk.target.version>
+
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>${log4j.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.pi4j</groupId>
+			<artifactId>pi4j-core</artifactId>
+			<version>${pi4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.pi4j</groupId>
+			<artifactId>pi4j-gpio-extension</artifactId>
+			<version>${pi4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.pi4j</groupId>
+			<artifactId>pi4j-device</artifactId>
+			<version>${pi4j.version}</version>
+		</dependency>
+	</dependencies>
+
+
+	<build>
+		<plugins>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>${jdk.source.version}</source>
+					<target>${jdk.target.version}</target>
+				</configuration>
+			</plugin>
+
+			<!-- COPY DEPENDENCIES INTO THE 'dependency-jars' FOLDER -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<version>2.5.1</version>
+				<executions>
+					<execution>
+						<id>copy-dependencies</id>
+						<phase>package</phase>
+						<goals>
+							<goal>copy-dependencies</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${project.build.directory}/dependency-jars/</outputDirectory>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- CREATE THE MANIFEST FILE -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>2.4</version>
+				<configuration>
+					<archive>
+						<manifest>
+							<mainClass>com.jvs.pi4j.test.i2c.arduino.I2CArduinoUnoJoystickExample</mainClass>
+							<addClasspath>true</addClasspath>
+							<classpathPrefix>dependency-jars/</classpathPrefix>
+						</manifest>
+					</archive>
+				</configuration>
+			</plugin>
+
+			<!-- OPTIONALLY DEPLOY THE FINAL JAR TO THE RASPBERRY PI -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<executions>
+
+					<!-- copy the compiled JAR file to the Raspberry Pi platform platform -->
+					<execution>
+						<id>transfer-compiled-jar</id>
+						<phase>install</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<tasks>
+								<taskdef name="if" classname="ise.antelope.tasks.IfTask" />
+								<if name="pi.transfer.dev" value="true">
+								
+									<!--  Ensure the target directory exists on the Raspberry Pi -->
+									<sshexec host="${pi.host.dev}" port="${pi.port.dev}"
+										username="${pi.user.dev}" password="${pi.password.dev}" trust="true"
+										failonerror="false" verbose="true"
+										command="mkdir --parents ${pi.dirCopyTo.dev}" />
+
+									<!-- Ensure the 'dependencies-jars' folder exists on the Raspberry Pi -->
+									<sshexec host="${pi.host.dev}" port="${pi.port.dev}"
+										username="${pi.user.dev}" password="${pi.password.dev}" trust="true"
+										failonerror="false" verbose="true"
+										command="mkdir --parents ${pi.dirCopyTo.dev}/dependency-jars" />
+
+									<!-- Copy the dependencies into the 'dependencies-jars' folder on the Raspberry Pi -->
+									<scp todir="${pi.user.dev}:${pi.password.dev}@${pi.host.dev}:${pi.dirCopyTo.dev}/dependency-jars"
+										port="${pi.port.dev}" trust="true" verbose="true" failonerror="true">
+										<fileset dir="${project.build.directory}/dependency-jars" />
+									</scp>
+
+									<!-- copy the JAR file to the Raspberry Pi -->
+									<scp file="${project.build.directory}/${project.build.finalName}.jar"
+										todir="${pi.user.dev}:${pi.password.dev}@${pi.host.dev}:${pi.dirCopyTo.dev}"
+										port="${pi.port.dev}" trust="true" verbose="true" failonerror="true">
+									</scp>
+
+									<!-- Copy the 'run.sh' script on the Raspberry Pi -->
+									<scp file="${project.basedir}/scripts/run.sh"
+										todir="${pi.user.dev}:${pi.password.dev}@${pi.host.dev}:${pi.dirCopyTo.dev}"
+										port="${pi.port.dev}" trust="true" verbose="true" failonerror="true">
+									</scp>
+									
+									<!-- Executes the 'run.sh' script on the Raspberry Pi -->
+									<sshexec host="${pi.host.dev}" port="${pi.port.dev}"
+										username="${pi.user.dev}" password="${pi.password.dev}" trust="true"
+										failonerror="false" verbose="true"
+										command="sudo chmod +x ${pi.dirCopyTo.dev}/run.sh; sudo ${pi.dirCopyTo.dev}/run.sh" />
+								</if>
+							</tasks>
+						</configuration>
+					</execution>
+				</executions>
+
+				<dependencies>
+					<dependency>
+						<groupId>org.apache.ant</groupId>
+						<artifactId>ant-jsch</artifactId>
+						<version>${ant-jsch.version}</version>
+					</dependency>
+					<dependency>
+						<groupId>com.jcraft</groupId>
+						<artifactId>jsch</artifactId>
+						<version>${jsch.version}</version>
+					</dependency>
+					<dependency>
+						<groupId>org.tigris.antelope</groupId>
+						<artifactId>antelopetasks</artifactId>
+						<version>${antelopetasks.version}</version>
+					</dependency>
+				</dependencies>
+			</plugin>
+
+		</plugins>
+	</build>
+
+</project>

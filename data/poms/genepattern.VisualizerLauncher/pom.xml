@@ -1,0 +1,475 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd"
+>
+<!-- 
+  ==================================================
+    GenePattern Visualizer Launcher Maven Project 
+  ==================================================
+  Usage:
+    # build ...
+    #   ... creates single jar executable (signed)
+    #   ... creates Mac OS X application bundle (unsigned)
+    mvn package
+
+    # run visualizer launcher (for debugging, testing)
+    mvn -q clean package exec:exec
+
+    # application data are downloaded to the project directory
+    mvn package exec:exec, uses ./target/appdata, which is deleted on 'mvn clean;
+    mvn package exec:java, uses ./appdata, which is not deleted
+    # use a custom path ...
+    mvn -Duser.data.dir=appdata package exec:java
+    mvn -Duser.data.dir=appdata package exec:exec
+    mvn -Duser.data.dir=/fq/path package exec:exec
+
+    # run visualizer launcher with the java command
+    java -jar target/visualizerLauncher-{version}-full.jar
+      
+    # use a different certificate ...
+    mvn -Dsignjar.keystore=${HOME}/.gp_build/genepattern-codesign.jks
+        -Dsignjar.alias=codesign
+        -Dsignjar.storepass=....
+
+    # ===== additional commands =====
+    # check for newer versions of dependencies
+    mvn versions:display-dependency-updates
+    mvn dependency:help
+  -->
+
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>genepattern.org</groupId>
+  <artifactId>visualizerLauncher</artifactId>
+  <version>1.2.8</version>
+  <name>VisualizerLauncher</name>
+  <url>http://maven.apache.org</url>
+  
+  <prerequisites>
+    <maven>3.0</maven>
+  </prerequisites>
+
+  <properties>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+    <maven.build.timestamp.format>yyyy-MM-dd-HHmmss</maven.build.timestamp.format>
+
+    <!-- jarName>${project.artifactId}-${project.version}-b${buildNumber}</jarName -->
+    <jarName>${project.artifactId}-${project.version}</jarName>
+    <!-- the signed executable jar file, includes all dependencies -->
+    <jarFile>${project.build.directory}/${jarName}-full.jar</jarFile>
+
+    <!-- code signing certificate -->
+    <signjar.keystore>${project.build.directory}/keystore.default</signjar.keystore>
+    <signjar.alias>Genepattern</signjar.alias>
+    <signjar.storepass>gEnEpAtTeRn</signjar.storepass>
+    <signjar.keypass>${signjar.storepass}</signjar.keypass>
+    <signjar.dname>CN=GenePattern, OU=Cancer Genomics, O=Broad Institute, L=Cambridge, S=MA, C=US, EMAILADDRESS=gp-help@broadinstitute.org</signjar.dname>
+    <signjar.tsaurl>http://timestamp.comodoca.com/rfc3161</signjar.tsaurl>
+    
+    <!-- command line execution -->
+    <mainClass>org.genepattern.desktop.VisualizerLauncher</mainClass>
+    <exec.workingdir>${project.build.directory}</exec.workingdir>
+    <user.data.dir>appdata</user.data.dir>
+    <exec.mainClass>${mainClass}</exec.mainClass>
+    <exec.executable>java</exec.executable>
+    <exec.args>-Duser.data.dir=${user.data.dir} -jar ${jarFile}</exec.args>
+
+    <!-- debugging -->
+    <verbose>false</verbose>
+  </properties>
+  
+  <!-- dummy scm required for buildnumber-maven-plugin --> 
+  <scm>
+    <connection>scm:svn:http://127.0.0.1/dummy</connection>
+    <developerConnection>scm:svn:https://127.0.0.1/dummy</developerConnection>
+    <tag>HEAD</tag>
+    <url>http://127.0.0.1/dummy</url>
+  </scm>
+
+  <build>
+    <!-- 
+    <defaultGoal>clean package exec:exec</defaultGoal>
+    -->
+    <defaultGoal>package</defaultGoal>
+    <finalName>${jarName}</finalName>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>buildnumber-maven-plugin</artifactId>
+          <version>1.4</version>
+          <executions>
+            <execution>
+              <id>buildnumber</id>
+              <phase>validate</phase>
+              <goals>
+                <goal>create</goal>
+              </goals>
+            </execution>
+          </executions>
+          <configuration>
+            <doCheck>false</doCheck>
+            <doUpdate>false</doUpdate>
+            <revisionOnScmFailure>unknownbuild</revisionOnScmFailure>
+            <format>{0,number}</format>
+            <items>
+              <item>buildNumber</item>
+            </items>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>buildnumber-maven-plugin</artifactId>
+      </plugin>
+
+      <!--
+        ==================================================
+          maven-surefire-plugin
+        ==================================================
+        Run junit tests using Surefire
+        See:
+          http://maven.apache.org/surefire/maven-surefire-plugin/
+          http://maven.apache.org/surefire/maven-surefire-plugin/usage.html
+          http://maven.apache.org/plugins/maven-surefire-plugin/test-mojo.html
+       -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.12.4</version>
+        <configuration>
+          <workingDirectory>${project.build.directory}/test-run</workingDirectory>
+          <!-- Example: set system property for tests 
+          <systemProperties>
+            <property>
+              <name>log.dir</name>
+              <value>${user.data.dir}</value>
+            </property>
+          </systemProperties>
+          -->
+          <!--  Example: how to add an additional classpath element for junit tests 
+          <additionalClasspathElements>
+            <additionalClasspathElement>${basedir}/src/test/lib/jdom.jar</additionalClasspathElement>
+          </additionalClasspathElements>
+          -->
+        </configuration>
+      </plugin>
+      
+
+      <!-- 
+        ==================================================
+          maven-shade-plugin
+        ==================================================
+        Create executable jar file including all library dependencies.
+        Use as an alternative to the maven-assembly-plugin
+        See:
+          https://maven.apache.org/plugins/maven-shade-plugin/
+          https://maven.apache.org/plugins/maven-shade-plugin/shade-mojo.html
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.0.0</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <finalName>${jarName}-full</finalName>
+              <transformers>
+                <!-- add Main-Class to manifest file -->
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>${mainClass}</mainClass>
+                </transformer>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      
+      <!-- 
+        ==================================================
+          keytool plugin
+        ==================================================
+        Generate default keystore file
+        See:
+          http://www.mojohaus.org/keytool/
+          http://www.mojohaus.org/keytool/keytool-maven-plugin/
+          https://mvnrepository.com/artifact/org.codehaus.mojo/keytool-maven-plugin 
+      -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>keytool-maven-plugin</artifactId>
+        <version>1.5</version>
+        <configuration>
+          <verbose>${verbose}</verbose>
+          <validity>1800</validity> <!-- 5 years -->
+          <skipIfExist>true</skipIfExist>
+          <keystore>${signjar.keystore}</keystore>
+          <storepass>${signjar.storepass}</storepass>
+          <keypass>${signjar.keypass}</keypass>
+          <alias>${signjar.alias}</alias>
+          <dname>${signjar.dname}</dname>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>generate-resources</phase>
+            <id>generateKeyPair</id>
+            <goals>
+              <goal>generateKeyPair</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- 
+        ==================================================
+          maven-jarsigner-plugin
+        ==================================================
+        Sign jar file
+        See: 
+          http://maven.apache.org/plugins/maven-jarsigner-plugin/
+       -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jarsigner-plugin</artifactId>
+        <version>1.4</version>
+        <configuration>
+          <archive>${jarFile}</archive>
+          <verbose>${verbose}</verbose>
+          <keystore>${signjar.keystore}</keystore>
+          <alias>${signjar.alias}</alias>
+          <storepass>${signjar.storepass}</storepass>
+          <keypass>${signjar.keypass}</keypass>
+          <tsa>${signjar.tsaurl}</tsa>
+        </configuration>
+        <executions>
+          <execution>
+            <id>sign</id>
+            <goals>
+              <goal>sign</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>verify</id>
+            <goals>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- 
+        ==================================================
+          appbundle-maven-plugin (Mac OS X)
+        ==================================================
+        Package as a Mac OS X application bundle
+        Usage:
+          mvn package appbundle:bundle
+          mvn help:describe -Dplugin=appbundle -Ddetail
+        See: 
+          https://mvnrepository.com/artifact/sh.tak.appbundler/appbundle-maven-plugin/1.2.0
+          https://github.com/federkasten/appbundle-maven-plugin
+      -->
+      <plugin>
+        <groupId>sh.tak.appbundler</groupId>
+        <artifactId>appbundle-maven-plugin</artifactId>
+        <version>1.2.0</version>
+        <configuration>
+          <mainClass>${mainClass}</mainClass>
+          <jvmVersion>1.8+</jvmVersion>
+          <generateDiskImageFile>false</generateDiskImageFile>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>bundle</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- 
+        ==================================================
+          exec-maven-plugin
+        ==================================================
+        Run the VisualizerLauncher from the mvn command line.
+        Usage:
+          mvn -q clean package exec:java
+          # '-q' means quiet, -X for debug output          
+        See:
+          http://www.mojohaus.org/exec-maven-plugin/usage.html
+          # for more info
+          mvn help:describe -Dcmd=exec:java -Ddetail
+      -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.6.0</version>
+        <configuration>
+          <systemProperties>
+            <systemProperty>
+              <!-- set -Duser.data.dir for exec:java -->
+              <key>user.data.dir</key>
+              <value>${user.data.dir}</value>
+            </systemProperty>
+          </systemProperties>
+        </configuration>
+      </plugin>
+
+      <!-- 
+        ==================================================
+          maven-clean-plugin
+        ==================================================
+        Cleanup additional files which are created when you run the application
+          ./logs
+          ./visualizerLauncher 
+        By default only the target directory is deleted.
+        See: 
+          https://maven.apache.org/plugins/maven-clean-plugin/
+      -->
+      <plugin>
+        <artifactId>maven-clean-plugin</artifactId>
+        <version>3.0.0</version>
+        <configuration>
+          <filesets>
+            <fileset>
+              <followSymlinks>false</followSymlinks>
+              <directory>visualizerLauncher</directory>
+            </fileset>
+            <fileset>
+              <followSymlinks>false</followSymlinks>
+              <directory>logs</directory>
+            </fileset>
+          </filesets>
+        </configuration>
+      </plugin>
+
+    </plugins>
+
+  </build>
+  
+  <dependencies>
+
+    <!-- https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient -->
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+      <version>4.5.3</version>
+    </dependency>
+
+    <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-api -->
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-api</artifactId>
+      <version>[2.17.1,)</version>
+    </dependency>
+    
+    <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core -->
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+      <version>[2.17.1,)</version>
+    </dependency>
+
+    <!-- https://mvnrepository.com/artifact/org.json/json -->
+    <dependency>
+      <groupId>org.json</groupId>
+      <artifactId>json</artifactId>
+      <version>20160810</version>
+    </dependency>
+
+    <!-- 
+      Apache Commons Exec for launching command line process
+      See:
+        http://commons.apache.org/proper/commons-exec/ 
+        http://commons.apache.org/proper/commons-exec/apidocs/index.html
+    -->
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-exec</artifactId>
+      <version>1.3</version>
+    </dependency>
+
+    <!-- 
+      Java Native Access 
+      Required for AppDirs plugin
+      See:
+        https://mvnrepository.com/artifact/net.java.dev.jna/jna 
+        https://mvnrepository.com/artifact/net.java.dev.jna/jna-platform
+    -->
+    <dependency>
+      <groupId>net.java.dev.jna</groupId>
+      <artifactId>jna</artifactId>
+      <version>4.4.0</version>
+    </dependency>
+    <dependency>
+      <groupId>net.java.dev.jna</groupId>
+      <artifactId>jna-platform</artifactId>
+      <version>4.4.0</version>
+    </dependency>
+
+    <!--
+      AppDirs plugin for platform dependent application data paths
+      See:
+        https://mvnrepository.com/artifact/net.harawata/appdirs
+    -->
+    <dependency>
+      <groupId>net.harawata</groupId>
+      <artifactId>appdirs</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    
+    <!--
+      Apache Log4j SLF4J Binding
+      Required by AppDirs
+      See: 
+        https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-slf4j-impl
+        https://logging.apache.org/log4j/2.0/faq.html
+    -->
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-slf4j-impl</artifactId>
+      <version>[2.17.1,)</version>
+    </dependency>
+
+    <!-- for testing -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.12</version>
+      <scope>test</scope>
+    </dependency>
+
+  </dependencies>
+  
+  <reporting>
+    <plugins>
+      <!--
+        ==================================================
+          maven-surefire-report-plugin
+        ==================================================
+        Generate junit html report using the Surefire Report plugin
+        See:
+          http://maven.apache.org/surefire/maven-surefire-report-plugin/
+          http://maven.apache.org/surefire/maven-surefire-report-plugin/usage.html
+
+        To generate the report ...
+          mvn site
+          open target/site/index.html
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-report-plugin</artifactId>
+        <version>2.20</version>
+      </plugin>
+    </plugins>
+  </reporting>
+
+</project>

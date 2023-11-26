@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.jboss</groupId>
+    <artifactId>wsOnKaraf</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>bundle</packaging>
+    <name>JBoss Fuse Quickstart: soap</name>
+    <description>SOAP example using JAXWS</description>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <distribution>repo</distribution>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
+        </license>
+    </licenses>
+
+    <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <version.compiler.plugin>2.3.1</version.compiler.plugin>
+    <maven.compiler.target>1.7</maven.compiler.target>
+    <maven.compiler.source>1.7</maven.compiler.source>
+    <version.maven-surefire-plugin>2.15</version.maven-surefire-plugin>
+    <version.maven-bundle-plugin>2.3.7</version.maven-bundle-plugin>
+    <cxf-version>3.0.4.redhat-621084</cxf-version>
+    <skipTests>true</skipTests>
+
+    <!-- the version of the BOM, defining all the dependency versions -->
+    <fabric8.bom.version>1.2.0.redhat-621084</fabric8.bom.version>
+    <fabric.version>1.2.0.redhat-621084</fabric.version>
+
+    <!-- fabric8 deploy profile configuration -->
+    <fabric8.profile>cxf-basic-profile</fabric8.profile>
+    <fabric8.parentProfiles>feature-cxf</fabric8.parentProfiles>
+    <fabric8.features>fabric-cxf cxf-jaxws</fabric8.features>
+  </properties>
+
+    <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.fabric8.bom</groupId>
+        <artifactId>fabric8-bom</artifactId>
+        <version>${fabric8.bom.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+    <dependencies>
+    <!--
+        For coding the example, we don't actually depend on any CXF classes - we only use the JAX-WS
+        standard annotations
+    -->
+    <dependency>
+      <groupId>org.apache.geronimo.specs</groupId>
+      <artifactId>geronimo-ws-metadata_2.0_spec</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <!--
+        For logging, we will use SLF4J, which is also available in the container by default.
+      -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+
+    <!-- Test Dependencies -->
+
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!--
+      Add the slf4j-log4j12 dependency jar for testing
+    -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+    <build>
+    <finalName>${project.artifactId}</finalName>
+    <plugins>
+      <!-- Skip Test by default and enable them only in Test profile -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${version.maven-surefire-plugin}</version>
+        <configuration>
+          <skipTests>${skipTests}</skipTests>
+        </configuration>
+      </plugin>
+      <!-- Compiler plugin enforces Java 1.7 compatibility and activates annotation processors -->
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>${version.compiler.plugin}</version>
+        <configuration>
+          <source>${maven.compiler.source}</source>
+          <target>${maven.compiler.target}</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <version>${version.maven-bundle-plugin}</version>
+        <extensions>true</extensions>
+        <configuration>
+          <instructions>
+            <Import-Package>javax.jws;version="[0,3)",
+              javax.wsdl,
+              javax.xml.namespace,
+              org.apache.cxf.helpers,
+              org.osgi.service.blueprint,
+              io.fabric8.cxf.endpoint,
+              org.apache.cxf.transport.http</Import-Package>
+            <Import-Service>org.apache.aries.blueprint.NamespaceHandler;
+                osgi.service.blueprint.namespace=http://cxf.apache.org/transports/http/configuration</Import-Service>
+            <Export-Package>com.jboss.wsOnKaraf</Export-Package>
+          </instructions>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.cxf</groupId>
+        <artifactId>cxf-java2ws-plugin</artifactId>
+        <version>${cxf-version}</version>
+        <executions>
+          <execution>
+            <id>process-classes</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>java2ws</goal>
+            </goals>
+            <configuration>
+              <className>com.jboss.wsOnKaraf.HelloWorld</className>
+              <genWsdl>true</genWsdl>
+              <attachWsdl>false</attachWsdl>
+              <verbose>true</verbose>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <!--
+          this plugin will use the fabric.* properties to configure its behaviour
+          see the Properties section here: http://fabric8.io/gitbook/mavenPlugin.html
+        -->
+        <groupId>io.fabric8</groupId>
+        <artifactId>fabric8-maven-plugin</artifactId>
+        <version>${fabric.version}</version>
+      </plugin>
+    </plugins>
+  </build>
+
+    <profiles>
+    <profile>
+      <id>test</id>
+      <properties>
+        <skipTests>false</skipTests>
+      </properties>
+      <build>
+        <defaultGoal>verify</defaultGoal>
+      </build>
+    </profile>
+  </profiles>
+</project>

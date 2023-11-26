@@ -1,0 +1,699 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+semanticcms-core-docs - Documentation runner for Java API for modeling web page content and relationships.
+Copyright (C) 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023  AO Industries, Inc.
+    support@aoindustries.com
+    7262 Bull Pen Cir
+    Mobile, AL 36695
+
+This file is part of semanticcms-core-docs.
+
+semanticcms-core-docs is free software: you can redistribute it and/or modify
+it under the terms of the GNU Lesser General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+semanticcms-core-docs is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public License
+along with semanticcms-core-docs.  If not, see <https://www.gnu.org/licenses/>.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.semanticcms</groupId><artifactId>semanticcms-parent</artifactId><version>1.20.2-SNAPSHOT</version>
+    <relativePath>../../parent/pom.xml</relativePath>
+  </parent>
+
+  <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-docs</artifactId><version>1.12.0-SNAPSHOT</version>
+  <packaging>war</packaging>
+
+  <properties>
+    <!-- Must be set to ${git.commit.time} for snapshots or ISO 8601 timestamp for releases. -->
+    <project.build.outputTimestamp>${git.commit.time}</project.build.outputTimestamp>
+    <module.name>com.semanticcms.core.docs</module.name>
+    <!-- Never stage snapshot, see https://stackoverflow.com/a/39139979 -->
+    <nexus.skipNexusStagingDeployMojo>${build.isSnapshot}</nexus.skipNexusStagingDeployMojo>
+    <!-- Require secure session cookies in production -->
+    <session.cookie.secure>true</session.cookie.secure>
+  </properties>
+
+  <name>SemanticCMS Core Docs</name>
+  <url>https://semanticcms.com/core/docs/</url>
+  <description>Documentation runner for Java API for modeling web page content and relationships.</description>
+  <inceptionYear>2016</inceptionYear>
+
+  <licenses>
+    <license>
+      <name>GNU General Lesser Public License (LGPL) version 3.0</name>
+      <url>https://www.gnu.org/licenses/lgpl-3.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <organization>
+    <name>AO Industries, Inc.</name>
+    <url>https://aoindustries.com/</url>
+  </organization>
+
+  <developers>
+    <developer>
+      <name>AO Industries, Inc.</name>
+      <email>support@aoindustries.com</email>
+      <url>https://aoindustries.com/</url>
+      <organization>AO Industries, Inc.</organization>
+      <organizationUrl>https://aoindustries.com/</organizationUrl>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:git://github.com/ao-apps/semanticcms-core-docs.git</connection>
+    <developerConnection>scm:git:git@github.com:ao-apps/semanticcms-core-docs.git</developerConnection>
+    <url>https://github.com/ao-apps/semanticcms-core-docs</url>
+    <tag>HEAD</tag>
+  </scm>
+
+  <issueManagement>
+    <system>GitHub Issues</system>
+    <url>https://github.com/ao-apps/semanticcms-core-docs/issues</url>
+  </issueManagement>
+
+  <ciManagement>
+    <system>Jenkins</system>
+    <url>https://jenkins.aoindustries.com/job/ao/job/semanticcms-1.x/job/core/job/docs/</url>
+  </ciManagement>
+  <!-- Only one allowed in POM:
+  <ciManagement>
+    <system>GitHub Actions</system>
+    <url>https://github.com/ao-apps/semanticcms-core-docs/actions</url>
+  </ciManagement>
+  -->
+
+  <repositories>
+    <!-- Repository required here, too, so can find parent -->
+    <repository>
+      <id>sonatype-nexus-snapshots</id>
+      <name>Sonatype Nexus Snapshots</name>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <checksumPolicy>fail</checksumPolicy>
+      </snapshots>
+    </repository>
+  </repositories>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.sonatype.ossindex.maven</groupId><artifactId>ossindex-maven-plugin</artifactId>
+        <configuration>
+          <excludeVulnerabilityIds>
+            <!--
+              Exclude sonatype-2020-0243: https://github.com/JodaOrg/joda-time-jsptags/pull/2
+              This is already mitigated by our PGP verification of all downloaded artifacts.
+              Plus, we always directly declare all transitive dependencies.
+              TODO: Remove in joda-time:joda-time-jsptags > 1.1.1
+            -->
+            <exclude>sonatype-2020-0243</exclude>
+          </excludeVulnerabilityIds>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId><artifactId>maven-dependency-plugin</artifactId>
+        <configuration>
+          <usedDependencies>
+            <!-- Required for module-info.java -->
+            <dependency>com.semanticcms:semanticcms-core-all</dependency>
+            <dependency>com.semanticcms:semanticcms-news-all</dependency>
+            <dependency>com.semanticcms:semanticcms-section-all</dependency>
+          </usedDependencies>
+          <ignoredUnusedDeclaredDependencies combine.children="append">
+            <!-- Books -->
+            <dependency>com.semanticcms:*-book:jar</dependency>
+          </ignoredUnusedDeclaredDependencies>
+          <ignoredDependencies>
+            <!-- No "module-info.java" in some release builds -->
+            <dependency>com.aoapps:ao-fluent-html-any</dependency>
+          </ignoredDependencies>
+        </configuration>
+      </plugin>
+      <plugin>
+        <!--
+          Workaround "versions:display-plugin-updates" failing when "publish" profile active.
+          See https://github.com/mojohaus/versions-maven-plugin/issues/354
+
+          A recent optimization moved all configuration of the maven-war-plugin to
+          profileManagement, to avoid the overhead of instantiating this plugin on
+          all projects.  This, however, has exposed us to this bug.
+        -->
+        <groupId>org.apache.maven.plugins</groupId><artifactId>maven-war-plugin</artifactId>
+      </plugin>
+      <!-- Do not deploy snapshot (unless "jenkins" profile below), see https://stackoverflow.com/a/39139979 -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId><artifactId>maven-deploy-plugin</artifactId>
+        <configuration><skip>${build.isSnapshot}</skip></configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <!-- Features only enabled during development time -->
+      <id>development</id>
+      <properties>
+        <!-- Allow unsecure session cookies in development -->
+        <session.cookie.secure>false</session.cookie.secure>
+      </properties>
+      <dependencies>
+        <dependency>
+          <groupId>com.semanticcms</groupId><artifactId>semanticcms-openfile-all</artifactId><version>1.7.0-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>com.semanticcms</groupId><artifactId>semanticcms-view-all</artifactId><version>1.8.0${POST-SNAPSHOT}</version>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>com.semanticcms</groupId><artifactId>semanticcms-view-tree</artifactId><version>1.6.1${POST-SNAPSHOT}</version>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>com.semanticcms</groupId><artifactId>semanticcms-view-what-links-here</artifactId><version>1.7.0${POST-SNAPSHOT}</version>
+          <scope>runtime</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>publish</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId><artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+              <!-- Unpack all javadoc JARs in preparation for packaging as javadoc-webresources -->
+              <execution>
+                <id>copy.javadocs</id><phase>generate-resources</phase><goals><goal>copy</goal></goals>
+                <configuration>
+                  <outputDirectory>${project.build.directory}/dependency/copy.javadocs</outputDirectory>
+                  <artifactItems>
+                    <!-- No apidocs: <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-all</artifactId><classifier>javadoc</classifier> -->
+                    <!-- No apidocs: <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-bom</artifactId><classifier>javadoc</classifier> -->
+                    <!-- No apidocs: <groupId>com.semanticcms</groupId><artifactId>semanticcms-core</artifactId><classifier>javadoc</classifier> -->
+                    <artifactItem>
+                      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-breadcrumblist-json-ld</artifactId><classifier>javadoc</classifier>
+                      <destFileName>semanticcms-core-breadcrumblist-json-ld-javadoc.jar</destFileName>
+                    </artifactItem>
+                    <artifactItem>
+                      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-canonical</artifactId><classifier>javadoc</classifier>
+                      <destFileName>semanticcms-core-canonical-javadoc.jar</destFileName>
+                    </artifactItem>
+                    <artifactItem>
+                      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-model</artifactId><classifier>javadoc</classifier>
+                      <destFileName>semanticcms-core-model-javadoc.jar</destFileName>
+                    </artifactItem>
+                    <artifactItem>
+                      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-servlet</artifactId><classifier>javadoc</classifier>
+                      <destFileName>semanticcms-core-servlet-javadoc.jar</destFileName>
+                    </artifactItem>
+                    <artifactItem>
+                      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-sitemap</artifactId><classifier>javadoc</classifier>
+                      <destFileName>semanticcms-core-sitemap-javadoc.jar</destFileName>
+                    </artifactItem>
+                    <artifactItem>
+                      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-style</artifactId><classifier>javadoc</classifier>
+                      <destFileName>semanticcms-core-style-javadoc.jar</destFileName>
+                    </artifactItem>
+                    <artifactItem>
+                      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-taglib</artifactId><classifier>javadoc</classifier>
+                      <destFileName>semanticcms-core-taglib-javadoc.jar</destFileName>
+                    </artifactItem>
+                    <artifactItem>
+                      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-theme-base</artifactId><classifier>javadoc</classifier>
+                      <destFileName>semanticcms-core-theme-base-javadoc.jar</destFileName>
+                    </artifactItem>
+                    <artifactItem>
+                      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-view-content</artifactId><classifier>javadoc</classifier>
+                      <destFileName>semanticcms-core-view-content-javadoc.jar</destFileName>
+                    </artifactItem>
+                  </artifactItems>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId><artifactId>maven-war-plugin</artifactId>
+            <configuration>
+              <webResources>
+                <!-- Default Web Resources -->
+                <resource>
+                  <directory>src/main/webapp-filtered</directory>
+                  <filtering>true</filtering>
+                </resource>
+                <!-- Javadocs -->
+                <resource>
+                  <directory>${project.build.directory}/dependency/javadoc-webresources</directory>
+                  <filtering>false</filtering>
+                </resource>
+              </webResources>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId><artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>create-javadoc-webresources</id><phase>generate-resources</phase><goals><goal>run</goal></goals>
+                <configuration>
+                  <target xmlns:if="ant:if">
+                    <macrodef name="create-javadoc-webresource">
+                      <attribute name="groupId" />
+                      <attribute name="artifactId" />
+                      <attribute name="path" />
+                      <sequential>
+                        <!--
+                          As a requirement for reproducible builds, much care is taken to use the original timestamp
+                          of META-INF for all newly introduced directory levels:
+                          1) <jar> task does not maintain the timestamp of the MANIFEST.MF file, so using <zip>
+                          2) Generating a small ZIP to provide the timestamps for the new directories, matching META-INF
+                          3) Extracting META-INF/MANIFEST.MF directly to maintain timestamp
+                          4) All entries copied zip-to-zip to not lose directory timestamps
+                        -->
+                        <!-- Create ZIP directories to patch into new ZIP -->
+                        <taskdef resource="com/aoapps/ant/tasks/antlib.xml" />
+                        <create-zipped-directories referenceZip="${project.build.directory}/dependency/copy.javadocs/@{artifactId}-javadoc.jar" referencePath="META-INF/" generateZip="${project.build.directory}/create-javadoc-webresource/@{artifactId}-new-directories.zip" generatePath="META-INF/resources@{path}/apidocs/" />
+                        <zip destfile="${project.build.directory}/dependency/javadoc-webresources/WEB-INF/lib/@{artifactId}-${@{groupId}:@{artifactId}:jar:javadoc.version}-javadoc-webresource.jar" keepcompression="true" encoding="UTF8" whenempty="fail" duplicate="fail">
+                          <zipfileset src="${project.build.directory}/create-javadoc-webresource/@{artifactId}-new-directories.zip" />
+                          <zipfileset src="${project.build.directory}/dependency/copy.javadocs/@{artifactId}-javadoc.jar" includes="META-INF/MANIFEST.MF,META-INF/sitemap-index.xml" />
+                          <zipfileset src="${project.build.directory}/dependency/copy.javadocs/@{artifactId}-javadoc.jar" prefix="META-INF/resources@{path}/apidocs" excludes="**/MANIFEST.MF,**/sitemap-index.xml" />
+                        </zip>
+                        <insert-google-analytics-tracking if:true="${build.isSnapshot}" file="${project.build.directory}/dependency/javadoc-webresources/WEB-INF/lib/@{artifactId}-${@{groupId}:@{artifactId}:jar:javadoc.version}-javadoc-webresource.jar" googleAnalyticsTrackingId="${google.analytics.trackingId}" />
+                      </sequential>
+                    </macrodef>
+                    <!-- No apidocs: <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-all</artifactId><classifier>javadoc</classifier> -->
+                    <!-- No apidocs: <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-bom</artifactId><classifier>javadoc</classifier> -->
+                    <!-- No apidocs: <groupId>com.semanticcms</groupId><artifactId>semanticcms-core</artifactId><classifier>javadoc</classifier> -->
+                    <create-javadoc-webresource groupId="com.semanticcms" artifactId="semanticcms-core-breadcrumblist-json-ld" path="/core/breadcrumblist-json-ld" />
+                    <create-javadoc-webresource groupId="com.semanticcms" artifactId="semanticcms-core-canonical" path="/core/canonical" />
+                    <create-javadoc-webresource groupId="com.semanticcms" artifactId="semanticcms-core-model" path="/core/model" />
+                    <create-javadoc-webresource groupId="com.semanticcms" artifactId="semanticcms-core-servlet" path="/core/servlet" />
+                    <create-javadoc-webresource groupId="com.semanticcms" artifactId="semanticcms-core-sitemap" path="/core/sitemap" />
+                    <create-javadoc-webresource groupId="com.semanticcms" artifactId="semanticcms-core-style" path="/core/style" />
+                    <create-javadoc-webresource groupId="com.semanticcms" artifactId="semanticcms-core-taglib" path="/core/taglib" />
+                    <create-javadoc-webresource groupId="com.semanticcms" artifactId="semanticcms-core-theme-base" path="/core/theme-base" />
+                    <create-javadoc-webresource groupId="com.semanticcms" artifactId="semanticcms-core-view-content" path="/core/view-content" />
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+      <dependencies>
+        <!-- Dependencies for javadocs -->
+        <!-- No apidocs: <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-all</artifactId><classifier>javadoc</classifier> -->
+        <!-- No apidocs: <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-bom</artifactId><classifier>javadoc</classifier> -->
+        <!-- No apidocs: <groupId>com.semanticcms</groupId><artifactId>semanticcms-core</artifactId><classifier>javadoc</classifier> -->
+        <dependency>
+          <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-breadcrumblist-json-ld</artifactId><version>1.5.0-POST-SNAPSHOT</version><classifier>javadoc</classifier>
+          <scope>provided</scope>
+          <exclusions><exclusion><groupId>*</groupId><artifactId>*</artifactId></exclusion></exclusions>
+        </dependency>
+        <dependency>
+          <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-canonical</artifactId><version>1.3.0-POST-SNAPSHOT</version><classifier>javadoc</classifier>
+          <scope>provided</scope>
+          <exclusions><exclusion><groupId>*</groupId><artifactId>*</artifactId></exclusion></exclusions>
+        </dependency>
+        <dependency>
+          <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-model</artifactId><version>1.14.1-POST-SNAPSHOT</version><classifier>javadoc</classifier>
+          <scope>provided</scope>
+          <exclusions><exclusion><groupId>*</groupId><artifactId>*</artifactId></exclusion></exclusions>
+        </dependency>
+        <dependency>
+          <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-servlet</artifactId><version>1.20.0-SNAPSHOT</version><classifier>javadoc</classifier>
+          <scope>provided</scope>
+          <exclusions><exclusion><groupId>*</groupId><artifactId>*</artifactId></exclusion></exclusions>
+        </dependency>
+        <dependency>
+          <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-sitemap</artifactId><version>1.16.0-SNAPSHOT</version><classifier>javadoc</classifier>
+          <scope>provided</scope>
+          <exclusions><exclusion><groupId>*</groupId><artifactId>*</artifactId></exclusion></exclusions>
+        </dependency>
+        <dependency>
+          <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-style</artifactId><version>1.5.0-POST-SNAPSHOT</version><classifier>javadoc</classifier>
+          <scope>provided</scope>
+          <exclusions><exclusion><groupId>*</groupId><artifactId>*</artifactId></exclusion></exclusions>
+        </dependency>
+        <dependency>
+          <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-taglib</artifactId><version>1.16.0-SNAPSHOT</version><classifier>javadoc</classifier>
+          <scope>provided</scope>
+          <exclusions><exclusion><groupId>*</groupId><artifactId>*</artifactId></exclusion></exclusions>
+        </dependency>
+        <dependency>
+          <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-theme-base</artifactId><version>1.7.0-SNAPSHOT</version><classifier>javadoc</classifier>
+          <scope>provided</scope>
+          <exclusions><exclusion><groupId>*</groupId><artifactId>*</artifactId></exclusion></exclusions>
+        </dependency>
+        <dependency>
+          <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-view-content</artifactId><version>1.9.0-POST-SNAPSHOT</version><classifier>javadoc</classifier>
+          <scope>provided</scope>
+          <exclusions><exclusion><groupId>*</groupId><artifactId>*</artifactId></exclusion></exclusions>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- Direct -->
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-all</artifactId><version>1.12.0-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-all-book</artifactId><version>1.12.0-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-bom-book</artifactId><version>1.12.0-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-book</artifactId><version>1.15.0-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-breadcrumblist-json-ld-book</artifactId><version>1.5.0-POST-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-canonical-book</artifactId><version>1.3.0-POST-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-model-book</artifactId><version>1.14.1-POST-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-servlet-book</artifactId><version>1.20.0-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-sitemap-book</artifactId><version>1.16.0-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-style-book</artifactId><version>1.5.0-POST-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-taglib-book</artifactId><version>1.16.0-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-theme-base-book</artifactId><version>1.7.0-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-view-content-book</artifactId><version>1.9.0-POST-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-news-all</artifactId><version>1.9.0-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-section-all</artifactId><version>1.8.0-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+      </dependency>
+      <!-- Transitive -->
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-badges</artifactId><version>1.10.1${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-collections</artifactId><version>3.0.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-concurrent</artifactId><version>4.0.5${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-encoding</artifactId><version>7.0.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-encoding-servlet</artifactId><version>4.2.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-encoding-taglib</artifactId><version>5.0.0-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-fluent-html</artifactId><version>0.7.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-fluent-html-any</artifactId><version>0.8.0-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-fluent-html-servlet</artifactId><version>0.7.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-hodgepodge</artifactId><version>5.2.0-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-io-buffer</artifactId><version>4.1.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-lang</artifactId><version>5.6.0-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-net-types</artifactId><version>2.0.2${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-servlet-last-modified</artifactId><version>3.0.1${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-servlet-subrequest</artifactId><version>2.0.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-servlet-util</artifactId><version>5.3.0-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-style</artifactId><version>2.0.1${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-taglib</artifactId><version>8.0.0-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-tempfiles</artifactId><version>3.0.2${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-tempfiles-servlet</artifactId><version>3.0.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-tld-parser</artifactId><version>2.0.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-tlds</artifactId><version>2.0.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-web-resources-registry</artifactId><version>0.6.0-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-web-resources-servlet</artifactId><version>0.5.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId><artifactId>commons-lang3</artifactId><version>3.13.0</version>
+      </dependency>
+      <dependency>
+        <groupId>javax.el</groupId><artifactId>javax.el-api</artifactId><version>3.0.0</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>javax.servlet</groupId><artifactId>javax.servlet-api</artifactId><version>3.1.0</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>javax.servlet.jsp</groupId><artifactId>javax.servlet.jsp-api</artifactId><version>2.3.3</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>joda-time</groupId><artifactId>joda-time</artifactId><version>2.12.5</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-changelog-taglib</artifactId><version>1.7.1${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-model</artifactId><version>1.14.1${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-servlet</artifactId><version>1.20.0-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-taglib</artifactId><version>1.16.0-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-news-model</artifactId><version>1.3.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-news-servlet</artifactId><version>1.7.1${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-news-taglib</artifactId><version>1.8.0-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-section-model</artifactId><version>1.6.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-section-servlet</artifactId><version>1.11.2${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-section-taglib</artifactId><version>1.10.0-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-tag-reference</artifactId><version>1.10.2-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+      </dependency>
+      <!-- javaee-web-api-bom: <groupId>org.apache.taglibs</groupId><artifactId>taglibs-standard-spec</artifactId> -->
+      <!-- Runtime Direct -->
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-mime-mappings</artifactId><version>1.2.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-servlet-filter</artifactId><version>3.0.3${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-theme-documentation</artifactId><version>1.13.0-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+      </dependency>
+      <!-- Runtime Transitive -->
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-javadoc-offline</artifactId><version>3.4.1${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-web-resources-renderer</artifactId><version>0.6.0-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+      </dependency>
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>ao-web-resources-taglib</artifactId><version>0.6.0-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+      </dependency>
+      <dependency>
+        <groupId>org.webjars.npm</groupId><artifactId>d3</artifactId><version>7.8.5</version>
+      </dependency>
+      <dependency>
+        <groupId>org.webjars.npm</groupId><artifactId>dagre</artifactId><version>0.8.5</version>
+      </dependency>
+      <dependency>
+        <groupId>org.webjars.npm</groupId><artifactId>dagre-d3</artifactId><version>0.6.4</version>
+      </dependency>
+      <dependency>
+        <groupId>org.webjars.npm</groupId><artifactId>graphlib</artifactId><version>2.1.8</version>
+      </dependency>
+      <dependency>
+        <groupId>joda-time</groupId><artifactId>joda-time-jsptags</artifactId><version>1.1.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.webjars.npm</groupId><artifactId>lodash</artifactId><version>4.17.21</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-breadcrumblist-json-ld</artifactId><version>1.5.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-canonical</artifactId><version>1.3.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-sitemap</artifactId><version>1.16.0-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-style</artifactId><version>1.5.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-theme-base</artifactId><version>1.7.0-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-view-content</artifactId><version>1.9.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-file-model</artifactId><version>1.5.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-file-servlet</artifactId><version>1.10.1${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-file-taglib</artifactId><version>1.10.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-news-rss</artifactId><version>1.6.2${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-news-style</artifactId><version>1.4.1${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-news-view</artifactId><version>1.7.0-SNAPSHOT<!-- ${POST-SNAPSHOT} --></version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-pagegraph</artifactId><version>1.7.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-section-style</artifactId><version>1.8.0${POST-SNAPSHOT}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.semanticcms</groupId><artifactId>semanticcms-theme-documentation-style</artifactId><version>1.9.1${POST-SNAPSHOT}</version>
+      </dependency>
+      <!-- javaee-web-api-bom: <groupId>org.apache.taglibs</groupId><artifactId>taglibs-standard-impl</artifactId> -->
+      <!-- Imports -->
+      <dependency>
+        <groupId>com.aoapps</groupId><artifactId>javaee-web-api-bom</artifactId><version>7.0.1-POST-SNAPSHOT</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <!-- Direct -->
+    <dependency>
+      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-all</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-all-book</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-bom-book</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-book</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-breadcrumblist-json-ld-book</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-canonical-book</artifactId>
+    </dependency>
+    <!-- Can't run /core/docs here due to cyclic dependency -->
+    <dependency>
+      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-model-book</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-servlet-book</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-sitemap-book</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-style-book</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-taglib-book</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-theme-base-book</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.semanticcms</groupId><artifactId>semanticcms-core-view-content-book</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.semanticcms</groupId><artifactId>semanticcms-news-all</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.semanticcms</groupId><artifactId>semanticcms-section-all</artifactId>
+    </dependency>
+    <!-- Runtime Direct -->
+    <dependency>
+      <!-- Required for UTF-8 static resources -->
+      <groupId>com.aoapps</groupId><artifactId>ao-mime-mappings</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.aoapps</groupId><artifactId>ao-servlet-filter</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.semanticcms</groupId><artifactId>semanticcms-theme-documentation</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+  </dependencies>
+</project>

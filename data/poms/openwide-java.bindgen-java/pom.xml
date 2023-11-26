@@ -1,0 +1,368 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>fr.openwide.core.components</groupId>
+	<artifactId>bindgen-java</artifactId>
+	<version>0.2.2</version>
+	
+	<name>owsi-core java.* bindings</name>
+	<description>Pre-generated bindings for java classes</description>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		
+		<bindgen.version>3.1.0</bindgen.version>
+		<slf4j.version>1.6.1</slf4j.version>
+		<guava.version>19.0</guava.version>
+		
+		<maven-toolchains-plugin.version>1.1</maven-toolchains-plugin.version>
+		<maven-compiler-plugin.version>3.6.0</maven-compiler-plugin.version>
+		<maven-enforcer-plugin.version>1.4.1</maven-enforcer-plugin.version>
+		<maven-jgitflow-plugin.version>1.0-m5.1</maven-jgitflow-plugin.version>
+		<animal-sniffer-maven-plugin.version>1.15</animal-sniffer-maven-plugin.version>
+		
+		<jdk.signature.groupId>org.codehaus.mojo.signature</jdk.signature.groupId>
+		<jdk.signature.artifactId>java18</jdk.signature.artifactId>
+		<jdk.signature.version>1.0</jdk.signature.version>
+		<jdk.version>1.8</jdk.version>
+		<minimal.jdk.version>1.8</minimal.jdk.version>
+		<minimal.maven.version>3.3</minimal.maven.version>
+	</properties>
+
+	<!-- Toolchain configuration so that bindgen can be generated either for jdk7 or jdk8 -->
+	<profiles>
+		<profile>
+			<id>owsi-core</id>
+			<activation>
+				<property>
+					<name>owsi-core</name>
+				</property>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-compiler-plugin</artifactId>
+						<configuration>
+							<compilerArguments>
+								<AbindingPathSuperClass>fr.openwide.core.commons.util.binding.AbstractCoreBinding</AbindingPathSuperClass>
+							</compilerArguments>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>jdk7</id>
+			<activation>
+				<property>
+					<name>jdk7</name>
+				</property>
+			</activation>
+			<properties>
+				<jdk.signature.groupId>org.codehaus.mojo.signature</jdk.signature.groupId>
+				<jdk.signature.artifactId>java17</jdk.signature.artifactId>
+				<jdk.signature.version>1.0</jdk.signature.version>
+				<jdk.version>1.7</jdk.version>
+			</properties>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-toolchains-plugin</artifactId>
+						<configuration>
+							<toolchains>
+								<jdk>
+									<version>1.7</version>
+								</jdk>
+							</toolchains>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>jdk8</id>
+			<activation>
+				<property>
+					<name>jdk8</name>
+				</property>
+			</activation>
+			<properties>
+				<jdk.signature.groupId>org.codehaus.mojo.signature</jdk.signature.groupId>
+				<jdk.signature.artifactId>java18</jdk.signature.artifactId>
+				<jdk.signature.version>1.0</jdk.signature.version>
+				<jdk.version>1.8</jdk.version>
+			</properties>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-toolchains-plugin</artifactId>
+						<configuration>
+							<toolchains>
+								<jdk>
+									<version>1.8</version>
+								</jdk>
+							</toolchains>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<activation>
+				<property>
+					<name>distribution</name>
+					<value>owsi-core-release</value>
+				</property>
+			</activation>
+			<distributionManagement>
+				<repository>
+					<id>nexus-owsi-core</id>
+					<name>Nexus OWSI Core</name>
+					<url>https://projects.openwide.fr/services/nexus/content/repositories/owsi-core</url>
+				</repository>
+				<snapshotRepository>
+					<id>nexus-owsi-core-snapshots</id>
+					<name>Nexus OWSI Core Snapshots</name>
+					<url>https://projects.openwide.fr/services/nexus/content/repositories/owsi-core-snapshots</url>
+				</snapshotRepository>
+			</distributionManagement>
+		</profile>
+	</profiles>
+
+	<dependencies>
+		<!-- bindgen generator and bases classes -->
+		<dependency>
+			<groupId>org.bindgen</groupId>
+			<artifactId>bindgen</artifactId>
+			<version>${bindgen.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-api</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>${slf4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>${guava.version}</version>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<!-- processor and compiler
+			
+			maven-compiler-plugin must be used in place of maven-processor-plugin because it supports toolchain
+			-->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>animal-sniffer-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>external.atlassian.jgitflow</groupId>
+				<artifactId>jgitflow-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>${maven-compiler-plugin.version}</version>
+					<!-- two phases : processor and compiler -->
+					<executions>
+						<execution>
+							<id>default-compile</id>
+						</execution>
+						<execution>
+							<id>default-processor</id>
+							<phase>generate-sources</phase>
+							<goals>
+								<goal>compile</goal>
+							</goals>
+							<configuration>
+								<proc>only</proc>
+							</configuration>
+						</execution>
+					</executions>
+					<configuration>
+						<source>${jdk.version}</source>
+						<target>${jdk.version}</target>
+						<fork>true</fork>
+						<annotationProcessorPaths>
+							<path>
+								<groupId>org.bindgen</groupId>
+								<artifactId>bindgen</artifactId>
+								<version>${bindgen.version}</version>
+							</path>
+						</annotationProcessorPaths>
+						<annotationProcessors>
+							<annotationProcessor>org.bindgen.processor.Processor</annotationProcessor>
+						</annotationProcessors>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-toolchains-plugin</artifactId>
+					<version>${maven-toolchains-plugin.version}</version>
+					<!-- trigger toolchain system -->
+					<executions>
+						<execution>
+							<goals>
+								<goal>toolchain</goal>
+							</goals>
+						</execution>
+					</executions>
+				</plugin>
+				<!-- Enforce code compatibility with the target JRE, even when building with a newer JDK. This ensures
+					that none of the newer classes or methods that were not yet defined in the target JRE are referenced 
+					in this project. See https://maven.apache.org/guides/mini/guide-building-jdk14-on-jdk15.html Please
+					be aware that code generation tools may be affected by the JDK used to compile, and thus may trigger 
+					a failure (because they automatically referenced newer classes or methods). In this case, the only
+					way to make things work is to use the proper JDK. -->
+				<plugin>
+					<groupId>org.codehaus.mojo</groupId>
+					<artifactId>animal-sniffer-maven-plugin</artifactId>
+					<version>${animal-sniffer-maven-plugin.version}</version>
+					<!-- check generated bindings jre api calls -->
+					<executions>
+						<execution>
+							<id>check-java-version</id>
+							<phase>compile</phase>
+							<goals>
+								<goal>check</goal>
+							</goals>
+							<configuration>
+								<signature>
+									<groupId>${jdk.signature.groupId}</groupId>
+									<artifactId>${jdk.signature.artifactId}</artifactId>
+									<version>${jdk.signature.version}</version>
+								</signature>
+							</configuration>
+						</execution>
+					</executions>
+					<dependencies>
+						<dependency>
+							<groupId>${jdk.signature.groupId}</groupId>
+							<artifactId>${jdk.signature.artifactId}</artifactId>
+							<version>${jdk.signature.version}</version>
+							<type>signature</type>
+						</dependency>
+					</dependencies>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-enforcer-plugin</artifactId>
+					<version>${maven-enforcer-plugin.version}</version>
+					<executions>
+						<execution>
+							<id>enforce</id>
+							<goals>
+								<goal>enforce</goal>
+							</goals>
+							<configuration>
+								<rules>
+									<DependencyConvergence />
+									<requireMavenVersion>
+										<version>[${minimal.maven.version},)</version>
+									</requireMavenVersion>
+									<requireJavaVersion>
+										<version>${minimal.jdk.version}</version>
+									</requireJavaVersion>
+								</rules>
+							</configuration>
+						</execution>
+					</executions>
+				</plugin>
+				<plugin>
+					<groupId>external.atlassian.jgitflow</groupId>
+					<artifactId>jgitflow-maven-plugin</artifactId>
+					<version>${maven-jgitflow-plugin.version}</version>
+					<configuration>
+						<autoVersionSubmodules>true</autoVersionSubmodules>
+						<flowInitContext>
+							<masterBranchName>master</masterBranchName>
+							<developBranchName>dev</developBranchName>
+							<featureBranchPrefix>ft-</featureBranchPrefix>
+							<releaseBranchPrefix>rl-</releaseBranchPrefix>
+							<hotfixBranchPrefix>hf-</hotfixBranchPrefix>
+							<versionTagPrefix>v</versionTagPrefix>
+						</flowInitContext>
+					</configuration>
+				</plugin>
+				
+				<!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>org.codehaus.mojo</groupId>
+										<artifactId>animal-sniffer-maven-plugin</artifactId>
+										<versionRange>[${animal-sniffer-maven-plugin.version},)</versionRange>
+										<goals>
+											<goal>check</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore />
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+
+	<scm>
+		<url>git@github.com:openwide-java/bindgen-java.git</url>
+		<connection>scm:git:git@github.com:openwide-java/bindgen-java.git</connection>
+		<developerConnection>scm:git:git@github.com:openwide-java/bindgen-java.git</developerConnection>
+		<tag>HEAD</tag>
+	</scm>
+
+	<repositories>
+		<repository>
+			<id>bindgen</id>
+			<url>http://repo.joist.ws/</url>
+		</repository>
+		<repository>
+			<id>nexus-owsi-core</id>
+			<name>Nexus OWSI Core</name>
+			<url>https://projects.openwide.fr/services/nexus/content/repositories/owsi-core</url>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</repository>
+		<repository>
+			<id>nexus-owsi-core-snapshots</id>
+			<name>Nexus OWSI Core Snapshots</name>
+			<url>https://projects.openwide.fr/services/nexus/content/repositories/owsi-core-snapshots</url>
+			<releases>
+				<enabled>false</enabled>
+			</releases>
+		</repository>
+	</repositories>
+</project>

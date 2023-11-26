@@ -1,0 +1,345 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.lge.stark</groupId>
+	<artifactId>eddard</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>Eddard</name>
+	<description>Messenger Server hive</description>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+
+	<profiles>
+		<!-- Just for fixing compile time error on pom.xml -->
+		<profile>
+			<id>dummy.profile</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<properties>
+				<env>local</env>
+			</properties>
+		</profile>
+	</profiles>
+
+	<dependencies>
+		<dependency>
+			<groupId>net.anyflow</groupId>
+			<artifactId>menton</artifactId>
+			<version>1.7.1</version>
+		</dependency>
+
+		<!-- APNS java library. Refer https://github.com/relayrides/pushy -->
+		<dependency>
+			<groupId>com.relayrides</groupId>
+			<artifactId>pushy</artifactId>
+			<version>0.4.3</version>
+		</dependency>
+
+		<dependency>
+		    <groupId>org.elasticsearch</groupId>
+		    <artifactId>elasticsearch</artifactId>
+		    <version>2.1.1</version>
+		</dependency>
+
+	</dependencies>
+
+	<build>
+		<finalName>${project.artifactId}-${project.version}-${git.commit.id.describe}</finalName>
+
+		<filters>
+			<filter>${project.basedir}/build.parameters/${env}.properties</filter>
+		</filters>
+
+		<resources>
+			<resource>
+				<filtering>true</filtering>
+				<directory>src/main/resources</directory>
+				<targetPath>../</targetPath>
+				<includes>
+					<include>application.properties</include>
+					<include>log4j.xml</include>
+					<include>startup.sh</include>
+					<include>shutdown.sh</include>
+				</includes>
+			</resource>
+			<resource>
+				<filtering>false</filtering>
+				<directory>src/main/resources</directory>
+				<excludes>
+					<exclude>application.properties</exclude>
+					<exclude>log4j.xml</exclude>
+					<exclude>startup.sh</exclude>
+					<exclude>shutdown.sh</exclude>
+				</excludes>
+			</resource>
+		</resources>
+
+		<plugins>
+
+			<!-- Force eclipse use java version 1.7 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.3</version>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+
+			<!-- skip test on mavening... To skip test, follow the command : mvn package 
+				-Dmaven.test.skip=true -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.16</version>
+				<configuration>
+					<skipTests>false</skipTests>
+					<includes>
+						<include>**/</include>
+					</includes>
+				</configuration>
+			</plugin>
+
+			<!-- for jar packaging -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>2.4</version>
+				<configuration>
+					<archive>
+						<manifest>
+							<addClasspath>true</addClasspath>
+							<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+							<addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+							<classpathPrefix>lib/</classpathPrefix>
+							<mainClass>com.lge.stark.Entrypoint</mainClass>
+						</manifest>
+					</archive>
+				</configuration>
+			</plugin>
+
+			<!-- Copy dependencies to lib directory -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<version>2.1</version>
+				<executions>
+					<execution>
+						<id>copy-dependencies</id>
+						<phase>package</phase>
+						<goals>
+							<goal>copy-dependencies</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${project.build.directory}/lib</outputDirectory>
+							<overWriteReleases>false</overWriteReleases>
+							<overWriteSnapshots>false</overWriteSnapshots>
+							<overWriteIfNewer>true</overWriteIfNewer>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- run jar via maven (mvn exec:java) -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.2.1</version>
+				<configuration>
+					<mainClass>com.lge.stark.Entrypoint</mainClass>
+				</configuration>
+			</plugin>
+
+			<!-- create archive for deploy -->
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<configuration>
+					<finalName>[${maven.build.timestamp}]${project.build.finalName}</finalName>
+					<workDirectory>target/assembly/work</workDirectory>
+					<descriptors>
+						<descriptor>${project.basedir}/build.parameters/distribution.xml</descriptor>
+					</descriptors>
+				</configuration>
+				<executions>
+					<execution>
+						<id>assembly</id>
+						<phase>deploy</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- In case of .git doesn't exist, pre-generated buildinfo.properties 
+				will be used in project.build.finalname. -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>properties-maven-plugin</artifactId>
+				<version>1.0-alpha-2</version>
+				<executions>
+					<execution>
+						<phase>initialize</phase>
+						<goals>
+							<goal>read-project-properties</goal>
+						</goals>
+						<configuration>
+							<quiet>true</quiet>
+							<files>
+								<file>${project.basedir}/build.parameters/buildinfo.properties</file>
+								<file>${project.basedir}/build.parameters/${env}.properties</file>
+							</files>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- Using git commit id on project.build.finalname. Refer /src/main/resources/buildinfo.properties. -->
+			<plugin>
+				<groupId>pl.project13.maven</groupId>
+				<artifactId>git-commit-id-plugin</artifactId>
+				<version>2.2.0</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>revision</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<dotGitDirectory>${project.basedir}/.git</dotGitDirectory>
+					<generateGitPropertiesFile>true</generateGitPropertiesFile>
+					<generateGitPropertiesFilename>${project.basedir}/build.parameters/buildinfo.properties</generateGitPropertiesFilename>
+					<failOnNoGitDirectory>false</failOnNoGitDirectory>
+					<gitDescribe>
+						<skip>false</skip>
+						<always>false</always>
+						<abbrev>7</abbrev>
+						<dirty>-dirty</dirty>
+						<forceLongFormat>false</forceLongFormat>
+					</gitDescribe>
+				</configuration>
+			</plugin>
+
+			<!-- supress default deploy plugin running -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-deploy-plugin</artifactId>
+				<version>2.8.1</version>
+				<configuration>
+					<skip>true</skip>
+				</configuration>
+			</plugin>
+
+			<!-- deploy to server -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>1.6</version>
+				<executions>
+					<execution>
+						<id>deploy</id>
+						<configuration>
+							<target>
+								<echo>Sending package...</echo>
+								<scp
+									todir="${deployTarget.username}@${my.host}:${deployTarget.archive}"
+									port="${deployTarget.ssh.port}" keyfile="${deployTarget.keyfile}"
+									passphrase="${deployTarget.passphrase}" trust="true"
+									failonerror="true" verbose="true">
+									<fileset dir="${project.build.directory}">
+										<include name="*.zip" />
+									</fileset>
+								</scp>
+								<echo>Shutting down eddard...</echo>
+								<sshexec host="${my.host}" port="${deployTarget.ssh.port}"
+									username="${deployTarget.username}" keyfile="${deployTarget.keyfile}"
+									passphrase="${deployTarget.passphrase}" trust="true"
+									failonerror="false" verbose="true"
+									command="sh ${deployTarget.dir}/shutdown.sh" />
+								<echo>Copying old resources...</echo>
+								<sshexec host="${my.host}" port="${deployTarget.ssh.port}"
+									username="${deployTarget.username}" keyfile="${deployTarget.keyfile}"
+									passphrase="${deployTarget.passphrase}" trust="true"
+									failonerror="false" verbose="true"
+									command="cp -rf ${deployTarget.dir} ${deployTarget.dir}.bak" />
+								<echo>Deleting old resources...</echo>
+								<sshexec host="${my.host}" port="${deployTarget.ssh.port}"
+									username="${deployTarget.username}" keyfile="${deployTarget.keyfile}"
+									passphrase="${deployTarget.passphrase}" trust="true"
+									failonerror="false" verbose="true" command="rm -rf ${deployTarget.dir}" />
+								<echo>Unpacking package...</echo>
+								<sshexec host="${my.host}" port="${deployTarget.ssh.port}"
+									username="${deployTarget.username}" keyfile="${deployTarget.keyfile}"
+									passphrase="${deployTarget.passphrase}" trust="true"
+									failonerror="true" verbose="true"
+									command="unzip ${deployTarget.archive}/[${maven.build.timestamp}]${project.build.finalName}-bin.zip -d ${deployTarget.dir}" />
+								<echo>Executing chmod startup/shutdown scripts...</echo>
+								<sshexec host="${my.host}" port="${deployTarget.ssh.port}"
+									username="${deployTarget.username}" keyfile="${deployTarget.keyfile}"
+									passphrase="${deployTarget.passphrase}" trust="true"
+									failonerror="false" verbose="true"
+									command="chmod u+x ${deployTarget.dir}/*.sh" />
+								<echo>Starting up eddard...</echo>
+								<sshexec host="${my.host}" port="${deployTarget.ssh.port}"
+									username="${deployTarget.username}" keyfile="${deployTarget.keyfile}"
+									passphrase="${deployTarget.passphrase}" trust="true"
+									failonerror="true" verbose="true" command="sh ${deployTarget.dir}/startup.sh" />
+							</target>
+						</configuration>
+						<phase>deploy</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+				</executions>
+				<dependencies>
+					<dependency>
+						<groupId>com.jcraft</groupId>
+						<artifactId>jsch</artifactId>
+						<version>0.1.38</version>
+					</dependency>
+					<dependency>
+						<groupId>org.apache.ant</groupId>
+						<artifactId>ant-jsch</artifactId>
+						<version>1.7.1</version>
+					</dependency>
+				</dependencies>
+			</plugin>
+		</plugins>
+		<pluginManagement>
+			<plugins>
+				<!--This plugin's configuration is used to store Eclipse m2e settings 
+					only. It has no influence on the Maven build itself. -->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>org.codehaus.mojo</groupId>
+										<artifactId>properties-maven-plugin</artifactId>
+										<versionRange>[1.0-alpha-2,)</versionRange>
+										<goals>
+											<goal>read-project-properties</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore></ignore>
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+</project>

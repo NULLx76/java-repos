@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>ru.ilb.test</groupId>
+    <artifactId>test-episodes</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.7</maven.compiler.source>
+        <maven.compiler.target>1.7</maven.compiler.target>
+    </properties>
+    <dependencies>
+        <!-- sources located at https://github.com/ilb/w3c-meta -->
+        <dependency>
+            <groupId>ru.ilb.w3c</groupId>
+            <artifactId>w3c-meta</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>javax</groupId>
+            <artifactId>javaee-web-api</artifactId>
+            <version>7.0</version>
+            <type>jar</type>
+            <scope>provided</scope>
+        </dependency>
+
+    </dependencies>
+    <build>
+        <plugins>
+            <!-- unpack w3c-meta to access w3c.episode -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>2.1</version>
+                <executions>
+                    <execution>
+                        <id>unpack</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>ru.ilb.w3c</groupId>
+                                    <artifactId>w3c-meta</artifactId>
+                                    <type>jar</type>
+                                    <overWrite>false</overWrite>
+                                    <outputDirectory>${project.build.directory}/schemas-build-root</outputDirectory>
+                                </artifactItem>
+                            </artifactItems>
+                            <includes>schemas/**</includes>
+                            <overWriteReleases>false</overWriteReleases>
+                            <overWriteSnapshots>true</overWriteSnapshots>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.cxf</groupId>
+                <artifactId>cxf-wadl2java-plugin</artifactId>
+                <version>3.1.4</version>
+                <executions>
+                    <execution>
+                        <id>generate-sources</id>
+                        <phase>generate-sources</phase>
+                        <configuration>
+                            <sourceRoot>${project.build.directory}/generated-sources/xjc</sourceRoot>
+                            <wadlOptions>
+                                <wadlOption>
+                                    <wadl>${basedir}/src/main/resources/schemas/test/test.wadl</wadl>
+                                    <bindingFiles>
+                                        <bindingFile>${basedir}/src/main/resources/schemas/test/resource.xjb</bindingFile>
+                                        <!-- leads to "Error compiling schema from WADL : "file:...." is not a part of this compilation. Is this a mistake for ..."
+                                        <bindingFile>classpath:/schemas/w3c/w3c.episode</bindingFile>-->
+                                    </bindingFiles>
+                                    <extraargs>
+                                        <extraarg>-verbose</extraarg>
+                                        <extraarg>-inheritResourceParams</extraarg>
+                                        <extraarg>-xjc-Xfluent-api</extraarg>
+                                        <extraarg>-catalog</extraarg>
+                                        <extraarg>${basedir}/src/main/resources/catalog.xml</extraarg>
+                                        <!-- leads to java.lang.ClassCastException: org.apache.cxf.catalog.OASISCatalogManager$1 cannot be cast to com.sun.org.apache.xml.internal.resolver.tools.CatalogResolver
+                                        <extraarg>-xjc-catalog</extraarg>
+                                        <extraarg>-xjc${basedir}/src/main/resources/catalog.xml</extraarg>-->
+
+                                        <extraarg>-xjc-enableIntrospection</extraarg>
+                                        <extraarg>-xjc-b</extraarg>
+                                        <!--<extraarg>-xjc/classpath:/schemas/w3c/w3c.episode</extraarg>-->
+                                        <!--<extraarg>-xjcschemas/w3c/w3c.episode</extraarg>-->
+                                        <!--<extraarg>-xjchttp://www.w3.org/1999/w3c.episode</extraarg>-->
+                                        <!-- working, but requires to unpack w3c-meta -->
+                                        <extraarg>-xjc${project.build.directory}/schemas-build-root/schemas/w3c/w3c.episode</extraarg>
+                                    </extraargs>
+                                </wadlOption>
+                            </wadlOptions>
+                        </configuration>
+                        <goals>
+                            <goal>wadl2java</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.jvnet.jaxb2_commons</groupId>
+                        <artifactId>jaxb2-fluent-api</artifactId>
+                        <version>3.0</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+~ Copyright (c) 2013 Google Inc. All Rights Reserved.
+~
+~ Licensed under the Apache License, Version 2.0 (the "License"); you
+~ may not use this file except in compliance with the License. You may
+~ obtain a copy of the License at
+~
+~     http://www.apache.org/licenses/LICENSE-2.0
+~
+~ Unless required by applicable law or agreed to in writing, software
+~ distributed under the License is distributed on an "AS IS" BASIS,
+~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+~ implied. See the License for the specific language governing
+~ permissions and limitations under the License.
+-->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+  <packaging>war</packaging>
+  <version>1.0-SNAPSHOT</version>
+
+  <groupId>com.webtide.appengine.tests</groupId>
+  <artifactId>gae-test-webapp</artifactId>
+
+  <properties>
+    <appengine.target.version>1.9.27</appengine.target.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+  <scm>
+    <connection>scm:git:https://github.com/jetty-project/gae-test-webapp.git</connection>
+  </scm>
+
+  <dependencies>
+    <!-- Compile/runtime dependencies -->
+    <dependency>
+      <groupId>com.google.appengine</groupId>
+      <artifactId>appengine-api-1.0-sdk</artifactId>
+      <version>${appengine.target.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>javax.servlet-api</artifactId>
+      <version>3.1.0</version>
+      <type>jar</type>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>javax.servlet.jsp</groupId>
+      <artifactId>javax.servlet.jsp-api</artifactId>
+      <version>2.3.1</version>
+    </dependency>
+    <dependency>
+      <groupId>jstl</groupId>
+      <artifactId>jstl</artifactId>
+      <version>1.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-annotations</artifactId>
+      <version>9.3.5.v20151012</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <!-- needed for enabling compile/reload on save in mordern IDEs...-->
+    <outputDirectory>target/${project.artifactId}-${project.version}/WEB-INF/classes</outputDirectory>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <version>2.5.1</version>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.7</source>
+          <target>1.7</target>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>com.google.appengine</groupId>
+        <artifactId>gcloud-maven-plugin</artifactId>
+        <version>2.0.9.89.v20151202</version>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <activation>
+        <property>
+          <name>docker-image</name>
+        </property>
+      </activation>
+
+      <build>
+        <plugins>
+
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>1.8</version>
+            <executions>
+              <execution>
+                <phase>prepare-package</phase>
+                <configuration>
+                  <target>
+                    <mkdir dir="${project.basedir}/target/docker-${docker-image}"/>
+		    <copy file="${project.basedir}/target/${project.name}-${project.version}.war"
+		          tofile="${project.basedir}/target/docker-${docker-image}/root.war"/>
+                    <echo file="${project.basedir}/target/docker-${docker-image}/Dockerfile"
+                          message="FROM ${docker-image}${line.separator}"/>
+                    <echo file="${project.basedir}/target/docker-${docker-image}/Dockerfile"
+                          append="true"
+                          message="ADD root.war /var/lib/jetty/webapps/"/>
+                  </target>
+                </configuration>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>com.spotify</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <version>0.3.2</version>
+            <executions>
+              <execution>
+                <id>build</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>build</goal>
+                </goals>
+                <configuration>
+                  <imageName>${project.name}:latest</imageName>
+                  <dockerDirectory>${project.basedir}/target/docker-${docker-image}</dockerDirectory>
+                </configuration>
+              </execution>
+              <execution>
+                <id>clean-docker</id>
+                <phase>clean</phase>
+                <goals>
+                  <goal>removeImage</goal>
+                </goals>
+                <configuration>
+                  <imageName>${project.name}</imageName>
+                  <imageTags>
+                    <imageTag>${docker-image}</imageTag>
+                  </imageTags>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+</project>

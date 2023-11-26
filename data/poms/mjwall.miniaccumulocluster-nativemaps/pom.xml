@@ -1,0 +1,113 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.mjwall</groupId>
+  <artifactId>miniaccumulocluster-nativemaps</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>miniaccumulocluster-nativemaps</name>
+  <url>http://maven.apache.org</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <accumulo.version>1.6.2</accumulo.version>
+    <java.version>1.7</java.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.accumulo</groupId>
+      <artifactId>accumulo-minicluster</artifactId>
+      <version>${accumulo.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.12</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.5</version>
+        <configuration>
+          <source>${java.version}</source>
+          <target>${java.version}</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.4.0</version>
+        <executions>
+          <!-- build native library before compile -->
+          <execution>
+            <id>build-native-libs</id>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <phase>process-resources</phase>
+            <configuration>
+              <executable>make</executable>
+              <workingDirectory>${project.build.directory}/build-native/accumulo-native-${accumulo.version}</workingDirectory>
+            </configuration>
+          </execution>
+          <!-- run shell at test phase -->
+          <execution>
+            <id>run-shell</id>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <phase>test</phase>
+            <configuration>
+              <executable>java</executable>
+              <environmentVariables>
+                <DYLIB_LIBRARY_PATH>${project.build.directory}/build-native/accumulo-native-${accumulo.version}</DYLIB_LIBRARY_PATH>
+                <LD_LIBRARY_PATH>${project.build.directory}/build-native/accumulo-native-${accumulo.version}</LD_LIBRARY_PATH>
+              </environmentVariables>
+              <arguments>
+                <!--
+                <argument>-Djava.library.path=${project.build.directory}/build-native/accumulo-native-${accumulo.version}</argument>
+                -->
+                <argument>-classpath</argument>
+                <classpath/>
+                <argument>com.mjwall.mac.nativemaps.MiniAccumuloClusterNativeTest</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+         <groupId>org.apache.maven.plugins</groupId>
+         <artifactId>maven-dependency-plugin</artifactId>
+         <version>2.10</version>
+         <executions>
+           <execution>
+             <id>unpack</id>
+             <phase>generate-resources</phase>
+             <goals>
+               <goal>unpack</goal>
+             </goals>
+             <configuration>
+               <artifactItems>
+                 <artifactItem>
+                   <groupId>org.apache.accumulo</groupId>
+                   <artifactId>accumulo-native</artifactId>
+                   <version>${accumulo.version}</version>
+                   <type>tar.gz</type>
+                   <overWrite>false</overWrite>
+                   <outputDirectory>${project.build.directory}/build-native</outputDirectory>
+                 </artifactItem>
+               </artifactItems>
+             </configuration>
+           </execution>
+         </executions>
+       </plugin>
+    </plugins>
+  </build>
+</project>

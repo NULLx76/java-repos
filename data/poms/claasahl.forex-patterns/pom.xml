@@ -1,0 +1,247 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>org.claasahl</groupId>
+	<artifactId>forex-patterns</artifactId>
+	<packaging>war</packaging>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>forex-patterns Maven Webapp</name>
+	<url>http://maven.apache.org</url>
+	<dependencies>
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>${version-jax-servlet}</version>
+		</dependency>
+		<dependency>
+			<groupId>javax.ws.rs</groupId>
+			<artifactId>javax.ws.rs-api</artifactId>
+			<version>${version-jax-rs}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
+			<version>${version-gson}</version>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>${version-junit}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.rest-assured</groupId>
+			<artifactId>rest-assured</artifactId>
+			<version>${version-rest-assured}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>guru.nidi.raml</groupId>
+			<artifactId>raml-tester</artifactId>
+			<version>${version-raml-tester}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.raml</groupId>
+			<artifactId>raml-parser</artifactId>
+			<version>${version-raml-parser}</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+	<build>
+		<!-- do not forget: plugin for generating JAX-RS from RAML -->
+		<!-- do not forget: plugin for testing RAML specification -->
+		<finalName>forex-patterns</finalName>
+		<plugins>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${version-maven-compiler}</version>
+				<configuration>
+					<source>${version-java}</source>
+					<target>${version-java}</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<!-- http://gleclaire.github.io/findbugs-maven-plugin/ -->
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>findbugs-maven-plugin</artifactId>
+				<version>${version-find-bugs}</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<!-- https://github.com/eirslett/frontend-maven-plugin -->
+				<groupId>com.github.eirslett</groupId>
+				<artifactId>frontend-maven-plugin</artifactId>
+				<version>${version-frontend}</version>
+				<executions>
+					<execution>
+						<id>install node and npm</id>
+						<goals>
+							<goal>install-node-and-npm</goal>
+						</goals>
+						<configuration>
+							<nodeVersion>${version-node-js}</nodeVersion>
+						</configuration>
+					</execution>
+					<execution>
+						<id>npm install</id>
+						<goals>
+							<goal>npm</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<!-- https://github.com/mulesoft/raml-for-jax-rs/blob/master/maven-plugin.md -->
+				<groupId>org.raml.plugins</groupId>
+				<artifactId>raml-jaxrs-maven-plugin</artifactId>
+				<version>${version-jax-rs-raml}</version>
+				<configuration>
+					<jaxrsVersion>2.0</jaxrsVersion>
+					<jsonMapper>gson</jsonMapper>
+					<removeOldOutput>true</removeOldOutput>
+				</configuration>
+				<executions>
+					<execution>
+						<id>raml-to-jaxrs-api-v1</id>
+						<goals>
+							<goal>generate</goal>
+						</goals>
+						<phase>generate-sources</phase>
+						<configuration>
+							<sourceDirectory>${basedir}/src/main/raml/v1</sourceDirectory>
+							<basePackageName>de.claas.forex.api.v1</basePackageName>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<!-- https://www.eclipse.org/jetty/documentation/current/jetty-maven-plugin.html -->
+				<groupId>org.eclipse.jetty</groupId>
+				<artifactId>jetty-maven-plugin</artifactId>
+				<version>${version-jetty}</version>
+				<configuration>
+					<stopKey>stopKey</stopKey>
+					<stopPort>9999</stopPort>
+					<stopWait>30</stopWait>
+					<webApp>
+						<contextPath>${application-context-path}</contextPath>
+					</webApp>
+				</configuration>
+				<executions>
+					<execution>
+						<id>start-jetty</id>
+						<phase>pre-integration-test</phase>
+						<goals>
+							<goal>start</goal>
+						</goals>
+						<configuration>
+							<scanIntervalSeconds>0</scanIntervalSeconds>
+						</configuration>
+					</execution>
+					<execution>
+						<id>stop-jetty</id>
+						<phase>post-integration-test</phase>
+						<goals>
+							<goal>stop</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>${version-maven-antrun}</version>
+				<executions>
+					<execution>
+						<phase>compile</phase>
+						<configuration>
+							<target>
+								<!-- https://ant.apache.org/manual/index.html -->
+								<delete dir="${application-public-assets}" />
+								<copy todir="${application-public-assets}">
+									<fileset dir="${node-modules}/tether/dist/" />
+									<fileset dir="${node-modules}/bootstrap/dist/" />
+									<!-- consider minifying files -->
+									<fileset dir="${application-private-assets}" />
+								</copy>
+								<copy todir="${application-public-assets}/js">
+									<fileset dir="${node-modules}/jquery/dist/" />
+								</copy>
+							</target>
+						</configuration>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+		<pluginManagement>
+			<plugins>
+				<!--This plugin's configuration is used to store Eclipse m2e settings 
+					only. It has no influence on the Maven build itself. -->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>
+											org.apache.maven.plugins
+										</groupId>
+										<artifactId>
+											maven-antrun-plugin
+										</artifactId>
+										<versionRange>
+											[1.8,)
+										</versionRange>
+										<goals>
+											<goal>run</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<execute></execute>
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+	<properties>
+		<version-junit>4.12</version-junit>
+		<version-rest-assured>3.0.1</version-rest-assured>
+		<version-raml-tester>0.8.12</version-raml-tester>
+		<version-raml-parser>0.8.17</version-raml-parser>
+		<version-find-bugs>3.0.4</version-find-bugs>
+		<version-jetty>9.4.0.v20161208</version-jetty>
+		<version-frontend>1.3</version-frontend>
+		<version-node-js>v7.3.0</version-node-js>
+		<version-minify>1.7.6</version-minify>
+		<version-gson>2.8.0</version-gson>
+		<version-jax-servlet>3.1.0</version-jax-servlet>
+		<version-jax-rs>2.0.1</version-jax-rs>
+		<version-jax-rs-raml>1.3.4</version-jax-rs-raml>
+		<version-java>1.8</version-java>
+		<version-maven-antrun>1.8</version-maven-antrun>
+		<version-maven-compiler>3.6.0</version-maven-compiler>
+		<node-modules>node_modules</node-modules>
+		<application-context-path>/patterns</application-context-path>
+		<application-public-assets>src/main/webapp/assets</application-public-assets>
+		<application-private-assets>src/main/resources/assets</application-private-assets>
+		<application-css-sources>${application-private-assets}/css</application-css-sources>
+		<application-js-sources>${application-private-assets}/js</application-js-sources>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+</project>

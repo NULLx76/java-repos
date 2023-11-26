@@ -1,0 +1,170 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.paypal.test.qi</groupId>
+    <artifactId>SelionDockerTest</artifactId>
+    <packaging>jar</packaging>
+    <version>1.0-SNAPSHOT</version>
+    <name>SelionDockerTest</name>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <suiteXmlFile>src/test/resources/SampleSuite.xml</suiteXmlFile>
+        <seLionImageVersion>1.0.0</seLionImageVersion>
+    </properties>
+
+    <!-- you need this to pull SeLion SNAPSHOT artifacts from the global repo -->
+    <repositories>
+        <repository>
+            <id>sonatype-nexus-snapshots</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </repository>
+    </repositories>
+
+    <!-- you need this to pull SeLion SNAPSHOT plugin artifacts from the global repo -->
+    <pluginRepositories>
+        <pluginRepository>
+            <id>sonatype-nexus-snapshots</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </pluginRepository>
+    </pluginRepositories>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.paypal.selion</groupId>
+            <artifactId>SeLion</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
+        <!-- for "runlocally" support -->
+        <dependency>
+            <groupId>com.paypal.selion</groupId>
+            <artifactId>SeLion-Grid</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-server</artifactId>
+            <version>2.48.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.12</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>1.7.12</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>net.wouterdanes.docker</groupId>
+                <!-- maven version: 3.1.1 and java 8 required! -->
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>4.1.0</version>
+                <executions>
+                    <execution>
+                        <id>start</id>
+                        <configuration>
+                            <!-- prevent dangling containers! -->
+                            <forceCleanup>true</forceCleanup>
+                            <containers>
+                                <container>
+                                    <id>selion-hub</id>
+                                    <image>selion/hub:${seLionImageVersion}</image>
+                                    <!-- Waits till this string appears on console -->
+                                    <waitForStartup>Started ServerConnector</waitForStartup>
+                                </container>
+                                <container>
+                                    <id>selion-chrome</id>
+                                    <image>selion/node-chrome:${seLionImageVersion}</image>
+                                    <links>
+                                        <link>
+                                            <containerId>selion-hub</containerId>
+                                            <containerAlias>hub</containerAlias>
+                                        </link>
+                                    </links>
+                                    <waitForStartup>The node is registered to the hub</waitForStartup>
+                                </container>
+                                <!-- plugin config can get messy for complex grids with several SeLion nodes -->
+                                <container>
+                                    <id>selion-firefox</id>
+                                    <image>selion/node-firefox:${seLionImageVersion}</image>
+                                    <links>
+                                        <link>
+                                            <containerId>selion-hub</containerId>
+                                            <containerAlias>hub</containerAlias>
+                                        </link>
+                                    </links>
+                                    <waitForStartup>The node is registered to the hub</waitForStartup>
+                                </container>
+                            </containers>
+                        </configuration>
+                        <goals>
+                            <goal>start-containers</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>stop</id>
+                        <goals>
+                            <goal>stop-containers</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.19.1</version>
+                <configuration>
+                    <!-- Need to use integration-test for start/stop of containers -->
+                    <skipTests>true</skipTests>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.19.1</version>
+                <configuration>
+                    <systemPropertyVariables>
+                        <!-- set by docker plugin -->
+                        <SELION_SELENIUM_HOST>${docker.containers.selion-hub.ports.4444/tcp.host}</SELION_SELENIUM_HOST>
+                        <SELION_SELENIUM_PORT>${docker.containers.selion-hub.ports.4444/tcp.port}</SELION_SELENIUM_PORT>
+                    </systemPropertyVariables>
+                    <suiteXmlFiles>
+                        <suiteXmlFile>${suiteXmlFile}</suiteXmlFile>
+                    </suiteXmlFiles>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>skip-docker-plugin-execution</id>
+            <activation>
+                <property>
+                    <name>skipTests</name>
+                </property>
+            </activation>
+            <properties>
+                <docker.skip>true</docker.skip>
+            </properties>
+        </profile>
+    </profiles>
+
+</project>

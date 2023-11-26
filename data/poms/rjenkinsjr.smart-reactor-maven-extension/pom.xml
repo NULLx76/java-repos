@@ -1,0 +1,1134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright (C) 2016 Ronald Jack Jenkins Jr.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>info.ronjenkins</groupId>
+  <artifactId>smart-reactor-maven-extension</artifactId>
+  <version>0.1.5-SNAPSHOT</version>
+  <name>Smart Reactor Maven Extension</name>
+  <description>The Maven reactor, reimagined!</description>
+  <url>http://rjenkinsjr.github.io/smart-reactor-maven-extension</url>
+  <licenses>
+    <license>
+      <name>The Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <id>rjenkinsjr</id>
+      <name>Ronald Jack Jenkins Jr.</name>
+      <email>me@ronjenkins.info</email>
+      <timezone>America/Detroit</timezone>
+    </developer>
+  </developers>
+  <scm>
+    <connection>scm:git:git://github.com/rjenkinsjr/smart-reactor-maven-extension.git</connection>
+    <developerConnection>scm:git:git@github.com:rjenkinsjr/smart-reactor-maven-extension.git</developerConnection>
+    <url>https://github.com/rjenkinsjr/smart-reactor-maven-extension</url>
+  </scm>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <maven.compiler.source>1.7</maven.compiler.source>
+    <maven.compiler.target>1.7</maven.compiler.target>
+    <plexus.version>1.5.5</plexus.version>
+    <groovy.version>2.4.5</groovy.version>
+    <maven.surefire.version>2.19.1</maven.surefire.version>
+    <maven.invoker.version>2.0.0</maven.invoker.version>
+    <maven.javadoc.version>2.10.3</maven.javadoc.version>
+    <jacoco.version>0.7.5.201505241946</jacoco.version>
+    <shaded.classifier>libext</shaded.classifier>
+    <shaded.filename>${project.artifactId}-${project.version}-${shaded.classifier}.jar</shaded.filename>
+    <shaded.artifact>${project.build.directory}/${shaded.filename}</shaded.artifact>
+    <prepIt.src>${project.basedir}/src/prep-it</prepIt.src>
+    <prepIt.dest>${project.build.directory}/prep-it</prepIt.dest>
+    <prepId.reportsDirectory>${project.build.directory}/prep-invoker-reports</prepId.reportsDirectory>
+    <mainIt.src>${project.basedir}/src/it</mainIt.src>
+    <mainIt.dest>${project.build.directory}/it</mainIt.dest>
+    <mainIt.resources.src>${project.basedir}/src/it/resources</mainIt.resources.src>
+    <mainIt.resources.dest>${project.build.directory}/it-resources</mainIt.resources.dest>
+    <mainIt.mavenDir>${project.build.directory}/it-maven</mainIt.mavenDir>
+    <libextIt.dest>${project.build.directory}/libext-it</libextIt.dest>
+    <libextIt.reportsDirectory>${project.build.directory}/libext-invoker-reports</libextIt.reportsDirectory>
+    <libextIt.resources.src>${project.basedir}/src/libext-it/resources</libextIt.resources.src>
+    <libextIt.resources.dest>${project.build.directory}/libext-it-resources</libextIt.resources.dest>
+    <libextIt.mavenDir>${project.build.directory}/libext-it-maven</libextIt.mavenDir>
+    <doubleIt.dest>${project.build.directory}/double-it</doubleIt.dest>
+    <doubleIt.reportsDirectory>${project.build.directory}/double-invoker-reports</doubleIt.reportsDirectory>
+    <it.localRepositoryPath>${project.build.directory}/it-repo</it.localRepositoryPath>
+    <it.settings.xml>${mainIt.resources.dest}/settings.xml</it.settings.xml>
+    <jacoco.ut.file>${project.build.directory}/coverage-reports/jacoco-ut.exec</jacoco.ut.file>
+    <jacoco.it.file>${project.build.directory}/coverage-reports/jacoco-it.exec</jacoco.it.file>
+    <sonar.java.source>${maven.compiler.source}</sonar.java.source>
+    <sonar.core.codeCoveragePlugin>jacoco</sonar.core.codeCoveragePlugin>
+    <sonar.jacoco.reportPath>${jacoco.ut.file}</sonar.jacoco.reportPath>
+    <sonar.jacoco.itReportPath>${jacoco.it.file}</sonar.jacoco.itReportPath>
+    <sonar.jacoco.reportMissing.force.zero>true</sonar.jacoco.reportMissing.force.zero>
+    <site.src>${project.basedir}/src/site</site.src>
+    <site.dest>${project.basedir}/target/site-src</site.dest>
+    <site.profile>pre-release</site.profile>
+    <github.site.dir>${project.basedir}/src/github</github.site.dir>
+    <libext.download.urlPrefix>http://repo1.maven.org/maven2</libext.download.urlPrefix>
+    <tagNameFormat>@{project.version}</tagNameFormat>
+  </properties>
+  <!-- Project dependencies. -->
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-core</artifactId>
+      <version>3.3.1</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.plexus</groupId>
+      <artifactId>plexus-component-annotations</artifactId>
+      <version>${plexus.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven.release</groupId>
+      <artifactId>maven-release-manager</artifactId>
+      <version>2.5.3</version>
+    </dependency>
+    <!-- Hamcrest comes before JMockit -->
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-library</artifactId>
+      <version>1.3</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- JMockit comes before JUnit -->
+    <dependency>
+      <groupId>org.jmockit</groupId>
+      <artifactId>jmockit</artifactId>
+      <version>1.21</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.12</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.sonarsource.java</groupId>
+      <artifactId>sonar-jacoco-listeners</artifactId>
+      <version>3.9</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- Silence misleading annotation errors during SonarQube analysis. -->
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <version>3.0.1</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  <!-- Build configuration. -->
+  <build>
+    <defaultGoal>clean install</defaultGoal>
+    <resources>
+      <!-- JAR contents. -->
+      <resource>
+        <directory>${project.basedir}/src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+      <!-- JAR contents, from the repository root. -->
+      <resource>
+        <directory>${project.basedir}</directory>
+        <includes>
+          <include>LICENSE</include>
+          <include>THIRDPARTY</include>
+        </includes>
+      </resource>
+    </resources>
+    <plugins>
+      <!-- Generates the final components.xml that handles Plexus dependencies at runtime. -->
+      <plugin>
+        <groupId>org.codehaus.plexus</groupId>
+        <artifactId>plexus-component-metadata</artifactId>
+        <version>${plexus.version}</version>
+        <executions>
+          <execution>
+            <id>generate-descriptor</id>
+            <!-- phase process-classes -->
+            <goals>
+              <goal>generate-metadata</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Executes unit tests via JUnit. -->
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${maven.surefire.version}</version>
+        <configuration>
+          <argLine>${surefireArgLine}</argLine>
+          <properties>
+            <property>
+              <name>listener</name>
+              <value>org.sonar.java.jacoco.JUnitListener</value>
+            </property>
+          </properties>
+        </configuration>
+      </plugin>
+      <!-- Generate shaded JAR, for "lib" installations. -->
+      <plugin>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>2.4.3</version>
+        <executions>
+          <execution>
+            <id>generate-lib-version</id>
+            <!-- phase package -->
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <artifactSet>
+                <includes>
+                  <include>org.apache.maven.release:maven-release-manager</include>
+                  <include>org.apache.maven.release:maven-release-api</include>
+                  <include>org.apache.maven.scm:maven-scm-provider-accurev</include>
+                  <include>org.apache.maven.scm:maven-scm-provider-bazaar</include>
+                  <include>org.apache.maven.scm:maven-scm-provider-clearcase</include>
+                  <include>org.apache.maven.scm:maven-scm-provider-cvsexe</include>
+                  <include>org.apache.maven.scm:maven-scm-provider-cvsjava</include>
+                  <include>org.apache.maven.scm:maven-scm-provider-cvs-commons</include>
+                  <include>org.apache.maven.scm:maven-scm-provider-gitexe</include>
+                  <include>org.apache.maven.scm:maven-scm-provider-git-commons</include>
+                  <include>org.apache.maven.scm:maven-scm-provider-hg</include>
+                  <include>org.apache.maven.scm:maven-scm-provider-perforce</include>
+                  <include>org.apache.maven.scm:maven-scm-provider-starteam</include>
+                  <include>org.apache.maven.scm:maven-scm-provider-svnexe</include>
+                  <include>org.apache.maven.scm:maven-scm-provider-svn-commons</include>
+                  <include>org.apache.maven.scm:maven-scm-provider-synergy</include>
+                  <include>org.apache.maven.scm:maven-scm-provider-vss</include>
+                  <include>org.apache.maven.scm:maven-scm-provider-tfs</include>
+                  <include>org.apache.maven.scm:maven-scm-provider-integrity</include>
+                  <include>org.apache.maven.scm:maven-scm-provider-jazz</include>
+                  <include>org.apache.maven.scm:maven-scm-api</include>
+                  <include>org.apache.maven.scm:maven-scm-manager-plexus</include>
+                  <include>org.codehaus.plexus:plexus-interactivity-api</include>
+                  <include>org.jdom:jdom</include>
+                </includes>
+              </artifactSet>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Resource management. -->
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>2.7</version>
+        <executions>
+          <!-- Copies resources for main IT execution. -->
+          <execution>
+            <id>copy-main-it-resources</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${mainIt.resources.dest}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${mainIt.resources.src}</directory>
+                  <excludes>
+                    <!-- settings.xml is generated by antrun. -->
+                    <exclude>settings.xml</exclude>
+                  </excludes>
+                  <filtering>true</filtering>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+          <!-- Copies resources for libext IT execution. -->
+          <execution>
+            <id>copy-libext-it-resources</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${libextIt.resources.dest}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${libextIt.resources.src}</directory>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+          <!-- Filter site resources. -->
+          <execution>
+            <id>copy-site-resources</id>
+            <phase>pre-site</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${site.dest}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${site.src}</directory>
+                  <filtering>true</filtering>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Generates the initial settings.xml for Maven Invoker. -->
+      <plugin>
+        <artifactId>maven-help-plugin</artifactId>
+        <version>2.2</version>
+        <executions>
+          <execution>
+            <id>write-current-settings-to-disk</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>effective-settings</goal>
+            </goals>
+            <configuration>
+              <output>${it.settings.xml}</output>
+              <showPasswords>true</showPasswords>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Executes integration tests. -->
+      <plugin>
+        <artifactId>maven-invoker-plugin</artifactId>
+        <version>${maven.invoker.version}</version>
+        <dependencies>
+          <!-- Needed for Groovy AntBuilder. -->
+          <dependency>
+            <groupId>org.apache.ant</groupId>
+            <artifactId>ant</artifactId>
+            <version>1.9.6</version>
+          </dependency>
+          <!-- Set Groovy version. -->
+          <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-all</artifactId>
+            <version>${groovy.version}</version>
+          </dependency>
+        </dependencies>
+        <!-- Config common to all IT invocations. -->
+        <configuration>
+          <goals>
+            <goal>clean</goal>
+          </goals>
+          <localRepositoryPath>${it.localRepositoryPath}</localRepositoryPath>
+          <settingsFile>${it.settings.xml}</settingsFile>
+        </configuration>
+        <executions>
+          <!-- Installs this Maven extension into the IT local Maven repo. -->
+          <execution>
+            <id>install-this-extension</id>
+            <!-- phase pre-integration-test -->
+            <goals>
+              <goal>install</goal>
+            </goals>
+          </execution>
+          <!-- Executes the prep integration tests. -->
+          <execution>
+            <id>prep-integration-tests</id>
+            <!-- phase integration-test -->
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <cloneClean>true</cloneClean>
+              <cloneProjectsTo>${prepIt.dest}</cloneProjectsTo>
+              <mavenHome>${mainIt.mavenDir}</mavenHome>
+              <!-- No JaCoCo for prep ITs. -->
+              <projectsDirectory>${prepIt.src}</projectsDirectory>
+              <reportsDirectory>${prepIt.reportsDirectory}</reportsDirectory>
+            </configuration>
+          </execution>
+          <!-- Executes the main integration tests. -->
+          <execution>
+            <id>main-integration-tests</id>
+            <!-- phase integration-test -->
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <cloneClean>true</cloneClean>
+              <cloneProjectsTo>${mainIt.dest}</cloneProjectsTo>
+              <mavenHome>${mainIt.mavenDir}</mavenHome>
+              <mavenOpts>${invokerArgLine}</mavenOpts>
+              <projectsDirectory>${mainIt.src}</projectsDirectory>
+              <scriptVariables>
+                <itResourcesDir>${mainIt.resources.dest}</itResourcesDir>
+                <itCommonPrebuild>${mainIt.resources.dest}/prebuild-common.groovy</itCommonPrebuild>
+              </scriptVariables>
+            </configuration>
+          </execution>
+          <!-- Executes the libext integration tests. -->
+          <execution>
+            <id>libext-integration-tests</id>
+            <!-- phase integration-test -->
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <cloneClean>true</cloneClean>
+              <cloneProjectsTo>${libextIt.dest}</cloneProjectsTo>
+              <mavenHome>${libextIt.mavenDir}</mavenHome>
+              <!-- No JaCoCo for libext ITs. -->
+              <projectsDirectory>${mainIt.src}</projectsDirectory>
+              <reportsDirectory>${libextIt.reportsDirectory}</reportsDirectory>
+              <scriptVariables>
+                <itResourcesDir>${libextIt.resources.dest}</itResourcesDir>
+                <itCommonPrebuild>${libextIt.resources.dest}/prebuild-common.groovy</itCommonPrebuild>
+              </scriptVariables>
+            </configuration>
+          </execution>
+          <!-- Executes the double integration tests. -->
+          <execution>
+            <id>double-integration-tests</id>
+            <!-- phase integration-test -->
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <cloneClean>true</cloneClean>
+              <cloneProjectsTo>${doubleIt.dest}</cloneProjectsTo>
+              <mavenHome>${libextIt.mavenDir}</mavenHome>
+              <!-- No JaCoCo for libext ITs. -->
+              <projectsDirectory>${mainIt.src}</projectsDirectory>
+              <reportsDirectory>${doubleIt.reportsDirectory}</reportsDirectory>
+              <scriptVariables>
+                <itResourcesDir>${mainIt.resources.dest}</itResourcesDir>
+                <itCommonPrebuild>${mainIt.resources.dest}/prebuild-common.groovy</itCommonPrebuild>
+              </scriptVariables>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Handles all items related to code coverage. -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${jacoco.version}</version>
+        <executions>
+          <!-- Generates command-line args for Maven Surefire. -->
+          <execution>
+            <id>assemble-unit-test-args</id>
+            <phase>test-compile</phase><!-- Prevent re-execution during site generation. -->
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+            <configuration>
+              <destFile>${jacoco.ut.file}</destFile>
+              <propertyName>surefireArgLine</propertyName>
+            </configuration>
+          </execution>
+          <!-- Generates command-line args for Maven Failsafe. -->
+          <execution>
+            <id>assemble-integration-test-args</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+            <configuration>
+              <destFile>${jacoco.it.file}</destFile>
+              <propertyName>invokerArgLine</propertyName>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Site plugin configuration. -->
+      <plugin>
+        <artifactId>maven-site-plugin</artifactId>
+        <version>3.4</version>
+        <configuration>
+          <!-- Use renamed site files. -->
+          <siteDirectory>${site.dest}</siteDirectory>
+          <!-- Don't use this plugin to deploy anything. -->
+          <skipDeploy>true</skipDeploy>
+        </configuration>
+      </plugin>
+      <!-- Custom scripting. -->
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.8</version>
+        <dependencies>
+          <!-- Set Groovy version. -->
+          <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-all</artifactId>
+            <version>${groovy.version}</version>
+          </dependency>
+          <!-- XML combiner. -->
+          <dependency>
+            <groupId>org.atteo</groupId>
+            <artifactId>xml-combiner</artifactId>
+            <version>2.2</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <!-- Inject libext download URL as Maven property. -->
+          <execution>
+            <id>inject-libext-download-url</id>
+            <phase>initialize</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <exportAntProperties>true</exportAntProperties>
+              <target>
+                <property name="libext.download.url" value="${libext.download.urlPrefix}/${groupId.path}/${project.artifactId}/${project.version}/${shaded.filename}" />
+              </target>
+            </configuration>
+          </execution>
+          <!-- Swap shaded and original artifacts, for integration testing. -->
+          <execution>
+            <id>swap-shaded-and-original-artifacts</id>
+            <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <property name="main.artifact" location="${project.build.directory}/${project.artifactId}-${project.version}.jar" />
+                <move file="${main.artifact}" tofile="${shaded.artifact}" />
+                <move file="${project.build.directory}/original-${project.artifactId}-${project.version}.jar" tofile="${main.artifact}" />
+              </target>
+            </configuration>
+          </execution>
+          <!-- Download and prep Maven for use for integration testing. -->
+          <execution>
+            <id>download-and-prepare-maven</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <!-- Download Maven. -->
+                <property name="maven.zip" location="${project.build.directory}/maven.zip" />
+                <get src="http://www.us.apache.org/dist/maven/maven-3/${maven.version}/binaries/apache-maven-${maven.version}-bin.zip" dest="${maven.zip}" />
+                <!-- Unzip Maven. -->
+                <unzip src="${maven.zip}" dest="${mainIt.mavenDir}">
+                  <mapper>
+                    <cutdirsmapper dirs="1" />
+                  </mapper>
+                </unzip>
+                <unzip src="${maven.zip}" dest="${libextIt.mavenDir}">
+                  <mapper>
+                    <cutdirsmapper dirs="1" />
+                  </mapper>
+                </unzip>
+                <delete file="${maven.zip}" />
+                <!-- Install the libext extension. -->
+                <copy file="${shaded.artifact}" todir="${libextIt.mavenDir}/lib/ext" />
+                <!-- Chmod the Maven installations for execution. -->
+                <chmod dir="${mainIt.mavenDir}" perm="+rx" includes="**/*" />
+                <chmod dir="${libextIt.mavenDir}" perm="+rx" includes="**/*" />
+              </target>
+            </configuration>
+          </execution>
+          <!-- Generate settings.xml for Maven Invoker Plugin. -->
+          <execution>
+            <id>generate-invoker-plugin-settings</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <property name="itSettingsXmlDest" location="${it.settings.xml}" />
+                <property name="itSettingsXmlSrc" location="${mainIt.resources.src}/settings.xml" />
+                <script language="groovy"><![CDATA[
+// 1. Read src settings.xml, get ids of all repos and plugin repos.
+// 2. Read dest settings.xml, add src settings.xml ids as mirror exclusions.
+// 3. Merge src and dest settings.xml, write to dest.
+import org.apache.maven.settings.io.xpp3.SettingsXpp3Reader;
+import org.apache.maven.settings.io.xpp3.SettingsXpp3Writer;
+import org.atteo.xmlcombiner.XmlCombiner;
+
+def srcFile = new File(itSettingsXmlSrc)
+def destFile = new File(itSettingsXmlDest)
+
+// Read source and destination settings files.
+def reader = new SettingsXpp3Reader()
+def srcSettings
+srcFile.withInputStream { is ->
+  srcSettings = reader.read(is)
+}
+def destSettings
+destFile.withInputStream { is ->
+  destSettings = reader.read(is)
+}
+
+// Get list of all repo ids from the source.
+def repoIds = new HashSet()
+srcSettings.profiles.each { profile ->
+  profile.repositories.each { repo ->
+    repoIds.add(repo.id)
+  }
+  profile.pluginRepositories.each { pRepo ->
+    repoIds.add(pRepo.id)
+  }
+}
+
+// Assemble the new "mirrorOf" suffix.
+def repoIdList = ',!' + repoIds.join(',!')
+if (repoIdList == ',!') repoIdList = ''
+
+// Modify all the destination mirrors.
+destSettings.mirrors.each {
+  it.setMirrorOf(it.getMirrorOf() + repoIdList)
+}
+
+// Write the new destination settings.
+destFile.withOutputStream { os ->
+  new SettingsXpp3Writer().write(os, destSettings)
+}
+
+// Instruct the combiner to append relevant elements
+def destXml = new XmlSlurper(false, false, true).parse(destFile)
+destXml.profiles.setProperty('@combine.children', 'append')
+destFile.withOutputStream { os ->
+  groovy.xml.XmlUtil.serialize(destXml, os)
+}
+
+// Combine the source and destination files to the destination.
+def combiner = new XmlCombiner();
+combiner.combine(destFile.toPath());
+combiner.combine(srcFile.toPath());
+destFile.withOutputStream { os ->
+  combiner.buildDocument(os);
+}
+
+// Delete the destination file when the Maven JVM exits.
+destFile.deleteOnExit()
+                ]]></script>
+              </target>
+            </configuration>
+          </execution>
+          <!-- Rename site files to Velocity templates. -->
+          <execution>
+            <id>preprocess-site-velocity-templates</id>
+            <phase>pre-site</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <move todir="${site.dest}" includeemptydirs="false">
+                  <fileset dir="${site.dest}" includes="**/*.md" />
+                  <globmapper from="*.md" to="*.md.vm" />
+                </move>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- More custom scripting. -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>1.10</version>
+        <executions>
+          <!-- Get the Maven version. -->
+          <execution>
+            <id>maven-version</id>
+            <!-- phase validate -->
+            <goals>
+              <goal>maven-version</goal>
+            </goals>
+          </execution>
+          <!-- Convert the groupId to path format. -->
+          <execution>
+            <id>groupId-as-path</id>
+            <!-- phase validate -->
+            <goals>
+              <goal>regex-property</goal>
+            </goals>
+            <configuration>
+              <name>groupId.path</name>
+              <value>${project.groupId}</value>
+              <regex>\.</regex>
+              <replacement>/</replacement>
+            </configuration>
+          </execution>
+          <!-- Attach the shaded artifact. -->
+          <execution>
+            <id>attach-shaded-artifact</id>
+            <phase>package</phase>
+            <goals>
+              <goal>attach-artifact</goal>
+            </goals>
+            <configuration>
+              <artifacts>
+                <artifact>
+                  <file>${shaded.artifact}</file>
+                  <type>jar</type>
+                  <classifier>${shaded.classifier}</classifier>
+                </artifact>
+              </artifacts>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+    <!-- Plugins used by profiles. -->
+    <pluginManagement>
+      <plugins>
+        <!-- SonarQube analysis. -->
+        <plugin>
+          <groupId>org.sonarsource.scanner.maven</groupId>
+          <artifactId>sonar-maven-plugin</artifactId>
+          <version>3.0.1</version>
+          <executions>
+            <execution>
+              <id>sonarqube-analysis</id>
+              <phase>verify</phase>
+              <goals>
+                <goal>sonar</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+  <distributionManagement>
+    <snapshotRepository>
+      <id>ossrh</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    </snapshotRepository>
+  </distributionManagement>
+  <!-- Manages site/report configuration. -->
+  <reporting>
+    <plugins>
+      <!-- Basic reports -->
+      <plugin>
+        <artifactId>maven-project-info-reports-plugin</artifactId>
+        <version>2.8.1</version>
+        <configuration>
+          <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
+        </configuration>
+        <reportSets>
+          <reportSet>
+            <reports>
+              <report>issue-tracking</report>
+              <report>mailing-list</report>
+              <report>project-team</report>
+              <report>dependencies</report>
+              <report>dependency-management</report>
+              <report>dependency-convergence</report>
+              <report>plugins</report>
+              <report>scm</report>
+              <report>cim</report>
+              <report>distribution-management</report>
+              <report>summary</report>
+              <report>license</report>
+            </reports>
+          </reportSet>
+        </reportSets>
+      </plugin>
+      <!-- Javadocs -->
+      <plugin>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>${maven.javadoc.version}</version>
+        <reportSets>
+          <reportSet>
+            <reports>
+              <report>javadoc</report>
+            </reports>
+          </reportSet>
+        </reportSets>
+      </plugin>
+      <!-- Source XRef -->
+      <plugin>
+        <artifactId>maven-jxr-plugin</artifactId>
+        <version>2.5</version>
+        <reportSets>
+          <reportSet>
+            <reports>
+              <report>jxr</report>
+              <report>test-jxr</report>
+            </reports>
+          </reportSet>
+        </reportSets>
+      </plugin>
+      <!-- TODOs, etc. -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>taglist-maven-plugin</artifactId>
+        <version>2.4</version>
+        <configuration>
+          <tagListOptions>
+            <tagClasses>
+              <tagClass>
+                <displayName>To-dos</displayName>
+                <tags>
+                  <tag>
+                    <matchString>TODO</matchString>
+                    <matchType>ignoreCase</matchType>
+                  </tag>
+                  <tag>
+                    <matchString>FIXME</matchString>
+                    <matchType>ignoreCase</matchType>
+                  </tag>
+                </tags>
+              </tagClass>
+              <tagClass>
+                <displayName>Deprecations</displayName>
+                <tags>
+                  <tag>
+                    <matchString>@deprecated</matchString>
+                    <matchType>ignoreCase</matchType>
+                  </tag>
+                </tags>
+              </tagClass>
+            </tagClasses>
+          </tagListOptions>
+        </configuration>
+      </plugin>
+      <!-- UT reports. -->
+      <plugin>
+        <artifactId>maven-surefire-report-plugin</artifactId>
+        <version>${maven.surefire.version}</version>
+        <reportSets>
+          <reportSet>
+            <reports>
+              <report>report-only</report>
+            </reports>
+          </reportSet>
+        </reportSets>
+      </plugin>
+      <!-- IT reports. -->
+      <plugin>
+        <artifactId>maven-invoker-plugin</artifactId>
+        <version>${maven.invoker.version}</version>
+      </plugin>
+      <!-- Code coverage reports. -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${jacoco.version}</version>
+        <reportSets>
+          <!-- UT CC reports. -->
+          <reportSet>
+            <reports>
+              <report>report</report>
+            </reports>
+            <configuration>
+              <dataFile>${jacoco.ut.file}</dataFile>
+              <outputDirectory>${project.reporting.outputDirectory}/jacoco-ut</outputDirectory>
+            </configuration>
+          </reportSet>
+          <!-- IT CC reports. -->
+          <reportSet>
+            <reports>
+              <report>report-integration</report>
+            </reports>
+            <configuration>
+              <dataFile>${jacoco.it.file}</dataFile>
+              <outputDirectory>${project.reporting.outputDirectory}/jacoco-it</outputDirectory>
+            </configuration>
+          </reportSet>
+        </reportSets>
+      </plugin>
+    </plugins>
+  </reporting>
+  <profiles>
+    <!-- SonarQube analysis profile. -->
+    <profile>
+      <id>sonarqube</id>
+      <activation>
+        <property>
+          <name>sonar.host.url</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.sonarsource.scanner.maven</groupId>
+            <artifactId>sonar-maven-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- Things to do only for releases. -->
+    <profile>
+      <id>release</id>
+      <activation>
+        <property>
+          <name>rtr.release</name>
+          <value>true</value>
+        </property>
+      </activation>
+      <!-- TODO: uncomment once we reach 1.0.0 -->
+      <!--properties>
+        <site.profile>production</site.profile>
+      </properties-->
+      <build>
+        <defaultGoal>clean deploy site-deploy</defaultGoal>
+        <plugins>
+          <!-- Write POM version to properties file. -->
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>write-properties-file</id>
+                <phase>initialize</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <propertyfile file="${project.basedir}/version.properties">
+                      <entry key="RELEASE_POM_VERSION" value="${project.version}" />
+                    </propertyfile>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <!-- Generate source JAR. -->
+          <plugin>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>2.4</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <!-- phase package -->
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <!-- Generate Javadoc JAR. -->
+          <plugin>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>${maven.javadoc.version}</version>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <!-- phase package -->
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <!-- Sign all artifacts. -->
+          <plugin>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>1.6</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <!-- phase verify -->
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+                <configuration>
+                  <!-- settings.xml -->
+                  <executable>gpg2</executable>
+                  <defaultKeyring>false</defaultKeyring>
+                  <publicKeyring>${project.basedir}/pubring.gpg</publicKeyring>
+                  <secretKeyring>${project.basedir}/secring.gpg</secretKeyring>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <!-- SonarQube analysis. -->
+          <plugin>
+            <groupId>org.sonarsource.scanner.maven</groupId>
+            <artifactId>sonar-maven-plugin</artifactId>
+          </plugin>
+          <!-- Do not use the Maven Deploy Plugin. -->
+          <plugin>
+            <artifactId>maven-deploy-plugin</artifactId>
+            <version>2.8.2</version>
+            <configuration>
+              <skip>true</skip>
+            </configuration>
+          </plugin>
+          <!-- Push artifacts to OSSRH. -->
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nexus-staging-maven-plugin</artifactId>
+            <version>1.6.6</version>
+            <executions>
+              <execution>
+                <id>default-deploy</id>
+                <phase>deploy</phase>
+                <goals>
+                  <goal>deploy</goal>
+                </goals>
+                <configuration>
+                  <serverId>ossrh</serverId><!-- settings.xml -->
+                  <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                  <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <!-- Generate GitHub README.md. -->
+          <plugin>
+            <artifactId>maven-resources-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>generate-github-readme</id>
+                <phase>site</phase>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <configuration>
+                  <outputDirectory>${project.basedir}</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>${github.site.dir}</directory>
+                      <includes>
+                        <include>README.md</include>
+                      </includes>
+                      <filtering>true</filtering>
+                    </resource>
+                  </resources>
+                  <overwrite>true</overwrite>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <!-- Push Maven site to GitHub. -->
+          <plugin>
+            <groupId>com.github.github</groupId>
+            <artifactId>site-maven-plugin</artifactId>
+            <version>0.12</version>
+            <executions>
+              <execution>
+                <id>push-site-to-github</id>
+                <phase>site-deploy</phase>
+                <goals>
+                  <goal>site</goal>
+                </goals>
+                <configuration>
+                  <server>github</server><!-- settings.xml -->
+                  <message>Publishing site for version
+                    ${project.version}</message>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- m2e configuration, enabled only by the m2e IDE plugin to eliminate erroneous build warnings. -->
+    <profile>
+      <id>only-eclipse</id>
+      <activation>
+        <property>
+          <name>m2e.version</name>
+        </property>
+      </activation>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.eclipse.m2e</groupId>
+              <artifactId>lifecycle-mapping</artifactId>
+              <version>1.0.0</version>
+              <configuration>
+                <lifecycleMappingMetadata>
+                  <pluginExecutions>
+                    <pluginExecution>
+                      <pluginExecutionFilter>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <versionRange>*</versionRange>
+                        <goals>
+                          <goal>run</goal>
+                        </goals>
+                      </pluginExecutionFilter>
+                      <action>
+                        <ignore />
+                      </action>
+                    </pluginExecution>
+                    <pluginExecution>
+                      <pluginExecutionFilter>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <versionRange>*</versionRange>
+                        <goals>
+                          <goal>regex-property</goal>
+                        </goals>
+                      </pluginExecutionFilter>
+                      <action>
+                        <ignore />
+                      </action>
+                    </pluginExecution>
+                    <pluginExecution>
+                      <pluginExecutionFilter>
+                        <groupId>org.codehaus.plexus</groupId>
+                        <artifactId>plexus-component-metadata</artifactId>
+                        <versionRange>*</versionRange>
+                        <goals>
+                          <goal>generate-metadata</goal>
+                          <goal>merge-metadata</goal>
+                        </goals>
+                      </pluginExecutionFilter>
+                      <action>
+                        <ignore />
+                      </action>
+                    </pluginExecution>
+                    <pluginExecution>
+                      <pluginExecutionFilter>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-invoker-plugin</artifactId>
+                        <versionRange>*</versionRange>
+                        <goals>
+                          <goal>install</goal>
+                        </goals>
+                      </pluginExecutionFilter>
+                      <action>
+                        <ignore />
+                      </action>
+                    </pluginExecution>
+                    <pluginExecution>
+                      <pluginExecutionFilter>
+                        <groupId>org.sonarsource.scanner.maven</groupId>
+                        <artifactId>sonar-maven-plugin</artifactId>
+                        <versionRange>*</versionRange>
+                        <goals>
+                          <goal>sonar</goal>
+                        </goals>
+                      </pluginExecutionFilter>
+                      <action>
+                        <ignore />
+                      </action>
+                    </pluginExecution>
+                  </pluginExecutions>
+                </lifecycleMappingMetadata>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
+    </profile>
+  </profiles>
+</project>

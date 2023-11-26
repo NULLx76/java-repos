@@ -1,0 +1,355 @@
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://maven.apache.org/POM/4.0.0"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>de.adesso.alarm</groupId>
+	<artifactId>wunderbar-alarm</artifactId>
+	<packaging>war</packaging>
+	<version>1.0-SNAPSHOT</version>
+
+	<name>Wunderbar IoT alarm application</name>
+
+	<url>http://adesso.de</url>
+
+	<properties>
+		<artifact.name>alarm</artifact.name>
+		<endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
+		<vendor.loc>src/main/webapp/vendor</vendor.loc>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<sonar.host.url>http://192.168.99.101:9000</sonar.host.url>
+		<!-- <sonar.language>js</sonar.language> -->   	<!-- NOT javascript/JavaScript ! -->
+		<sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
+		<sonar.javascript.lcov.reportPath>${saga.output.coverage.sonar.lcov.file}</sonar.javascript.lcov.reportPath>
+		<sonar.sources>${basedir}/src/main/java, ${basedir}/src/main/javascript</sonar.sources>
+		<sonar.testSources>${basedir}/src/test/java, ${basedir}/src/test/javascript</sonar.testSources>
+
+	    <!-- properties for saga -->
+		<saga.output.dir>${project.build.directory}/coverage</saga.output.dir>
+		<saga.output.coverage.file>${saga.output.dir}/total-coverage.dat</saga.output.coverage.file>
+		<saga.output.coverage.sonar.lcov.file>${saga.output.dir}/total-coverage-sonar.dat</saga.output.coverage.sonar.lcov.file>
+
+		<!-- properties for translating saga output to sonar lcov file -->
+		<saga.output.lcov.source.dir.path>SF:src/</saga.output.lcov.source.dir.path>
+		<sonar.lcov.source.dir.path>SF:src/main/javascript/</sonar.lcov.source.dir.path>
+		
+		<sonar.junit.reportsPath>target/surefire-reports</sonar.junit.reportsPath>
+		<!-- 
+		<sonar.java.coveragePlugin>cobertura</sonar.java.coveragePlugin>
+	    <sonar.cobertura.reportPath>target/cobertura/cobertura.ser</sonar.cobertura.reportPath>
+	     -->
+		
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>io.relayr</groupId>
+			<artifactId>java-sdk</artifactId>
+			<version>1.2.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.netflix.rxjava</groupId>
+			<artifactId>rxjava-core</artifactId>
+			<version>0.20.7</version>
+		</dependency>
+		
+
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.11</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-all</artifactId>
+			<version>1.9.5</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>javax</groupId>
+			<artifactId>javaee-api</artifactId>
+			<version>7.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+
+			<groupId>org.jboss.resteasy</groupId>
+			<artifactId>resteasy-jackson-provider</artifactId>
+			<version>3.0.8.Final</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.fasterxml.jackson.module</groupId>
+			<artifactId>jackson-module-jaxb-annotations</artifactId>
+			<version>2.4.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.glassfish.jersey.media</groupId>
+			<artifactId>jersey-media-json-jackson</artifactId>
+			<version>2.12</version>
+			<scope>test</scope>
+		</dependency>
+
+
+	</dependencies>
+	<build>
+		<finalName>${artifact.name}</finalName>
+		<resources>
+			<resource>
+				<directory>src/main/javascript</directory>
+				<filtering>true</filtering>
+			</resource>
+			<resource>
+        		<directory>src/main/resources</directory>
+      		</resource>
+		</resources>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.1</version>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+					<compilerArguments>
+						<endorseddirs>${endorsed.dir}</endorseddirs>
+					</compilerArguments>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<version>2.4</version>
+				<configuration>
+					<failOnMissingWebXml>false</failOnMissingWebXml>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<version>2.6</version>
+				<executions>
+					<execution>
+						<phase>validate</phase>
+						<goals>
+							<goal>copy</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${endorsed.dir}</outputDirectory>
+							<silent>true</silent>
+							<artifactItems>
+								<artifactItem>
+									<groupId>javax</groupId>
+									<artifactId>javaee-endorsed-api</artifactId>
+									<version>7.0</version>
+									<type>jar</type>
+								</artifactItem>
+							</artifactItems>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>net.alchim31.maven</groupId>
+				<artifactId>yuicompressor-maven-plugin</artifactId>
+				<version>1.1</version>
+				<executions>
+					<execution>
+						<id>compress-js</id>
+						<phase>process-resources</phase>
+						<goals>
+							<!--<goal>jslint</goal> -->
+							<goal>compress</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<failOnWarning>true</failOnWarning>
+					<!--<outputDirectory>src/main/webapp/js</outputDirectory> -->
+					<outputDirectory>target/${artifact.name}/js</outputDirectory>
+					<nosuffix>true</nosuffix>
+					<excludes>
+						<exclude>**/js/**/*js</exclude>
+						<exclude>vendor/**</exclude>
+						<exclude>**/*min.css</exclude>
+						<exclude>**/*min.js</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>com.github.searls</groupId>
+				<artifactId>jasmine-maven-plugin</artifactId>
+				<version>1.3.1.5</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>test</goal>
+							<goal>bdd</goal>
+						</goals>
+						<configuration>
+							<!-- keepServerAlive needed to run saga coverage -->
+							<keepServerAlive>true</keepServerAlive>
+						</configuration>
+					</execution>
+				</executions>
+				<configuration>
+					<webDriverClassName>org.openqa.selenium.phantomjs.PhantomJSDriver</webDriverClassName>
+					<webDriverCapabilities>
+						<capability>
+							<name>phantomjs.binary.path</name>
+							<value>C:/develop/phantomjs-2.1.1-windows/bin/phantomjs.exe</value>
+						</capability>
+					</webDriverCapabilities>
+					<preloadSources>
+						<source>${vendor.loc}/jquery/dist/jquery.js</source>
+						<source>${vendor.loc}/angular/angular.min.js</source>
+						<source>${vendor.loc}/angular-route/angular-route.min.js</source>
+						<source>${vendor.loc}/angular-mocks/angular-mocks.js</source>
+					</preloadSources>
+					<jsSrcDir>src/main/javascript</jsSrcDir>
+					<jsTestSrcDir>src/test/javascript</jsTestSrcDir>
+					<specIncludes>
+						<include>*Spec.js</include>
+					</specIncludes>
+				</configuration>
+			</plugin>
+			
+						<!-- coverage plugin -->
+			<plugin>
+				<groupId>com.github.timurstrekalov</groupId>
+				<artifactId>saga-maven-plugin</artifactId>
+				<version>1.5.5</version>
+				<executions>
+					<execution>
+						<phase>verify</phase>
+						<goals>
+							<goal>coverage</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<!-- URL for jasmine server -->
+					<baseDir>http://localhost:${jasmine.serverPort}</baseDir>
+					<outputDir>${saga.output.dir}</outputDir>
+				</configuration>
+			</plugin>
+
+			<!-- ant run to translate saga output to sonar lcov file. This must appear 
+				after saga plugin -->
+			<plugin>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>1.7</version>
+				<executions>
+					<execution>
+						<id>saga-to-sonar-lcov</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<target>
+								<echo
+									message="setting up sonar lcov file (from saga): ${saga.output.coverage.sonar.lcov.file} ..." />
+								<copy file="${saga.output.coverage.file}" tofile="${saga.output.coverage.sonar.lcov.file}" />
+
+								<echo
+									message="replacing '${saga.output.lcov.source.dir.path} with '${sonar.lcov.source.dir.path}' in ${saga.output.coverage.sonar.lcov.file}" />
+								<replace file="${saga.output.coverage.sonar.lcov.file}"
+									token="${saga.output.lcov.source.dir.path}" value="${sonar.lcov.source.dir.path}" />
+							</target>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.3.2</version>
+				<executions>
+					<execution>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<executable>bower</executable>
+					<arguments>
+						<argument>install</argument>
+					</arguments>
+					<workingDirectory>${basedir}</workingDirectory>
+				</configuration>
+			</plugin>
+			<plugin>
+				<artifactId>maven-clean-plugin</artifactId>
+				<version>2.5</version>
+				<configuration>
+					<filesets>
+						<fileset>
+							<directory>src/main/webapp/vendor</directory>
+						</fileset>
+						<fileset>
+							<directory>node_modules</directory>
+						</fileset>
+					</filesets>
+				</configuration>
+			</plugin>
+
+			<!-- sonar plugin
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>sonar-maven-plugin</artifactId>
+				<version>2.7.1</version>
+				<!-d- use verify execution so it runs immediately after saga -d->
+				<executions>
+					<execution>
+						<id>sonar-run</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>sonar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			 -->
+
+		</plugins>
+		<!-- needed by sonar plugin to find files to analyse
+		<sourceDirectory>${sonar.sources}</sourceDirectory>	
+		<testSourceDirectory>${sonar.testSources}</testSourceDirectory>
+		 -->	
+	</build>
+	<profiles>
+		<profile>
+			<!-- When built in OpenShift the 'openshift' profile will be used when 
+				invoking mvn. -->
+			<!-- Use this profile for any OpenShift specific customization your app 
+				will need. -->
+			<!-- By default that is to put the resulting archive into the 'deployments' 
+				folder. -->
+			<!-- http://maven.apache.org/guides/mini/guide-building-for-different-environments.html -->
+			<id>openshift</id>
+			<build>
+				<finalName>alarm</finalName>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-war-plugin</artifactId>
+						<version>2.3</version>
+						<configuration>
+							<failOnMissingWebXml>false</failOnMissingWebXml>
+							<outputDirectory>deployments</outputDirectory>
+							<warName>ROOT</warName>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>	
+</project>

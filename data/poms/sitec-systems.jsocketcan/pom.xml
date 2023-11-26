@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>de.sitec-systems</groupId>
+    <artifactId>jSocketCan</artifactId>
+    <version>1.2.2-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.7</maven.compiler.source>
+        <maven.compiler.target>1.7</maven.compiler.target>
+        <target.amd64>target/native/amd64</target.amd64>
+        <target.armhf>target/native/armhf</target.armhf>
+    </properties>
+    
+    <organization>
+        <name>sitec systems GmbH</name>
+        <url>http://www.sitec-systems.de</url>
+    </organization>
+    
+    <licenses>
+        <license>
+            <name>GNU Lesser General Public License, Version 3</name>
+            <url>http://www.gnu.org/licenses/lgpl.html</url>
+        </license>
+    </licenses>
+    
+    <scm>
+        <connection>scm:git:https://${server.ip}/redmine/projekte/15_0014/scm_15_0014.git</connection>
+        <developerConnection>scm:git:https://${server.ip}/redmine/projekte/15_0014/scm_15_0014.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
+    
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.8</version>
+                <executions>
+                    <execution>
+                    <!-- this execution happens just after compiling the java
+                    classes, and builds the native code.
+
+                        We use an antrun for this, rather than an exec, as it
+                        finds make on the system path. It also allows us to write
+                        the classpath file.
+                        -->
+                        <id>build-native</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <property name="native.classpath" refid="maven.compile.classpath" />
+                                <mkdir dir="${target.amd64}" />
+                                <exec dir="${target.amd64}" executable="cmake" failonerror="true">
+                                    <arg line="../../../src/main/native" />
+                                    <arg line="-DCMAKE_C_COMPILER=gcc" />
+                                    <arg line="-DARCH=amd64" />
+                                    <arg line="-DCLASSPATH=${native.classpath}" />
+                                </exec>
+                                <exec dir="${target.amd64}" executable="make" failonerror="true" />
+                                <exec dir="${target.amd64}" executable="make" failonerror="true">
+                                    <arg line="install" />
+                                </exec>
+                                <mkdir dir="${target.armhf}" />
+                                <exec dir="${target.armhf}" executable="cmake" failonerror="true">
+                                    <arg line="../../../src/main/native" />
+                                    <arg line="-DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc" />
+                                    <arg line="-DARCH=armhf" />
+                                    <arg line="-DCLASSPATH=${native.classpath}" />
+                                </exec>
+                                <exec dir="${target.armhf}" executable="make" failonerror="true" />
+                                <exec dir="${target.armhf}" executable="make" failonerror="true">
+                                    <arg line="install" />
+                                </exec>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <descriptors>
+                        <descriptor>assembly.xml</descriptor>
+                    </descriptors>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>2.4</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.7</version>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <version>1.4</version>
+                <artifactId>buildnumber-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>create</goal>
+                        </goals>
+                        <configuration>
+                            <useLastCommittedRevision>true</useLastCommittedRevision>
+                            <doCheck>false</doCheck>
+                            <doUpdate>false</doUpdate>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <version>2.5</version>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Build-Branch>${scmBranch}</Build-Branch>
+                            <Build-Number>${buildNumber}</Build-Number>
+                            <Project-Version>${project.version}</Project-Version>
+                            <Project-Name>${project.name}</Project-Name>
+                        </manifestEntries>
+                        <addMavenDescriptor>false</addMavenDescriptor>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <version>2.5.3</version>
+                <artifactId>maven-release-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+    
+    <dependencies>
+        <dependency>
+            <groupId>de.sitec-systems</groupId>
+            <artifactId>jCanInterface</artifactId>
+            <version>1.0.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.12</version>
+        </dependency>
+        <dependency>
+            <groupId>de.sitec-systems</groupId>
+            <artifactId>NativeLibraryLoader</artifactId>
+            <version>1.1.1</version>
+        </dependency>
+    </dependencies>
+    
+    <distributionManagement>
+        <snapshotRepository>
+            <id>nexus.snapshots.upload</id>
+            <name>Nexus-Repository for Snapshots</name>
+            <url>http://${server.ip}:8080/nexus/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>nexus.releases.upload</id>
+            <name>Nexus-Repository for Releases</name>
+            <url>http://${server.ip}:8080/nexus/content/repositories/releases</url>
+        </repository>
+    </distributionManagement>
+    <description>Framework for Access to Linux SocketCAN from Java. Implements jCanInterface.</description>
+</project>

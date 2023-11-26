@@ -1,0 +1,515 @@
+<!--
+
+     Copyright (c) 2017 Atos, and others
+     All rights reserved. This program and the accompanying materials
+     are made available under the terms of the Eclipse Public License 2.0
+     which accompanies this distribution, and is available at
+     https://www.eclipse.org/legal/epl-2.0/
+
+     Contributors:
+     Atos - initial implementation
+
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>eu.atos.paas</groupId>
+    <artifactId>unified-paas</artifactId>
+    <version>0.3.1-SNAPSHOT</version>
+    <modules>
+        <module>common</module>
+        <module>library</module>
+        <module>service-model</module>
+        <module>service</module>
+        <module>client</module>
+    </modules>
+    <packaging>pom</packaging>
+
+    <name>PaaS Unified Library</name>
+
+    <properties>
+        <!-- Compilation -->
+        <java.version>1.7</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- Dependencies -->
+        <javatuples.version>1.2</javatuples.version>
+        <dropwizard.version>0.8.1</dropwizard.version>
+        <guava.version>18.0</guava.version>
+        <heroku.version>0.24</heroku.version>
+        <jersey.version>2.17</jersey.version>
+        <cf-version>1.1.3</cf-version>
+        <openshift2-version>2.7.0.Final</openshift2-version>
+        <heroku-deploy>0.5.7</heroku-deploy>
+        <commons-configuration.version>1.10</commons-configuration.version>
+        <swagger.version>1.5.0</swagger.version>
+        <jackson.version>2.5.1</jackson.version>
+        <jgit.version>4.6.0.201612231935-r</jgit.version>
+
+        <!-- Test and logs dependencies -->
+        <testng.version>6.8.8</testng.version>
+        <slf4j.version>1.7.12</slf4j.version>
+        <slf4j-simple.version>1.6.4</slf4j-simple.version>
+        <logback.version>1.1.2</logback.version>
+        <integration.groups>dummy</integration.groups>
+
+        <!-- Plugins -->
+        <maven-jar-plugin.version>2.4</maven-jar-plugin.version>
+        <maven-shade-plugin.version>2.4</maven-shade-plugin.version>
+        <maven-compiler-plugin.version>3.3</maven-compiler-plugin.version>
+        <maven-surefire-plugin.version>2.18.1</maven-surefire-plugin.version>
+        <maven-failsafe-plugin.version>2.19.1</maven-failsafe-plugin.version>
+        <maven-war-plugin.version>2.4</maven-war-plugin.version>
+        <cobertura-maven-plugin.version>2.3</cobertura-maven-plugin.version>
+        <dropwizard-launcher-plugin.version>1.0.1</dropwizard-launcher-plugin.version>
+        <mycila-plugin.version>3.0</mycila-plugin.version>
+        <maven-checkstyle-plugin.version>3.0.0</maven-checkstyle-plugin.version>
+
+        
+        <server-jar.path>service/target/unified-paas-service-0.0.1-SNAPSHOT.jar</server-jar.path>
+        <server-conf.path>service/conf/config.yml</server-conf.path>
+    </properties>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${maven-surefire-plugin.version}</version>
+                    <configuration>
+                        <enableAssertions>true</enableAssertions>
+                        <groups>${includedTestGroups}</groups>
+                        <excludedGroups>${excludedTestGroups}</excludedGroups>
+                        <testFailureIgnore>false</testFailureIgnore>
+                        <skipTests>${skip.unit.tests}</skipTests>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>${maven-failsafe-plugin.version}</version>
+                    <executions>
+                        <execution>
+                            <id>integration-tests</id>
+                            <goals>
+                                <goal>integration-test</goal>
+                                <goal>verify</goal>
+                            </goals>
+                            <configuration>
+                                <skipTests>${skip.integration.tests}</skipTests>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-assembly-plugin</artifactId>
+                    <version>2.5.4</version>
+                    <configuration>
+                        <tarLongFileMode>gnu</tarLongFileMode>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-clean-plugin</artifactId>
+                    <version>2.6.1</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${maven-compiler-plugin.version}</version>
+                    <configuration>
+                        <source>${java.version}</source>
+                        <target>${java.version}</target>
+                        <encoding>${project.build.sourceEncoding}</encoding>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>${maven-shade-plugin.version}</version>
+                    <configuration>
+                        <createDependencyReducedPom>true</createDependencyReducedPom>
+                        <filters>
+                            <filter>
+                                <artifact>*:*</artifact>
+                                <excludes>
+                                    <exclude>META-INF/*.SF</exclude>
+                                    <exclude>META-INF/*.DSA</exclude>
+                                    <exclude>META-INF/*.RSA</exclude>
+                                </excludes>
+                            </filter>
+                        </filters>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>${maven-jar-plugin.version}</version>
+                    <configuration>
+                        <archive>
+                            <manifest>
+                                <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            </manifest>
+                        </archive>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
+        <plugins>
+            <plugin>
+                <groupId>com.mycila</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>${mycila-plugin.version}</version>
+                <configuration>
+                    <header>LICENSE-header.txt</header>
+                    <skipExistingHeaders>true</skipExistingHeaders>
+                    <properties>
+                        <year>2018</year>
+                    </properties>
+                    <excludes>
+                        <exclude>**/*.sample</exclude>
+                        <exclude>**/*.properties</exclude>
+                        <exclude>**/*.json</exclude>
+                        <exclude>LICENSE.txt</exclude>
+                        <exclude>LICENSE-header.txt</exclude>
+                        <!--
+                        <exclude>**/README.md</exclude>
+                        <exclude>src/test/resources/**</exclude>
+                        <exclude>src/main/resources/**</exclude>
+                        <exclude>LICENSE.txt</exclude>
+                        <exclude>LICENSE-header.txt</exclude>
+                        <exclude>**/*.uml</exclude>
+                        <exclude>**/*.sh</exclude>
+                        -->
+                    </excludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>${maven-checkstyle-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>verify-style</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <logViolationsToConsole>true</logViolationsToConsole>
+                    <checkstyleRules>
+                        <module name="Checker">
+                            <!-- Checks for whitespace                               -->
+                            <!-- See http://checkstyle.sf.net/config_whitespace.html -->
+                            <module name="FileTabCharacter">
+                                <property name="eachLine" value="true" />
+                            </module>
+                            <module name="TreeWalker">
+                                <module name="IllegalImport">
+                                    <property name="illegalPkgs" value="com.google.api.client.repackaged" />
+                                </module>
+                            </module>
+                        </module>
+                    </checkstyleRules>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>eu.atos.paas</groupId>
+                <artifactId>unified-paas-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>eu.atos.paas</groupId>
+                <artifactId>unified-paas-common</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+                <scope>test</scope>
+            </dependency>
+            
+            <dependency>
+                <groupId>eu.atos.paas</groupId>
+                <artifactId>unified-paas-library</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>eu.atos.paas</groupId>
+                <artifactId>unified-paas-service-model</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>eu.atos.paas</groupId>
+                <artifactId>unified-paas-service</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>eu.atos.paas</groupId>
+                <artifactId>unified-paas-client</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.javatuples</groupId>
+                <artifactId>javatuples</artifactId>
+                <version>${javatuples.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-simple</artifactId>
+                <version>${slf4j-simple.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-log4j12</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.glassfish.jersey.core</groupId>
+                <artifactId>jersey-common</artifactId>
+                <version>${jersey.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.glassfish.jersey.core</groupId>
+                <artifactId>jersey-client</artifactId>
+                <version>${jersey.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.glassfish.jersey.media</groupId>
+                <artifactId>jersey-media-json-jackson</artifactId>
+                <version>${jersey.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.glassfish.jersey.media</groupId>
+                <artifactId>jersey-media-multipart</artifactId>
+                <version>${jersey.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>commons-configuration</groupId>
+                <artifactId>commons-configuration</artifactId>
+                <version>${commons-configuration.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-guava</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.eclipse.jgit</groupId>
+                <artifactId>org.eclipse.jgit</artifactId>
+                <version>${jgit.version}</version>
+            </dependency>
+            
+            <!-- Swagger -->
+            <dependency>
+                <groupId>io.swagger</groupId>
+                <artifactId>swagger-jersey2-jaxrs</artifactId>
+                <version>${swagger.version}</version>
+                <scope>compile</scope>
+                <exclusions>
+                  <exclusion>
+                    <groupId>org.glassfish.jersey</groupId>
+                    <artifactId>*</artifactId>
+                  </exclusion>
+                  <exclusion>
+                    <groupId>org.glassfish.jersey.containers</groupId>
+                    <artifactId>*</artifactId>
+                  </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>io.swagger</groupId>
+                <artifactId>swagger-annotations</artifactId>
+                <version>${swagger.version}</version>
+            </dependency>
+
+            <!-- Dropwizard -->
+            <dependency>
+                <groupId>io.dropwizard</groupId>
+                <artifactId>dropwizard-core</artifactId>
+                <version>${dropwizard.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dropwizard</groupId>
+                <artifactId>dropwizard-assets</artifactId>
+                <version>${dropwizard.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dropwizard</groupId>
+                <artifactId>dropwizard-forms</artifactId>
+                <version>${dropwizard.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.dropwizard</groupId>
+                <artifactId>dropwizard-testing</artifactId>
+                <version>${dropwizard.version}</version>
+            </dependency>
+
+            <!-- HEROKU -->
+            <dependency>
+                <groupId>com.heroku.api</groupId>
+                <artifactId>heroku-api</artifactId>
+                <version>${heroku.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.heroku.api</groupId>
+                <artifactId>heroku-json-jackson</artifactId>
+                <version>${heroku.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.heroku.sdk</groupId>
+                <artifactId>heroku-deploy</artifactId>
+                <version>${heroku-deploy}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.heroku.api</groupId>
+                <artifactId>heroku-http-apache</artifactId>
+                <version>${heroku.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <artifactId>httpcore</artifactId>
+                        <groupId>org.apache.httpcomponents</groupId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            
+            <!-- CLOUD FOUNDRY -->
+            <dependency>
+                <groupId>org.cloudfoundry</groupId>
+                <artifactId>cloudfoundry-client-lib</artifactId>
+                <version>${cf-version}</version>
+                <exclusions>
+                    <exclusion>
+                        <artifactId>httpclient</artifactId>
+                        <groupId>org.apache.httpcomponents</groupId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            
+            <!-- OPENSHIFT 2 -->
+            <dependency>
+                <groupId>com.openshift</groupId>
+                <artifactId>openshift-java-client</artifactId>
+                <version>${openshift2-version}</version>
+            </dependency>
+
+            <!-- Test dependencies -->
+            <dependency>
+                <groupId>org.testng</groupId>
+                <artifactId>testng</artifactId>
+                <version>${testng.version}</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <profiles>
+    
+        <!-- Default profile that runs only unit tests -->
+        <profile>
+            <id>default</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <build.profile.id>default</build.profile.id>
+                <skip.integration.tests>true</skip.integration.tests>
+                <skip.unit.tests>false</skip.unit.tests>
+            </properties>
+        </profile>
+        
+        <!--  
+            Profile to run integration tests.
+            By default only run tests in dummy group.
+            To modify group, pass integration.groups param to mvn command.
+                Ex: mvn verify -P integration-test -Dintegration.groups=openshift2,cloudfoundry
+         -->
+        <profile>
+            <id>integration-test</id>
+            <properties>
+                <build.profile.id>integration-test</build.profile.id>
+                <skip.integration.tests>false</skip.integration.tests>
+                <skip.unit.tests>true</skip.unit.tests>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                      <artifactId>maven-failsafe-plugin</artifactId>
+                      <configuration>
+                        <groups>default,${integration.groups}</groups>
+                      </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        
+    </profiles>
+
+</project>

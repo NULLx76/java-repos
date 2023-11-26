@@ -1,0 +1,214 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>org.biojava</groupId>
+	<artifactId>biojava-http</artifactId>
+	<version>6.0.0-alpha2</version>
+	<name>BioJava HTTP</name>
+	<description>HTML/JS based interfaces for BioJava</description>
+
+	<properties>
+		<jdk.version>1.8</jdk.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.build.targetEncoding>UTF-8</project.build.targetEncoding>
+		<maven.build.timestamp.format>yyyyMMdd-HHmm</maven.build.timestamp.format>
+		<timestamp>${maven.build.timestamp}</timestamp>
+		<slf4j.version>1.7.19</slf4j.version>
+		<log4j.version>2.17.1</log4j.version>
+		<biojava.version>6.0.0-alpha2</biojava.version>
+	</properties>
+
+	<repositories>
+		<repository>
+			<id>oss.sonatype.org-snapshot</id>
+			<url>http://oss.sonatype.org/content/repositories/snapshots</url>
+			<releases>
+				<enabled>false</enabled>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
+	</repositories>
+
+	<scm>
+		<connection>scm:git:git@github.com:biojava/biojava-http.git</connection>
+		<developerConnection>scm:git:git@github.com:biojava/biojava-http.git</developerConnection>
+		<url>https://github.com/biojava/biojava-http</url>
+		<tag>HEAD</tag>
+	</scm>
+	<issueManagement>
+		<url>https://github.com/biojava/biojava-http/issues</url>
+		<system>Github</system>
+	</issueManagement>
+
+	<dependencies>
+		<dependency>
+			<groupId>com.sparkjava</groupId>
+			<artifactId>spark-core</artifactId>
+			<version>2.9.3</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.biojava</groupId>
+			<artifactId>biojava-core</artifactId>
+			<version>${biojava.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.biojava</groupId>
+			<artifactId>biojava-structure</artifactId>
+			<version>${biojava.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.13.2</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- SLF4J API, for compiling -->
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>${slf4j.version}</version>
+		</dependency>
+		<!-- binding for log4j 2 at runtime -->
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-slf4j-impl</artifactId>
+			<version>${log4j.version}</version>
+			<!-- runtime scope includes the test scope as well -->
+			<scope>runtime</scope>
+		</dependency>
+		<!-- Log4j API and Core implementation required for binding -->
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-api</artifactId>
+			<version>${log4j.version}</version>
+			<!-- runtime scope includes the test scope as well -->
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-core</artifactId>
+			<version>${log4j.version}</version>
+			<!-- runtime scope includes the test scope as well -->
+			<scope>runtime</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.sparkjava</groupId>
+			<artifactId>spark-template-handlebars</artifactId>
+			<version>2.7.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
+			<version>2.8.6</version>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<fork>true</fork>
+					<source>${jdk.version}</source>
+					<target>${jdk.version}</target>
+					<maxmem>2000m</maxmem>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<!-- Minimizing removes log4j -->
+							<minimizeJar>false</minimizeJar>
+							<outputFile>target/${project.artifactId}-full-${project.version}.jar</outputFile>
+							<artifactSet>
+								<excludes>
+									<exclude>junit:junit</exclude>
+								</excludes>
+							</artifactSet>
+							<filters>
+								<filter>
+									<!-- Exclude signature files -->
+									<artifact>*:*</artifact>
+									<excludes>
+										<exclude>META-INF/*.SF</exclude>
+										<exclude>META-INF/*.DSA</exclude>
+										<exclude>META-INF/*.RSA</exclude>
+									</excludes>
+								</filter>
+							</filters>
+							<transformers>
+								<transformer
+									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+									<manifestEntries>
+										<Specification-Vendor>BioJava</Specification-Vendor>
+										<Implementation-Vendor>BioJava</Implementation-Vendor>
+										<Specification-Version>${project.version}</Specification-Version>
+										<Implementation-Version>${project.version}</Implementation-Version>
+										<Specification-Title>${project.name}</Specification-Title>
+										<Implementation-Title>${project.name}</Implementation-Title>
+										<Main-Class>org.biojava.http.ServerMain</Main-Class>
+										<Build-Date>${build.date}</Build-Date>
+										<Build-Number>${buildNumber}</Build-Number>
+									</manifestEntries>
+								</transformer>
+								<!-- This bit merges the various META-INF/services files -->
+								<transformer
+									implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+							</transformers>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- Include git commit -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>buildnumber-maven-plugin</artifactId>
+				<version>1.4</version>
+				<executions>
+					<execution>
+						<id>createbuildnum</id>
+						<phase>validate</phase>
+						<goals>
+							<goal>create</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>createdate</id>
+						<phase>validate</phase>
+						<goals>
+							<goal>create</goal>
+						</goals>
+						<configuration>
+							<format>{0,date,yyyy-MM-dd}</format>
+							<items>
+								<item>timestamp</item>
+							</items>
+							<buildNumberPropertyName>build.date</buildNumberPropertyName>
+						</configuration>
+					</execution>
+				</executions>
+				<configuration>
+					<!-- Allow building with local modifications -->
+					<doCheck>false</doCheck>
+					<!-- No need to fetch with git -->
+					<doUpdate>false</doUpdate>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+</project>

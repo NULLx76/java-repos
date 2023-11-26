@@ -1,0 +1,506 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.seagrid</groupId>
+    <artifactId>seagrid-app</artifactId>
+    <name>SEAGrid Desktop Client</name>
+    <version>1.0</version>
+
+    <properties>
+        <!-- Airavata version-->
+        <airavata.version>0.20-SNAPSHOT</airavata.version>
+
+        <!-- Installer Filename without suffix -->
+        <!--<app.filename>SEAGridDesktop</app.filename>-->
+        <app.filename>SEAGridDesktop</app.filename>
+
+        <!-- The JavaFX Application class name -->
+        <app.mainClass>org.seagrid.desktop.SEAGridDesktop</app.mainClass>
+
+        <!-- Optional parameters to the application, will be embedded in the launcher and can be overriden on the command line -->
+        <app.parameters></app.parameters>
+
+        <!-- The Application vendor used by javapackager -->
+        <app.vendor>Indiana University</app.vendor>
+
+        <!-- The Application version used by javapackager -->
+        <app.version>1.0</app.version>
+
+        <!--Installer Icon-->
+        <app.icon>app.icns</app.icon>
+
+        <!-- Base URL where you will host the application artifacts -->
+        <!--<app.url>https://seagrid.org/seagrid-rich-client/</app.url>-->
+        <app.url>https://seagrid.org/seagrid-rich-client/</app.url>
+
+        <!-- Optional scp target for application artifacts hosted at the above url -->
+
+        <!--<app.deploy.target>pga@gw75.iu.xsede.org:/var/www/portals/seagrid/public/seagrid-rich-client-->
+        <app.deploy.target>pga@gf4.ucs.indiana.edu:/var/www/portals/django-seagrid/static/seagrid-rich-client
+
+        <!--<app.deploy.target>mvn:/var/www/portals/seagrid/public/seagrid-rich-client-->
+        <!-- app.deploy.target>pga@gw75.iu.xsede.org:/var/www/portals/seagrid/public/seagrid-rich-client -->
+
+        </app.deploy.target>
+
+        <!-- The app and launcher will be assembled in this folder -->
+        <app.dir>${project.build.directory}/app</app.dir>
+
+        <!-- Native installers will be built in this folder -->
+        <app.installerdir>${project.build.directory}/installer</app.installerdir>
+
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <javassist.version>3.24.1-GA</javassist.version>
+
+    </properties>
+
+    <profiles>
+        <profile>
+            <id>default</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <version>3.3</version>
+                        <configuration>
+                            <source>1.8</source>
+                            <target>16</target>
+                            <compilerArgs>
+                                <arg>--add-modules</arg>
+                                <arg>java.xml.bind</arg>
+                            </compilerArgs>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>update-deployment</id>
+            <build>
+                <plugins>
+                    <!-- Compile project jar to appdir -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jar-plugin</artifactId>
+                        <version>2.6</version>
+                        <configuration>
+                            <outputDirectory>${app.dir}</outputDirectory>
+                        </configuration>
+
+                    </plugin>
+                    <!-- Copy dependencies to appdir -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-dependency-plugin</artifactId>
+                        <version>2.10</version>
+                        <configuration>
+                            <excludeScope>provided</excludeScope>
+                            <outputDirectory>${app.dir}</outputDirectory>
+                            <stripVersion>true</stripVersion>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>copy-dependencies</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>3.0.0</version>
+                        <!-- Generate app.xml manifest -->
+                        <executions>
+                            <execution>
+                                <id>create-manifest</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>java</goal>
+                                </goals>
+                                <configuration>
+                                    <mainClass>fxlauncher.CreateManifest</mainClass>
+                                    <arguments>
+                                        <argument>${app.url}</argument>
+                                        <argument>${app.mainClass}</argument>
+                                        <argument>${app.dir}</argument>
+                                        <argument>${app.parameters}</argument>
+
+                                    </arguments>
+                                </configuration>
+                                
+                            </execution>
+                            <!-- Embed app.xml inside fxlauncher.xml so we don't need to reference app.xml to start the app -->
+                            <execution>
+                                <id>embed-manifest-in-launcher</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>jar</executable>
+                                    <workingDirectory>${app.dir}</workingDirectory>
+                                    <arguments>
+                                        <argument>uef</argument>
+                                        <argument>fxlauncher.jar</argument>
+                                        <argument>app.xml</argument>
+
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                            <!-- Create native installer. Feel free to add more arguments as needed.
+                             https://docs.oracle.com/javase/8/docs/technotes/tools/windows/javapackager.html
+                             -->
+                            <execution>
+                                <id>installer</id>
+                                <phase>install</phase>
+                                <goals>
+                                    <goal>java</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${env.JAVA_HOME}/bin/jpackage</executable>
+                                    <arguments>
+                                        <!-- argument>-deploy</argument>
+                                        <argument>-native</argument>
+                                        <argument>-outdir</argument -->
+                                        <argument>--type app-image</argument>
+                                        <argument> -d distribution</argument>
+                                        <argument> -i target/app</argument>
+                                        <!-- argument>${app.filename}</argument -->
+                                        <!-- argument>-\-input ${app.dir} </argument -->
+                                        <!-- argument>${app.dir}</argument -->
+                                        <!-- argument> - install-dir '${app.installerdir}'</argument-->
+                                        <!-- argument>-srcfiles</argument -->
+                                        <argument>--main-jar fxlauncher.jar</argument>
+                                        <argument>--main-class xlauncher.Launcher </argument>
+                                        <!-- argument>org.seagrid.desktop.SEAGridDesktop fxlauncher.Launcher</argument --> 
+                                        <argument>--name {project.name}</argument>
+                                        <!-- argument>${project.name}</argument -->
+                                        <!-- argument>-title</argument>
+                                        <argument>${project.name}</argument -->
+                                        <argument> -p  "$PATH_TO_FX" </argument>
+
+                                        <argument>--vendor ${app.vendor}</argument>
+                                        <argument>--add-modules javafx.controls,javafx.fxml</argument>
+                                        <!-- argument>${app.vendor}</argument -->
+                                        <!-- argument> app-version  ${app.version}</argument -->
+                                        <!-- argument>-BappVersion=${app.version}</argument -->
+                                        <!-- argument>-\-icon ${app.icon}</argument -->
+                                        <argument>--mac-signing-key-user-name ${app.vendor}</argument>
+                                    </arguments>
+                                </configuration>
+                                 
+                            </execution>
+                            <!-- Copy application artifacts to remote site using scp (optional) -->
+                            <execution>
+                                <id>deploy-app</id>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>scp</executable>
+                                    <arguments>
+                                        <argument>-r</argument>
+                                        <argument>${app.dir}/.</argument>
+                                        <argument>${app.deploy.target}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <mainClass>org.seagrid.desktop.SEAGridDesktop</mainClass>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <version>3.3</version>
+                        <configuration>
+                            <source>1.8</source>
+                            <target>1.8</target>
+                            <sources>
+                                  <source>/Users/spamidig/Documents/Professional/Work_home/git/seagrid-rich-client/jamberoo-libs</source>
+                                </sources>
+
+                        </configuration>
+                         
+                    </plugin>
+                    <plugin>
+		        <groupId>org.openjfx</groupId>
+		        <artifactId>javafx-maven-plugin</artifactId>
+		        <version>0.0.6</version>
+		        <!-- configuration> <mainClass>HelloFX</mainClass> </configuration -->
+                   </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+    <dependencies>
+        <!--FX Launcher-->
+        <dependency>
+            <groupId>no.tornado</groupId>
+            <artifactId>fxlauncher</artifactId>
+            <version>1.0.8</version>
+        </dependency>
+
+        <!-- Airavata Dependencies-->
+        <dependency>
+            <groupId>org.apache.airavata</groupId>
+            <artifactId>airavata-data-models</artifactId>
+            <version>${airavata.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.airavata</groupId>
+            <artifactId>airavata-model-utils</artifactId>
+            <version>${airavata.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.airavata</groupId>
+            <artifactId>airavata-api-stubs</artifactId>
+            <version>${airavata.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.airavata</groupId>
+            <artifactId>airavata-client-configuration</artifactId>
+            <version>${airavata.version}</version>
+        </dependency>
+
+        <!-- UI Dialogs-->
+        <dependency>
+            <groupId>org.controlsfx</groupId>
+            <artifactId>controlsfx</artifactId>
+            <version>11.1.0</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.openjfx/javafx -->
+<dependency>
+    <groupId>org.openjfx</groupId>
+    <artifactId>javafx-fxml</artifactId>
+    <version>14</version>
+    <type>pom</type>
+</dependency>
+<dependency>
+    <groupId>org.openjfx</groupId>
+    <artifactId>javafx-web</artifactId>
+    <version>14</version>
+    <type>pom</type>
+</dependency>
+ 
+  <dependency>
+    <groupId>org.openjfx</groupId>
+    <artifactId>javafx-controls</artifactId>
+    <version>14</version>
+  </dependency>
+<!-- https://mvnrepository.com/artifact/javax.xml.bind/jaxb-api -->
+
+<!-- https://mvnrepository.com/artifact/javax.activation/activation -->
+ 
+
+<!-- https://mvnrepository.com/artifact/org.glassfish.jaxb/jaxb-runtime -->
+<dependency>
+    <groupId>org.glassfish.jaxb</groupId>
+    <artifactId>jaxb-runtime</artifactId>
+    <version>2.3.2</version>
+</dependency>
+<dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-core</artifactId>
+            <version>2.2.11</version>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-impl</artifactId>
+            <version>2.2.11</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.activation</groupId>
+            <artifactId>javax.activation-api</artifactId>
+            <version>1.2.0</version>
+        </dependency>
+
+        <!--OAuth Dependencies-->
+        <dependency>
+            <groupId>org.codehaus.jackson</groupId>
+            <artifactId>jackson-mapper-asl</artifactId>
+            <version>1.9.13</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.oltu.oauth2</groupId>
+            <artifactId>org.apache.oltu.oauth2.client</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
+
+        <!-- Apache Commons -->
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.6</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-collections</groupId>
+            <artifactId>commons-collections</artifactId>
+            <version>3.2.2</version>
+        </dependency>
+
+        <!-- JSch Dependency-->
+        <dependency>
+            <groupId>com.jcraft</groupId>
+            <artifactId>jsch</artifactId>
+            <version>0.1.54</version>
+        </dependency>
+
+
+        <!-- Google Guava -->
+        <!-- dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>18.0</version>
+        </dependency -->
+<dependency>
+	<groupId>com.google.guava</groupId>
+	<artifactId>guava</artifactId>
+	<version>30.1.1-jre</version>
+</dependency>
+<!-- Thanks for using https://jar-download.com -->
+
+        <!-- Logging  -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.7.31</version>
+        </dependency>
+<!-- https://mvnrepository.com/artifact/log4j/log4j >
+<dependency>
+    <groupId>log4j</groupId>
+    <artifactId>log4j</artifactId>
+    <version>1.2.17</version>
+</dependency -->
+
+        <!-- Jamberoo dependencies -->
+        <dependency>
+            <groupId>jamberoo</groupId>
+            <artifactId>bsh-2.0b4</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/bsh/bsh -->
+<!-- dependency>
+    <groupId>bsh</groupId>
+    <artifactId>bsh</artifactId>
+    <version>2.0b4</version>
+</dependency -->
+        <dependency>
+            <groupId>jamberoo</groupId>
+            <artifactId>cct-globus</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>jamberoo</groupId>
+            <artifactId>Fragments</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>jamberoo</groupId>
+            <artifactId>j2ssh-common</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>jamberoo</groupId>
+            <artifactId>j2ssh-core</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>jamberoo</groupId>
+            <artifactId>Jamberoo-help</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>jamberoo</groupId>
+            <artifactId>jbzip2-0.9.1</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>jamberoo</groupId>
+            <artifactId>jcommon-1.0.12</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>jamberoo</groupId>
+            <artifactId>jfreechart-1.0.9</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>jamberoo</groupId>
+            <artifactId>jhall</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>jamberoo</groupId>
+            <artifactId>mysql-connector-java-5.1.33-bin</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>jamberoo</groupId>
+            <artifactId>Solvents</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jogamp.jogl</groupId>
+            <artifactId>jogl-all-main</artifactId>
+            <version>2.3.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jogamp.gluegen</groupId>
+            <artifactId>gluegen-rt-main</artifactId>
+            <version>2.3.2</version>
+        </dependency>
+
+        <!-- Java 3D dependencies -->
+        <dependency>
+            <groupId>org.scijava</groupId>
+            <artifactId>j3dutils</artifactId>
+            <version>1.6.0-scijava-2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.scijava</groupId>
+            <artifactId>j3dcore</artifactId>
+            <version>1.6.0-scijava-2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.scijava</groupId>
+            <artifactId>vecmath</artifactId>
+            <version>1.6.0-scijava-2</version>
+        </dependency>
+    </dependencies>
+
+    <repositories>
+        <repository>
+            <id>apache.snapshots</id>
+            <name>Apache Snapshot Repository</name>
+            <url>http://repository.apache.org/snapshots</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+        </repository>
+        <repository>
+            <id>Codehaus Mojo</id>
+            <name>Codehaus Mojo</name>
+            <url>https://nexus.codehaus.org/contents/repositories/releases</url>
+        </repository>
+    </repositories>
+
+
+</project>

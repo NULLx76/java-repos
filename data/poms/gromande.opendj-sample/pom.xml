@@ -1,0 +1,163 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.groman</groupId>
+	<artifactId>opendj-sample</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>opendj-sample</name>
+	<url>http://maven.apache.org</url>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<opendj.sdk.version>2.6.11</opendj.sdk.version>
+		<guice.version>3.0</guice.version>
+		<slf4j.version>1.7.5</slf4j.version>
+	</properties>
+
+	<repositories>
+		<repository>
+			<id>forgerock-releases</id>
+			<url>http://maven.forgerock.org/repo/releases</url>
+		</repository>
+	</repositories>
+
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.forgerock.opendj</groupId>
+			<artifactId>opendj-ldap-sdk</artifactId>
+			<version>${opendj.sdk.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.inject</groupId>
+			<artifactId>guice</artifactId>
+			<version>${guice.version}</version>
+			<classifier>no_aop</classifier>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>${slf4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
+			<version>${slf4j.version}</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.19</version>
+				<!-- Exclude integration tests -->
+				<configuration>
+					<excludedGroups>com.groman.opendj.dao.IntegrationTest</excludedGroups>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<version>2.19</version>
+				<!-- Only run integration tests -->
+				<configuration>
+					<groups>com.groman.opendj.dao.IntegrationTest</groups>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>integration-test</goal>
+						</goals>
+						<configuration>
+							<includes>
+								<include>**/*.class</include>
+							</includes>
+							<systemPropertyVariables>
+								<opendj.hostname>${docker.containers.opendj.ports.1389/tcp.host}</opendj.hostname>
+								<opendj.ldap.port>${docker.containers.opendj.ports.1389/tcp.port}</opendj.ldap.port>
+								<opendj.bindDN>cn=directory manager</opendj.bindDN>
+								<opendj.bindPassword>password</opendj.bindPassword>
+							</systemPropertyVariables>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>net.wouterdanes.docker</groupId>
+				<artifactId>docker-maven-plugin</artifactId>
+				<version>5.0.0</version>
+				<executions>
+					<execution>
+						<id>package</id>
+						<goals>
+							<goal>build-images</goal>
+						</goals>
+						<configuration>
+							<images>
+								<image>
+									<id>opendj</id>
+									<dockerFile>${project.basedir}/src/test/resources/opendj/Dockerfile</dockerFile>
+								    <keep>true</keep>
+								    <nameAndTag>groman/opendj-test:1.0</nameAndTag>
+								    <artifacts>
+								        <artifact>
+                                            <file>${project.basedir}/src/test/resources/opendj/opendj.zip</file>
+                                        </artifact>
+								        <artifact>
+								            <file>${project.basedir}/src/test/resources/opendj/99-custom-schema.ldif</file>
+								        </artifact>
+								        <artifact>
+								            <file>${project.basedir}/src/test/resources/opendj/custom-dit.ldif</file>
+								        </artifact>
+								    </artifacts>
+								</image>
+							</images>
+						</configuration>
+					</execution>
+					<execution>
+						<id>start</id>
+						<goals>
+							<goal>start-containers</goal>
+						</goals>
+						<configuration>
+							<!-- You can set forceCleanup to true to stop and remove started containers 
+								at the end of the build even if the stop-containers goal is not executed 
+								(useful for preventing Ctrl+C causing dangling containers) -->
+							<forceCleanup>false</forceCleanup>
+							<containers>
+								<container>
+									<id>opendj</id>
+									<image>groman/opendj-test:1.0</image>
+									<waitForStartup>The Directory Server has started successfully</waitForStartup>
+								</container>
+							</containers>
+						</configuration>
+					</execution>
+					<execution>
+						<id>stop</id>
+						<goals>
+							<goal>stop-containers</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>verify</id>
+						<goals>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+</project>

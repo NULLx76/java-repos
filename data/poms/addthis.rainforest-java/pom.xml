@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <parent>
+        <artifactId>jar-pom</artifactId>
+        <groupId>com.addthis.common.build.maven.pom</groupId>
+        <version>3.4.1</version>
+    </parent>
+    
+    <groupId>com.addthis.rainforest</groupId>
+    <artifactId>rainforest-java</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    
+    <name>Rainforest Java API</name>
+    
+    <url>https://github.com/addthis/rainforest-java</url>
+    <description>Java based Rainforest QA client</description>
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+    
+    <properties>
+        <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
+    </properties>
+    
+    <packaging>jar</packaging>
+    
+    <dependencies>
+        <dependency>
+            <groupId>org.glassfish.jersey.core</groupId>
+            <artifactId>jersey-client</artifactId>
+            <version>2.21</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.media</groupId>
+            <artifactId>jersey-media-multipart</artifactId>
+            <version>2.21</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>javax.ws.rs-api</artifactId>
+            <version>2.0.1</version>
+            <scope>compile</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-joda</artifactId>
+            <version>2.6.2</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>io.swagger</groupId>
+            <artifactId>swagger-annotations</artifactId>
+            <version>1.5.4</version>
+        </dependency>
+    </dependencies>
+    
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.4.0</version>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>io.swagger.codegen.SwaggerCodegen</mainClass>
+                            <includePluginDependencies>true</includePluginDependencies>
+                            <arguments>
+                                <argument>generate</argument>
+                                <argument>-i</argument>
+                                <argument>${basedir}/src/main/resources/rainforest.json</argument>
+                                <argument>-l</argument>
+                                <argument>java</argument>
+                                <argument>-o</argument>
+                                <argument>${project.build.directory}/generated-sources/swagger</argument>
+                                <argument>-c</argument>
+                                <argument>${basedir}/src/main/resources/config.json</argument>
+                            </arguments>
+                        </configuration>
+                    </execution> 
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>io.swagger</groupId>
+                        <artifactId>swagger-codegen-cli</artifactId>
+                        <version>2.1.4</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.8</version>
+                <executions>
+                    <execution>
+                        <!-- this is to correct the weirdness that the swagger code gen plugin spits out -->
+                        <phase>generate-sources</phase>
+                        <configuration>
+                            <target>
+                                <move todir="${basedir}/target/generated-sources/swagger/com">
+                                    <fileset dir="${basedir}/target/generated-sources/swagger/src/main/java/com"/>
+                                </move>
+                                <delete dir="${basedir}/target/generated-sources/swagger/src"/>
+                                <delete file="${basedir}/target/generated-sources/swagger/pom.xml"/>
+                                <delete file="${basedir}/target/generated-sources/swagger/build.gradle"/>
+                                <delete file="${basedir}/target/generated-sources/swagger/settings.gradle"/>
+                                <delete file="${basedir}/target/generated-sources/swagger/gradle.properties"/>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.9.1</version>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.build.directory}/generated-sources/swagger</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+    
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.rat</groupId>
+                <artifactId>apache-rat-plugin</artifactId>
+                <version>${dep.plugin.rat.version}</version>
+            </plugin>
+        </plugins>
+    </reporting>
+    
+    <scm>
+        <connection>scm:git:git@github.com:addthis/rainforest-java.git</connection>
+        <developerConnection>scm:git:git@github.com:addthis/rainforest-java.git</developerConnection>
+        <url>https://github.com/addthis/rainforest-java</url>
+        <tag>HEAD</tag>
+    </scm>
+    
+</project>

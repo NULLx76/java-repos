@@ -1,0 +1,187 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.cgomez</groupId>
+	<artifactId>dl-batch</artifactId>
+	<packaging>jar</packaging>
+	<version>1.0.0</version>
+	<name>dl-batch</name>
+	<description>Batches and extractors of information from DBLP</description>
+	<inceptionYear>2015</inceptionYear>
+
+	<developers>
+		<developer>
+			<name>Carlos A. Gómez</name>
+			<email>andres1537@gmail.com</email>
+			<roles>
+				<role>Developer</role>
+			</roles>
+		</developer>
+	</developers>
+    
+    <properties>
+        <source.encoding>UTF-8</source.encoding>
+        <maven.compiler.plugin>3.1</maven.compiler.plugin>
+        <maven.dependency.plugin>2.9</maven.dependency.plugin>
+        <maven.assembly.plugin>2.4</maven.assembly.plugin>
+        <maven.jar.plugin>2.5</maven.jar.plugin>
+        <jdk.version>1.7</jdk.version>
+        <maven.source.plugin.version>2.4</maven.source.plugin.version>
+
+        <!-- Libs of the project -->
+        <dl.java.version>1.0.0</dl.java.version>
+        <mongo.java.driver.version>3.2.2</mongo.java.driver.version>
+        <mongo.jack.version>2.6.0</mongo.jack.version>
+        <fongo.version>2.0.6</fongo.version>
+        <log4j.core.version>2.3</log4j.core.version>
+        <slf4j.log4j12.version>1.7.12</slf4j.log4j12.version>
+    </properties>
+
+	<build>
+		<finalName>dl-batch</finalName>
+		<plugins>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${maven.compiler.plugin}</version>
+				<configuration>
+					<source>${jdk.version}</source>
+					<target>${jdk.version}</target>
+					<encoding>${source.encoding}</encoding>
+				</configuration>
+			</plugin>
+			<plugin>
+        		<artifactId>maven-dependency-plugin</artifactId>
+        		<version>${maven.dependency.plugin}</version>
+        		<executions>
+          			<execution>
+            			<id>copy-dependencies</id>
+            			<phase>package</phase>
+            			<goals>
+              				<goal>copy-dependencies</goal>
+            			</goals>
+            			<configuration>
+              				<outputDirectory>${project.build.directory}/lib</outputDirectory>
+              				<overWriteReleases>false</overWriteReleases>
+              				<overWriteSnapshots>false</overWriteSnapshots>
+              				<overWriteIfNewer>true</overWriteIfNewer>
+            			</configuration>
+          			</execution>
+        		</executions>
+      		</plugin>
+      		<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>${maven.assembly.plugin}</version>
+				<configuration>
+					<descriptor>conf/assembly/description.xml</descriptor>
+				</configuration>
+				<executions>
+          			<execution>
+            			<id>make-assembly</id> <!-- this is used for inheritance merges -->
+            			<phase>package</phase> <!-- bind to the packaging phase -->
+            			<goals>
+              				<goal>single</goal>
+            			</goals>
+          			</execution>
+        		</executions>
+			</plugin>
+			<plugin>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>${maven.jar.plugin}</version>
+				<configuration>
+					<excludes>
+            			<exclude>**/log4j.properties</exclude>
+          			</excludes>
+					<archive>
+						<manifest>
+							<addClasspath>true</addClasspath>
+							<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+							<addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+							<mainClass>com.cgomez.BatchRunner</mainClass>
+						</manifest>
+						<manifestEntries>
+                			<Class-Path>../data/conf/</Class-Path>
+            			</manifestEntries>
+					</archive>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>${maven.source.plugin.version}</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+	
+	<dependencies>
+		<dependency>
+			<groupId>com.cgomez</groupId>
+			<artifactId>dl-java</artifactId>
+			<version>${dl.java.version}</version>
+		</dependency>
+	
+		<!-- mongodb -->
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongo-java-driver</artifactId>
+            <version>${mongo.java.driver.version}</version>
+        </dependency>
+		<dependency>
+			<groupId>org.mongojack</groupId>
+			<artifactId>mongojack</artifactId>
+			<version>${mongo.jack.version}</version>
+		</dependency>
+        <dependency>
+        	<groupId>com.github.fakemongo</groupId>
+            <artifactId>fongo</artifactId>
+            <version>${fongo.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-core</artifactId>
+			<version>${log4j.core.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>${slf4j.log4j12.version}</version>
+		</dependency>
+	</dependencies>
+	
+	<profiles>
+		<!-- PRODUCTION PROFILE -->
+		<profile>
+			<id>prod</id>
+			<build>
+				<plugins>
+					<!-- Replace properties DEV to PROD -->
+					<plugin>
+						<artifactId>maven-antrun-plugin</artifactId>
+						<executions>
+							<execution>
+								<phase>test</phase>
+								<goals>
+									<goal>run</goal>
+								</goals>
+								<configuration>
+									<tasks>
+										<delete file="${project.build.outputDirectory}/log4j.properties" />
+										<copy file="conf/log/log4j-prod.properties" tofile="${project.build.outputDirectory}/log4j.properties" />
+									</tasks>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+</project>

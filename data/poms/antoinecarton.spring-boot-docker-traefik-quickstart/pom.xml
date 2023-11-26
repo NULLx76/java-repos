@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.example</groupId>
+    <artifactId>spring-boot-docker</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>spring-boot-docker-example</name>
+    <description>Demo project for Spring Boot with docker and Traefik proxy</description>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>1.4.2.RELEASE</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <java.version>1.8</java.version>
+
+        <docker.plugin.version>0.15.2</docker.plugin.version>
+        <docker.folder>/opt/spring-boot-docker</docker.folder>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-tomcat</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jetty</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <!-- Docker -->
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>${docker.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>release-docker</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>push</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <images>
+                        <image>
+                            <name>example/${project.artifactId}:${project.version}</name>
+                            <alias>${project.artifactId}</alias>
+                            <build>
+                                <from>java:8</from>
+                                <tags>
+                                    <tag>latest</tag>
+                                </tags>
+                                <env>
+                                    <DOCKER_FOLDER>${docker.folder}</DOCKER_FOLDER>
+                                    <CONFIG_PATH>${docker.folder}/config</CONFIG_PATH>
+                                    <LOG_PATH>${docker.folder}/logs</LOG_PATH>
+                                </env>
+                                <volumes>
+                                    <volume>${docker.folder}/config</volume>
+                                    <volume>${docker.folder}/logs</volume>
+                                </volumes>
+                                <assembly>
+                                    <inline>
+                                        <files>
+                                            <file>
+                                                <source>${project.build.directory}/${project.build.finalName}.jar</source>
+                                                <outputDirectory>${docker.folder}</outputDirectory>
+                                            </file>
+                                        </files>
+                                    </inline>
+                                </assembly>
+                                <workdir>${docker.folder}</workdir>
+                                <runCmds>
+                                    <runCmd>useradd -U -r -m -d ${docker.folder} spring-user</runCmd>
+                                    <runCmd>install -dm755 -o spring-user -g spring-user ${docker.folder}/logs</runCmd>
+                                    <runCmd>install -dm755 -o spring-user -g spring-user ${docker.folder}/config</runCmd>
+                                    <runCmd>mv /maven${docker.folder}/${project.build.finalName}.jar ${docker.folder}/${project.build.finalName}.jar</runCmd>
+                                    <runCmd>chown spring-user:spring-user ${docker.folder}/${project.build.finalName}.jar</runCmd>
+                                </runCmds>
+                                <user>spring-user</user>
+                                <cmd>java -Duser.timezone=UTC -jar ${project.build.finalName}.jar</cmd>
+                            </build>
+                        </image>
+                    </images>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

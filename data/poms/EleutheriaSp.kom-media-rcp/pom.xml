@@ -1,0 +1,185 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>pl.kommedia</groupId>
+	<artifactId>kom-media-rcp</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>kom-media-rcp</name>
+	<description>Kleint zdalny</description>
+  
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<version.jboss.bom>8.2.2.Final</version.jboss.bom>
+		<version.wildfly>10.0.0.Final</version.wildfly>
+		
+		<!-- other plugin versions -->
+		<version.compiler.plugin>3.1</version.compiler.plugin>
+		<version.exec.plugin>1.5.0</version.exec.plugin>
+		
+		<!-- maven-compiler-plugin -->
+		<maven.compiler.target>1.7</maven.compiler.target>
+		<maven.compiler.source>1.7</maven.compiler.source>
+	</properties> 
+ 
+ 	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.wildfly.bom</groupId>
+				<artifactId>jboss-javaee-7.0-with-tools</artifactId>
+				<version>${version.jboss.bom}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			
+			<dependency>
+				<groupId>org.wildfly</groupId>
+				<artifactId>wildfly-ejb-client-bom</artifactId>
+				<type>pom</type>
+				<version>${version.wildfly}</version>
+	  		 </dependency>
+		</dependencies>
+		
+		
+	</dependencyManagement>
+  
+     <dependencies>
+          <!-- Import API dotyczącego transakcji, używamy zakresu runtime, ponieważ referencje do tego API
+        nie występują w kodzie klienta w sposób bezpośredni. -->
+      <dependency>
+         <groupId>org.jboss.spec.javax.transaction</groupId>
+         <artifactId>jboss-transaction-api_1.2_spec</artifactId>
+         <scope>runtime</scope>
+      </dependency>
+
+      <!-- Import API EJB 3.1, używamy zakresu runtime, ponieważ referencje do tego API
+        nie występują w kodzie klienta w sposób bezpośredni. -->
+         <dependency>
+         <groupId>org.jboss.spec.javax.ejb</groupId>
+         <artifactId>jboss-ejb-api_3.2_spec</artifactId>
+         <scope>runtime</scope>
+      </dependency>
+      
+             <!-- Potrzebny jest zdalny interfejs aplikacji EJB. -->
+       <dependency>
+		<groupId>pl.kommedia</groupId>
+          <artifactId>kom-media-ejb</artifactId>
+         	<type>ejb-client</type>  
+       		<version>${project.version}</version>
+       </dependency>
+       
+       	<dependency>
+			<groupId>pl.kompro</groupId>
+			<artifactId>kom-pro-int</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
+       
+       
+         <!-- Plik JAR API klienckiego EJB. Używamy zakresu runtime, ponieważ referencje do tego API
+        nie występują w kodzie klienta w sposób bezpośredni. Potrzebujemy posiadać ten plik w ścieżce. -->
+       <dependency>
+           <groupId>org.jboss</groupId>
+           <artifactId>jboss-ejb-client</artifactId>
+           <version>2.1.6.Final</version>
+           <scope>runtime</scope>
+       </dependency>
+       
+       <!-- Klient do komunikacji z serwerem używa XNIO. -->
+       <dependency>
+           <groupId>org.jboss.xnio</groupId>
+           <artifactId>xnio-api</artifactId>
+           <version>3.3.6.Final</version>
+           <scope>runtime</scope>
+       </dependency>
+
+       <dependency>
+           <groupId>org.jboss.xnio</groupId>
+           <artifactId>xnio-nio</artifactId>
+           <version>3.3.6.Final</version>
+           <scope>runtime</scope>
+       </dependency>
+       
+      <!-- Klient potrzebuje JBoss remoting. -->
+       <dependency>
+            <groupId>org.jboss.remoting3</groupId>
+            <artifactId>jboss-remoting</artifactId>
+            <version>3.3.8.Final</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Zdalny dostęp warto zabezpieczyć. -->
+        <dependency>
+            <groupId>org.jboss.sasl</groupId>
+            <artifactId>jboss-sasl</artifactId>
+            <version>1.0.5.Final</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Serializacja danych dla zdalnie wywoływanych EJB -->
+        <dependency>
+            <groupId>org.jboss.marshalling</groupId>
+            <artifactId>jboss-marshalling-river</artifactId>
+            <version>1.4.10.Final</version>
+            <scope>runtime</scope>
+        </dependency>
+        
+	</dependencies>
+
+	<build>
+		<finalName>${project.artifactId}</finalName>
+		<plugins>
+			<!-- Wymusza Javę 1.7  -->
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${version.compiler.plugin}</version>
+				<configuration>
+					<source>${maven.compiler.source}</source>
+					<target>${maven.compiler.target}</target>
+					<fork>true</fork>
+				</configuration>
+			</plugin>
+
+            <!-- Dodaje moduł exec, by uruchamiać program przy użyciu maven -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>${version.exec.plugin}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <executable>java</executable>
+                    <workingDirectory>${project.build.directory}/exec-working-directory</workingDirectory>
+                    <arguments>
+                        <!-- automatycznie tworzy classpath z wszystkimi zależnościami projektu,
+                            a także folder wynikowy aplikacji. -->
+                        <argument>-classpath</argument>
+                        <classpath>
+                        </classpath>
+                        <argument>pl.kommedia.zdalnie.Uslugi</argument>
+                    </arguments>
+                </configuration>
+            </plugin>
+            <!-- tworzy niezależny plik jar -->
+          <!--   <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                    <archive>
+                        <manifest>
+                            <mainClass>org.jboss.as.quickstarts.ejb.remote.client.RemoteEJBClient</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin> -->
+         
+           
+        </plugins>
+
+    </build>
+  
+</project>

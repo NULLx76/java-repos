@@ -1,0 +1,140 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>nl.vanwollingen</groupId>
+    <artifactId>selenium-nginx-example</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+
+    <name>Selenium Nginx Example</name>
+    <description>Run a webserver and Selenium node in Docker</description>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-remote-driver</artifactId>
+            <version>2.48.2</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.3</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.19.1</version>
+                <configuration>
+                    <systemProperties>
+                        <nginxIP>${docker.container.some-nginx.ip}</nginxIP>
+                    </systemProperties>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>failsafe-integration-tests</id>
+                        <phase>integration-test</phase>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>0.15.9</version>
+                <configuration>
+                    <images>
+                        <image>
+                            <name>selenium/standalone-firefox-debug</name>
+                            <alias>seleniumnode</alias>
+                            <run>
+                                <namingStrategy>alias</namingStrategy>
+                                <ports>
+                                    <port>4444:4444</port>
+                                    <port>5900:5900</port>
+                                </ports>
+                                <wait>
+                                    <log>Selenium Server is up and running</log>
+                                </wait>
+                            </run>
+                        </image>
+                        <image>
+                            <name>some-nginx</name>
+                            <alias>some-nginx</alias>
+                            <build>
+                                <dockerFileDir>nginx</dockerFileDir>
+                            </build>
+                            <run>
+                                <namingStrategy>alias</namingStrategy>
+                                <ports>
+                                    <port>80:80</port>
+                                </ports>
+                                <wait>
+                                    <tcp>
+                                        <mode>mapped</mode>
+                                        <host>localhost</host>
+                                        <ports>
+                                            <port>80</port>
+                                        </ports>
+                                    </tcp>
+                                </wait>
+                                <links>
+                                    <link>seleniumnode</link>
+                                </links>
+                            </run>
+                        </image>
+                    </images>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>start</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>stop</goal>
+                            <goal>start</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>stop</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <repositories>
+        <repository>
+            <id>java.net</id>
+            <url>https://maven.java.net/content/repositories/releases/</url>
+        </repository>
+    </repositories>
+</project>

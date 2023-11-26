@@ -1,0 +1,397 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>se.joshua</groupId>
+    <artifactId>endpoint-party-party</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+
+    <modules>
+        <module>endpoint-party-client</module>
+        <module>endpoint-party-development</module>
+        <module>endpoint-party-model</module>
+        <module>endpoint-party-model-mapper</module>
+        <module>endpoint-party-service</module>
+        <module>endpoint-party-test</module>
+    </modules>
+
+    <properties>
+        <sugar.dependency.version>0.0.1-SNAPSHOT</sugar.dependency.version>
+        <sugar.common.version>0.0.1-SNAPSHOT</sugar.common.version>
+        <sugar.backend.party.version>0.0.1-SNAPSHOT</sugar.backend.party.version>
+
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <additionalparam>-Xdoclint:none</additionalparam>
+        <java.version>1.8</java.version>
+        <slf4j.version>1.7.21</slf4j.version>
+        <lucene.version>5.4.1</lucene.version>
+        <gigaspaces.version>11.0.0-14800-RELEASE</gigaspaces.version>
+        <jackson.version>2.6.3</jackson.version>
+        <spring.version>4.1.1.RELEASE</spring.version>
+    </properties>
+
+<dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.so4it.sugar</groupId>
+            <artifactId>common-util</artifactId>
+            <version>${sugar.common.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>se.joshua</groupId>
+            <artifactId>backend-component-party-domain</artifactId>
+            <version>${sugar.backend.party.version}</version>
+        </dependency>
+
+       <!-- <dependency>
+            <groupId>com.so4it.sugar</groupId>
+            <artifactId>swagger-dependency-management-2.5.0</artifactId>
+            <version>${sugar.dependency.version}</version>
+            <scope>import</scope>
+            <type>pom</type>
+        </dependency>-->
+
+    </dependencies>
+</dependencyManagement>
+
+
+    <dependencies>
+
+        <dependency>
+            <groupId>com.so4it.sugar</groupId>
+            <artifactId>platform-provided-dependencies-2.0.0</artifactId>
+            <version>${sugar.dependency.version}</version>
+            <scope>provided</scope>
+            <type>pom</type>
+        </dependency>
+        <dependency>
+            <groupId>com.so4it.sugar</groupId>
+            <artifactId>platform-provided-endpoint-dependencies-2.0.0</artifactId>
+            <version>${sugar.dependency.version}</version>
+            <scope>provided</scope>
+            <type>pom</type>
+        </dependency>
+        <dependency>
+            <groupId>com.so4it.sugar</groupId>
+            <artifactId>platform-required-endpoint-dependencies-2.0.0</artifactId>
+            <version>${sugar.dependency.version}</version>
+            <scope>compile</scope>
+            <type>pom</type>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.5.1</version>
+                    <configuration>
+                        <source>1.8</source>
+                        <target>1.8</target>
+                    </configuration>
+                </plugin>
+
+
+                <!--
+                Jetty plugin
+                -->
+
+                <plugin>
+                    <groupId>org.mortbay.jetty</groupId>
+                    <artifactId>jetty-maven-plugin</artifactId>
+                    <version>8.1.16.v20140903</version>
+                    <configuration>
+                        <systemProperties>
+                            <systemProperty>
+                                <name>com.gs.multicast.enabled</name>
+                                <value>false</value>
+                            </systemProperty>
+                            <systemProperty>
+                                <name>com.gs.start-embedded-lus</name>
+                                <value>true</value>
+                            </systemProperty>
+                            <systemProperty>
+                                <name>lookupGroups</name>
+                                <value>${env.LOOKUPGROUPS}</value>
+                            </systemProperty>
+                            <systemProperty>
+                                <name>lookupLocators</name>
+                                <value>${env.LOOKUPLOCATORS}</value>
+                            </systemProperty>
+                        </systemProperties>
+
+                        <war>${project.basedir}/target/${project.artifactId}-pu.war</war>
+                        <contextXml>${project.basedir}/src/main/resources/jetty-context.xml</contextXml>
+                        <scanIntervalSeconds>2</scanIntervalSeconds>
+                        <stopKey>${jetty.stopKey}</stopKey>
+                        <stopPort>${jetty.stopPort}</stopPort>
+                        <connectors>
+                            <connector implementation="org.eclipse.jetty.server.nio.SelectChannelConnector">
+                                <port>${jetty.port}</port>
+                            </connector>
+                        </connectors>
+                        <jvmArgs>-Djetty.port=${jetty.port} -Djava.net.preferIPv4Stack=true</jvmArgs>
+                        <waitForChild>false</waitForChild>
+                    </configuration>
+
+                    <dependencies>
+
+                        <!--
+                            GigaSpaces XAP
+                        -->
+                        <dependency>
+                            <groupId>com.gigaspaces</groupId>
+                            <artifactId>gs-openspaces</artifactId>
+                            <version>${gigaspaces.version}</version>
+                            <exclusions>
+                                <exclusion>
+                                    <groupId>asm</groupId>
+                                    <artifactId>asm</artifactId>
+                                </exclusion>
+                                <exclusion>
+                                    <groupId>org.hibernate</groupId>
+                                    <artifactId>hibernate-core</artifactId>
+                                </exclusion>
+                            </exclusions>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.gigaspaces</groupId>
+                            <artifactId>gs-runtime</artifactId>
+                            <version>${gigaspaces.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.gigaspaces</groupId>
+                            <artifactId>xap-spatial</artifactId>
+                            <version>${gigaspaces.version}</version>
+                            <exclusions>
+                                <exclusion>
+                                    <groupId>org.apache.lucene</groupId>
+                                    <artifactId>lucene-analyzers-common</artifactId>
+                                </exclusion>
+                                <exclusion>
+                                    <groupId>org.apache.lucene</groupId>
+                                    <artifactId>lucene-core</artifactId>
+                                </exclusion>
+                                <exclusion>
+                                    <groupId>org.apache.lucene</groupId>
+                                    <artifactId>lucene-misc</artifactId>
+                                </exclusion>
+                                <exclusion>
+                                    <groupId>org.apache.lucene</groupId>
+                                    <artifactId>lucene-queries</artifactId>
+                                </exclusion>
+                                <exclusion>
+                                    <groupId>org.apache.lucene</groupId>
+                                    <artifactId>lucene-queryparser</artifactId>
+                                </exclusion>
+                                <exclusion>
+                                    <groupId>org.apache.lucene</groupId>
+                                    <artifactId>lucene-sandbox</artifactId>
+                                </exclusion>
+                                <exclusion>
+                                    <groupId>org.apache.lucene</groupId>
+                                    <artifactId>lucene-spatial</artifactId>
+                                </exclusion>
+                            </exclusions>
+                        </dependency>
+
+
+                        <!--
+                            Lucene is part of GigaSpaces XAP
+                        -->
+                        <dependency>
+                            <groupId>org.apache.lucene</groupId>
+                            <artifactId>lucene-analyzers-common</artifactId>
+                            <version>${lucene.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.apache.lucene</groupId>
+                            <artifactId>lucene-core</artifactId>
+                            <version>${lucene.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.apache.lucene</groupId>
+                            <artifactId>lucene-misc</artifactId>
+                            <version>${lucene.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.apache.lucene</groupId>
+                            <artifactId>lucene-queries</artifactId>
+                            <version>${lucene.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.apache.lucene</groupId>
+                            <artifactId>lucene-queryparser</artifactId>
+                            <version>${lucene.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.apache.lucene</groupId>
+                            <artifactId>lucene-sandbox</artifactId>
+                            <version>${lucene.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.apache.lucene</groupId>
+                            <artifactId>lucene-spatial</artifactId>
+                            <version>${lucene.version}</version>
+                            <exclusions>
+                                <exclusion>
+                                    <groupId>com.spatial4j</groupId>
+                                    <artifactId>spatial4j</artifactId>
+                                </exclusion>
+                            </exclusions>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.spatial4j</groupId>
+                            <artifactId>spatial4j</artifactId>
+                            <version>0.5</version>
+                        </dependency>
+
+
+                        <!--
+                            Aspectj is not part  of GigaSpaces XAp ( a fact that we still dont understand) but
+                            we add it under the ext library
+                        -->
+                        <dependency>
+                            <groupId>org.aspectj</groupId>
+                            <artifactId>aspectjrt</artifactId>
+                            <version>1.8.2</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.aspectj</groupId>
+                            <artifactId>aspectjweaver</artifactId>
+                            <version>1.8.2</version>
+                        </dependency>
+
+                        <!--
+                            Curator framework is part of GigaSpaces XAP
+                        -->
+                        <dependency>
+                            <groupId>org.apache.curator</groupId>
+                            <artifactId>curator-framework</artifactId>
+                            <version>2.9.1</version>
+                            <exclusions>
+                                <exclusion>
+                                    <groupId>log4j</groupId>
+                                    <artifactId>log4j</artifactId>
+                                </exclusion>
+                            </exclusions>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.apache.curator</groupId>
+                            <artifactId>curator-recipes</artifactId>
+                            <version>2.9.1</version>
+                        </dependency>
+
+                        <!--
+                            Springframework is part of GigaSpaces XAP
+                        -->
+                        <dependency>
+                            <groupId>org.springframework</groupId>
+                            <artifactId>spring-aop</artifactId>
+                            <version>4.1.1.RELEASE</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.springframework</groupId>
+                            <artifactId>spring-beans</artifactId>
+                            <version>4.1.1.RELEASE</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.springframework</groupId>
+                            <artifactId>spring-core</artifactId>
+                            <version>4.1.1.RELEASE</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.springframework</groupId>
+                            <artifactId>spring-context</artifactId>
+                            <version>4.1.1.RELEASE</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.springframework</groupId>
+                            <artifactId>spring-context-support</artifactId>
+                            <version>4.1.1.RELEASE</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.springframework</groupId>
+                            <artifactId>spring-tx</artifactId>
+                            <version>4.1.1.RELEASE</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.springframework</groupId>
+                            <artifactId>spring-web</artifactId>
+                            <version>4.1.1.RELEASE</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.springframework</groupId>
+                            <artifactId>spring-webmvc</artifactId>
+                            <version>4.1.1.RELEASE</version>
+                        </dependency>
+
+
+                        <!--
+                        -->
+                        <dependency>
+                            <groupId>commons-logging</groupId>
+                            <artifactId>commons-logging</artifactId>
+                            <version>1.2</version>
+                        </dependency>
+
+                        <!--
+                            Jackson is not part of GigaSpaces XAP but added it to /ext
+                        -->
+                        <dependency>
+                            <groupId>com.fasterxml.jackson.core</groupId>
+                            <artifactId>jackson-core</artifactId>
+                            <version>2.6.3</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.fasterxml.jackson.core</groupId>
+                            <artifactId>jackson-databind</artifactId>
+                            <version>2.6.3</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.fasterxml.jackson.core</groupId>
+                            <artifactId>jackson-annotations</artifactId>
+                            <version>2.6.3</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.fasterxml.jackson.datatype</groupId>
+                            <artifactId>jackson-datatype-jsr310</artifactId>
+                            <version>2.6.3</version>
+                            <exclusions>
+                                <exclusion>
+                                    <groupId>com.fasterxml.jackson.core</groupId>
+                                    <artifactId>jackson-core</artifactId>
+                                </exclusion>
+                                <exclusion>
+                                    <groupId>com.fasterxml.jackson.core</groupId>
+                                    <artifactId>jackson-databind</artifactId>
+                                </exclusion>
+                                <exclusion>
+                                    <groupId>com.fasterxml.jackson.core</groupId>
+                                    <artifactId>jackson-annotations</artifactId>
+                                </exclusion>
+                            </exclusions>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.fasterxml</groupId>
+                            <artifactId>classmate</artifactId>
+                            <version>1.3.1</version>
+                        </dependency>
+                    </dependencies>
+                </plugin>
+
+
+            </plugins>
+        </pluginManagement>
+
+    </build>
+</project>

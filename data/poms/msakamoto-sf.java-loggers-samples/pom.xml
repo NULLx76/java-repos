@@ -1,0 +1,124 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>net.glamenv-setpzen.demo</groupId>
+  <artifactId>java-loggers-samples</artifactId>
+  <packaging>pom</packaging>
+  <version>1.0-SNAPSHOT</version>
+  <name>Java Loggers Sample Code</name>
+  <url>https://github.com/msakamoto-sf/java-loggers-samples</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <java.version>11</java.version>
+  </properties>
+
+  <modules>
+    <module>jul-default-demo</module>
+    <module>jul-globalconf-byfile</module>
+    <module>jul-globalconf-byclass</module>
+    <module>jul-create-logger</module>
+    <module>logback-conf-xml</module>
+    <module>logback-conf-groovy</module>
+    <module>logback-create-logger</module>
+    <module>logback-sift-demo</module>
+  </modules>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>ch.qos.logback</groupId>
+        <artifactId>logback-classic</artifactId>
+        <version>1.2.3</version>
+      </dependency>
+      <!--
+      logback-classic の pom を確認すると groovy-all について scope:compile, optional:true で依存している。
+      https://search.maven.org/artifact/ch.qos.logback/logback-classic/1.2.3/jar
+      → groovyファイルによる設定を使うときは groovy-all を依存関係に明示的に追加する必要がある。
+      
+      バージョンについては logback-parent 側のpomで 2.4.0 を利用しているため、2.4系最新を使えば問題無さそう。
+      https://search.maven.org/artifact/ch.qos.logback/logback-parent/1.2.3/pom
+      -->
+      <dependency>
+        <groupId>org.codehaus.groovy</groupId>
+        <artifactId>groovy-all</artifactId>
+        <version>2.4.21</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.8.1</version>
+          <configuration>
+            <debug>true</debug>
+            <encoding>${project.build.sourceEncoding}</encoding>
+            <source>${java.version}</source>
+            <target>${java.version}</target>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>3.2.4</version>
+
+          <!--
+          shade plugin は jar 用のプロジェクトで動作する。
+          そのため parent の pom 用プロジェクトで executions の設定をしても、子プロジェクトでは参照されず、shade pluginは動作しない。
+          → configuration のみ親で設定し、executions は各子プロジェクトのpom.xmlで設定する。
+          ref-1: https://stackoverflow.com/questions/21021485/how-to-configure-maven-shade-plugin-in-a-multi-module-project
+          ref-2: http://blog.nithinasokan.com/2014/05/create-shaded-uber-jar-for-maven-multi.html
+          ref-3: https://kazuhira-r.hatenablog.com/entry/2020/11/23/001949
+          -->
+
+          <configuration>
+
+            <!--
+            以下のartifactのjarファイルについて、META-INF/MANIFEST.MFが衝突してしまう。
+            ググっても特にこれについてのQAなどが見つからなかった。
+            試しに exclude フィルタを使って除外してみたところ、今のところ問題なく動いているのでこれで様子見する。
+            see: https://maven.apache.org/plugins/maven-shade-plugin/shade-mojo.html#filters
+            -->
+            <filters>
+              <filter>
+                <artifact>ch.qos.logback:*</artifact>
+                <excludes>
+                  <exclude>META-INF/MANIFEST.MF</exclude>
+                </excludes>
+              </filter>
+              <filter>
+                <artifact>org.slf4j:slf4j-api</artifact>
+                <excludes>
+                  <exclude>META-INF/MANIFEST.MF</exclude>
+                </excludes>
+              </filter>
+              <filter>
+                <artifact>org.codehaus.groovy:groovy-all</artifact>
+                <excludes>
+                  <exclude>META-INF/MANIFEST.MF</exclude>
+                </excludes>
+              </filter>
+            </filters>
+
+            <createDependencyReducedPom>false</createDependencyReducedPom>
+            <transformers>
+              <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                <!--
+                see: https://maven.apache.org/plugins/maven-shade-plugin/examples/executable-jar.html
+                -->
+                <manifestEntries>
+                  <Main-Class>testpkg.Main</Main-Class>
+                </manifestEntries>
+              </transformer>
+            </transformers>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+</project>

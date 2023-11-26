@@ -1,0 +1,438 @@
+<!--
+
+    Copyright (C) 2015 Red Hat, Inc. (jbrazdil@redhat.com)
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.jboss</groupId>
+    <artifactId>jboss-parent</artifactId>
+    <version>39</version>
+    <relativePath />
+  </parent>
+
+  <groupId>org.jboss.pnc.causeway</groupId>
+  <artifactId>causeway</artifactId>
+  <version>2.7.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>Causeway PNCL-to-Koji Bridge</name>
+  <inceptionYear>2015</inceptionYear>
+  <url>http://github.com/project-ncl/causeway</url>
+
+  <licenses>
+      <license>
+          <name>Apache License, Version 2.0</name>
+          <distribution>repo</distribution>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
+      </license>
+  </licenses>
+
+  <scm>
+    <connection>scm:git:http://github.com/project-ncl/causeway.git</connection>
+    <developerConnection>scm:git:git@github.com:project-ncl/causeway.git</developerConnection>
+    <url>http://github.com/project-ncl/causeway</url>
+    <tag>HEAD</tag>
+  </scm>
+
+  <properties>
+    <projectOwner>Red Hat, Inc.</projectOwner>
+    <projectEmail>jbrazdil@redhat.com</projectEmail>
+    <javaVersion>11</javaVersion>
+    <configVersion>0.8</configVersion>
+    <mockitoVersion>1.10.19</mockitoVersion>
+    <kojijiVersion>2.19</kojijiVersion>
+    <pncmetrics.version>1.1.12</pncmetrics.version>
+    <semverVersion>0.9.0</semverVersion>
+    <atlasVersion>1.1.3</atlasVersion>
+    <pncVersion>2.5.0</pncVersion>
+    <pncApiVersion>2.4.5</pncApiVersion>
+    <!-- OTEL Dependencies for Instrumentation -->
+    <version.io.opentelemetry.instrumentation>1.22.0</version.io.opentelemetry.instrumentation>
+    <version.com.redhat.resilience.otel>1.3.0</version.com.redhat.resilience.otel>
+    <version.pnc-common>2.2.1</version.pnc-common>
+    <tagSuffix />
+  </properties>
+
+  <modules>
+    <module>core</module>
+    <module>rest</module>
+    <module>web</module>
+    <module>application</module>
+  </modules>
+
+  <repositories>
+    <repository>
+      <id>mrrc-ga</id>
+      <url>https://maven.repository.redhat.com/ga</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </repository>
+
+    <repository>
+      <id>jboss-snapshots</id>
+      <url>https://repository.jboss.org/nexus/content/repositories/snapshots</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+    </repository>
+
+    <repository>
+      <id>Nexus Staging</id>
+      <url>https://oss.sonatype.org/content/groups/staging</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- BOM -->
+      <dependency>
+        <groupId>org.jboss.bom</groupId>
+        <artifactId>jboss-eap-jakartaee8-with-tools</artifactId>
+        <version>7.4.5.GA</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.jboss.bom</groupId>
+        <artifactId>eap-runtime-artifacts</artifactId>
+        <version>7.3.1.GA</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <!-- provided dependencies -->
+      <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <version>1.18.22</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.keycloak</groupId>
+        <artifactId>keycloak-core</artifactId>
+        <version>18.0.9.redhat-00001</version>
+        <scope>provided</scope>
+      </dependency>
+
+      <!-- Causeway modules -->
+      <dependency>
+        <groupId>org.jboss.pnc.causeway</groupId>
+        <artifactId>causeway-core</artifactId>
+        <type>ejb</type>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jboss.pnc.causeway</groupId>
+        <artifactId>causeway-rest</artifactId>
+        <type>ejb</type>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jboss.pnc.causeway</groupId>
+        <artifactId>causeway-web</artifactId>
+        <type>war</type>
+        <version>${project.version}</version>
+      </dependency>
+
+      <!-- PNC dependencies -->
+      <dependency>
+        <groupId>org.jboss.pnc</groupId>
+        <artifactId>rest-client</artifactId>
+        <version>${pncVersion}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jdk8</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-jackson2-provider</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.jboss.pnc.metrics</groupId>
+        <artifactId>pncmetrics</artifactId>
+        <version>${pncmetrics.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jboss.pnc</groupId>
+        <artifactId>pnc-api</artifactId>
+        <version>${pncApiVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jboss.pnc</groupId>
+        <artifactId>pnc-common</artifactId>
+        <version>${version.pnc-common}</version>
+      </dependency>
+
+      <!-- Other dependencies -->
+      <dependency>
+       <groupId>com.github.zafarkhaja</groupId>
+        <artifactId>java-semver</artifactId>
+        <version>${semverVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.commonjava.util</groupId>
+        <artifactId>configuration-api</artifactId>
+        <version>${configVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.commonjava.util</groupId>
+        <artifactId>configuration-dotconf</artifactId>
+        <version>${configVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.commonjava.atlas</groupId>
+        <artifactId>atlas-npm-identities</artifactId>
+        <version>${atlasVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.commonjava.rwx</groupId>
+        <artifactId>rwx-bindings</artifactId>
+        <version>1.1</version>
+      </dependency>
+      <dependency>
+          <groupId>org.apache.commons</groupId>
+          <artifactId>commons-compress</artifactId>
+          <version>1.21</version>
+      </dependency>
+      <dependency>
+        <groupId>com.redhat.red.build</groupId>
+        <artifactId>kojiji</artifactId>
+        <version>${kojijiVersion}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <!--dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-servlets</artifactId>
+        <version>9.3.11.v20160721</version>
+      </dependency-->
+
+      <!-- OTEL Dependencies for Instrumentation -->
+      <!-- BOMs -->
+      <dependency>
+        <groupId>io.opentelemetry.instrumentation</groupId>
+        <artifactId>opentelemetry-instrumentation-annotations</artifactId>
+        <version>${version.io.opentelemetry.instrumentation}</version>
+        <exclusions>
+          <exclusion>
+           <groupId>io.opentelemetry</groupId>
+           <artifactId>opentelemetry-api</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+
+      <dependency>
+        <groupId>com.redhat.resilience.otel</groupId>
+        <artifactId>opentelemetry-ext-cli-java</artifactId>
+        <version>${version.com.redhat.resilience.otel}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.keycloak</groupId>
+        <artifactId>keycloak-authz-client</artifactId>
+        <version>19.0.1</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+          <groupId>org.apache.httpcomponents</groupId>
+          <version>4.5.13.redhat-00001</version>
+          <artifactId>httpclient</artifactId>
+          <scope>provided</scope>
+      </dependency>
+
+      <!-- Test dependencies -->
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-all</artifactId>
+        <version>${mockitoVersion}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.assertj</groupId>
+        <artifactId>assertj-core</artifactId>
+        <version>3.24.2</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.github.tomakehurst</groupId>
+        <artifactId>wiremock</artifactId>
+        <version>1.58</version>
+        <scope>test</scope>
+      </dependency>
+
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration combine.children="append">
+          <includes>
+            <include>**/*IT.java</include>
+          </includes>
+        </configuration>
+      </plugin>
+      <plugin>
+          <groupId>net.revelc.code.formatter</groupId>
+          <artifactId>formatter-maven-plugin</artifactId>
+          <version>2.11.0</version>
+          <configuration>
+              <configFile>../eclipse-codeStyle.xml</configFile>
+          </configuration>
+          <executions>
+              <execution>
+                  <id>java-format</id>
+                  <goals>
+                      <goal>format</goal>
+                  </goals>
+              </execution>
+          </executions>
+      </plugin>
+      <plugin>
+          <groupId>com.mycila</groupId>
+          <artifactId>license-maven-plugin</artifactId>
+          <executions>
+              <execution>
+                  <phase>none</phase>
+              </execution>
+          </executions>
+      </plugin>
+      <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-release-plugin</artifactId>
+          <configuration>
+              <tagNameFormat>@{project.version}${tagSuffix}</tagNameFormat>
+              <autoVersionSubmodules>true</autoVersionSubmodules>
+          <releaseProfiles>release</releaseProfiles>
+          </configuration>
+      </plugin>
+      <plugin>
+          <groupId>org.sonatype.plugins</groupId>
+          <artifactId>nexus-staging-maven-plugin</artifactId>
+          <version>1.6.13</version>
+          <extensions>true</extensions>
+          <configuration>
+              <serverId>ossrh</serverId>
+              <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+              <autoReleaseAfterClose>false</autoReleaseAfterClose>
+          </configuration>
+      </plugin>
+    </plugins>
+  </build>
+  <profiles>
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>${version.source.plugin}</version>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>${version.javadoc.plugin}</version>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                                <configuration>
+                                    <detectOfflineLinks>false</detectOfflineLinks>
+                                    <quiet>true</quiet>
+                                    <doclint>none</doclint>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>3.1.0</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

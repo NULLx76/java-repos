@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.elasticsearch.plugin</groupId>
+        <artifactId>plugins</artifactId>
+        <version>3.0.0-SNAPSHOT</version>
+    </parent>
+
+    <!-- elasticsearch snapshot repository -->
+    <repositories>
+        <repository>
+            <id>oss-snapshots</id>
+            <name>Sonatype OSS Snapshots</name>
+            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+        </repository>
+    </repositories>
+
+    <artifactId>lang-plan-a</artifactId>
+    <name>Plugin: Language: Plan A</name>
+    <description>An easy, safe and fast scripting language for Elasticsearch</description>
+
+    <properties>
+        <elasticsearch.plugin.classname>org.elasticsearch.plan.a.PlanAPlugin</elasticsearch.plugin.classname>
+        <xlint.options>-Xlint:-deprecation,-fallthrough,-rawtypes,-unchecked</xlint.options>
+        <tests.rest.suite>plan_a</tests.rest.suite>
+        <tests.rest.load_packaged>false</tests.rest.load_packaged>
+        <antlr.version>4.5.1</antlr.version>
+        <asm.version>5.0.4</asm.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+           <groupId>org.antlr</groupId>
+           <artifactId>antlr4-runtime</artifactId>
+           <version>${antlr.version}</version>
+        </dependency>
+        <dependency>
+           <groupId>org.ow2.asm</groupId>
+           <artifactId>asm</artifactId>
+           <version>${asm.version}</version>
+        </dependency>
+        <dependency>
+           <groupId>org.ow2.asm</groupId>
+           <artifactId>asm-commons</artifactId>
+           <version>${asm.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+            </plugin>
+            <!-- antlr regeneration task. set -Dregenerate for it to run -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>regenerate</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target if="${regenerate}">
+                                <ant antfile="dev-tools/ant.xml" target="regenerate">
+                                    <reference refid="maven.plugin.classpath"/>
+                                </ant>
+                            </target>
+                        </configuration>
+                    </execution>
+                    <!-- start up elasticsearch in foreground. -->
+                    <execution>
+                        <id>execute</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target if="${run}">
+                                <!-- use conventional port numbers -->
+                                <ant antfile="dev-tools/ant.xml" target="start-foreground">
+                                    <property name="integ.http.port" value="9200"/>
+                                    <property name="integ.transport.port" value="9300"/>
+                                </ant>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.antlr</groupId>
+                        <artifactId>antlr4</artifactId>
+                        <version>${antlr.version}</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <!-- do not try to license-check generated code -->
+            <plugin>
+                <groupId>com.mycila</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <!-- Generated antlr -->
+                        <exclude>src/main/java/org/elasticsearch/plan/a/PlanABaseVisitor.java</exclude>
+                        <exclude>src/main/java/org/elasticsearch/plan/a/PlanALexer.java</exclude>
+                        <exclude>src/main/java/org/elasticsearch/plan/a/PlanAParser.java</exclude>
+                        <exclude>src/main/java/org/elasticsearch/plan/a/PlanAVisitor.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

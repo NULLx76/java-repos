@@ -1,0 +1,439 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>eu.kidf</groupId>
+		<artifactId>diversicon-super-pom</artifactId>
+		<version>0.1.0-SNAPSHOT</version>
+	</parent>
+
+	<groupId>eu.kidf</groupId>
+	<artifactId>divercli</artifactId>
+	<packaging>jar</packaging>
+
+	<name>DiverCLI</name>
+	<url>https://github.com/diversicon-kb/divercli</url>
+	<description>Command line interface to manage Diversicon knowledge base.</description>
+
+	<!-- better to copy scm, see https://github.com/opendatatrentino/tod-super-pom/issues/1 -->
+	<scm>
+		<url>${project.url}</url>
+		<connection>scm:git:${project.url}.git</connection>
+		<developerConnection>scm:git:${project.url}.git</developerConnection>
+		<tag>HEAD</tag>
+	</scm>
+
+
+	<properties>
+		<dkpro.uby.version>0.7.0</dkpro.uby.version>
+		<slf4j.version>1.7.21</slf4j.version> <!-- so we get org.slf4j.event.Level -->
+		<diversicon.version>0.1.0-SNAPSHOT</diversicon.version>
+	</properties>
+
+
+	<repositories>
+		<!-- so it picks superpom snapshot without complaining -->
+		<repository>
+			<id>bootstrap-snapshots</id>
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+			<releases>
+				<enabled>false</enabled>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
+
+		<repository>
+			<id>ukp-oss-releases</id>
+			<url>http://zoidberg.ukp.informatik.tu-darmstadt.de/artifactory/public-releases</url>
+		</repository>
+
+	</repositories>
+
+	<developers>
+
+		<developer>
+			<id>d.leoni</id>
+			<name>David Leoni</name>
+			<email>david.leoni@unitn.it</email>
+			<organization>Heriot-Watt University, Edinburgh</organization>
+		</developer>
+
+	</developers>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>de.tudarmstadt.ukp.uby</groupId>
+				<artifactId>de.tudarmstadt.ukp.uby</artifactId>
+				<version>${dkpro.uby.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<profiles>
+	
+
+		<!--  
+			  THIS *MUST* MANUALLY ACTIVATED ALSO WHEN YOU RELEASE ! 
+			  (release process triggers automatically its own 'release' profile) 
+
+			  - Plugins here can't go to release profile as it would trigger the damned gpg plugin
+			    which is inherited from the superpom.			    
+			  - we can't automatically trigger this profile based on 'release' profile 			  
+		 -->
+		<profile>
+			<id>ci</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-dependency-plugin</artifactId>
+						<version>3.0.0</version>
+						<executions>
+							<execution>
+								<id>unpack</id>
+								<phase>package</phase>
+								<goals>
+									<goal>unpack</goal>
+								</goals>
+								<configuration>
+									<artifactItems>
+										<artifactItem>
+											<groupId>eu.kidf</groupId>
+											<artifactId>diversicon-model</artifactId>
+											<version>${diversicon.version}</version>
+											<type>jar</type>
+											<overWrite>true</overWrite>
+											<outputDirectory>${project.build.directory}/divercli-overlay/lexres</outputDirectory>											
+											<includes>*.xml</includes>											
+										</artifactItem>
+										<artifactItem>
+											<groupId>eu.kidf</groupId>
+											<artifactId>diversicon-model</artifactId>
+											<version>${diversicon.version}</version>
+											<type>jar</type>
+											<overWrite>true</overWrite>
+											<outputDirectory>${project.build.directory}/divercli-overlay</outputDirectory>											
+											<includes>schema/**/*</includes>											
+										</artifactItem>
+										<artifactItem>
+											<groupId>eu.kidf</groupId>
+											<artifactId>diversicon-core</artifactId>
+											<version>${diversicon.version}</version>
+											<type>jar</type>
+											<overWrite>true</overWrite>
+											<outputDirectory>${project.build.directory}/divercli-overlay/scripts</outputDirectory>											
+											<includes>*.xql</includes>											
+										</artifactItem>
+									</artifactItems>									
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+
+					<!-- currently josman site doesn't work here, it even prevents the javadoc 
+						plugin from running !!! <plugin> <groupId>eu.trentorise.opendata</groupId> 
+						<artifactId>josman-maven-plugin</artifactId> <configuration> <snapshot>true</snapshot> 
+						</configuration> <executions> <execution> <id>gen-snapshot-site</id> <goals> 
+						<goal>site</goal> </goals> </execution> </executions> </plugin> -->
+
+					<plugin>
+						<artifactId>maven-assembly-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>create-archive</id>
+								<phase>package</phase>
+								<goals>
+									<goal>single</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+
+
+				</plugins>
+			</build>
+		</profile>
+
+	</profiles>
+
+
+
+	<build>
+		<plugins>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+			</plugin>
+
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>animal-sniffer-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>buildnumber-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<executions>
+					<execution>
+						<goals>
+							<goal>test-jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+			</plugin>
+
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>appassembler-maven-plugin</artifactId>
+				<version>1.10</version>
+				<configuration>
+					<programs>
+						<program>
+							<mainClass>eu.kidf.diversicon.cli.DiverCli</mainClass>
+							<id>divercli</id>
+						</program>
+					</programs>
+				</configuration>
+				<executions>
+					<execution>
+						<id>assemble</id>
+						<goals>
+							<goal>assemble</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.5.3</version>
+				<configuration>
+					<descriptor>src/assembly/bin.xml</descriptor>
+					<finalName>${project.artifactId}-${project.version}</finalName>
+					<appendAssemblyId>false</appendAssemblyId>
+					<attach>true</attach>
+				</configuration>
+
+			</plugin>
+
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<!-- note this IS NOT recognized in stupid Eclipse by design, see https://bugs.eclipse.org/bugs/show_bug.cgi?id=388683 -->
+					<systemPropertyVariables>
+						<logback.configurationFile>${basedir}/conf/logback-test.xml</logback.configurationFile>
+						<divercli.testing>true</divercli.testing>
+					</systemPropertyVariables>
+
+					<excludes>
+						<exclude>**/*SlowTest*</exclude>
+					</excludes>
+
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+			</plugin>
+
+			<plugin>
+				<groupId>eu.trentorise.opendata</groupId>
+				<artifactId>josman-maven-plugin</artifactId>
+			</plugin>
+
+			<plugin>
+				<groupId>com.github.github</groupId>
+				<artifactId>site-maven-plugin</artifactId>
+			</plugin>
+
+		</plugins>
+	</build>
+
+	<dependencies>
+
+		<dependency>
+			<groupId>eu.kidf</groupId>
+			<artifactId>diversicon-core</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>eu.kidf</groupId>
+			<artifactId>div-wn31-h2db</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.beust</groupId>
+			<artifactId>jcommander</artifactId>
+			<version>1.48</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.ini4j</groupId>
+			<artifactId>ini4j</artifactId>
+			<version>0.5.1</version>
+		</dependency>
+
+
+		<dependency>
+			<groupId>com.google.code.findbugs</groupId>
+			<artifactId>jsr305</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.google.code.findbugs</groupId>
+			<artifactId>annotations</artifactId>
+			<scope> compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>de.tudarmstadt.ukp.uby</groupId>
+			<artifactId>de.tudarmstadt.ukp.uby.lmf.api-asl</artifactId>
+			<exclusions> <!-- we use logback -->
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-simple</artifactId>
+				</exclusion>
+			</exclusions>
+
+		</dependency>
+
+
+		<dependency>
+
+			<groupId>org.hibernate.common</groupId>
+			<artifactId>hibernate-commons-annotations</artifactId>
+			<version>4.0.1.Final</version>
+
+			<exclusions>
+				<exclusion>
+					<groupId>org.jboss.logging</groupId>
+					<artifactId>jboss-logging</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+
+		<dependency>
+			<groupId>de.tudarmstadt.ukp.uby</groupId>
+			<artifactId>de.tudarmstadt.ukp.uby.persistence.transform-asl</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+		</dependency>
+
+
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+		</dependency>
+
+
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>jline</groupId>
+			<artifactId>jline</artifactId>
+			<version>2.12</version>
+		</dependency>
+
+
+
+		<!-- ****************** TEST DEPENDENCIES ****************** -->
+
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- needed even if it is a junit dep because maven shade excluding it 
+			from builds :-/ -->
+		<dependency>
+			<artifactId>hamcrest-core</artifactId>
+			<groupId>org.hamcrest</groupId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>eu.kidf</groupId>
+			<artifactId>diversicon-core</artifactId>
+			<type>test-jar</type>
+			<version>${diversicon.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-csv</artifactId>
+			<version>1.4</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-exec</artifactId>
+			<version>1.3</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.github.tomakehurst</groupId>
+			<artifactId>wiremock</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- for wiremock deps clashes -->
+		<dependency>
+			<groupId>com.flipkart.zjsonpatch</groupId>
+			<artifactId>zjsonpatch</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- for wiremock deps clashes -->
+		<dependency>
+			<groupId>com.github.jknack</groupId>
+			<artifactId>handlebars</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- for wiremock deps clashes -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+
+	</dependencies>
+
+
+</project>

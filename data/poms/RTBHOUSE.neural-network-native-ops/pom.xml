@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.rtbhouse.model</groupId>
+    <artifactId>neural-network-native-ops</artifactId>
+    <version>0.4.1</version>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <javacpp.version>1.4</javacpp.version>
+        <jmh.version>1.11.3</jmh.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.bytedeco</groupId>
+            <artifactId>javacpp</artifactId>
+            <version>${javacpp.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.fommil</groupId>
+            <artifactId>jniloader</artifactId>
+            <version>1.1</version>
+        </dependency>
+
+        <!-- TEST -->
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-core</artifactId>
+            <version>${jmh.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-generator-annprocess</artifactId>
+            <version>${jmh.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.fommil.netlib</groupId>
+            <artifactId>all</artifactId>
+            <version>1.1.2</version>
+            <type>pom</type>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <profiles>
+        <profile>
+            <id>noBenchmarks</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <testcase.excludedGroups>com.rtbhouse.tests.Benchmark,com.rtbhouse.tests.ReleaseBenchmark</testcase.excludedGroups>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>benchmarks</id>
+            <properties>
+                <testcase.includedGroups>com.rtbhouse.tests.Benchmark</testcase.includedGroups>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>release</id>
+            <properties>
+                <testcase.excludedGroups>com.rtbhouse.tests.Benchmark</testcase.excludedGroups>
+            </properties>
+            <build>
+                <plugins>
+                    <!-- source, javadoc and gpg plugins are needed only when deploying to maven central -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>2.2.1</version>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>2.9.1</version>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.5</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.18.1</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.surefire</groupId>
+                        <artifactId>surefire-junit47</artifactId>
+                        <version>2.13</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <groups>${testcase.includedGroups}</groups>
+                    <excludedGroups>${testcase.excludedGroups}</excludedGroups>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>2.3</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.2.1</version>
+                <executions>
+                    <execution>
+                        <id>default-cli</id>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>java</executable>
+                            <arguments>
+                                <argument>-jar</argument>
+                                <argument>${org.bytedeco:javacpp:jar}</argument>
+                                <argument>-classpath</argument>
+                                <argument>${project.build.outputDirectory}</argument>
+                                <argument>-d</argument>
+                                <argument>${project.build.sourceDirectory}/../resources/com/rtbhouse/model/natives/</argument>
+
+                                <argument>-Dplatform.compiler=g++-7</argument>
+
+                                <!-- Intel MKL -->
+                                <!--
+                                <argument>-Dplatform.compiler.default=-march=haswell -m64 -O3 -s -g -mavx2 -mfma -mtune=haswell -fno-omit-frame-pointer -I/opt/intel/mkl/include/ /opt/intel/mkl/lib/intel64_lin/libmkl_intel_lp64.a /opt/intel/mkl/lib/intel64_lin/libmkl_sequential.a /opt/intel/mkl/lib/intel64_lin/libmkl_core.a -DUSE_MKL</argument>
+                                -->
+
+                                <!-- OpenBLAS -->
+                                <argument>-Dplatform.compiler.default=-march=haswell -m64 -O3 -s -g -mavx2 -mfma -mtune=haswell -fno-omit-frame-pointer -I${user.home}/OpenBLASlib/include/ ${user.home}/OpenBLASlib/lib/libopenblas.a</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <name>${project.groupId}:${project.artifactId}</name>
+    <description>Small Java lib with few neural network operations:
+        ReLU, linearForward and simple matrix-by-vector multiplication.
+    </description>
+    <url>https://github.com/RTBHOUSE/neural-network-native-ops</url>
+
+    <licenses>
+        <license>
+            <name>GNU GPL v3</name>
+            <url>http://www.gnu.org/licenses/gpl-3.0.en.html</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Piotr Chromiec</name>
+            <email>tworec@rtbhouse.com</email>
+            <organization>RTB HOUSE</organization>
+            <organizationUrl>http://www.rtbhouse.com</organizationUrl>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git@github.com:RTBHOUSE/neural-network-native-ops.git</connection>
+        <developerConnection>git@github.com:RTBHOUSE/neural-network-native-ops.git</developerConnection>
+        <url>git@github.com:RTBHOUSE/neural-network-native-ops.git</url>
+    </scm>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
+
+</project>

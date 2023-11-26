@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.example</groupId>
+	<artifactId>jruby-test</artifactId>
+	<version>0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<properties>
+		<project.mainclass>com.example.jruby.runner.JRubyRunner</project.mainclass>
+	</properties>
+
+	<repositories>
+		<repository>
+			<id>local_repo</id>
+			<url>file:///home/zacsek/work/test_jruby/repo/repository</url>
+			<!--<url>http://rubygems-proxy.torquebox.org/releases/</url>-->
+		</repository>
+	</repositories>
+
+
+	<dependencies>
+		<dependency>
+			<groupId>org.jruby</groupId>
+			<artifactId>jruby</artifactId>
+			<version>1.7.24</version>
+		</dependency>
+
+
+		<dependency>
+			<groupId>com.beust</groupId>
+			<artifactId>jcommander</artifactId>
+			<version>1.48</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>19.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>rubygems</groupId>
+			<artifactId>awesome_print</artifactId>
+			<version>1.6.1</version>
+			<type>gem</type>
+		</dependency>
+
+		<dependency>
+			<groupId>rubygems</groupId>
+			<artifactId>pry</artifactId>
+			<version>0.10.3</version>
+			<type>gem</type>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<version>1.10</version>
+				<executions>
+					<execution>
+						<id>add-resource</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>add-resource</goal>
+						</goals>
+						<configuration>
+							<resources>
+								<resource>
+									<directory>${project.build.directory}/rubygems</directory>
+									<targetPath>rubygems</targetPath>
+								</resource>
+							</resources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>de.saumya.mojo</groupId>
+				<artifactId>gem-maven-plugin</artifactId>
+				<version>1.1.4</version>
+				<configuration>
+					<includeGemsInResources>true</includeGemsInResources>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>initialize</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>2.4.3</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<shadedArtifactAttached>true</shadedArtifactAttached>
+							<shadedClassifierName>shaded</shadedClassifierName>
+							<artifactSet>
+								<excludes>
+									<exclude>*:*:gem:*</exclude>
+								</excludes>
+							</artifactSet>
+							<filters> <!-- signatures from foreign jars are bad news -->
+								<filter>
+									<artifact>*:*</artifact>
+									<excludes>
+										<exclude>META-INF/*.SF</exclude>
+										<exclude>META-INF/*.DSA</exclude>
+										<exclude>META-INF/*.RSA</exclude>
+										<exclude>META-INF/LICENSE</exclude> <!-- We get a LICENSE and a META-INF/license folder.  This make the jar error on decompression because directories on standard mac are not case sensitive -->
+
+									</excludes>
+								</filter>
+							</filters>
+							<transformers>
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+									<manifestEntries>
+										<Main-Class>${project.mainclass}</Main-Class>
+										<Implementation-Build>${buildNumber}</Implementation-Build>
+									</manifestEntries>
+								</transformer>
+							</transformers>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- <plugin>
+				<groupId></groupId>
+				<artifactId></artifactId>
+				<version></version>
+				<executions>
+					<execution>
+					</execution>
+				</executions>
+			</plugin> -->
+		</plugins>
+	</build>
+</project>

@@ -1,0 +1,770 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                            http://maven.apache.org/xsd/maven-4.0.0.xsd"
+    xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.google.cloud.tools.eclipse</groupId>
+  <artifactId>trunk</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>Google Cloud Platform plugin for Eclipse</name>
+  <description>
+    An Eclipse plugin for building, debugging, and deploying Google
+    Cloud Platform applications.
+  </description>
+  <url>https://github.com/GoogleCloudPlatform/google-cloud-eclipse</url>
+
+  <organization>
+    <name>Google LLC</name>
+    <url>https://www.google.com</url>
+  </organization>
+
+  <licenses>
+    <license>
+      <name>The Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+    </license>
+  </licenses>
+
+  <modules>
+    <module>gcp-repo</module>
+    <module>features</module>
+    <module>plugins</module>
+    <module>third_party</module>
+  </modules>
+  <properties>
+    <!-- Execution environment supported by Cloud Tools for Eclipse -->
+    <requiredExecutionEnvironment>JavaSE-1.8</requiredExecutionEnvironment>
+
+    <!-- use Tycho 2.6.0 for builds to avoid triggering
+        https://github.com/eclipse-tycho/tycho/issues/1377 -->
+    <tycho.version>2.6.0</tycho.version>
+    <tycho-extras.version>2.6.0</tycho-extras.version>
+
+    <product.version.qualifier.suffix/>  <!-- 0-length string by default -->
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <eclipse.target>2018-09</eclipse.target> <!-- the default build -->
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+
+    <!-- by default enable GTK3 support -->
+    <swt.gtk3>1</swt.gtk3>
+
+    <!-- log surefire tests to stdout -->
+    <tycho.showEclipseLog>true</tycho.showEclipseLog>
+
+    <!--
+      A round-about way for the jacoco-maven-plugin to provide its
+      JaCoCo agent arguments required as we specify an Tycho Surefire
+      <argLine/>.
+    -->
+    <jacoco.agentArgLine/>
+
+    <!--
+      `SYSTEM` means build using the current JDK.
+      `BREE` means find an appropriate JDK using Maven Toolchains matching
+      the Bundle-RequiredExecutionEnvironment. See `README.md` for details.
+    -->
+    <tycho.toolchains>SYSTEM</tycho.toolchains>
+    <tycho.testToolchains>SYSTEM</tycho.testToolchains>
+
+    <!-- OS-specific JVM flags, empty for the default case but redefined below -->
+    <os-jvm-flags/>
+    <org.eclipse.swtbot.search.timeout>30000</org.eclipse.swtbot.search.timeout>
+
+    <jgit.dirtyWorkingTree>warning</jgit.dirtyWorkingTree>
+
+    <!--
+      jgit provider uses git commit hash to generate bundle/feature version
+      qualifier; set to empty to work around bug building from git-worktrees
+    -->
+    <tycho.buildtimestamp.provider>jgit</tycho.buildtimestamp.provider>
+  </properties>
+
+  <!--
+    Maven dependencies that are OSGi bundles
+
+    Note: simply putting these dependencies within the poms of the
+    requesting bundles and features doesn't quite work with Tycho 0.24:
+    they somehow bleed through and require being added to consumers
+    of those bundles and features too.
+  -->
+  <dependencies>
+    <dependency>
+      <!-- bundle: com.google.gson -->
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.8.9</version>
+    </dependency>
+    <dependency>
+      <!-- bundle: com.google.cloud.tools.appengine -->
+      <groupId>com.google.cloud.tools</groupId>
+      <artifactId>appengine-plugins-core</artifactId>
+      <version>0.9.11</version>
+    </dependency>
+    <dependency>
+      <!--
+        bundle: org.apache.commons.commons-compress
+        dependency used by appengine-plugins-core
+      -->
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-compress</artifactId>
+      <version>1.21</version>
+    </dependency>
+    <dependency>
+      <!-- bundle: com.google.guava -->
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>30.0-jre</version>
+    </dependency>
+    <dependency>
+      <!-- bundle: jackson-core-asl -->
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-core-asl</artifactId>
+      <version>1.9.13</version>
+    </dependency>
+    <dependency>
+      <!-- bundle: com.fasterxml.jackson.core.jackson-core -->
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <version>2.9.6</version>
+    </dependency>
+    <dependency>
+      <!-- bundle: org.mortbay.jetty.server -->
+      <groupId>org.mortbay.jetty</groupId>
+      <artifactId>jetty</artifactId>
+      <version>6.1.26</version>
+    </dependency>
+    <dependency>
+      <!-- bundle: org.mortbay.jetty.util -->
+      <groupId>org.mortbay.jetty</groupId>
+      <artifactId>jetty-util</artifactId>
+      <version>6.1.26</version>
+    </dependency>
+    <dependency>
+      <!-- bundle: org.freemarker.freemarker -->
+      <groupId>org.freemarker</groupId>
+      <artifactId>freemarker</artifactId>
+      <version>2.3.25-incubating</version>
+    </dependency>
+    <dependency>
+      <!-- bundle: org.yaml.snakeyaml -->
+      <groupId>org.yaml</groupId>
+      <artifactId>snakeyaml</artifactId>
+      <version>2.0</version>
+    </dependency>
+    <dependency>
+      <!-- bundle: org.glassfish.javax.json -->
+      <groupId>org.glassfish</groupId>
+      <artifactId>javax.json</artifactId>
+      <version>1.0.4</version>
+    </dependency>
+  </dependencies>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.13.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-core</artifactId>
+        <version>1.10.19</version>
+      </dependency>
+      <dependency>
+        <groupId>org.objenesis</groupId>
+        <artifactId>objenesis</artifactId>
+        <version>2.2</version>
+      </dependency>
+      <dependency>
+        <groupId>org.hamcrest</groupId>
+        <artifactId>hamcrest-core</artifactId>
+        <version>1.3</version>
+      </dependency>
+      <dependency>
+        <groupId>org.hamcrest</groupId>
+        <artifactId>hamcrest-library</artifactId>
+        <version>1.3</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.eclipse.tycho</groupId>
+        <artifactId>tycho-maven-plugin</artifactId>
+        <extensions>true</extensions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.eclipse.tycho</groupId>
+        <artifactId>tycho-compiler-plugin</artifactId>
+        <configuration>
+          <showWarnings>true</showWarnings>
+          <!--
+            avoid access restriction on class due to restriction on
+            required library
+          -->
+          <compilerArgument>-warn:+discouraged,+forbidden,-unavoidableGenericProblems,-warningToken</compilerArgument>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.eclipse.tycho</groupId>
+        <artifactId>target-platform-configuration</artifactId>
+        <configuration>
+          <filters>
+            <filter>
+              <type>java-package</type>
+              <id>org.eclipse.jetty.http</id>
+              <restrictTo>
+                <versionRange>[${jettyMinVersion},${jettyMaxVersion})</versionRange>
+              </restrictTo>
+            </filter>
+            <filter>
+              <type>eclipse-plugin</type>
+              <id>org.apache.commons.collections</id>
+              <restrictTo>
+                <versionRange>[3.2.2,4)</versionRange>
+              </restrictTo>
+            </filter>
+          </filters>
+          <environments>
+            <environment>
+              <os>linux</os> <ws>gtk</ws> <arch>x86_64</arch>
+            </environment>
+            <environment>
+              <os>win32</os> <ws>win32</ws> <arch>x86_64</arch>
+            </environment>
+            <environment>
+              <os>macosx</os> <ws>cocoa</ws> <arch>x86_64</arch>
+            </environment>
+          </environments>
+          <pomDependencies>consider</pomDependencies>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.eclipse.tycho</groupId>
+        <artifactId>tycho-packaging-plugin</artifactId>
+        <dependencies>
+          <dependency>
+            <groupId>org.eclipse.tycho.extras</groupId>
+            <artifactId>tycho-buildtimestamp-jgit</artifactId>
+            <version>${tycho-extras.version}</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <timestampProvider>${tycho.buildtimestamp.provider}</timestampProvider>
+          <jgit.dirtyWorkingTree>${jgit.dirtyWorkingTree}</jgit.dirtyWorkingTree>
+          <jgit.ignore>
+            pom.xml
+          </jgit.ignore>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>enforce-maven</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                  <version>3.5.0</version>
+                </requireMavenVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.eclipse.tycho</groupId>
+          <artifactId>tycho-maven-plugin</artifactId>
+          <version>${tycho.version}</version>
+          <extensions>true</extensions>
+        </plugin>
+
+        <plugin>
+          <groupId>org.eclipse.tycho</groupId>
+          <artifactId>tycho-compiler-plugin</artifactId>
+          <version>${tycho.version}</version>
+          <configuration>
+            <showWarnings>true</showWarnings>
+            <useJDK>${tycho.toolchains}</useJDK>
+          </configuration>
+        </plugin>
+
+        <plugin>
+          <groupId>org.eclipse.tycho</groupId>
+          <artifactId>target-platform-configuration</artifactId>
+          <version>${tycho.version}</version>
+        </plugin>
+
+        <plugin>
+          <groupId>org.eclipse.tycho</groupId>
+          <artifactId>tycho-packaging-plugin</artifactId>
+          <version>${tycho.version}</version>
+        </plugin>
+
+        <plugin>
+          <groupId>org.eclipse.tycho</groupId>
+          <artifactId>tycho-p2-plugin</artifactId>
+          <version>${tycho.version}</version>
+        </plugin>
+
+        <plugin>
+          <groupId>org.eclipse.tycho</groupId>
+          <artifactId>tycho-surefire-plugin</artifactId>
+          <version>${tycho.version}</version>
+          <configuration>
+            <runOrder>hourly</runOrder>
+            <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>
+            <trimStackTrace>false</trimStackTrace>
+            <useJDK>${tycho.testToolchains}</useJDK>
+            <!--
+              - maven.artifact.threads=1 to workaround repository corruption seen in
+                https://github.com/GoogleCloudPlatform/google-cloud-eclipse/issues/2284
+            -->
+            <environmentVariables>
+              <SWT_GTK3>${swt.gtk3}</SWT_GTK3>
+            </environmentVariables>
+            <argLine>${jacoco.agentArgLine} -Dmaven.artifact.threads=1
+              -Dorg.eclipse.swtbot.search.timeout=${org.eclipse.swtbot.search.timeout}
+              -Xms40m -Xmx1G
+              -Djava.awt.headless=true
+              -DdisablePrivacyTos=true
+              -Dlogback.configurationFile=platform:/plugin/com.google.cloud.tools.eclipse.test.dependencies/logback.xml
+              ${os-jvm-flags}
+            </argLine>
+            <bundleStartLevel>
+              <!-- use level 3 to ensure we start after other org.eclipse.equinox.* bundles -->
+              <bundle>
+                 <id>com.google.cloud.tools.eclipse.test.dependencies</id>
+                 <level>3</level>
+                 <autoStart>true</autoStart>
+              </bundle>
+           </bundleStartLevel>
+          </configuration>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-toolchains-plugin</artifactId>
+          <version>1.1</version>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>3.0.0-M3</version>
+        </plugin>
+
+        <plugin>
+          <groupId>org.jacoco</groupId>
+          <artifactId>jacoco-maven-plugin</artifactId>
+          <version>0.7.8</version>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.8.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>2.12.4</version>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>3.0.2</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-antrun-plugin</artifactId>
+          <version>1.8</version>
+        </plugin>
+
+        <plugin>
+          <groupId>org.eclipse.scout</groupId>
+          <artifactId>eclipse-settings-maven-plugin</artifactId>
+          <version>3.0.2</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>macosx-jvm-flags</id>
+      <activation>
+        <os><family>mac</family></os>
+      </activation>
+      <properties>
+        <os-jvm-flags>-XstartOnFirstThread</os-jvm-flags>
+      </properties>
+    </profile>
+
+    <profile>
+      <!--
+        Tycho 2.7.4+ includes lifecycle mapping metadata to instruct
+        Eclipse/m2eclipse how to handle the various Tycho plugins.
+        But Tycho 2.7.4+ has a bug where loading the
+        tycho-buildtimestamp-jgit provider causes build failures
+        (https://github.com/eclipse-tycho/tycho/issues/1377),
+        so we can only use it when loading into m2eclipse.
+      -->
+      <id>only-eclipse</id>
+      <activation>
+        <property>
+          <name>m2e.version</name>
+        </property>
+      </activation>
+      <properties>
+        <tycho.version>2.7.5</tycho.version>
+        <tycho-extras.version>2.7.5</tycho-extras.version>
+        <tycho.buildtimestamp.provider/>
+      </properties>
+    </profile>
+
+    <profile>
+      <!-- Default target if no eclipse.target specified. -->
+      <id>build-eclipse-2018-09</id>
+      <activation>
+        <property>
+          <name>!eclipse.target</name>
+          <!-- when no longer the default: <name>eclipse.target</name> <value>2018-09</value> -->
+        </property>
+      </activation>
+      <properties>
+         <jettyMinVersion>9.4</jettyMinVersion>
+         <jettyMaxVersion>9.5</jettyMaxVersion>
+      </properties>
+      <!-- build against a known target platform -->
+      <modules>
+        <module>eclipse/eclipse-2018-09</module>
+      </modules>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.eclipse.tycho</groupId>
+            <artifactId>target-platform-configuration</artifactId>
+            <configuration>
+            <target>
+              <artifact>
+                <groupId>com.google.cloud.tools.eclipse</groupId>
+                <artifactId>gcp-eclipse-2018-09</artifactId>
+                <version>4.9.0-SNAPSHOT</version>
+              </artifact>
+            </target>
+           </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>build-eclipse-2018-12</id>
+      <activation>
+        <property>
+          <name>eclipse.target</name> <value>2018-12</value>
+        </property>
+      </activation>
+      <properties>
+         <jettyMinVersion>9.4</jettyMinVersion>
+         <jettyMaxVersion>9.5</jettyMaxVersion>
+      </properties>
+      <!-- build against a known target platform -->
+      <modules>
+        <module>eclipse/eclipse-2018-12</module>
+      </modules>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.eclipse.tycho</groupId>
+            <artifactId>target-platform-configuration</artifactId>
+            <configuration>
+            <target>
+              <artifact>
+                <groupId>com.google.cloud.tools.eclipse</groupId>
+                <artifactId>gcp-eclipse-2018-12</artifactId>
+                <version>4.10.0-SNAPSHOT</version>
+              </artifact>
+            </target>
+           </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>build-eclipse-2019-09</id>
+      <activation>
+        <property>
+          <name>eclipse.target</name> <value>2019-09</value>
+        </property>
+      </activation>
+      <properties>
+         <jettyMinVersion>9.4</jettyMinVersion>
+         <jettyMaxVersion>9.5</jettyMaxVersion>
+      </properties>
+      <!-- build against a known target platform -->
+      <modules>
+        <module>eclipse/eclipse-2019-09</module>
+      </modules>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.eclipse.tycho</groupId>
+            <artifactId>target-platform-configuration</artifactId>
+            <configuration>
+            <target>
+              <artifact>
+                <groupId>com.google.cloud.tools.eclipse</groupId>
+                <artifactId>gcp-eclipse-2019-09</artifactId>
+                <version>4.13.0-SNAPSHOT</version>
+              </artifact>
+            </target>
+           </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>build-eclipse-2019-12</id>
+      <activation>
+        <property>
+          <name>eclipse.target</name> <value>2019-12</value>
+        </property>
+      </activation>
+      <properties>
+         <jettyMinVersion>9.4</jettyMinVersion>
+         <jettyMaxVersion>9.5</jettyMaxVersion>
+      </properties>
+      <!-- build against a known target platform -->
+      <modules>
+        <module>eclipse/eclipse-2019-12</module>
+      </modules>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.eclipse.tycho</groupId>
+            <artifactId>target-platform-configuration</artifactId>
+            <configuration>
+            <target>
+              <artifact>
+                <groupId>com.google.cloud.tools.eclipse</groupId>
+                <artifactId>gcp-eclipse-2019-12</artifactId>
+                <version>4.14.0-SNAPSHOT</version>
+              </artifact>
+            </target>
+           </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>build-eclipse-2020-03</id>
+      <activation>
+        <property>
+          <name>eclipse.target</name> <value>2020-03</value>
+        </property>
+      </activation>
+      <properties>
+         <jettyMinVersion>9.4</jettyMinVersion>
+         <jettyMaxVersion>9.5</jettyMaxVersion>
+      </properties>
+      <!-- build against a known target platform -->
+      <modules>
+        <module>eclipse/eclipse-2020-03</module>
+      </modules>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.eclipse.tycho</groupId>
+            <artifactId>target-platform-configuration</artifactId>
+            <configuration>
+            <target>
+              <artifact>
+                <groupId>com.google.cloud.tools.eclipse</groupId>
+                <artifactId>gcp-eclipse-2020-03</artifactId>
+                <version>4.15.0-SNAPSHOT</version>
+              </artifact>
+            </target>
+           </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!--
+      The following profiles work to prevent Java 9'isms
+      using Maven and Tycho's support for toolchains.
+    -->
+    <profile>
+       <!--
+          When building with a later JDK (i.e., JDK 11) than our
+          minimum supported platform (`requiredExecutionEnvironment`) then
+          use Tycho's useJDK=BREE mode to compile bundles using their
+          corresponding `Bundle-RequiredExecutionEnvironment` to catch
+          inadvertent use of incompatible language features.  We still
+          run tests with the current JRE to catch any JVM-specificisms.
+      -->
+      <id>building-with-bree</id>
+      <activation>
+        <jdk>[9,)</jdk> <!-- kept in sync with `requiredExecutionEnvironment` -->
+      </activation>
+      <properties>
+         <tycho.toolchains>BREE</tycho.toolchains>
+      </properties>
+    </profile>
+
+    <profile>
+      <id>ci-build</id>
+      <properties>
+        <!-- Ensure we don't resolve previous versions of our artifacts -->
+        <tycho.localArtifacts>ignore</tycho.localArtifacts>
+        <jgit.dirtyWorkingTree>error</jgit.dirtyWorkingTree>
+      </properties>
+      <modules>
+        <module>eclipse/ide-target-platform</module>
+        <module>build/verify-feature-completeness</module>
+      </modules>
+    </profile>
+
+    <profile>
+      <id>jacoco</id>
+      <!--
+        This rigamarole is required to obtain the JaCoCo agent argline
+        from the jacoco-maven-plugin.  By default, `prepare-agent`
+        attempts to populate `tycho.testArgLine`, but that property
+        is ignored since we explicitly configure our own `<argLine/>`.
+        If we reference `${jacocoArgLine}` in our `<argLine/>` without
+        previously declaring it in a `<properties/>`, then Maven
+        raises an error.  But `prepare-agent` is unable to override
+        a declared property.
+      -->
+      <properties>
+        <jacoco.agentArgLine>${jacocoArgLine}</jacoco.agentArgLine>
+      </properties>
+      <modules>
+        <module>build/jacoco</module>
+      </modules>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>prepare-agent</goal>
+                </goals>
+                <configuration>
+                  <propertyName>jacocoArgLine</propertyName>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!-- enable error-prone as per http://errorprone.info/docs/installation -->
+    <profile>
+      <id>errorprone</id>
+      <activation>
+        <property><name>errorprone</name></property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>compile</phase>
+                <goals>
+                  <goal>compile</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <source>8</source>
+              <target>8</target>
+              <compilerArgs>
+                <arg>-XDcompilePolicy=simple</arg>
+                <arg>-Xplugin:ErrorProne</arg>
+              </compilerArgs>
+              <annotationProcessorPaths>
+                <path>
+                  <groupId>com.google.errorprone</groupId>
+                  <artifactId>error_prone_core</artifactId>
+                  <version>2.3.4</version>
+                </path>
+              </annotationProcessorPaths>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>errorprone-jdk8</id>
+      <activation>
+        <property><name>errorprone</name></property>
+        <jdk>1.8</jdk>
+      </activation>
+      <properties>
+        <!-- unclear how this magic version number should be determined
+           https://github.com/google/error-prone/blob/master/examples/maven/pom.xml#L28 -->
+        <javac.version>9+181-r4173-1</javac.version>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <fork>true</fork>
+              <compilerArgs combine.children="append">
+                <arg>-J-Xbootclasspath/p:${settings.localRepository}/com/google/errorprone/javac/${javac.version}/javac-${javac.version}.jar</arg>
+                <arg>-version</arg>
+              </compilerArgs>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+  <repositories>
+    <repository>
+      <id>sonatype-nexus-snapshots</id>
+      <name>Sonatype Nexus Snapshots</name>
+      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+</project>

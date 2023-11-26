@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.maxleap</groupId>
+    <artifactId>maxleap-parent</artifactId>
+    <version>8</version>
+  </parent>
+
+  <groupId>cn.leapcloud</groupId>
+  <artifactId>release-platform</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.maxleap</groupId>
+        <artifactId>ext-deps</artifactId>
+        <version>${maxleap-stack.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-web</artifactId>
+    </dependency>
+    <!--mysql-->
+    <dependency>
+      <groupId>com.zaxxer</groupId>
+      <artifactId>HikariCP</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-mail-client</artifactId>
+      <version>3.3.3</version>
+    </dependency>
+    <dependency>
+      <groupId>mysql</groupId>
+      <artifactId>mysql-connector-java</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jooq</groupId>
+      <artifactId>jooq</artifactId>
+    </dependency>
+    <!--test-->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <appendAssemblyId>false</appendAssemblyId>
+          <descriptors>
+            <descriptor>src/main/assembly/dir.xml</descriptor>
+          </descriptors>
+        </configuration>
+        <executions>
+          <execution>
+            <id>assembly</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.spotify</groupId>
+        <artifactId>docker-maven-plugin</artifactId>
+        <configuration>
+          <imageName>${docker.repository}/maxleap/${project.artifactId}:${project.version}</imageName>
+          <dockerDirectory>${project.build.directory}/classes/docker</dockerDirectory>
+          <pushImage>true</pushImage>
+          <resources>
+            <resource>
+              <targetPath>/</targetPath>
+              <directory>${project.build.directory}/${project.build.finalName}</directory>
+              <include>*.*</include>
+              <include>**/*</include>
+            </resource>
+          </resources>
+        </configuration>
+        <executions>
+          <execution>
+            <id>build-image</id>
+            <phase>package</phase>
+            <goals>
+              <goal>build</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>local</id>
+      <!--本地环境配置文件变量-->
+      <properties>
+        <!--日志配置-->
+        <config.log4j2.appenderRefs>
+          <![CDATA[
+          <AppenderRef ref="Console" />
+          ]]>
+        </config.log4j2.appenderRefs>
+        <config.httpPort>8888</config.httpPort>
+        <config.mysql.jdbc.url>
+          jdbc:mysql://localhost:3306/leapcloud_release_platform?useUnicode=true&amp;characterEncoding=UTF-8&amp;useSSL=false
+        </config.mysql.jdbc.url>
+        <config.mysql.jdbc.user>root</config.mysql.jdbc.user>
+        <config.mysql.jdbc.password>root</config.mysql.jdbc.password>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <!-- Specify the maven code generator plugin -->
+            <groupId>org.jooq</groupId>
+            <artifactId>jooq-codegen-maven</artifactId>
+            <version>${jooq.version}</version>
+            <!-- The plugin should hook into the generate goal -->
+            <executions>
+              <execution>
+                <goals>
+                  <goal>generate</goal>
+                </goals>
+              </execution>
+            </executions>
+
+            <!-- Manage the plugin's dependency. -->
+            <dependencies>
+              <dependency>
+                <groupId>mysql</groupId>
+                <artifactId>mysql-connector-java</artifactId>
+                <version>${mysql.version}</version>
+              </dependency>
+            </dependencies>
+
+            <!-- Specify the plugin configuration.
+                 The configuration format is the same as for the standalone code generator -->
+            <configuration>
+              <!-- JDBC connection parameters -->
+              <jdbc>
+                <driver>com.mysql.jdbc.Driver</driver>
+                <url>${config.mysql.jdbc.url}</url>
+                <user>${config.mysql.jdbc.user}</user>
+                <password>${config.mysql.jdbc.password}</password>
+              </jdbc>
+
+              <!-- Generator parameters -->
+              <generator>
+                <database>
+                  <recordVersionFields>_version</recordVersionFields>
+
+                  <!--<recordTimestampFields>_version</recordTimestampFields>-->
+                  <name>org.jooq.util.mysql.MySQLDatabase</name>
+                  <includes>.*</includes>
+                  <excludes/>
+                  <inputSchema>leapcloud_release_platform</inputSchema>
+                </database>
+
+                <generate>
+                  <deprecated>false</deprecated>
+                </generate>
+
+                <target>
+                  <packageName>cn.leapcloud.release.platform.dao.entity</packageName>
+                  <directory>${project.basedir}/src/main/java</directory>
+                </target>
+              </generator>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>uat</id>
+      <properties>
+        <!--日志配置-->
+        <config.log4j2.appenderRefs>
+          <![CDATA[
+          <AppenderRef ref="RollingFile" />
+            ]]>
+        </config.log4j2.appenderRefs>
+        <!--UAT环境配置文件变量-->
+        <config.httpPort>8888</config.httpPort>
+        <config.mysql.jdbc.url>
+          jdbc:mysql://10.10.10.183:3306/leapcloud_release_platform?useUnicode=true&amp;characterEncoding=UTF-8&amp;useSSL=false
+        </config.mysql.jdbc.url>
+        <config.mysql.jdbc.user>root</config.mysql.jdbc.user>
+        <config.mysql.jdbc.password>las</config.mysql.jdbc.password>
+      </properties>
+    </profile>
+
+    <profile>
+      <id>coverage</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <version>0.7.8</version>
+            <executions>
+              <execution>
+                <!--
+                在maven的initialize阶段，将Jacoco的runtime agent作为VM的一个参数
+                传给被测程序，用于监控JVM中的调用。
+                -->
+                <id>default-prepare-agent</id>
+                <goals>
+                  <goal>prepare-agent</goal>
+                </goals>
+                <configuration>
+                  <destFile>
+                    ${project.build.directory}/coverage-reports/jacoco.exec
+                  </destFile>
+                  <propertyName>surefireArgLine</propertyName>
+                </configuration>
+              </execution>
+              <!--
+              在程序的verify阶段，执行report测试的程序。
+              文件的输入为perpare-agent阶段中设置或者默认的jacoco.exec.
+              参数 includes和excludes可用来选定report中过滤的类。
+              -->
+              <execution>
+                <id>default-report</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>report</goal>
+                </goals>
+                <configuration>
+                  <dataFile>${project.build.directory}/coverage-reports/jacoco.exec</dataFile>
+                  <outputDirectory>${project.reporting.outputDirectory}/jacoco</outputDirectory>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <version>2.19.1</version>
+            <configuration>
+              <argLine>@{surefireArgLine}</argLine>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

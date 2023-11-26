@@ -1,0 +1,457 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>SymbiosArt</groupId>
+    <artifactId>SymbiosArt-JettyServer</artifactId>
+    <version>1.0</version>
+
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.version>1.0</project.version>
+
+        <!--plugins versions-->
+        <maven.dependency.plugin.version>2.4</maven.dependency.plugin.version>
+        <maven.rpm.plugin.version>2.1</maven.rpm.plugin.version>
+        <maven.resources.plugin.version>2.6</maven.resources.plugin.version>
+
+        <!--deps versions-->
+        <mongo.version>3.2.0</mongo.version>
+        <solr.version>5.2.1</solr.version>
+        <jetty.version>9.3.4.RC1</jetty.version>
+        <slf4j.version>1.7.5</slf4j.version>
+        <logback.version>1.1.3</logback.version>
+        <jersey.version>2.17</jersey.version>
+        <jax.rs.version>2.0</jax.rs.version>
+        <gson.version>2.5</gson.version>
+        <fongo.version>2.0.4</fongo.version>
+        <junit.version>4.11</junit.version>
+        <flickr4j.version>2.11</flickr4j.version>
+
+        <!--rpm-->
+        <rpm.copyright>2016, derlin@heia-fr</rpm.copyright>
+        <rpm.group>Application/Internet</rpm.group>
+        <rpm.rootprefix>/opt/symbiosart</rpm.rootprefix>
+        <rpm.apprefix>${rpm.rootprefix}</rpm.apprefix>
+        <rpm.username>llinder</rpm.username>
+        <rpm.groupname>daplab_users</rpm.groupname>
+        <rpm.logdirname>logs</rpm.logdirname>
+        <rpm.targetos>el6</rpm.targetos>
+        <rpm.targetArch>x86_64</rpm.targetArch>
+        <rpm.path>${rpm.apprefix}</rpm.path>
+        <rpm.logdirpath>${rpm.apprefix}/${rpm.logdirname}</rpm.logdirpath>
+        <rpm.appname>${project.artifactId}</rpm.appname>
+        <rpm.basedir>${project.artifactId}</rpm.basedir>
+        <rpm.distribution>SymbiosartImmersion</rpm.distribution>
+    </properties>
+
+    <packaging>jar</packaging>
+
+    <profiles>
+        <profile>
+            <id>rpmRelease.defaultValue</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+                <property>
+                    <name>!rpmRelease</name>
+                </property>
+            </activation>
+            <properties>
+                <rpmRelease>1</rpmRelease>
+            </properties>
+        </profile>
+        <profile>
+            <id>fatJar</id>
+            <build>
+                <!--  include config to jar -->
+                <resources>
+                    <resource>
+                        <directory>src/main/config</directory>
+                    </resource>
+                </resources>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>create-my-bundle</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>single</goal>
+                                </goals>
+                                <configuration>
+                                    <descriptorRefs>
+                                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                                    </descriptorRefs>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+
+            </build>
+        </profile>
+
+        <profile>
+            <id>rpm</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <!--copy deps to /target/lib-->
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-dependency-plugin</artifactId>
+                        <version>${maven.dependency.plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>copy-dependencies</id>
+                                <phase>prepare-package</phase>
+                                <goals>
+                                    <goal>copy-dependencies</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                            <!-- See here for more details https://gist.github.com/killerwhile/95c49fb0af0e938de222 -->
+                            <overWriteReleases>false</overWriteReleases>
+                            <overWriteSnapshots>false</overWriteSnapshots>
+                            <overWriteIfNewer>true</overWriteIfNewer>
+                            <includeScope>runtime</includeScope>
+                            <!--excludeTransitive>false</excludeTransitive-->
+                            <stripVersion>false</stripVersion>
+                            <excludeScope>provided</excludeScope>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <!--create an rpm-->
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>rpm-maven-plugin</artifactId>
+                        <version>${maven.rpm.plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>attached-rpm</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <copyright>${rpm.copyright}</copyright>
+                            <distribution>${rpm.distribution}</distribution>
+                            <group>${rpm.group}</group>
+                            <needarch>${rpm.targetArch}</needarch>
+                            <classifier>${rpm.targetos}.${rpm.targetArch}</classifier>
+                            <name>${rpm.appname}</name>
+                            <version>
+                                ${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion}
+                            </version>
+                            <release>${rpmRelease}</release>
+                            <defineStatements>
+                                <defineStatement>_binaries_in_noarch_packages_terminate_build 0</defineStatement>
+                                <defineStatement>_unpackaged_files_terminate_build 0</defineStatement>
+                            </defineStatements>
+                            <mappings>
+                                <mapping>
+                                    <directory>${rpm.apprefix}</directory>
+                                    <filemode>0755</filemode>
+                                    <username>${rpm.username}</username>
+                                    <groupname>${rpm.groupname}</groupname>
+                                </mapping>
+                                <!-- Top level directory -->
+                                <mapping>
+                                    <directory>${rpm.path}</directory>
+                                    <filemode>0755</filemode>
+                                    <username>${rpm.username}</username>
+                                    <groupname>${rpm.groupname}</groupname>
+                                </mapping>
+                                <!-- set all directory permissions -->
+                                <mapping>
+                                    <configuration>true</configuration>
+                                    <directory>${rpm.path}/config</directory>
+                                    <recurseDirectories>true</recurseDirectories>
+                                    <filemode>0755</filemode>
+                                    <username>${rpm.username}</username>
+                                    <groupname>${rpm.groupname}</groupname>
+                                </mapping>
+                                <mapping>
+                                    <directory>${rpm.path}/bin</directory>
+                                    <recurseDirectories>true</recurseDirectories>
+                                    <filemode>0755</filemode>
+                                    <username>${rpm.username}</username>
+                                    <groupname>${rpm.groupname}</groupname>
+                                </mapping>
+                                <mapping>
+                                    <directory>${rpm.path}/lib</directory>
+                                    <recurseDirectories>true</recurseDirectories>
+                                    <filemode>0755</filemode>
+                                    <username>${rpm.username}</username>
+                                    <groupname>${rpm.groupname}</groupname>
+                                    <sources>
+                                        <source>
+                                            <location>
+                                                ${project.build.directory}/${project.artifactId}-${project.version}.jar
+                                            </location>
+                                        </source>
+                                        <source>
+                                            <location>${project.build.directory}/lib/</location>
+                                        </source>
+                                        <softlinkSource>
+                                            <destination>${project.artifactId}.jar</destination>
+                                            <location>${project.artifactId}-${project.version}.jar</location>
+                                        </softlinkSource>
+                                    </sources>
+                                </mapping>
+                                <mapping>
+                                    <directory>${rpm.path}/logs</directory>
+                                    <recurseDirectories>true</recurseDirectories>
+                                    <filemode>0755</filemode>
+                                    <username>${rpm.username}</username>
+                                    <groupname>${rpm.groupname}</groupname>
+                                </mapping>
+                                <!-- We exclude the dir because the perms were defined above recursively -->
+                                <mapping>
+                                    <configuration>true</configuration>
+                                    <directory>${rpm.path}/config</directory>
+                                    <directoryIncluded>false</directoryIncluded>
+                                    <filemode>0644</filemode>
+                                    <username>${rpm.username}</username>
+                                    <groupname>${rpm.groupname}</groupname>
+                                    <sources>
+                                        <source>
+                                            <location>${project.basedir}/src/main/config</location>
+                                        </source>
+                                    </sources>
+                                </mapping>
+                                <!-- We exclude the dir because the perms were defined above recursively -->
+                                <mapping>
+                                    <directory>${rpm.path}/bin</directory>
+                                    <directoryIncluded>false</directoryIncluded>
+                                    <filemode>0755</filemode>
+                                    <username>${rpm.username}</username>
+                                    <groupname>${rpm.groupname}</groupname>
+                                    <sources>
+                                        <source>
+                                            <location>${project.basedir}/src/main/scripts</location>
+                                            <!-- This prevents RPM python build failure on Jenkins -->
+                                            <excludes>
+                                                <exclude>*.pyc</exclude>
+                                                <exclude>*.pyo</exclude>
+                                            </excludes>
+                                        </source>
+                                    </sources>
+                                </mapping>
+                            </mappings>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+
+    <build>
+
+        <plugins>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.9.1</version>
+                <executions>
+                    <execution>
+                        <id>parse-version</id>
+                        <goals>
+                            <goal>parse-version</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <!-- Build an executable JAR -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.6</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                            <mainClass>derlin.symbiosart.jetty.WebAppLauncher</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <!--compiler-->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <!--launch the embedded server through maven-->
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-maven-plugin</artifactId>
+                <version>${jetty.version}</version>
+                <configuration>
+                    <httpConnector>
+                        <port>8680</port>
+                    </httpConnector>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <!--copy web-inf etc to jar-->
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>${maven.resources.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>copy-resources</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${basedir}/target/classes</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>src/main/webapp</directory>
+                                    <filtering>false</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+
+    <dependencies>
+
+        <!--flickr-->
+        <dependency>
+            <groupId>com.flickr4java</groupId>
+            <artifactId>flickr4java</artifactId>
+            <version>${flickr4j.version}</version>
+        </dependency>
+
+        <!--junit-->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
+        </dependency>
+
+        <!--mongo-->
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver</artifactId>
+            <version>${mongo.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongo-java-driver</artifactId>
+            <version>${mongo.version}</version>
+        </dependency>
+
+        <!--<dependency>-->
+            <!--<groupId>com.github.fakemongo</groupId>-->
+            <!--<artifactId>fongo</artifactId>-->
+            <!--<version>${fongo.version}</version>-->
+            <!--<scope>test</scope>-->
+        <!--</dependency>-->
+
+        <!--gson-->
+        <!--<dependency>-->
+            <!--<groupId>com.google.code.gson</groupId>-->
+            <!--<artifactId>gson</artifactId>-->
+            <!--<version>${gson.version}</version>-->
+        <!--</dependency>-->
+
+        <!--solr-->
+        <dependency>
+            <groupId>org.apache.solr</groupId>
+            <artifactId>solr-solrj</artifactId>
+            <version>${solr.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+            <version>1.1.1</version>
+        </dependency>
+
+        <!--jetty-->
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-server</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-servlet</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>javax.ws.rs-api</artifactId>
+            <version>${jax.rs.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.glassfish.jersey.core</groupId>
+            <artifactId>jersey-server</artifactId>
+            <version>${jersey.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.glassfish.jersey.containers</groupId>
+            <artifactId>jersey-container-jetty-servlet</artifactId>
+            <version>${jersey.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.glassfish.jersey.media</groupId>
+            <artifactId>jersey-media-json-jackson</artifactId>
+            <version>${jersey.version}</version>
+        </dependency>
+
+        <!--logging -->
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-core</artifactId>
+            <version>${logback.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${logback.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
+        <!--wordnet-->
+        <dependency>
+            <groupId>edu.mit</groupId>
+            <artifactId>jwi</artifactId>
+            <version>2.2.3</version>
+        </dependency>
+
+    </dependencies>
+
+
+</project>

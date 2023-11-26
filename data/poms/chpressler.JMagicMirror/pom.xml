@@ -1,0 +1,277 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>io.github.chpressler</groupId>
+  <artifactId>jmagicmirror</artifactId>
+  <packaging>jar</packaging>
+  <version>1.0</version>
+  <name>jmagicmirror</name>
+  <url>http://maven.apache.org</url>
+
+  <properties>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <pi.host>192.168.1.7</pi.host>
+    <pi.port>22</pi.port>
+    <pi.user>pi</pi.user>
+    <pi.password>raspberry</pi.password>
+    <pi.deployDirectory>/home/pi/Projects/</pi.deployDirectory>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>3.8.1</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- <dependency>
+      <groupId>com.oracle</groupId>
+      <artifactId>javafx</artifactId>
+      <version>2.2.3</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/jfxrt.jar</systemPath>
+    </dependency>-->
+    <!--<dependency>
+      <groupId>com.google.inject</groupId>
+      <artifactId>guice</artifactId>
+      <version>3.0</version>
+    </dependency>-->
+    <dependency>
+      <groupId>com.airhacks</groupId>
+      <artifactId>afterburner.fx</artifactId>
+      <version>1.6.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.8.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>3.5</version>
+    </dependency>
+    <dependency>
+      <groupId>oauth.signpost</groupId>
+      <artifactId>oauth-signpost</artifactId>
+      <version>1.2.1.2</version>
+    </dependency>
+    <dependency>
+      <groupId>io.reactivex</groupId>
+      <artifactId>rxjava</artifactId>
+      <version>1.3.0</version>
+    </dependency>
+      <dependency>
+          <groupId>org.junit.jupiter</groupId>
+          <artifactId>junit-jupiter-api</artifactId>
+          <version>RELEASE</version>
+      </dependency>
+  </dependencies>
+
+  <build>
+    <defaultGoal>clean package</defaultGoal>
+    <plugins>
+
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>2.6</version>
+        <configuration>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+          <archive>
+            <manifest>
+              <mainClass>io.github.chpressler.jmagicmirror.Main</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!--This plugin will Transfer the executable JAR file to the Pi and runs it -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.8</version>
+        <executions>
+          <execution>
+            <phase>install</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <tasks>
+                <!-- ensure the target directory exists on the Raspberry Pi -->
+                <sshexec host="${pi.host}" port="${pi.port}" username="${pi.user}" password="${pi.password}"
+                         trust="true" failonerror="false" verbose="true"
+                         command="mkdir --parents ${pi.deployDirectory}"/>
+                <!-- copy the JAR file to the Raspberry Pi -->
+                <scp
+                        file="${project.build.directory}/${project.build.finalName}-jar-with-dependencies.jar"
+                        todir="${pi.user}:${pi.password}@${pi.host}:${pi.deployDirectory}"
+                        port="${pi.port}" trust="true" verbose="true" failonerror="true">
+                </scp>
+                <!-- run the JAR file on the Raspberry Pi -->
+                <sshexec host="${pi.host}" port="${pi.port}" username="${pi.user}"
+                         password="${pi.password}" trust="true" failonerror="false"
+                         verbose="true"
+                         command="java -jar ${pi.deployDirectory}${project.build.finalName}-jar-with-dependencies.jar"/>
+              </tasks>
+            </configuration>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.ant</groupId>
+            <artifactId>ant-jsch</artifactId>
+            <version>1.9.6</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+
+      <plugin>
+        <groupId>com.zenjava</groupId>
+        <artifactId>javafx-maven-plugin</artifactId>
+        <version>1.3</version>
+        <configuration>
+          <mainClass>io.github.chpressler.jmagicmirror.Main</mainClass>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>2.10</version>
+        <executions>
+          <execution>
+            <id>unpack-dependencies</id>
+            <phase>package</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <excludeScope>system</excludeScope>
+              <excludeGroupIds>junit,org.mockito,org.hamcrest</excludeGroupIds>
+              <outputDirectory>${project.build.directory}/classes</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!--<plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.4.0</version>
+        <executions>
+          <execution>
+            <id>package-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>${env.JAVA_HOME}/bin/javafxpackager</executable>
+              <arguments>
+                <argument>-createjar</argument>
+                <argument>-nocss2bin</argument>
+                <argument>-appclass</argument>
+                <argument>com.airhacks.followme.App</argument>
+                <argument>-srcdir</argument>
+                <argument>${project.build.directory}/classes</argument>
+                <argument>-outdir</argument>
+                <argument>./target</argument>
+                <argument>-outfile</argument>
+                <argument>${project.artifactId}-app</argument>
+                <argument>-v</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>-->
+    </plugins>
+    <resources>
+      <resource>
+        <directory>src/main/java</directory>
+        <includes>
+          <include>**/*.fxml</include>
+          <include>**/*.css</include>
+          <include>**/*.properties</include>
+          <include>**/*.png</include>
+        </includes>
+      </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+        <includes>
+          <include>**/*.xml</include>
+          <include>**/*.css</include>
+          <include>**/*.properties</include>
+          <include>**/*.png</include>
+        </includes>
+      </resource>
+    </resources>
+  </build>
+
+ <!--<profiles>
+  <profile>
+    <id>install-javafx</id>
+    <build>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-install-plugin</artifactId>
+          <version>2.3.1</version>
+          <executions>
+            <execution>
+              <id>install-javafx</id>
+              <goals>
+                <goal>install-file</goal>
+              </goals>
+              <phase>validate</phase>
+              <configuration>
+                <file>${jfx-runtime}/lib/pwd</file>
+                <groupId>javafx</groupId>
+                <artifactId>javafx</artifactId>
+                <version>${jfx-version}</version>
+                <packaging>jar</packaging>
+                <javadoc>${jfx-runtime}/../docs/api.zip</javadoc>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <artifactId>maven-resources-plugin</artifactId>
+          <executions>
+            <execution>
+              <id>install-javafx-bin</id>
+              <phase>validate</phase>
+              <goals>
+                <goal>copy-resources</goal>
+              </goals>
+              <configuration>
+                <outputDirectory>${settings.localRepository}/javafx/javafx</outputDirectory>
+                <useBuildFilters>false</useBuildFilters>
+                <resources>
+                  <resource>
+                    <directory>${jfx-runtime}</directory>
+                    <includes>
+                      <include>bin/*.dll</include>
+                    </includes>
+                  </resource>
+                </resources>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </build>
+  </profile>
+</profiles>-->
+
+</project>

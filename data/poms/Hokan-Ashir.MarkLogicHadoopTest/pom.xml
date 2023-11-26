@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>ru.hokan</groupId>
+    <artifactId>MarkLogicHadoopTest</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <hadoop.version>2.5.1</hadoop.version>
+
+        <remote.host.ip>10.16.9.112</remote.host.ip>
+        <remote.host.name>root</remote.host.name>
+        <remote.host.password>centos</remote.host.password>
+        <docker.container.name>MarkLogicHadoopTest</docker.container.name>
+        <job.executor.script.name>execute-job.sh</job.executor.script.name>
+        <mark.logic.config.file>marklogic-connection-properties.xml</mark.logic.config.file>
+        <mark.logic.xdbc.server.port>9999</mark.logic.xdbc.server.port>
+
+        <file.name.to.copy>000000</file.name.to.copy>
+    </properties>
+
+    <repositories>
+        <repository>
+            <id>MarkLogic-releases</id>
+            <name>MarkLogic Releases</name>
+            <url>http://developer.marklogic.com/maven2</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <dependency>
+            <groupId>eu.bitwalker</groupId>
+            <artifactId>UserAgentUtils</artifactId>
+            <version>1.20</version>
+        </dependency>
+        <!-- Hadoop main client artifact -->
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-client</artifactId>
+            <version>${hadoop.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>RELEASE</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.mrunit</groupId>
+            <artifactId>mrunit</artifactId>
+            <version>1.1.0</version>
+            <classifier>hadoop2</classifier>
+            <scope>test</scope>
+        </dependency>
+        <!-- Hadoop test artifact for running mini clusters -->
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-minicluster</artifactId>
+            <version>${hadoop.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-modeler</groupId>
+            <artifactId>commons-modeler</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.marklogic</groupId>
+            <artifactId>marklogic-mapreduce2</artifactId>
+            <version>2.1.5</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.marklogic</groupId>
+            <artifactId>marklogic-xcc</artifactId>
+            <version>8.0.5</version>
+        </dependency>
+
+        <!--<dependency>-->
+            <!--<groupId>ru.hokan</groupId>-->
+            <!--<artifactId>MarkLogicTest</artifactId>-->
+            <!--<version>1.0-SNAPSHOT</version>-->
+            <!--<scope>system</scope>-->
+            <!--<systemPath>${project.basedir}/lib/MarkLogicTest-1.0-SNAPSHOT.jar</systemPath>-->
+        <!--</dependency>-->
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>2.4.3</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                            <minimizeJar>
+                                true
+                            </minimizeJar>
+                            <artifactSet>
+                                <includes>
+                                    <include>com.marklogic:*</include>
+                                    <include>ru.hokan:*</include>
+                                    <include>commons-modeler:*</include>
+                                </includes>
+                            </artifactSet>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>docker</id>
+            <build>
+                <finalName>MarkLogicHadoopTest</finalName>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <version>3.1</version>
+                        <configuration>
+                            <source>1.6</source>
+                            <target>1.6</target>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jar-plugin</artifactId>
+                        <version>2.5</version>
+                        <configuration>
+                            <outputDirectory>${basedir}</outputDirectory>
+                        </configuration>
+                    </plugin>
+
+                    <!--Solution to place compiled jar into virtual host FS taken from-->
+                    <!--https://jarirajari.wordpress.com/2014/06/11/copy-files-and-execute-command-on-a-remote-host-with-maven-antrun-plugin-without-ant-using-ssh-and-scp/-->
+                    <plugin>
+                        <inherited>false</inherited>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>1.6</version>
+                        <executions>
+                            <execution>
+                                <id>test</id>
+                                <phase>install</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target name="hadoop run" description="how to get antrun plugin to work with SCP and SSH">
+
+                                        <echo message="Starting Docker service ..." />
+                                        <sshexec trust="true" failonerror="true"
+                                                 host="${remote.host.ip}"
+                                                 username="${remote.host.name}"
+                                                 password="${remote.host.password}"
+                                                 command="service docker start"
+                                                 timeout="120000"
+                                                 usepty="true"
+                                        />
+                                        <echo message="Docker service started" />
+
+                                        <echo message="Coping compiled jar: ${project.build.finalName} ..." />
+                                        <scp trust="true" failonerror="true" verbose="off" sftp="true"
+                                             file="./${project.build.finalName}.jar"
+                                             todir="${remote.host.name}:${remote.host.password}@${remote.host.ip}:/root/" />
+                                        <echo message="Coping compiled jar: ${project.build.finalName} completed" />
+
+                                        <echo message="Coping execute job file: ${job.executor.script.name} ..." />
+                                        <scp trust="true" failonerror="true" verbose="off" sftp="true"
+                                             file="./${job.executor.script.name}"
+                                             todir="${remote.host.name}:${remote.host.password}@${remote.host.ip}:/root/" />
+                                        <echo message="Coping execute job file: ${job.executor.script.name} completed" />
+
+                                        <echo message="Coping MarkLogic config file: ${mark.logic.config.file} ..." />
+                                        <scp trust="true" failonerror="true" verbose="off" sftp="true"
+                                             file="./${mark.logic.config.file}"
+                                             todir="${remote.host.name}:${remote.host.password}@${remote.host.ip}:/root/" />
+                                        <echo message="Coping MarkLogic config file: ${mark.logic.config.file} completed" />
+
+                                        <!--Coping data files-->
+                                        <echo message="Coping ${file.name.to.copy} ..." />
+                                        <scp trust="true" failonerror="true" verbose="off" sftp="true"
+                                             file="${basedir}/src/main/data/${file.name.to.copy}"
+                                             todir="${remote.host.name}:${remote.host.password}@${remote.host.ip}:/root/" />
+                                        <echo message="Coping ${file.name.to.copy} completed" />
+
+                                        <echo message="Changing rights to copied files ..." />
+                                        <sshexec trust="true" failonerror="true"
+                                                 host="${remote.host.ip}"
+                                                 username="${remote.host.name}"
+                                                 password="${remote.host.password}"
+                                                 command="chmod -R 777 /root/${job.executor.script.name}"
+                                                 timeout="120000"
+                                                 usepty="true"
+                                        />
+                                        <echo message="Changing rights to copied files complete" />
+
+                                        <echo message="Running hadoop cluster in demon mode ..." />
+                                        <sshexec trust="true" failonerror="true"
+                                                 host="${remote.host.ip}"
+                                                 username="${remote.host.name}"
+                                                 password="${remote.host.password}"
+                                                 command="sudo -S docker run -d -it -v $PWD:/opt --name ${docker.container.name} sequenceiq/hadoop-docker:2.7.1"
+                                                 timeout="120000"
+                                                 usepty="true"
+                                        />
+                                        <echo message="Hadoop cluster in demon mode is running" />
+
+                                        <!-- TODO this is needed if you would like to connect to remote host but in this example-->
+                                        <!--we just use hadoop/docker container on the same host as MarkLogic, so it's XDBC-->
+                                        <!--port is already assigned and Docker doesn't need to see it via-->
+                                        <!--"-p" option explicity-->
+                                        <!-- -p ${mark.logic.xdbc.server.port}:${mark.logic.xdbc.server.port}-->
+
+                                        <!--TODO add \r\n -> \n sed script removal in case of emergency moving from Win to Linux and wondering WTF?-->
+                                        <!--sed -i -e 's/\r$//' create_mgw_3shelf_6xIPNI1P.sh-->
+
+                                        <echo message="Running hdfs job ..." />
+                                        <sshexec trust="true" failonerror="true"
+                                                 host="${remote.host.ip}"
+                                                 username="${remote.host.name}"
+                                                 password="${remote.host.password}"
+                                                 command="docker exec ${docker.container.name} /opt/${job.executor.script.name}"/>
+                                        <echo message="Running hdfs job complete" />
+
+                                        <!--TODO add clean up, on virtual box host-->
+
+                                        <taskdef name="scp" classname="org.apache.tools.ant.taskdefs.optional.ssh.Scp">
+                                            <classpath refid="maven.plugin.classpath" />
+                                        </taskdef>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                        <dependencies>
+                            <dependency>
+                                <groupId>ant</groupId>
+                                <artifactId>ant-commons-net</artifactId>
+                                <version>1.6.5</version>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.apache.ant</groupId>
+                                <artifactId>ant-jsch</artifactId>
+                                <version>1.9.1</version>
+                            </dependency>
+                        </dependencies>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

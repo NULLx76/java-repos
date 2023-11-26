@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+   <modelVersion>4.0.0</modelVersion>
+
+   <groupId>org.jboss.jawabot</groupId>
+   <artifactId>JawaBot-root</artifactId>
+   <packaging>pom</packaging>
+   <version>2.1.5-SNAPSHOT</version>
+
+   <name>JawaBot 2.0 root</name>
+
+   <modules>
+      <module>configs</module>
+      <module>core</module>
+      <!-- Keep the core above. -->
+      <module>irc</module>
+      <module>web</module>
+      <!-- Keep plugins down. -->
+      <module>plugins</module>
+      <!--<module>assemble</module>-->
+      <!--<module>assem-onejar</module>-->
+      <!--<module>assem-zip</module>-->
+      <module>assem-appassemble</module>
+      <module>testbase</module>
+   </modules>
+
+   
+   <properties>
+      <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+      
+      <!-- Config profile - see configs/ for available profiles. -->
+      <config.profile>redhat-test</config.profile>
+      <config.skipCopy>true</config.skipCopy>
+      <config.outputDir>workdir/conf</config.outputDir>
+   </properties>
+
+
+   <build>
+      <pluginManagement>
+         <plugins>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
+                <configuration> <source>1.7</source> <target>1.7</target> </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.6</version>
+            </plugin>
+            <plugin>
+               <artifactId>maven-dependency-plugin</artifactId>
+               <version>2.8</version>
+            </plugin>
+            <plugin>
+               <artifactId>maven-clean-plugin</artifactId>
+               <version>2.5</version>
+            </plugin>
+            <plugin>
+               <groupId>org.apache.maven.plugins</groupId>
+               <artifactId>maven-scm-plugin</artifactId>
+               <version>1.8.1</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.15</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>2.3</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.4</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.4</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>2.1</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>2.7</version>
+            </plugin>
+         </plugins>
+      </pluginManagement>
+         
+      <plugins>
+         <!-- Copy configuration files to workdir/ - TEMPLATE. -->
+         <plugin>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+               <!-- Copy a profile specified in ${config.profile} to workdir/ -->
+               <execution>
+                  <id>config.copyToWorkdir</id>
+                  <phase>process-resources</phase><!-- Override in submodules to process-resources to enable. -->
+                  <goals><goal>unpack</goal></goals>
+                  <configuration>
+                     <skip>${config.skipCopy}</skip>
+                     <artifactItems>
+                        <artifactItem>
+                           <groupId>org.jboss.jawabot.configs</groupId>
+                           <artifactId>JawaBot-config-${config.profile}</artifactId>
+                           <version>${project.version}</version>
+                           <overWrite>true</overWrite>
+                           <outputDirectory>${config.outputDir}</outputDirectory>
+                           <excludes>META-INF</excludes> <!-- Comma separated list of file filters. -->
+                        </artifactItem>
+                     </artifactItems>
+                  </configuration>
+               </execution>
+               <!-- Copy all profiles to workdir/<profile>/ -->
+               <execution>
+                  <id>config.copyToWorkdir-profiles</id>
+                  <phase>none</phase><!-- Override in submodules to process-resources to enable. -->
+                  <goals><goal>unpack</goal></goals>
+                  <configuration>
+                     <artifactItems>
+                        <artifactItem>
+                           <groupId>org.jboss.jawabot.configs</groupId> <artifactId>JawaBot-config-redhat-test</artifactId><version>${project.version}</version>
+                           <outputDirectory>${config.outputDir}/redhat-test</outputDirectory>
+                        </artifactItem>
+                        <artifactItem>
+                           <groupId>org.jboss.jawabot.configs</groupId> <artifactId>JawaBot-config-redhat-prod</artifactId><version>${project.version}</version>
+                           <outputDirectory>${config.outputDir}/redhat-prod</outputDirectory>
+                        </artifactItem>
+                        <!--
+                        <artifactItem>
+                           <groupId>org.jboss.jawabot.configs</groupId> <artifactId>JawaBot-config-freenode-test</artifactId><version>${project.version}</version>
+                           <outputDirectory>${config.outputDir}/freenode-test</outputDirectory>
+                        </artifactItem>
+                        -->
+                        <artifactItem>
+                           <groupId>org.jboss.jawabot.configs</groupId> <artifactId>JawaBot-config-freenode-dist</artifactId><version>${project.version}</version>
+                           <outputDirectory>${config.outputDir}/freenode-dist</outputDirectory>
+                        </artifactItem>
+                     </artifactItems>
+                  </configuration>
+               </execution>
+            </executions>
+         </plugin>
+         <!-- Delete workdir on clean. -->
+         <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-clean-plugin</artifactId>
+            <configuration>
+               <filesets>
+                  <fileset> <directory>workdir</directory> <includes> <include>**/*</include> </includes> </fileset>
+                  <fileset> <directory>.</directory> <includes> <include>workdir</include> </includes> </fileset>
+               </filesets>
+            </configuration>
+         </plugin>
+         <!-- Set surefire's workdir. -->
+         <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+               <workingDirectory>workdir</workingDirectory>
+            </configuration>
+         </plugin>
+         
+         
+         <!-- Compile, Git, Release, Deployment. -->
+         <plugin>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration> <source>1.6</source> <target>1.6</target> </configuration>
+         </plugin>
+         <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-scm-plugin</artifactId>
+         </plugin>
+         <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-release-plugin</artifactId>
+            <version>2.4.1</version>
+            <configuration>
+               <autoVersionSubmodules>true</autoVersionSubmodules>
+               <tagNameFormat>@{project.version}</tagNameFormat> <!--@{project.artifactId}-@{project.version}-->
+            </configuration>
+         </plugin>
+         <!-- Don't deploy all artifacts. Overridden in submodules. -->         
+         <plugin>
+             <groupId>org.apache.maven.plugins</groupId>
+             <artifactId>maven-deploy-plugin</artifactId>
+             <executions> <execution> <id>default-deploy</id> <phase>none</phase> </execution></executions>
+         </plugin>
+
+      </plugins>
+      
+      <extensions>
+          <extension>
+              <groupId>org.apache.maven.wagon</groupId>
+              <artifactId>wagon-ssh</artifactId>
+              <version>2.4</version>
+          </extension>
+      </extensions>
+   </build>
+
+   <scm>
+      <connection>scm:git:https://code.google.com/p/jawabot/</connection>
+      <developerConnection>scm:git:https://code.google.com/p/jawabot/</developerConnection>
+      <url>http://code.google.com/p/jawabot/</url>
+      <tag>HEAD</tag>
+   </scm>
+  
+   <distributionManagement>
+       <snapshotRepository>
+           <id>jboss-qa-snapshots</id>
+           <name>JBoss QA snapshot repository</name>
+           <url>http://nexus.qa.jboss.com:8081/nexus/content/repositories/snapshots</url>
+       </snapshotRepository>
+       <repository>
+           <id>jboss-qa-releases</id>
+           <name>JBoss QA release repository</name>
+           <url>http://nexus.qa.jboss.com:8081/nexus/content/repositories/releases</url>
+       </repository>
+   </distributionManagement>
+
+
+   <!-- Dependencies -->
+   <dependencies>
+      
+      <!-- Commons -->
+      <dependency>
+        <groupId>commons-lang</groupId>
+        <artifactId>commons-lang</artifactId>
+      </dependency>
+      <dependency>
+        <groupId>commons-io</groupId>
+        <artifactId>commons-io</artifactId>
+      </dependency>
+
+      <!-- Logging -->
+      <dependency>
+         <groupId>org.slf4j</groupId>
+         <artifactId>slf4j-log4j12</artifactId>
+      </dependency>
+      <dependency>
+        <groupId>log4j</groupId>
+        <artifactId>log4j</artifactId>
+      </dependency>
+
+      <dependency>
+         <groupId>junit</groupId>
+         <artifactId>junit</artifactId>
+         <scope>test</scope>
+      </dependency>
+
+   </dependencies>
+   
+   <dependencyManagement>
+      <dependencies>
+         <dependency>
+            <groupId>javax.mail</groupId>
+            <artifactId>mail</artifactId>
+            <version>1.4.7</version>
+         </dependency>
+         
+         <dependency>
+           <groupId>commons-lang</groupId>
+           <artifactId>commons-lang</artifactId>
+           <version>2.6</version>
+         </dependency>
+      
+         <dependency>
+           <groupId>commons-io</groupId>
+           <artifactId>commons-io</artifactId>
+           <version>2.4</version>
+         </dependency>
+         
+         <dependency>
+             <groupId>net.sourceforge.htmlunit</groupId>
+             <artifactId>htmlunit</artifactId>
+             <version>2.10</version>
+         </dependency>
+         
+      
+         <!-- Slf4j -->
+         <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.5</version>
+         </dependency>
+         <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.7.5</version>
+         </dependency>
+         
+         <dependency>
+           <groupId>log4j</groupId>
+           <artifactId>log4j</artifactId>
+           <version>1.2.17</version>
+         </dependency>
+         
+         <dependency>
+           <groupId>org.jboss.logmanager</groupId>
+           <artifactId>jboss-logmanager</artifactId>
+           <version>1.4.1.Final</version>
+         </dependency>
+         
+         <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+         </dependency>
+
+         <!-- Hibernate wants 3.1 vs. HtmlUnit wants 3.2.1 -->
+         <dependency>
+             <groupId>commons-collections</groupId>
+             <artifactId>commons-collections</artifactId>
+             <version>3.2.1</version>
+         </dependency>
+
+         <dependency>
+             <groupId>javax.activation</groupId>
+             <artifactId>activation</artifactId>
+             <version>1.1.1</version>
+         </dependency>
+
+      </dependencies>
+   </dependencyManagement>
+   
+   <repositories>
+      <repository><id>jboss</id><url>https://repository.jboss.org/nexus/content/groups/public</url></repository>
+      <!-- PLJ filter, PircBot 1.5.0 -->
+      <repository><id>ondrazizka-googlecode</id><url>http://ondrazizka.googlecode.com/svn/maven</url></repository>
+   </repositories>
+   
+</project>

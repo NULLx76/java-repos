@@ -1,0 +1,284 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+	<!-- **** -->
+	<!-- MAIN -->
+	<!-- **** -->
+
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>fr.mnantel</groupId>
+	<artifactId>wadl-example</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>WADLExample</name>
+	<inceptionYear>2015</inceptionYear>
+
+	<!-- ********** -->
+	<!-- PROPERTIES -->
+	<!-- ********** -->
+
+	<properties>
+
+		<resources.directory>src/main/resources</resources.directory>
+		<wadl.directory>${resources.directory}/wadl</wadl.directory>
+		<dictionary.directory>${resources.directory}/dictionary</dictionary.directory>
+		<xsdtojava.target.directory>${project.build.directory}/generated/cxf</xsdtojava.target.directory>
+
+		<library.javax.ws.rs-api.version>2.0.1</library.javax.ws.rs-api.version>
+		<library.commons-lang.version>2.6</library.commons-lang.version>
+
+		<product.cxf.version>3.0.3</product.cxf.version>
+		<plugin.cxf-wadl2java-plugin.version>${product.cxf.version}</plugin.cxf-wadl2java-plugin.version>
+		<plugin.cxf-xjc-plugin.version>${product.cxf.version}</plugin.cxf-xjc-plugin.version>
+		<library.cxf-xjc-runtime.version>${product.cxf.version}</library.cxf-xjc-runtime.version>
+
+		<plugin-dependency.jaxb2-basics.version>0.9.3</plugin-dependency.jaxb2-basics.version>
+		<plugin-dependency.jaxb2-basics-annotate.version>1.0.1</plugin-dependency.jaxb2-basics-annotate.version>
+
+		<product.jackson.version>2.5.1</product.jackson.version>
+		<plugin-dependency.jackson-dataformat-xml.version>${product.jackson.version}</plugin-dependency.jackson-dataformat-xml.version>
+		<library.jackson-jaxrs-json-provider.version>${product.jackson.version}</library.jackson-jaxrs-json-provider.version>
+		<library.jackson-jaxrs-xml-provider.version>${product.jackson.version}</library.jackson-jaxrs-xml-provider.version>
+
+		<plugin.replacer.version>1.5.3</plugin.replacer.version>
+
+	</properties>
+
+	<!-- ************ -->
+	<!-- DEPENDENCIES -->
+	<!-- ************ -->
+
+	<dependencies>
+
+		<!-- Java API for RESTful Services -->
+		<dependency>
+			<groupId>javax.ws.rs</groupId>
+			<artifactId>javax.ws.rs-api</artifactId>
+			<version>${library.javax.ws.rs-api.version}</version>
+		</dependency>
+
+		<!-- Apache Commons Lang -->
+		<dependency>
+			<groupId>commons-lang</groupId>
+			<artifactId>commons-lang</artifactId>
+			<version>${library.commons-lang.version}</version>
+		</dependency>
+
+		<!-- Apache CXF -->
+		<dependency>
+			<groupId>org.apache.cxf.xjc-utils</groupId>
+			<artifactId>cxf-xjc-runtime</artifactId>
+			<version>${library.cxf-xjc-runtime.version}</version>
+		</dependency>
+
+		<!-- Jackson JSON marshaller/unmarshaller -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.jaxrs</groupId>
+			<artifactId>jackson-jaxrs-json-provider</artifactId>
+			<version>${library.jackson-jaxrs-json-provider.version}</version>
+		</dependency>
+
+		<!-- Jackson XML marshaller/unmarshaller -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.jaxrs</groupId>
+			<artifactId>jackson-jaxrs-xml-provider</artifactId>
+			<version>${library.jackson-jaxrs-xml-provider.version}</version>
+		</dependency>
+
+	</dependencies>
+
+	<!-- ******************* -->
+	<!-- BUILD CONFIGURATION -->
+	<!-- ******************* -->
+
+	<build>
+		<plugins>
+
+			<!-- Generates Java interface from WADL specification -->
+			<!-- See: http://cxf.apache.org/docs/jaxrs-services-description.html#JAXRSServicesDescription-WADLfirstDevelopment -->
+			<plugin>
+				<groupId>org.apache.cxf</groupId>
+				<artifactId>cxf-wadl2java-plugin</artifactId>
+				<version>${plugin.cxf-wadl2java-plugin.version}</version>
+				<executions>
+					<execution>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>wadl2java</goal>
+						</goals>
+						<configuration>
+							<!-- Path of the directory that will contain the generated .java files -->
+							<sourceRoot>${xsdtojava.target.directory}</sourceRoot>
+							<wadlOptions>
+								<wadlOption>
+									<wadl>${wadl.directory}/WADLExample.xml</wadl>
+									<packagename>fr.mnantel.example.api</packagename>
+								</wadlOption>
+							</wadlOptions>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- Generates Java entities from XSD files -->
+			<!-- The CXF XJC Maven Plugin is a wrapper around the JAXB XJC tool to handle the XSD -> Java tasks. -->
+			<plugin>
+				<groupId>org.apache.cxf</groupId>
+				<artifactId>cxf-xjc-plugin</artifactId>
+				<version>${plugin.cxf-xjc-plugin.version}</version>
+
+				<!-- Dependencies only for the XJC plugin -->
+				<dependencies>
+					<dependency>
+						<!-- Allows to use <extensionArg>-Xinheritance</extensionArg>, which processes <inheritance:*/> -->
+						<groupId>org.jvnet.jaxb2_commons</groupId>
+						<artifactId>jaxb2-basics</artifactId>
+						<version>${plugin-dependency.jaxb2-basics.version}</version>
+					</dependency>
+					<dependency>
+						<!-- Allows to use <extensionArg>-Xannotate</extensionArg>, which processes <annox:*/> -->
+						<groupId>org.jvnet.jaxb2_commons</groupId>
+						<artifactId>jaxb2-basics-annotate</artifactId>
+						<version>${plugin-dependency.jaxb2-basics-annotate.version}</version>
+					</dependency>
+					<dependency>
+						<!-- Allows to use annotations from com.fasterxml.jackson.dataformat.xml.annotation.* -->
+						<groupId>com.fasterxml.jackson.dataformat</groupId>
+						<artifactId>jackson-dataformat-xml</artifactId>
+						<version>${plugin-dependency.jackson-dataformat-xml.version}</version>
+					</dependency>
+				</dependencies>
+
+				<executions>
+					<execution>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>xsdtojava</goal>
+						</goals>
+						<configuration>
+							<!-- Path of the directory that will contain the generated .java files -->
+							<sourceRoot>${project.build.directory}/generated/cxf</sourceRoot>
+
+							<extensions>
+								<extension>
+									<!-- Allows to use <extensionArg>-Xdv</extensionArg>, which processes the "default" attribute of <xsd:element/> -->
+									org.apache.cxf.xjcplugins:cxf-xjc-dv:${plugin.cxf-xjc-plugin.version}
+								</extension>
+								<extension>
+									<!-- Allows to use <extensionArg>-Xts</extensionArg>, which generates toString() methods -->
+									<!-- This is not really useful now, but... -->
+									org.apache.cxf.xjcplugins:cxf-xjc-ts:${plugin.cxf-xjc-plugin.version}
+								</extension>
+							</extensions>
+
+							<xsdOptions>
+
+								<!-- When processing "Store.xsd", "xsdtojava" generates "Store.java". Since "Store.xsd" includes "Apple.xsd", this also generates "Apple.java" and "AppleCollection.java". Since "Apple.xjb" is not 
+									used (only "Store.xjb" is when processing "Store.xsd"), "Apple.java" and "AppleCollection.java" are not correctly generated. Consequently, "Apple.xsd" must be processed *AFTER* that, using "Apple.xjb" 
+									file, to *REGENERATE* correctly "Apple.java" and "AppleCollection.java" (the files are written for the second time). The order of the targets is hence meaningful. Corollary, we do not know how to process 
+									correctly inclusion cycles between ".xsd" files. -->
+
+								<xsdOption>
+									<xsd>${dictionary.directory}/Store.xsd</xsd>
+									<bindingFile>${dictionary.directory}/Store.xjb</bindingFile>
+									<extension>true</extension>
+									<extensionArgs>
+										<extensionArg>-Xannotate</extensionArg>
+										<extensionArg>-Xdv</extensionArg>
+										<extensionArg>-Xinheritance</extensionArg>
+										<extensionArg>-Xts:style:multiline</extensionArg>
+									</extensionArgs>
+								</xsdOption>
+
+								<xsdOption>
+									<xsd>${dictionary.directory}/Apple.xsd</xsd>
+									<bindingFile>${dictionary.directory}/Apple.xjb</bindingFile>
+									<extension>true</extension>
+									<extensionArgs>
+										<extensionArg>-Xannotate</extensionArg>
+										<extensionArg>-Xdv</extensionArg>
+										<extensionArg>-Xinheritance</extensionArg>
+										<extensionArg>-Xts:style:multiline</extensionArg>
+									</extensionArgs>
+								</xsdOption>
+
+							</xsdOptions>
+
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- Modifies generated Java entities -->
+			<!-- We use this to add a @JsonValue annotation on the value() method on specified generated enumeration classes. -->
+			<!-- This allows to use in marshalling/unmarshalling textual representations distinct from the names of the enumeration values. -->
+			<!-- e.g. With @JsonValue, ROYAL_GALA("Royal Gala") in marshalled as "Royal Gala" instead of "ROYAL_GALA" (without the quotes). -->
+			<!-- see: https://code.google.com/p/maven-replacer-plugin/wiki/UsageGuide -->
+			<!-- <annotate:annotateEnumValueMethod> will be an easier replacement for this, when it will be implemented! -->
+			<!-- see: http://stackoverflow.com/a/28624699/4583935 -->
+			<plugin>
+				<groupId>com.google.code.maven-replacer-plugin</groupId>
+				<artifactId>replacer</artifactId>
+				<version>${plugin.replacer.version}</version>
+				<executions>
+					<execution>
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>replace</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<basedir>${xsdtojava.target.directory}/fr/mnantel/example/api</basedir>
+					<!-- separate multiples files with comma -->
+					<filesToInclude>AppleVariety.java</filesToInclude>
+					<replacements>
+						<replacement>
+							<unescape>true</unescape>
+							<token>public String value[(]</token>
+							<!-- CDATA section is needed to keep consecutive spaces when pretty-formatting this file -->
+							<value><![CDATA[@com.fasterxml.jackson.annotation.JsonValue\n    $0]]></value>
+						</replacement>
+						<replacement>
+							<unescape>true</unescape>
+							<token>public static [a-zA-Z_]+ fromValue[(]</token>
+							<value><![CDATA[@com.fasterxml.jackson.annotation.JsonCreator\n    $0]]></value>
+						</replacement>
+					</replacements>
+				</configuration>
+			</plugin>
+
+			<!-- Generates *-sources.jar -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<executions>
+					<execution>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- Generates *-javadoc.jar -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <additionalparam>-Xdoclint:none</additionalparam> <!-- Problem with JDK8. See: https://java.net/jira/browse/JAXB-1022-->
+                </configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+		</plugins>
+	</build>
+
+</project>

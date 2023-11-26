@@ -1,0 +1,181 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.azure.testjavasdk</groupId>
+	<artifactId>javasdk-test-queue</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	
+	<properties>
+		<!--General project configuration -->
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<project-home>${project.artifactId}</project-home>
+
+		<maven-compiler-plugin.version>3.0</maven-compiler-plugin.version>
+		<source.level>1.7</source.level>
+		<azureSBJavaSdk.version>0.9.3</azureSBJavaSdk.version>
+		<mainclass>MainAzQueue</mainclass>
+		<finalName>azt</finalName>
+		<finalNameDeps>azt-withdeps</finalNameDeps>
+	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<!-- ## AZURE ## -->
+			<!-- ## # AZURE ServiceBus Java SDK ## / http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.microsoft.azure%22 -->
+			<dependency>
+				<groupId>com.microsoft.azure</groupId>
+				<artifactId>azure-servicebus</artifactId>
+				<version>${azureSBJavaSdk.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.microsoft.azure</groupId>
+				<artifactId>azure-core</artifactId>
+				<version>${azureSBJavaSdk.version}</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<dependencies>
+		<dependency>
+			<groupId>com.microsoft.azure</groupId>
+			<artifactId>azure-servicebus</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.microsoft.azure</groupId>
+			<artifactId>azure-core</artifactId>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<finalName>${finalName}</finalName>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>${maven-compiler-plugin.version}</version>
+					<configuration>
+						<source>${source.level}</source>
+						<target>${source.level}</target>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-resources-plugin</artifactId>
+					<version>2.6</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-jar-plugin</artifactId>
+					<version>2.6</version>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>${source.level}</source>
+					<target>${source.level}</target>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+	<profiles>
+		<profile>
+			<id>console</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-jar-plugin</artifactId>
+						<configuration>
+							<archive>
+								<manifest>
+									<addClasspath>true</addClasspath>
+									<mainClass>${mainclass}</mainClass>
+								</manifest>
+							</archive>
+						</configuration>
+					</plugin>
+					<!-- filtering resource to produce parameter files (generate-resources 
+						=> process-resources) -->
+					<plugin>
+						<artifactId>maven-resources-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>generate-configuration</id>
+								<phase>process-resources</phase>
+								<goals>
+									<goal>copy-resources</goal>
+								</goals>
+								<configuration>
+									<outputDirectory>${project.build.directory}</outputDirectory>
+									<escapeString>\</escapeString>
+									<resources>
+										<resource>
+											<directory>src/test/resources/</directory>
+											<includes>
+												<include>*.sh</include>
+											</includes>
+											<targetPath />
+											<filtering>true</filtering>
+										</resource>
+									</resources>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+					<!-- TO FIX Service or property not registered: com.microsoft.windowsazure.services.servicebus.ServiceBusContract 
+						class com.sun.jersey.api.client.Client cf https://github.com/Azure/azure-sdk-for-java/issues/466 -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-assembly-plugin</artifactId>
+						<version>2.4</version>
+						<executions>
+							<execution>
+								<id>dir-jar-with-dependencies</id>
+								<phase>package</phase>
+								<goals>
+									<goal>single</goal>
+								</goals>
+								<configuration>
+									<descriptors>
+										<descriptor>src/assembly/dir_jardeps.xml</descriptor>
+									</descriptors>
+									<finalName>${finalName}</finalName>
+									<appendAssemblyId>false</appendAssemblyId>
+								</configuration>
+							</execution>
+							<execution>
+								<id>jar-with-dependencies-ms-patch</id>
+								<phase>package</phase>
+								<goals>
+									<goal>single</goal>
+								</goals>
+								<configuration>
+									<archive>
+										<manifest>
+											<mainClass>${mainclass}</mainClass>
+										</manifest>
+									</archive>
+									<descriptors>
+										<descriptor>src/assembly/jardeps_mspatch.xml</descriptor>
+									</descriptors>
+									<finalName>${finalNameDeps}</finalName>
+									<appendAssemblyId>false</appendAssemblyId>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+</project>

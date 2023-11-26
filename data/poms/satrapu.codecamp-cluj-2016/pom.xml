@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>ro.satrapu</groupId>
+  <artifactId>codecamp.cj.2016</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>war</packaging>
+
+  <name>heroku-jee-ci-cd</name>
+
+  <description>
+    See https://github.com/satrapu/codecamp-cluj-2016/blob/master/README.md.
+  </description>
+
+  <inceptionYear>2016</inceptionYear>
+
+  <ciManagement>
+    <system>Snap CI</system>
+    <url>https://snap-ci.com/satrapu/codecamp-cluj-2016/</url>
+  </ciManagement>
+
+  <scm>
+    <connection>scm:git:git@github.com:satrapu/codecamp-cluj-2016.git</connection>
+    <url>https://github.com/satrapu/codecamp-cluj-2016/commits/master</url>
+    <developerConnection>scm:git:git@github.com:satrapu/codecamp-cluj-2016.git</developerConnection>
+  </scm>
+
+  <issueManagement>
+    <system>GitHub Issues</system>
+    <url>https://github.com/satrapu/codecamp-cluj-2016/issues</url>
+  </issueManagement>
+
+  <licenses>
+    <license>
+      <name>Apache License 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+    </license>
+  </licenses>
+
+  <url>https://github.com/satrapu/codecamp-cluj-2016</url>
+
+  <developers>
+    <developer>
+      <id>satrapu</id>
+      <name>Bogdan Marian</name>
+      <email>bogdan.marian77@gmail.com</email>
+      <timezone>2</timezone>
+      <url>https://www.linkedin.com/in/bmarian</url>
+      <roles>
+        <role>Main Committer</role>
+      </roles>
+    </developer>
+  </developers>
+
+  <properties>
+    <version.java>1.8</version.java>
+    <version.jee>7.0</version.jee>
+    <version.maven>3.2.5</version.maven>
+    <version.maven-compiler-plugin>3.5.1</version.maven-compiler-plugin>
+    <version.maven-war-plugin>2.6</version.maven-war-plugin>
+    <version.maven-enforcer-plugin>1.4.1</version.maven-enforcer-plugin>
+    <version.wildfly.swarm>2016.11.0</version.wildfly.swarm>
+    <version.flyway>4.0.3</version.flyway>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <environment>local</environment>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.wildfly.swarm</groupId>
+        <artifactId>bom-all</artifactId>
+        <version>${version.wildfly.swarm}</version>
+        <scope>import</scope>
+        <type>pom</type>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>javax</groupId>
+      <artifactId>javaee-web-api</artifactId>
+      <version>${version.jee}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.wildfly.swarm</groupId>
+      <artifactId>cdi</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.wildfly.swarm</groupId>
+      <artifactId>datasources</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.wildfly.swarm</groupId>
+      <artifactId>ejb</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.wildfly.swarm</groupId>
+      <artifactId>undertow</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-core</artifactId>
+      <version>${version.flyway}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>${project.name}</finalName>
+    <defaultGoal>clean compile test</defaultGoal>
+
+    <filters>
+      <filter>src/main/filters/${environment}.properties</filter>
+    </filters>
+
+    <resources>
+      <!--
+          Replace tokens with actual values coming from the filters, like the datasource name found
+          inside persistence.xml file.
+      -->
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>${version.maven-compiler-plugin}</version>
+        <configuration>
+          <source>${version.java}</source>
+          <target>${version.java}</target>
+          <showDeprecation>true</showDeprecation>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-war-plugin</artifactId>
+        <version>${version.maven-war-plugin}</version>
+        <configuration>
+          <failOnMissingWebXml>false</failOnMissingWebXml>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>${version.maven-enforcer-plugin}</version>
+        <executions>
+          <execution>
+            <id>enforce-maven</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                  <!--
+                      Unable to generate -swarm.jar file using "package" goal unless
+                      Maven version is greater than or equal to 3.2.5
+                      (see https://issues.jboss.org/browse/SWARM-301).
+                  -->
+                  <version>${version.maven}</version>
+                </requireMavenVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <!--
+          This Maven profile is used when running the application on Heroku.
+      -->
+      <id>heroku</id>
+      <properties>
+        <environment>heroku</environment>
+      </properties>
+
+      <dependencies>
+        <dependency>
+          <groupId>org.wildfly.swarm</groupId>
+          <artifactId>jpa</artifactId>
+          <exclusions>
+            <!--
+                Exclude H2 fraction as the application will use PostgreSQL.
+            -->
+            <exclusion>
+              <groupId>org.wildfly.swarm</groupId>
+              <artifactId>h2</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+
+        <!--
+            Include "postgresql" WildFly Swarm fraction since it provides access to the PostgreSQL JDBC driver
+            to be used when communicating with a Heroku managed PostgreSQL database.
+        -->
+        <dependency>
+          <groupId>org.wildfly.swarm</groupId>
+          <artifactId>postgresql</artifactId>
+        </dependency>
+      </dependencies>
+
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.wildfly.swarm</groupId>
+            <artifactId>wildfly-swarm-plugin</artifactId>
+            <version>${version.wildfly.swarm}</version>
+
+            <configuration>
+              <!--
+                Ensure the custom WildFly Swarm container is started (i.e. the one containing a
+                datasource pointing to a Heroku managed database).
+              -->
+              <mainClass>ro.satrapu.codecamp.demo.HerokuRunner</mainClass>
+            </configuration>
+
+            <executions>
+              <execution>
+                <goals>
+                  <goal>package</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <!--
+        This Maven profile is used when running the application on local machine.
+      -->
+      <id>local</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <properties>
+        <environment>local</environment>
+      </properties>
+
+      <dependencies>
+        <!--
+            Include "jpa" WildFly Swarm fraction since it provides access to the default datasource, ExampleDS,
+            which points to an H2 managed database.
+        -->
+        <dependency>
+          <groupId>org.wildfly.swarm</groupId>
+          <artifactId>jpa</artifactId>
+        </dependency>
+      </dependencies>
+
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.wildfly.swarm</groupId>
+            <artifactId>wildfly-swarm-plugin</artifactId>
+            <version>${version.wildfly.swarm}</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>package</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

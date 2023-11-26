@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>jacocoAndSonarDemo</groupId>
+  <artifactId>jacocoAndSonarDemo</artifactId>
+  <packaging>war</packaging>
+  <version>0.1.0</version>
+
+  <properties>
+    <jacoco.reportPath>${project.build.directory}/coverage-reports/jacoco-ut.exec</jacoco.reportPath>
+    <jacoco.itReportPath>${project.build.directory}/coverage-reports/jacoco-it.exec</jacoco.itReportPath>
+
+    <!-- Equivalent to 100% coverage. This is so that the -->
+    <jacoco.minimum.coverage>0.10</jacoco.minimum.coverage>
+
+    <!-- Sonar (start) -->
+    <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
+    <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
+    <sonar.jacoco.reportPath>${jacoco.reportPath}</sonar.jacoco.reportPath>
+    <sonar.jacoco.itReportPath>${jacoco.itReportPath}</sonar.jacoco.itReportPath>
+    <sonar.test.inclusions>**/*Test.*,**/*IT.*,**/*Spec.*</sonar.test.inclusions>
+    <sonar.language>java</sonar.language>
+    <sonar.sources>src/main/java</sonar.sources>
+    <sonar-jacoco-listeners.version>1.4</sonar-jacoco-listeners.version>
+    <!-- Sonar (end) -->
+
+    <java.version>1.8</java.version>
+
+    <tomcat.port>8888</tomcat.port>
+    <tomcat.version>7.0.68</tomcat.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-server</artifactId>
+      <version>1.8</version>
+    </dependency>
+
+    <!--for tomcat7 plugin-->
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>servlet-api</artifactId>
+      <version>2.5</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-json</artifactId>
+      <version>1.18.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.owlike</groupId>
+      <artifactId>genson</artifactId>
+      <version>0.99</version>
+    </dependency>
+
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.12</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>1.10.19</version>
+    </dependency>
+
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!--<plugin>
+        <groupId>org.apache.tomcat.maven</groupId>
+        <artifactId>tomcat7-maven-plugin</artifactId>
+        <version>2.2</version>
+        <configuration>
+          <port>8889</port>
+          <systemProperties>
+            <archaius.deployment.environment>local</archaius.deployment.environment>
+          </systemProperties>
+          <path>/jacocoAndSonarDemo</path>
+        </configuration>
+      </plugin>-->
+
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.7.9</version>
+
+        <configuration>
+          <classDumpDir>${project.reporting.outputDirectory}/jacoco-all/classes</classDumpDir>
+          <skip>false</skip>
+        </configuration>
+
+        <executions>
+          <!--
+          Prepares the property pointing to the JaCoCo runtime agent which
+          is passed as VM argument when Maven the Surefire plugin is executed.
+          -->
+          <execution>
+            <id>pre-unit-test</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+            <configuration>
+              <!-- Sets the name of the property containing the settings for JaCoCo runtime agent. -->
+              <propertyName>surefireArgLine</propertyName>
+              <!-- Sets the path to the file which contains the execution data. -->
+              <destFile>${jacoco.reportPath}</destFile>
+            </configuration>
+          </execution>
+          <!--
+              Ensures that the code coverage report for unit tests is created after
+              unit tests have been run.
+          -->
+          <execution>
+            <id>post-unit-test</id>
+            <phase>test</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+            <configuration>
+              <!-- Sets the path to the file which contains the execution data. -->
+              <dataFile>${jacoco.reportPath}</dataFile>
+              <!-- Sets the output directory for the code coverage report. -->
+              <outputDirectory>${project.reporting.outputDirectory}/jacoco-ut</outputDirectory>
+            </configuration>
+          </execution>
+
+          <execution>
+            <id>jacoco-agent</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+            <configuration>
+              <!-- Sets the name of the property containing the settings for JaCoCo runtime agent. -->
+              <propertyName>jacoco.agent.ITArgLine</propertyName>
+              <!-- Sets the path to the file which contains the execution data. -->
+              <destFile>${jacoco.itReportPath}</destFile>
+            </configuration>
+          </execution>
+          <execution>
+            <id>jacoco-report</id>
+            <phase>post-integration-test</phase>
+            <goals>
+              <goal>dump</goal>
+              <goal>report</goal>
+            </goals>
+            <configuration>
+              <!-- Sets the path to the file which contains the execution data. -->
+              <dataFile>${jacoco.itReportPath}</dataFile>
+              <!-- Sets the path to the file which contains the execution data. -->
+              <destFile>${jacoco.itReportPath}</destFile>
+              <!-- Sets the output directory for the code coverage report. -->
+              <outputDirectory>${project.reporting.outputDirectory}/jacoco-it</outputDirectory>
+            </configuration>
+          </execution>
+          <execution>
+            <id>jacoco-check</id>
+            <phase>install</phase>
+            <goals>
+              <goal>merge</goal>
+              <goal>report</goal>
+              <goal>check</goal>
+            </goals>
+            <configuration>
+              <fileSets>
+                <fileSet>
+                  <directory>${project.build.directory}/coverage-reports</directory>
+                  <includes>
+                    <include>**/jacoco*.exec</include>
+                  </includes>
+                </fileSet>
+              </fileSets>
+              <destFile>${project.build.directory}/coverage-reports/jacoco.exec</destFile>
+              <dataFile>${project.build.directory}/coverage-reports/jacoco.exec</dataFile>
+              <!-- Sets the output directory for the code coverage report. -->
+              <outputDirectory>${project.reporting.outputDirectory}/jacoco-com</outputDirectory>
+              <rules>
+                <rule implementation="org.jacoco.maven.RuleConfiguration">
+                  <element>BUNDLE</element>
+                  <limits>
+                    <limit implementation="org.jacoco.report.check.Limit">
+                      <counter>INSTRUCTION</counter>
+                      <value>COVEREDRATIO</value>
+                      <!--Please override this property in properties section on per project basis -->
+                      <minimum>${jacoco.minimum.coverage}</minimum>
+                    </limit>
+                  </limits>
+                </rule>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.cargo</groupId>
+        <artifactId>cargo-maven2-plugin</artifactId>
+        <version>1.5.0</version>
+
+        <configuration>
+          <container>
+            <containerId>tomcat7x</containerId>
+            <zipUrlInstaller>
+              <url>http://repo1.maven.org/maven2/org/apache/tomcat/tomcat/${tomcat.version}/tomcat-${tomcat.version}.zip</url>
+              <downloadDir>${project.build.directory}/cargo/downloads</downloadDir>
+              <extractDir>${project.build.directory}/cargo/extracts</extractDir>
+            </zipUrlInstaller>
+          </container>
+          <configuration>
+            <properties>
+              <cargo.jvmargs>${jacoco.agent.ITArgLine},output=tcpserver,port=6300,append=true -Drunmode=TEST</cargo.jvmargs>
+              <cargo.servlet.port>${tomcat.port}</cargo.servlet.port>
+            </properties>
+          </configuration>
+        </configuration>
+        <executions>
+          <execution>
+            <id>start-tomcat</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>start</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>stop-tomcat</id>
+            <phase>post-integration-test</phase>
+            <goals>
+              <goal>stop</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.sonarsource.scanner.maven</groupId>
+        <artifactId>sonar-maven-plugin</artifactId>
+        <version>3.1.1</version>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.18.1</version>
+        <configuration>
+          <useFile>false</useFile>
+          <!-- Sets the VM argument line (for Jacoco) used when unit tests are run.
+                Please do NOT delete. -->
+          <argLine>${surefireArgLine}</argLine>
+          <includes>
+            <include>**/*Spec.groovy</include>
+            <include>**/*Test.groovy</include>
+            <include>**/*Spec.java</include>
+            <include>**/*Test.java</include>
+          </includes>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>2.16</version>
+        <configuration>
+          <systemProperties>
+            <application.home>${project.basedir}</application.home>
+          </systemProperties>
+          <includes>
+            <include>**/*IT.groovy</include>
+            <include>**/*IT.java</include>
+          </includes>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+            <configuration>
+              <!-- Sets the VM argument line used when integration tests are run. -->
+              <argLine>${jacoco.agent.ITArgLine}</argLine>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

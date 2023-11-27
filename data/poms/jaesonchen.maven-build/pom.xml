@@ -1,0 +1,420 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.asiainfo</groupId>
+	<artifactId>maven-build</artifactId>
+	<packaging>war</packaging>
+	<version>1.0.0</version>
+	<name>maven-build Webapp</name>
+	<url>http://maven.apache.org</url>
+	
+	<properties>
+		<org.springframework.version>4.2.5.RELEASE</org.springframework.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<maven.compiler.encoding>UTF-8</maven.compiler.encoding>
+		<maven.compiler.jdk>1.8</maven.compiler.jdk>
+		<maven.test.skip>true</maven.test.skip>
+  	</properties>
+  		
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+			<scope>test</scope>
+ 		</dependency>
+
+        <!-- servlet -->
+        <dependency>
+            <groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>3.1.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- jsp -->
+	    <dependency>
+			<groupId>javax.servlet.jsp</groupId>
+			<artifactId>javax.servlet.jsp-api</artifactId>
+			<version>2.3.1</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- jstl -->
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>jstl</artifactId>
+			<version>1.2</version>
+			<scope>provided</scope>
+		</dependency>
+
+        <dependency>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+            <version>1.2</version>
+        </dependency>			
+ 		<!-- slj4j and log4j -->
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.7.20</version>
+		</dependency>
+ 		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>1.7.20</version>
+		</dependency>
+        						
+		<!-- spring -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-core</artifactId>
+			<version>${org.springframework.version}</version>
+			<exclusions>
+	        	<exclusion>
+	          		<groupId>commons-logging</groupId>
+	           		<artifactId>commons-logging</artifactId>
+	        	</exclusion>
+	    	</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-beans</artifactId>
+			<version>${org.springframework.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context</artifactId>
+			<version>${org.springframework.version}</version>
+		</dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context-support</artifactId>
+            <version>${org.springframework.version}</version>
+        </dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-test</artifactId>
+			<version>${org.springframework.version}</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+    <!-- maven deploy 远程仓库配置 -->
+	<distributionManagement>
+		<repository>
+			<id>bdx_releases</id>
+			<name>Nexus Release Repository</name>
+			<url>http://repo.bdx.asiainfo.com/nexus/repository/bdx_Releases/</url>
+		</repository>
+        <snapshotRepository>
+            <id>bdx_snapshots</id>
+            <name>Nexus Snapshot Repository</name>
+            <url>http://repo.bdx.asiainfo.com/nexus/repository/bdx_Snaphots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+	<build>
+	    <!-- 用来替换变量的filter文件，可以替换web.xml、resources/*.xml、resources/*.properties、shell/*.sh -->
+		<filters>
+			<filter>src/filters/filter-${env}.properties</filter>
+		</filters>
+		
+		<!-- 打包时包含的资源，可以使用includes/excludes，默认输出到编译后的classes下 -->
+        <resources>
+            <!-- 打包带源码 -->
+			<resource>
+				<directory>src/main/java</directory>
+      		</resource>
+			<resource>
+				<directory>src/main/resources</directory>
+				<includes>
+					<include>**/*.xml</include>
+					<include>**/*.properties</include>
+				</includes>
+				<!-- 配置资源文件使用filter替换 -->
+				<filtering>true</filtering>
+			</resource>
+            <resource>
+                <directory>src/shell</directory>
+                <targetPath>${project.build.directory}/release/shell</targetPath>
+                <includes>
+                    <include>**/*.bat</include>
+                    <include>**/*.sh</include>
+                </includes>
+                <filtering>true</filtering>
+            </resource>
+		</resources>
+	
+		<plugins>
+		
+			<!-- 打包时可配置参数不进行测试：mvn package -Dmaven.test.skip=true or set properties <maven.test.skip>true</maven.test.skip> -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.19.1</version>
+				<configuration>
+					<forkMode>once</forkMode>
+					<argLine>-Dfile.encoding=UTF-8</argLine>
+					<testFailureIgnore>true</testFailureIgnore>
+					<excludes>
+						<exclude>**/*TestCase.java</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+			<!-- 编译使用的jdk版本、编码配置，使用了本地系统jar时，需要使用compilerArgs指定 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.6.0</version>
+				<configuration>
+					<source>${maven.compiler.jdk}</source>
+					<target>${maven.compiler.jdk}</target>
+					<encoding>${project.build.sourceEncoding}</encoding>
+					<compilerArgs>
+						<arg>-extdirs</arg>
+					    <arg>${project.basedir}/lib</arg>
+					</compilerArgs>
+				</configuration>
+			</plugin>
+			<!-- 打包成可以通过java -jar 直接运行的包，配置依赖jar classpath和入口main类，需要同时配置dependency插件复制依赖jar到指定的classpath目录 -->
+			<!-- 为了方便修改配置文件，通常不会把配置文件打入jar包，而是通过resources插件或者assembly插件复制配置文件到指定位置 -->
+			<!-- jar中只需要包含特定的接口文件时用includes，不包含配置文件时通常用excludes -->
+			<!-- <plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>3.0.2</version>
+				<configuration>
+					<finalName>${project.artifactId}-${project.version}</finalName>
+					<outputDirectory>${project.build.directory}/release</outputDirectory>
+					<archive>
+						<manifest>
+							<addClasspath>true</addClasspath>
+							<classpathPrefix>lib/</classpathPrefix>
+							<mainClass>com.asiainfo.Startup</mainClass>
+						</manifest>
+						<manifestEntries>
+							<Class-Path>.</Class-Path>
+							<Permissions>Copyright by asiainfo</Permissions>
+						</manifestEntries>
+					</archive>
+					<includes>
+						<include>**/*.class</include>
+						<include>**/*.java</include>
+					</includes>
+				</configuration>
+			</plugin> -->
+			<!-- 打包jar时，输出依赖jar到指定目录 -->
+			<!-- <plugin>
+	            <groupId>org.apache.maven.plugins</groupId>
+	            <artifactId>maven-dependency-plugin</artifactId>
+	            <version>3.0.0</version>
+	            <executions>
+	                <execution>
+	                    <id>copy-dependencies</id>
+	                    <phase>package</phase>
+	                    <configuration>
+	                        <overWriteReleases>false</overWriteReleases>
+	                        <overWriteSnapshots>false</overWriteSnapshots>
+	                        <overWriteIfNewer>true</overWriteIfNewer>
+	                        <outputDirectory>${project.build.directory}/release/lib</outputDirectory>
+	                    </configuration>
+	                    <goals>
+	                        <goal>copy-dependencies</goal>
+	                    </goals>
+	                </execution>
+	            </executions>
+        	</plugin> -->
+        	<!-- 组装发布包，通常时zip包，里面包含可执行jar、shell、配置文件、依赖jar，部署时直接解压即可 -->
+            <!-- <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <descriptors>
+                        <descriptor>src/assembly/package.xml</descriptor>
+                    </descriptors>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin> -->
+        	<!-- 可使用assembly指定jar-with-dependencies把依赖包组装进新的jar里，通常会出现META-INF覆盖问题，需要同时配置shade插件 -->
+        	<!-- <plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+    			<artifactId>maven-assembly-plugin</artifactId>
+    			<version>3.0.0</version>
+				<configuration>
+					<finalName>${project.artifactId}-assembly-${project.version}</finalName>
+	   				<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+	     			</descriptorRefs>
+					<archive>
+						<manifest>
+							<mainClass>com.asiainfo.Startup</mainClass>
+						</manifest>
+					</archive>
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-assembly</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+ 			</plugin> -->
+			<!-- 当把依赖包的classes解压一起打入新包时，会出现META-INF中同名文件覆盖问题，可以使用shade进行文件合并 -->
+			<!-- <plugin>
+		        <groupId>org.apache.maven.plugins</groupId>
+		        <artifactId>maven-shade-plugin</artifactId>
+		        <version>2.4.3</version>
+		        <executions>
+		            <execution>
+		                <phase>package</phase>
+		                <goals>
+		                    <goal>shade</goal>
+		                </goals>
+		                <configuration>
+		                        <transformers>
+		                            <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+		                                <resource>META-INF/spring.handlers</resource>
+		                            </transformer>
+		                            <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+		                                <resource>META-INF/spring.schemas</resource>
+		                            </transformer>
+		                            <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+		                                <resource>META-INF/spring.tooling</resource>
+		                            </transformer>
+		                            <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+		                                <mainClass>com.asiainfo.Startup</mainClass>
+		                            </transformer>
+		                        </transformers>
+		                </configuration>
+		            </execution>
+		        </executions>
+			</plugin> -->
+            
+            <!-- 打包war -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<version>3.0.0</version>
+				<configuration>
+					<warName>${project.artifactId}-${project.version}</warName>
+					<!-- war包的后缀 -->
+					<classifier>${env}</classifier>
+					<!-- 同时打jar包 -->
+					<attachClasses>true</attachClasses>
+					<!-- jar包的后缀 -->
+    				<classesClassifier>${env}-api</classesClassifier>
+    				<!-- 打war包时需要排除的文件 -->
+					<packagingExcludes>demos/**,lib/junit-*.jar</packagingExcludes>
+					<webResources>
+						<resource>
+							<directory>${project.basedir}/lib</directory>
+							<targetPath>WEB-INF/lib</targetPath>
+							<includes>
+								<include>**/*.jar</include>
+							</includes>
+						</resource>
+						<resource>
+							<directory>src/main/webapp</directory>
+							<includes>
+								<include>**/*.xml</include>
+							</includes>
+							<filtering>true</filtering>
+						</resource>
+					</webResources>
+					<filteringDeploymentDescriptors>true</filteringDeploymentDescriptors>
+					<failOnMissingWebXml>true</failOnMissingWebXml>
+				</configuration>
+			</plugin>
+			
+			<!-- 安装到本地仓库 mvn clean package install -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-install-plugin</artifactId>
+				<version>2.5.2</version>
+				<executions>
+					<execution>
+						<id>default-install</id>
+						<phase>install</phase>
+						<goals>
+							<goal>install-file</goal>
+						</goals>
+						<configuration>
+							<groupId>${project.groupId}</groupId>
+							<artifactId>${project.artifactId}</artifactId>
+							<version>${project.version}</version>
+							<packaging>jar</packaging>
+							<file>${project.build.directory}/${project.artifactId}-${project.version}.jar</file>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- 安装到远程仓库，需要配置distributionManagement指定远程仓库地址 -->
+			<!-- mvn clean package deploy -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-deploy-plugin</artifactId>
+				<version>2.8.2</version>
+				<executions>
+	                <execution>
+	                    <id>default-deploy</id>
+	                    <phase>deploy</phase>
+	                    <goals>
+	                        <goal>deploy-file</goal>
+	                    </goals>
+	                    <!-- 配置deploy到shapshot还是release -->
+	                    <configuration>
+	                        <repositoryId>${project.distributionManagement.snapshotRepository.id}</repositoryId>
+	                        <url>${project.distributionManagement.snapshotRepository.url}</url>
+	                        <groupId>${project.groupId}</groupId>
+	                        <artifactId>${project.artifactId}</artifactId>
+	                        <version>${project.version}</version>
+	                        <packaging>jar</packaging>
+	                        <file>${project.build.directory}/${project.artifactId}-${project.version}.jar</file>
+	                    </configuration>
+	                </execution>
+            	</executions>
+			</plugin>
+		</plugins>
+	</build>
+	
+	<profiles>
+		<profile>
+			<id>dev</id>
+			<properties>
+				<env>dev</env>
+			</properties>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+		</profile>
+		
+		<profile>
+			<id>test</id>
+			<properties>
+				<env>test</env>
+			</properties>
+			<activation>
+				<activeByDefault>false</activeByDefault>
+			</activation>
+		</profile>
+
+		<profile>
+			<id>release</id>
+			<properties>
+				<env>release</env>
+			</properties>
+			<activation>
+				<activeByDefault>false</activeByDefault>
+			</activation>
+		</profile>
+	</profiles>
+</project>

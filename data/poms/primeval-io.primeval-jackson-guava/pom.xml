@@ -1,0 +1,161 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>io.primeval</groupId>
+		<artifactId>primeval-parent</artifactId>
+		<version>3-SNAPSHOT</version>
+		<relativePath />
+	</parent>
+	<artifactId>primeval-jackson-guava</artifactId>
+	<version>1.0.0-SNAPSHOT</version>
+	<packaging>pom</packaging>
+
+	<properties>
+		<jackson.version>2.9.1</jackson.version>
+		<primeval-3rdparty-bom.version>1.1.0-SNAPSHOT</primeval-3rdparty-bom.version>
+	</properties>
+
+	<modules>
+		<module>guava18</module>
+		<module>guava21</module>
+		<module>guava23</module>
+		<module>guava24</module>
+	</modules>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>io.primeval</groupId>
+				<artifactId>primeval-thirdparty-bom</artifactId>
+				<version>${primeval-3rdparty-bom.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+
+	<profiles>
+		<profile>
+			<id>jackson-guava</id>
+			<activation>
+				<file>
+					<exists>src/main/java</exists>
+				</file>
+			</activation>
+			<dependencies>
+				<dependency>
+					<groupId>com.fasterxml.jackson.core</groupId>
+					<artifactId>jackson-databind</artifactId>
+					<version>${jackson.version}</version>
+				</dependency>
+
+
+				<dependency>
+					<groupId>com.fasterxml.jackson.datatype</groupId>
+					<artifactId>jackson-datatype-guava</artifactId>
+					<version>${jackson.version}</version>
+					<exclusions>
+						<exclusion>
+							<groupId>com.google.guava</groupId>
+							<artifactId>guava</artifactId>
+						</exclusion>
+					</exclusions>
+					<scope>provided</scope>
+				</dependency>
+			</dependencies>
+		</profile>
+		<profile>
+			<id>jackson-guava-deploy</id>
+			<activation>
+				<file>
+					<exists>src/main/java</exists>
+				</file>
+				<property>
+					<name>deploy</name>
+				</property>
+			</activation>
+			<build>
+				<plugins>
+
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-dependency-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>dependency-sources</id>
+								<phase>prepare-package</phase>
+								<goals>
+									<goal>unpack-dependencies</goal>
+								</goals>
+								<configuration>
+									<classifier>sources</classifier>
+									<includeGroupIds>com.fasterxml.jackson.datatype</includeGroupIds>
+									<includeArtifactIds>jackson-datatype-guava</includeArtifactIds>
+									<stripVersion>true</stripVersion>
+									<stripClassifier>true</stripClassifier>
+									<failOnMissingClassifierArtifact>false</failOnMissingClassifierArtifact>
+									<outputDirectory>${project.build.directory}/sources</outputDirectory>
+									<silent>true</silent>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-assembly-plugin</artifactId>
+						<executions>
+							<execution>
+								<phase>package</phase>
+								<id>source-jar</id>
+								<goals>
+									<goal>single</goal>
+								</goals>
+								<configuration>
+									<descriptors>
+										<descriptor>${basedir}/../src/assembly/source-jar.xml</descriptor>
+									</descriptors>
+									<appendAssemblyId>true</appendAssemblyId>
+									<attach>true</attach>
+									<archiverConfig></archiverConfig>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-source-plugin</artifactId>
+						<configuration>
+							<skipSource>true</skipSource>
+						</configuration>
+					</plugin>
+
+
+
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-javadoc-plugin</artifactId>
+						<configuration>
+							<!-- switch on dependency-driven aggregation -->
+							<includeDependencySources>true</includeDependencySources>
+							<additionalparam>-Xdoclint:none</additionalparam>
+
+							<quiet>true</quiet>
+							<failOnError>false</failOnError>
+							<dependencySourceIncludes>
+								<dependencySourceInclude>com.fasterxml.jackson.datatype:jackson-datatype-guava</dependencySourceInclude>
+							</dependencySourceIncludes>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+	</profiles>
+
+</project>
+

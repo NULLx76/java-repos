@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.intel.icecp</groupId>
+        <artifactId>icecp-module-template</artifactId>
+        <version>LATEST</version>
+    </parent>
+
+    <name>icecp-cli</name>
+    <groupId>com.intel.icecp</groupId>
+    <artifactId>icecp-cli</artifactId>
+    <version>0.2.4</version>
+    <packaging>jar</packaging>
+    <description>ICECP command-line interface used for ICECP module communication and configuration.
+    </description>
+
+    <organization>
+        <name>Intel Corporation</name>
+        <url>http://www.intel.com</url>
+    </organization>
+
+    <dependencies>
+        <dependency>
+            <groupId>commons-cli</groupId>
+            <artifactId>commons-cli</artifactId>
+            <version>1.3.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.intel.icecp</groupId>
+            <artifactId>icecp-node</artifactId>
+            <version>[0.12.12, 0.13.0)</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+
+            <!-- necessary for VersionCommand to pick up the version correctly
+                from the MANIFEST -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.0.0</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+
+            <!-- create shell scripts for running commands -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>appassembler-maven-plugin</artifactId>
+                <version>1.10</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>assemble</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <repositoryName>lib</repositoryName>
+                    <repositoryLayout>flat</repositoryLayout>
+                    <programs>
+                        <program>
+                            <id>icecp-cli</id>
+                            <mainClass>Main</mainClass>
+                        </program>
+                    </programs>
+                </configuration>
+            </plugin>
+
+            <!-- create a zip of all JARs and scripts -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.5.5</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <descriptor>src/main/assembly.xml</descriptor>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!-- Run `mvn package -Pas-rpm` to build project as a runnable application; look for output in 'target/appassembler' -->
+        <profile>
+            <id>as-rpm</id>
+            <build>
+                <plugins>
+                    <!-- build a JAR with dependencies -->
+                    <plugin>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <configuration>
+                            <descriptorRefs>
+                                <descriptorRef>jar-with-dependencies</descriptorRef>
+                            </descriptorRefs>
+                            <archive>
+                                <manifest>
+                                    <mainClass>com.intel.icecp.cli.Main</mainClass>
+                                    <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                                    <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                                </manifest>
+                            </archive>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>single</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>1.5.0</version>
+                        <executions>
+                            <execution>
+                                <id>create-rpm</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <!-- see explanations at https://github.com/jordansissel/fpm/wiki#usage -->
+                            <executable>fpm</executable>
+                            <commandlineArgs>-s dir -t rpm -f
+                                --template-scripts
+                                --license &quot;Intel Proprietary (see 'licenses' directory for libraries)&quot;
+                                --before-install ${project.basedir}/packaging/scripts/before-install.sh
+                                --after-install ${project.basedir}/packaging/scripts/after-install.sh
+                                --before-remove ${project.basedir}/packaging/scripts/before-remove.sh
+                                --after-remove ${project.basedir}/packaging/scripts/after-remove.sh
+                                --name ${project.artifactId}
+                                --version ${project.version}
+                                --iteration ${rpm.release}
+                                --architecture all
+                                --vendor &quot;${rpm.vendor}&quot;
+                                --maintainer &quot;${rpm.maintainer}&quot;
+                                --description &quot;${project.description}&quot;
+                                --url &quot;${rpm.url}&quot;
+                                --rpm-digest &quot;${rpm.digest}&quot;
+                                --rpm-auto-add-directories
+                                ${project.build.directory}/appassembler/bin=${rpm.targetDirectory}
+                                ${project.build.directory}/appassembler/lib=${rpm.targetDirectory}
+                                ${basedir}/target/generated-resources/licenses=${rpm.targetDirectory}
+                                ${basedir}/target/generated-resources/licenses.xml=${rpm.targetDirectory}/licenses/licenses.xml
+                            </commandlineArgs>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

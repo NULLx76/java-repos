@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>ar.com.kfgodel</groupId>
+    <artifactId>java-pom</artifactId>
+    <version>0.1-SNAPSHOT</version>
+  </parent>
+
+  <groupId>ar.com.kfgodel</groupId>
+  <artifactId>mementia-backend</artifactId>
+  <version>0.1-SNAPSHOT</version>
+
+  <name>Mementia Backend</name>
+  <description>Aplicacion Java para administrar una nueva base de datos</description>
+
+  <scm>
+    <connection>scm:git:ssh://github.com/kfgodel/mementia-backend.git</connection>
+    <developerConnection>scm:git:ssh://github.com/kfgodel/mementia-backend.git</developerConnection>
+    <url>https://github.com/kfgodel/mementia-backend</url>
+  </scm>
+
+  <repositories>
+    <repository>
+      <id>kfgodel_mosquito</id>
+      <name>Repo Mosquito</name>
+      <url>http://kfgodel.info:8081/nexus/content/groups/public/</url>
+    </repository>
+  </repositories>
+
+  <properties>
+    <version.plugin.assembly>2.5.3</version.plugin.assembly>
+    <version.plugin.shade>2.3</version.plugin.shade>
+    <version.plugin.dependency>2.10</version.plugin.dependency>
+
+    <version.webbyconvention>0.2-SNAPSHOT</version.webbyconvention>
+    <version.wrapper>3.5.25</version.wrapper>
+    <version.ateamhibernate>0.1-SNAPSHOT</version.ateamhibernate>
+    <version.hsqldb>2.3.2</version.hsqldb>
+    <version.execontainer>0.2-SNAPSHOT</version.execontainer>
+    <version.bean2bean>1.1.4</version.bean2bean>
+    <version.diamond>1.0.1-SNAPSHOT</version.diamond>
+    <version.groovy>2.1.5</version.groovy>
+    <version.h2>1.4.187</version.h2>
+    <version.frontend>0.1-SNAPSHOT</version.frontend>
+
+    <version.graphdb-by-convention>0.1-SNAPSHOT</version.graphdb-by-convention>
+  </properties>
+
+  <build>
+    <plugins>
+
+      <!-- Generates Queryable types for querydsl (inherited) -->
+      <plugin>
+        <groupId>com.mysema.maven</groupId>
+        <artifactId>apt-maven-plugin</artifactId>
+      </plugin>
+
+      <!-- Descomprime el contenedor ejecutable, el frontend -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>${version.plugin.dependency}</version>
+        <executions>
+
+          <execution>
+            <id>unpack-frontend</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>ar.com.kfgodel</groupId>
+                  <artifactId>mementia-frontend</artifactId>
+                  <version>${version.frontend}</version>
+                  <type>zip</type>
+                  <overWrite>true</overWrite>
+                  <outputDirectory>src/main/resources/convention/web</outputDirectory>
+                </artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
+
+          <execution>
+            <id>unpack-container</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>ar.com.kfgodel</groupId>
+                  <artifactId>executable-container</artifactId>
+                  <version>${version.execontainer}</version>
+                  <type>zip</type>
+                  <overWrite>true</overWrite>
+                  <outputDirectory>target/unpacked</outputDirectory>
+                </artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
+
+          <execution>
+            <!-- Needed by heroku find all the dependencies in a dir -->
+            <id>copy-dependencies</id>
+            <phase>package</phase>
+            <goals><goal>copy-dependencies</goal></goals>
+          </execution>
+
+        </executions>
+      </plugin>
+
+      <!-- Genera un sólo jar con todas las dependencias -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>2.3</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <filters>
+            <filter>
+              <artifact>*:*</artifact>
+              <excludes>
+                <exclude>META-INF/*.SF</exclude>
+                <exclude>META-INF/*.DSA</exclude>
+                <exclude>META-INF/*.RSA</exclude>
+              </excludes>
+            </filter>
+          </filters>
+          <transformers>
+            <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+            <transformer implementation="org.apache.maven.plugins.shade.resource.ComponentsXmlResourceTransformer"/>
+            <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+              <resource>META-INF/spring.handlers</resource>
+            </transformer>
+            <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+              <resource>META-INF/spring.schemas</resource>
+            </transformer>
+            <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+              <resource>META-INF/spring.tooling</resource>
+            </transformer>
+          </transformers>
+        </configuration>
+      </plugin>
+
+      <!-- Empaqueta el resultado final en un zip -->
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>${version.plugin.assembly}</version>
+        <executions>
+          <execution>
+            <id>generate-assembly</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <descriptors>
+            <descriptor>src/assembly/descriptor.xml</descriptor>
+          </descriptors>
+          <finalName>${project.artifactId}</finalName>
+          <appendAssemblyId>false</appendAssemblyId>
+          <outputDirectory>target</outputDirectory>
+        </configuration>
+      </plugin>
+
+    </plugins>
+  </build>
+
+  <dependencies>
+
+    <!-- Base de grafos -->
+    <dependency>
+      <groupId>ar.com.kfgodel</groupId>
+      <artifactId>graphdb-by-convention</artifactId>
+      <version>${version.graphdb-by-convention}</version>
+    </dependency>
+
+    <!-- Communication classes to manage executable host container -->
+    <dependency>
+      <groupId>org.tanukisoftware</groupId>
+      <artifactId>wrapper</artifactId>
+      <version>${version.wrapper}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- Convention based application modules -->
+    <dependency>
+      <groupId>ar.com.kfgodel</groupId>
+      <artifactId>app-by-convention</artifactId>
+      <version>0.1-SNAPSHOT</version>
+    </dependency>
+
+    <!-- In file database -->
+    <dependency>
+      <groupId>org.hsqldb</groupId>
+      <artifactId>hsqldb</artifactId>
+      <version>${version.hsqldb}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <version>${version.h2}</version>
+    </dependency>
+
+    <!-- Heroku database -->
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>9.4-1201-jdbc4</version>
+    </dependency>
+    <!-- Optional for heroku? to manage database connections?-->
+    <dependency>
+      <groupId>com.heroku.sdk</groupId>
+      <artifactId>heroku-jdbc</artifactId>
+      <version>0.1.1</version>
+    </dependency>
+
+    <!-- programmatic dsl for queries (inherited) -->
+    <dependency>
+      <groupId>com.querydsl</groupId>
+      <artifactId>querydsl-apt</artifactId>
+      <exclusions>
+        <exclusion>
+          <!-- Already provided by jetty under another groupid -->
+          <groupId>javax.inject</groupId>
+          <artifactId>javax.inject</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.querydsl</groupId>
+      <artifactId>querydsl-jpa</artifactId>
+      <exclusions>
+        <exclusion>
+          <!-- Already provided by a reflections findbugs dependency -->
+          <groupId>com.google.code.findbugs</groupId>
+          <artifactId>jsr305</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <!-- Logging  as compile dependency-->
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-core</artifactId>
+      <version>${version.logback}</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>${version.logback}</version>
+      <scope>compile</scope>
+    </dependency>
+
+    <!-- Spec for testing -->
+    <dependency>
+      <groupId>ar.com.dgarcia</groupId>
+      <artifactId>java-spec</artifactId>
+    </dependency>
+
+  </dependencies>
+
+</project>

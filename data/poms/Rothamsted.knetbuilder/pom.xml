@@ -1,0 +1,535 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+   
+	<parent>
+	  <groupId>uk.ac.rothamsted.knetminer</groupId>
+	  <artifactId>knetminer-common</artifactId>
+	  <version>5.0</version>
+	</parent>  
+
+   <groupId>net.sourceforge.ondex</groupId>
+   <artifactId>ondex-full</artifactId>
+   <version>7.0.2-SNAPSHOT</version>
+   <packaging>pom</packaging>
+
+   <name>ONDEX POM for Full Build</name>
+
+   <modules>
+      <module>ondex-base</module>
+      <module>ondex-opt</module>
+      <module>ondex-desktop</module>
+      <module>ondex-knet-builder</module>
+   </modules>
+
+
+   <licenses>
+      <license>
+         <name>GNU GPL</name>
+         <url>http://www.gnu.org/licenses/gpl.html</url>
+      </license>
+   </licenses>
+   
+   <description>
+     ONDEX enables data from diverse biological data sets to be linked, integrated and visualised through
+     graph analysis techniques.
+
+     As usually, this is a super-pom that define a lot of things used by the many components that Ondex
+     is made of. The current Maven module arrangement was reviewed in 2017 and later years (by Marco Brandizi), with
+     the aim of splitting things between what is most used for Knetminer, optional components and components to
+     simply archive as legacy. In a few cases, this splitting isn't so sharp, due to existing dependencies that are
+     difficult to disentangle. 
+   </description>
+   <url>http://www.ondex.org/</url>
+
+   <ciManagement>
+      <system>jenkins</system>
+      <url>http://ondex.rothamsted.ac.uk/build</url>
+   </ciManagement>
+
+   <organization>
+      <name>Ondex</name>
+      <url>https://github.com/Rothamsted/ondex-knet-builder</url>
+   </organization>
+
+   <scm>
+      <connection>scm:git:https://github.com/Rothamsted/ondex-full.git</connection>
+      <url>https://github.com/Rothamsted/ondex-full</url>
+   </scm>
+
+	 <properties>
+		 <java.version>17</java.version>
+		 <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+						
+		 <lucene.version>6.6.0</lucene.version>
+			
+		 <!-- Used by neo4j-related components -->
+		 <rdf2neo.version>5.1</rdf2neo.version>  
+			
+		 <slf4j.version>2.0.9</slf4j.version>
+			
+     <jena.version>4.9.0</jena.version>
+     
+     <!-- This is used when we want to override rdf-common -->
+     <!-- rdfutils.version>xxx</rdfutils.version -->
+
+	 </properties>
+
+   <build>
+      <plugins>
+         <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+         </plugin>
+         <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+         </plugin>
+         <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+         </plugin>
+         
+      </plugins>
+
+      <pluginManagement>
+         <plugins>
+         		<plugin>
+			       	<groupId>org.apache.maven.plugins</groupId>
+			       	<artifactId>maven-dependency-plugin</artifactId>
+         		</plugin>
+         		
+            <plugin>
+               <groupId>org.apache.maven.plugins</groupId>
+               <artifactId>maven-compiler-plugin</artifactId>
+               <configuration>
+                  <source>${java.version}</source>
+                  <target>${java.version}</target>
+                  <showWarnings>true</showWarnings>
+                  <showDeprecation>true</showDeprecation>
+                  <encoding>UTF-8</encoding>
+               </configuration>
+            </plugin>
+            
+						<plugin>
+						  <groupId>org.apache.maven.plugins</groupId>
+						  <artifactId>maven-source-plugin</artifactId>
+						  <executions>
+						     <execution>
+						        <id>attach-sources</id>
+						        <phase>verify</phase>
+						        <goals><goal>jar-no-fork</goal></goals>
+						     </execution>
+						  </executions>
+						</plugin>
+            
+
+            <!-- Cleans up things that are usualy left around on the main module folder, not in target/ -->
+		        <plugin>
+		          <artifactId>maven-clean-plugin</artifactId>
+		          <configuration>
+		            <filesets>
+		              <fileset>
+		                <directory>${basedir}</directory>
+		                <includes>
+		                  <include>ondex.log</include>
+		                  <include>velocity.log</include>
+		                  <include>uninstall.log</include>
+		                </includes>
+		              </fileset>
+		            </filesets>
+		          </configuration>
+		        </plugin>
+		        
+		        <plugin>
+	            <groupId>org.apache.maven.plugins</groupId>
+	            <artifactId>maven-javadoc-plugin</artifactId>
+	            <configuration>
+	               <stylesheet>maven</stylesheet>
+	            </configuration>
+		        </plugin>
+		        						
+						<plugin>
+						  <groupId>org.apache.maven.plugins</groupId>
+						  <artifactId>maven-surefire-plugin</artifactId>
+						  
+						  <configuration>
+								 <!-- Used to be forkMode = always, which is now deprecated -->
+								 <forkCount>1</forkCount>
+								 <reuseForks>false</reuseForks>
+								 						     
+						     <forkedProcessTimeoutInSeconds>700</forkedProcessTimeoutInSeconds>
+						     <argLine>-XX:MaxRAM=4G -Dondex.dir=${basedir}/data -Dfile.encoding=UTF-8</argLine>
+						     <excludes>
+						        <exclude>net/sourceforge/ondex/apps/*</exclude>
+						     </excludes>
+						     <failIfNoTests>false</failIfNoTests>
+						     <enableAssertions>true</enableAssertions>
+						     <redirectTestOutputToFile>false</redirectTestOutputToFile>
+						     <useFile>false</useFile>
+             		 <trimStackTrace>false</trimStackTrace>        
+								 <properties>
+								   <property>
+									   <!-- Prints out spaces and test name before/after every test method and automatically -->
+										 <name>listener</name>
+										 <value>uk.ac.ebi.utils.test.junit.TestOutputDecorator</value>
+									 </property>
+								 </properties>
+						  </configuration>
+						  <dependencies>
+								<dependency>
+						  		<groupId>uk.ac.ebi</groupId>
+						  		<artifactId>jutils</artifactId>
+		  						<version>${jutils.version}</version>
+								</dependency>
+						  </dependencies>
+						</plugin>
+						
+						<plugin>
+							<groupId>org.apache.maven.plugins</groupId>
+							<artifactId>maven-failsafe-plugin</artifactId>
+							<configuration>
+								<trimStackTrace>false</trimStackTrace>
+								<argLine>-XX:MaxRAM=4G -Dondex.dir=${basedir}/data -Dfile.encoding=UTF-8</argLine>
+							</configuration>
+							<executions>
+								<execution>
+									<phase>integration-test</phase>
+									<goals><goal>integration-test</goal></goals>
+								</execution>
+						    <execution>
+					        <id>verify</id>
+					        <phase>verify</phase>
+					        <goals><goal>verify</goal></goals>
+						    </execution>
+							</executions>
+						</plugin>
+						
+						
+					  <!-- 
+							A small plug-in that starts Neo4j. 
+					  -->
+		        <plugin>
+					    <groupId>com.github.harti2006</groupId>
+						  <artifactId>neo4j-server-maven-plugin</artifactId>
+		        </plugin>
+		        
+						<plugin>
+							<groupId>org.apache.maven.plugins</groupId>
+							<artifactId>maven-project-info-reports-plugin</artifactId>
+							<version>3.4.5</version>
+						</plugin>
+						
+						<plugin>
+						  <groupId>org.codehaus.mojo</groupId>
+						  <artifactId>taglist-maven-plugin</artifactId>
+						  <version>3.0</version>
+						</plugin>
+
+						
+            <!-- 
+            	This is needed by Eclipse, to in which build life cycle phase a plug-in is
+            	triggered. It won't hurt you if you don't use Eclipse.
+            -->
+            <plugin>
+               <groupId>org.eclipse.m2e</groupId>
+               <artifactId>lifecycle-mapping</artifactId>
+               <configuration>
+                  <lifecycleMappingMetadata>
+                     <pluginExecutions>
+                        <pluginExecution>
+                           <pluginExecutionFilter>
+                              <groupId>org.apache.maven.plugins</groupId>
+                              <artifactId>maven-dependency-plugin</artifactId>
+                              <versionRange>[2.0,)</versionRange>
+                              <goals>
+                                 <goal>copy-dependencies</goal>
+                                 <goal>unpack</goal>
+                              </goals>
+                           </pluginExecutionFilter>
+                           <action>
+                              <ignore/>
+                           </action>
+                        </pluginExecution>
+                        <pluginExecution>
+                           <pluginExecutionFilter>
+                              <groupId>org.apache.maven.plugins</groupId>
+                              <artifactId>maven-javadoc-plugin</artifactId>
+                              <versionRange>[2.6,)</versionRange>
+                              <goals>
+                                 <goal>javadoc</goal>
+                              </goals>
+                           </pluginExecutionFilter>
+                           <action>
+                              <ignore/>
+                           </action>
+                        </pluginExecution>
+                        <pluginExecution>
+                           <pluginExecutionFilter>
+                              <groupId>org.apache.cxf</groupId>
+                              <artifactId>cxf-java2ws-plugin</artifactId>
+                              <versionRange>[2.2,)</versionRange>
+                              <goals>
+                                 <goal>java2ws</goal>
+                              </goals>
+                           </pluginExecutionFilter>
+                           <action>
+                              <ignore/>
+                           </action>
+                        </pluginExecution>
+                        <pluginExecution>
+                           <pluginExecutionFilter>
+                              <groupId>org.apache.cxf</groupId>
+                              <artifactId>cxf-codegen-plugin</artifactId>
+                              <versionRange>[2.2,)</versionRange>
+                              <goals>
+                                 <goal>generate-sources</goal>
+                              </goals>
+                           </pluginExecutionFilter>
+                           <action>
+                              <ignore/>
+                           </action>
+                        </pluginExecution>
+                     </pluginExecutions>
+                  </lifecycleMappingMetadata>
+               </configuration>
+            </plugin>						
+         </plugins>
+      </pluginManagement>
+      
+   </build>
+
+   
+   <profiles>
+   </profiles>
+
+	 <repositories>
+			<repository>
+				<id>knetminer-repo</id>
+				<name>Rothamsted Maven Repo</name>
+				<url>https://knetminer.com/artifactory/repository/maven-public/</url>
+			  <snapshots><enabled>true</enabled></snapshots>
+			  <releases><enabled>true</enabled></releases>
+			</repository>
+						                 
+	 </repositories>
+	 
+   <dependencyManagement>
+     <dependencies>
+
+       <dependency>
+          <groupId>log4j</groupId>
+          <artifactId>log4j</artifactId>
+          <version>1.2.17</version>
+          <scope>provided</scope>
+       </dependency>
+        
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>slf4j-log4j12</artifactId>
+				<version>${slf4j.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>log4j-over-slf4j</artifactId>
+				<version>${slf4j.version}</version>
+			</dependency>
+			
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>jcl-over-slf4j</artifactId>
+				<version>${slf4j.version}</version>
+			</dependency>
+			
+			
+			<!-- Newer modules that are stand-alone command lines use this logger -->
+      <dependency>
+        <groupId>ch.qos.logback</groupId>
+        <artifactId>logback-classic</artifactId>
+        <version>1.4.11</version>
+      </dependency>
+			
+			<!-- Since JDK 11, we need this as a separate lib -->
+			<dependency>
+			  <groupId>jakarta.xml.bind</groupId>
+			  <artifactId>jakarta.xml.bind-api</artifactId>
+			  <version>4.0.1</version>
+			</dependency>
+			<!--
+			  This should be the implementation of jakarta.xml.bind-api
+			  (https://stackoverflow.com/a/72151763/529286) 
+			-->
+			<dependency>
+				<groupId>com.sun.xml.bind</groupId>
+			  <artifactId>jaxb-impl</artifactId>
+			  <version>4.0.4</version>
+			</dependency>
+
+			<!-- Spring annotations that were supported JDK<11 -->
+			<dependency>             
+        <groupId>javax.annotation</groupId>
+        <artifactId>javax.annotation-api</artifactId>
+        <version>1.3.2</version>
+			</dependency>  
+			<dependency>             
+        <groupId>javax.annotation</groupId>
+        <artifactId>jsr250-api</artifactId>
+        <version>1.3.2</version>
+			</dependency>  
+                
+      <dependency>
+        <groupId>com.thoughtworks.xstream</groupId>
+        <artifactId>xstream</artifactId>
+        <version>1.4.20</version>
+      </dependency>
+       
+      <dependency>
+       <groupId>net.sourceforge.collections</groupId>
+       <artifactId>collections-generic</artifactId>
+       <version>4.01</version>
+      </dependency>
+
+			<dependency>
+				<groupId>org.apache.commons</groupId>
+			  <artifactId>commons-collections4</artifactId>
+			  <version>4.4</version>
+			</dependency>
+										
+      <dependency>
+       <groupId>net.sourceforge.jexcelapi</groupId>
+       <artifactId>jxl</artifactId>
+       <version>2.6.12</version>
+      </dependency>
+         
+			<dependency>
+			  <groupId>org.apache.lucene</groupId>
+			 <artifactId>lucene-core</artifactId>
+			 <version>${lucene.version}</version>
+			</dependency>
+				 
+			<dependency>
+			  <groupId>org.apache.lucene</groupId>
+			 <artifactId>lucene-queryparser</artifactId>
+			 <version>${lucene.version}</version>
+			</dependency>
+			
+			<dependency>
+				<groupId>org.apache.lucene</groupId>
+				<artifactId>lucene-analyzers-common</artifactId>
+				<version>${lucene.version}</version>
+			</dependency>
+
+
+			<!-- 
+				The lib with main components in one bundle only.
+				
+				TODO: this is used in the scripting module only, more recent modules (eg, RDF exporter, Neo4j exporter)
+				link these in their own way.
+			-->
+			<dependency>
+    		<groupId>org.apache.jena</groupId>
+				<artifactId>apache-jena-libs</artifactId>
+		    <version>${jena.version}</version>
+				<type>pom</type>		    
+			</dependency>
+
+			<dependency>
+				<groupId>org.apache.jena</groupId>
+				<artifactId>jena-osgi</artifactId>
+		    <version>${jena.version}</version>
+			</dependency>		  
+
+
+      <dependency>
+         <groupId>com.sleepycat</groupId>
+         <artifactId>je</artifactId>
+         <version>4.0.92</version>
+      </dependency>
+        
+			<dependency>
+				<groupId>uk.ac.rothamsted.kg</groupId>
+				<artifactId>rdf2neo</artifactId>
+				<version>${rdf2neo.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>uk.ac.rothamsted.kg</groupId>
+				<artifactId>rdf2neo-cli</artifactId>
+				<version>${rdf2neo.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>uk.ac.rothamsted.kg</groupId>
+				<artifactId>neo4j-utils</artifactId>
+				<version>${rdf2neo.version}</version>
+			</dependency>
+
+			<!-- Stream parser, used by OXL and other big XML parsers -->
+      <dependency>
+         <groupId>org.codehaus.woodstox</groupId>
+         <artifactId>woodstox-core-lgpl</artifactId>
+         <version>4.0.11</version>
+         <exclusions>
+         	 <!-- It shouldn't be necessary and causes problems to Eclipse 
+         			 (javax.xml.stream referred by two modules) -->
+         	 <exclusion>
+         		 <groupId>javax.xml.stream</groupId>
+         		 <artifactId>stax-api</artifactId>
+         	 </exclusion>
+         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.codehaus.woodstox</groupId>
+        <artifactId>stax2-api</artifactId>
+        <version>4.2.2</version>
+      </dependency>
+			<dependency>
+				<groupId>org.apache.cxf</groupId>
+			  <artifactId>cxf-wstx-msv-validation</artifactId>
+				<!-- was 2.2.6 First that works is 2.2.11, 2.2 is the last on Central -->
+			  <version>2.2</version>
+			</dependency>
+			
+			<dependency>
+				<groupId>org.apache.commons</groupId>
+				<artifactId>commons-math3</artifactId>
+				<version>3.6.1</version>
+			</dependency>
+
+			<dependency>
+				<groupId>com.opencsv</groupId>
+				<artifactId>opencsv</artifactId>
+				<version>5.8</version>
+			</dependency>
+			
+			<dependency>
+				<groupId>xerces</groupId>
+				<artifactId>xercesImpl</artifactId>
+				<version>2.12.2</version>
+			</dependency>
+			
+      <dependency>
+        <groupId>com.googlecode.json-simple</groupId>
+        <artifactId>json-simple</artifactId>
+        <version>1.1.1</version>
+      </dependency>
+      
+      <dependency>
+				<groupId>org.jsoup</groupId>
+				<artifactId>jsoup</artifactId>
+				<version>1.16.2</version>
+      </dependency>
+      
+      <!-- TODO: would be good to replace all the uses of this with picocli, at the moment we use both -->
+			<dependency>
+				<groupId>commons-cli</groupId>
+				<artifactId>commons-cli</artifactId>
+				<version>1.6.0</version>
+			</dependency>			
+			
+    </dependencies>
+	</dependencyManagement>
+</project>

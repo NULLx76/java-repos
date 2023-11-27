@@ -1,0 +1,183 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.basepom</groupId>
+    <artifactId>basepom-foundation</artifactId>
+    <version>21</version>
+  </parent>
+  <groupId>com.github.zregvart</groupId>
+  <artifactId>salesforce-ipass-app</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>Salesforce OAuth Web application</name>
+
+  <properties>
+    <spring.boot-version>1.5.1.RELEASE</spring.boot-version>
+    <camel.version>2.19.0-SNAPSHOT</camel.version>
+    <basepom.check.skip-dependency>true</basepom.check.skip-dependency>
+    <basepom.check.skip-dependency-management>true</basepom.check.skip-dependency-management>
+    <basepom.check.skip-dependency-versions-check>true</basepom.check.skip-dependency-versions-check>
+    <basepom.check.skip-duplicate-finder>true</basepom.check.skip-duplicate-finder>
+    <fabric8.debug.enabled>true</fabric8.debug.enabled>
+  </properties>
+
+  <dependencyManagement>
+
+    <dependencies>
+
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring.boot-version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.camel</groupId>
+        <artifactId>camel-spring-boot-dependencies</artifactId>
+        <version>${camel.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+    </dependencies>
+
+  </dependencyManagement>
+
+  <dependencies>
+
+    <dependency>
+      <groupId>org.apache.camel</groupId>
+      <artifactId>camel-salesforce-starter</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.fabric8</groupId>
+      <artifactId>spring-cloud-starter-kubernetes</artifactId>
+      <version>0.1.4</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.hibernate</groupId>
+      <artifactId>hibernate-validator</artifactId>
+    </dependency>
+
+  </dependencies>
+
+  <build>
+
+    <finalName>${project.artifactId}</finalName>
+
+    <plugins>
+
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <version>${spring.boot-version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>repackage</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>io.fabric8</groupId>
+        <artifactId>fabric8-maven-plugin</artifactId>
+        <version>3.2.18</version>
+        <executions>
+          <execution>
+            <id>fmp</id>
+            <goals>
+              <goal>resource</goal>
+              <goal>helm</goal>
+              <goal>build</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>add-dto-source</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>src/generated/java</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+    </plugins>
+
+  </build>
+
+  <profiles>
+    <profile>
+      <id>regenerate-dto</id>
+      <activation>
+        <file>
+          <exists>salesforce-authentication.properties</exists>
+        </file>
+      </activation>
+
+      <build>
+        <plugins>
+
+          <!-- read Salesforce authentication properties -->
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>properties-maven-plugin</artifactId>
+            <version>1.0.0</version>
+            <executions>
+              <execution>
+                <id>read-salesforce-authentication-properties</id>
+                <phase>initialize</phase>
+                <goals>
+                  <goal>read-project-properties</goal>
+                </goals>
+                <configuration>
+                  <files>
+                    <file>salesforce-authentication.properties</file>
+                  </files>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <!-- generate Contact DTOs -->
+          <plugin>
+            <groupId>org.apache.camel.maven</groupId>
+            <artifactId>camel-salesforce-maven-plugin</artifactId>
+            <version>${camel.version}</version>
+            <executions>
+              <execution>
+                <id>generate-dtos</id>
+                <goals>
+                  <goal>generate</goal>
+                </goals>
+                <configuration>
+                  <version>37.0</version>
+                  <outputDirectory>src/generated/java</outputDirectory>
+                  <packageName>com.github.zregvart.salesforce.ipaas.dto</packageName>
+                  <includes>Account</includes>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+</project>

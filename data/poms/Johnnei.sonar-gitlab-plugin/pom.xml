@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.johnnei</groupId>
+  <artifactId>sonar-gitlab-plugin</artifactId>
+  <name>SonarQube :: GitLab Plugin</name>
+  <packaging>sonar-plugin</packaging>
+  <version>0.2.2</version>
+  <description>Provide merge request analysis support between GitLab and SonarQube</description>
+  <inceptionYear>2016</inceptionYear>
+
+  <properties>
+    <!-- Compiler Settings -->
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <!-- Deployment -->
+    <sonar.pluginName>GitLab Integration</sonar.pluginName>
+    <sonar.pluginClass>org.johnnei.sgp.sonar.GitLabPlugin</sonar.pluginClass>
+    <!-- Use a different key to avoid conflicts with the competition -->
+    <sonar.pluginKey>gitlabintegration</sonar.pluginKey>
+
+    <!-- Default IT settings -->
+    <it.sonar.version>lts</it.sonar.version>
+    <it.gitlab.version>9.3.10-ce.0</it.gitlab.version>
+
+    <!-- Dependency Versions -->
+    <dependency.sonar-plugin-api.version>5.6</dependency.sonar-plugin-api.version>
+    <dependency.com.fasterxml.jackson.core.jackson.version>2.9.0</dependency.com.fasterxml.jackson.core.jackson.version>
+    <dependency.org.jboss.resteasy.version>3.1.4.Final</dependency.org.jboss.resteasy.version>
+  </properties>
+
+  <developers>
+    <developer>
+      <name>Johan "Johnnei"</name>
+      <email>johnnei07@live.nl</email>
+      <organization>Johnnei</organization>
+      <organizationUrl>https://johnnei.org</organizationUrl>
+      <timezone>+1</timezone>
+    </developer>
+  </developers>
+
+  <licenses>
+    <license>
+      <name>GNU LGPL 3</name>
+      <url>http://www.gnu.org/licenses/lgpl.txt</url>
+    </license>
+  </licenses>
+
+  <scm>
+    <connection>scm:git:gitlab@git.johnnei.org:Johnnei/sonar-gitlab-plugin.git</connection>
+    <developerConnection>scm:git:gitlab@git.johnnei.org:Johnnei/sonar-gitlab-plugin.git</developerConnection>
+    <url>https://git.johnnei.org/Johnnei/sonar-gitlab-plugin</url>
+    <tag>HEAD</tag>
+  </scm>
+
+  <ciManagement>
+    <system>GitLab CI</system>
+    <url>https://git.johnnei.org/Johnnei/sonar-gitlab-plugin/pipelines</url>
+  </ciManagement>
+
+  <issueManagement>
+    <system>JIRA</system>
+    <url>https://jira.johnnei.org/projects/SGP/issues/</url>
+  </issueManagement>
+
+  <profiles>
+    <profile>
+      <id>it-environment-windows</id>
+      <activation>
+        <os>
+          <family>Windows</family>
+        </os>
+      </activation>
+
+      <properties>
+        <os.command>/C</os.command>
+        <os.shell>cmd</os.shell>
+      </properties>
+    </profile>
+  </profiles>
+
+  <build>
+    <testResources>
+      <testResource>
+        <directory>src/test/resources</directory>
+        <filtering>false</filtering>
+      </testResource>
+      <testResource>
+        <directory>src/test/expectations/sonarqube-${it.sonar.version}</directory>
+        <filtering>false</filtering>
+      </testResource>
+      <testResource>
+        <directory>src/test/filtered-resources</directory>
+        <filtering>true</filtering>
+      </testResource>
+    </testResources>
+
+    <plugins>
+
+      <!-- Plugin to build SonarQube plugin artifact -->
+      <plugin>
+        <groupId>org.sonarsource.sonar-packaging-maven-plugin</groupId>
+        <artifactId>sonar-packaging-maven-plugin</artifactId>
+        <version>1.17</version>
+        <extensions>true</extensions>
+      </plugin>
+
+      <!-- Add Docker Container Ports to environment -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>2.19.1</version>
+        <configuration>
+          <systemProperties>
+            <sonarqube.host>http://${sonar-plugin.host}:${sonar-plugin.port}</sonarqube.host>
+            <gitlab.host>${gitlab.host}:${gitlab.port}</gitlab.host>
+            <os.shell>${os.shell}</os.shell>
+            <os.command>${os.command}</os.command>
+          </systemProperties>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Plugin to run Docker Container based ITs -->
+      <plugin>
+        <groupId>io.fabric8</groupId>
+        <artifactId>docker-maven-plugin</artifactId>
+        <version>0.18.1</version>
+        <configuration>
+          <images>
+            <image>
+              <name>sonar-gitlab-plugin</name>
+              <alias>sonar-plugin</alias>
+              <build>
+                <dockerFileDir>${project.build.testOutputDirectory}/docker/sonarqube</dockerFileDir>
+                <!-- Add the build artifact to the build context. -->
+                <assembly>
+                  <descriptorRef>artifact</descriptorRef>
+                </assembly>
+              </build>
+              <run>
+                <ports>
+                  <port>+sonar-plugin.host:sonar-plugin.port:9000</port>
+                </ports>
+                <wait>
+                  <log>Process\[web\] is up</log>
+                  <time>60000</time>
+                </wait>
+              </run>
+            </image>
+            <image>
+              <name>gitlab/gitlab-ce:${it.gitlab.version}</name>
+              <alias>gitlab</alias>
+              <run>
+                <ports>
+                  <port>+gitlab.host:gitlab.port:80</port>
+                </ports>
+                <wait>
+                  <log>master process ready</log>
+                  <time>600000</time>
+                </wait>
+              </run>
+            </image>
+          </images>
+        </configuration>
+        <executions>
+          <execution>
+            <id>build-container</id>
+            <phase>package</phase>
+            <goals>
+              <goal>build</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>start-containers</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>start</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>cleanup-containers</id>
+            <phase>post-integration-test</phase>
+            <goals>
+              <goal>stop</goal>
+              <goal>remove</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.7.6.201602180812</version>
+        <executions>
+          <!-- Record unit test coverage -->
+          <execution>
+            <id>pre-unit-test</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+            <configuration>
+              <destFile>${project.build.directory}/jacoco.exec</destFile>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>commons-logging</groupId>
+        <artifactId>commons-logging</artifactId>
+        <version>1.2</version>
+        <scope>provided</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.sonarsource.sonarqube</groupId>
+      <artifactId>sonar-plugin-api</artifactId>
+      <version>${dependency.sonar-plugin-api.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <version>2.0.3</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- REST library to connect with GitLab -->
+    <dependency>
+      <groupId>org.jboss.resteasy</groupId>
+      <artifactId>resteasy-jaxrs</artifactId>
+      <version>${dependency.org.jboss.resteasy.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jboss.resteasy</groupId>
+      <artifactId>resteasy-client</artifactId>
+      <version>${dependency.org.jboss.resteasy.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jboss.resteasy</groupId>
+      <artifactId>resteasy-jackson2-provider</artifactId>
+      <version>${dependency.org.jboss.resteasy.version}</version>
+    </dependency>
+
+    <!-- JSON operations -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <version>${dependency.com.fasterxml.jackson.core.jackson.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-annotations</artifactId>
+      <version>${dependency.com.fasterxml.jackson.core.jackson.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>${dependency.com.fasterxml.jackson.core.jackson.version}</version>
+    </dependency>
+
+    <!-- unit tests -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.12</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Improved Assertions -->
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-all</artifactId>
+      <version>1.3</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Mocking -->
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>1.10.19</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Simplification of Refecltion -->
+    <dependency>
+      <groupId>org.powermock</groupId>
+      <artifactId>powermock-reflect</artifactId>
+      <version>1.6.6</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Interaction with GitLab / SonarQube -->
+    <dependency>
+      <groupId>com.squareup.okhttp3</groupId>
+      <artifactId>okhttp</artifactId>
+      <version>3.4.1</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Logging during Unit Tests -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>1.7.21</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+      <version>2.6.2</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-slf4j-impl</artifactId>
+      <version>2.6.2</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+</project>

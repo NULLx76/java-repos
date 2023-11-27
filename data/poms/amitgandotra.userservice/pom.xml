@@ -1,0 +1,321 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.ibps.openapi</groupId>
+    <artifactId>user-service</artifactId>
+    <version>1.9.0-SNAPSHOT</version>
+
+    <name>User Service</name>
+    <packaging>${packaging.type}</packaging>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>1.5.2.RELEASE</version>
+    </parent>
+
+    <properties>
+        <java.version>1.8</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <ibm.mq.version>7.1.0.1</ibm.mq.version>
+        <!--<jackson.version>2.7.4</jackson.version>-->
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web-services</artifactId>
+        </dependency>
+
+        <!--<dependency>-->
+            <!--<groupId>org.springframework.boot</groupId>-->
+            <!--<artifactId>spring-boot-starter-data-jpa</artifactId>-->
+        <!--</dependency>-->
+        <!-- Mail Dependency -->
+
+
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.4</version>
+        </dependency>
+
+        <!-- swagger -->
+        <dependency>
+            <groupId>io.swagger</groupId>
+            <artifactId>swagger-annotations</artifactId>
+            <version>1.5.7</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.jayway.restassured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <version>2.5.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ws</groupId>
+            <artifactId>spring-ws-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.tomakehurst</groupId>
+            <artifactId>wiremock-standalone</artifactId>
+            <version>2.4.1</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Needed for spring mockMVC json-path matcher -->
+        <dependency>
+            <groupId>com.jayway.jsonpath</groupId>
+            <artifactId>json-path</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jolokia</groupId>
+            <artifactId>jolokia-core</artifactId>
+        </dependency>
+
+
+    </dependencies>
+
+    <build>
+        <finalName>userservice</finalName>
+
+        <plugins>
+
+            <plugin>
+                <groupId>org.zalando.maven.plugins</groupId>
+                <artifactId>swagger-codegen-maven-plugin</artifactId>
+                <version>0.4.33</version>
+                <configuration>
+                    <apiFile>${project.basedir}/src/main/resources/api.swagger.yaml</apiFile>
+                    <language>springinterfacesNoSwaggerAnnotations</language>
+                    <modelPackage>com.ibps.api.usersvcs.model</modelPackage>
+                    <apiPackage>com.ibps.api.usersvcs.api</apiPackage>
+                    <enableBuilderSupport>true</enableBuilderSupport>
+                    <enable303>true</enable303>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>swagger-codegen</id>
+                        <goals>
+                            <goal>codegen</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.jsonschema2pojo</groupId>
+                <artifactId>jsonschema2pojo-maven-plugin</artifactId>
+                <version>0.4.27</version>
+                <configuration>
+                    <sourceDirectory>${basedir}/src/main/resources/json-schema</sourceDirectory>
+                    <outputDirectory>${project.build.directory}/generated-sources/json-schema</outputDirectory>
+                    <targetPackage>${project.groupId}.schema.json</targetPackage>
+                    <generateBuilders>true</generateBuilders>
+                    <useCommonsLang3>true</useCommonsLang3>
+                    <includeJsr303Annotations>true</includeJsr303Annotations>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.9.1</version>
+                <executions>
+                    <execution>
+                        <id>add-source</id>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.build.directory}/generated-sources/swagger/src/main/java</source>
+                                <source>${project.build.directory}/generated-sources/json-schema/</source>
+                                <source>${project.build.directory}/generated-sources/aimws</source>
+                                <source>${project.build.directory}/generated-sources/swagger-codegen/</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>pl.project13.maven</groupId>
+                <artifactId>git-commit-id-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>get-the-git-infos</id>
+                        <goals>
+                            <goal>revision</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>validate-the-git-infos</id>
+                        <goals>
+                            <goal>validateRevision</goal>
+                        </goals>
+                        <!-- *NOTE*: The default phase of validateRevision is verify, but in case you want to change it, you can do so by adding the phase here -->
+                        <phase>package</phase>
+                    </execution>
+                </executions>
+                <configuration>
+                    <dotGitDirectory>${project.basedir}/.git</dotGitDirectory>
+                    <prefix>git</prefix>
+                    <dateFormat>dd.MM.yyyy '@' HH:mm:ss z</dateFormat>
+                    <dateFormatTimeZone>${user.timezone}</dateFormatTimeZone>
+                    <verbose>true</verbose>
+                    <generateGitPropertiesFile>true</generateGitPropertiesFile>
+                    <generateGitPropertiesFilename>${project.build.outputDirectory}/classes/git.properties</generateGitPropertiesFilename>
+                    <format>properties</format>
+                    <skipPoms>true</skipPoms>
+                    <injectAllReactorProjects>false</injectAllReactorProjects>
+                    <failOnNoGitDirectory>true</failOnNoGitDirectory>
+                    <failOnUnableToExtractRepoInfo>true</failOnUnableToExtractRepoInfo>
+                    <skip>false</skip>
+                    <runOnlyOnce>false</runOnlyOnce>
+                    <excludeProperties>
+                        <!-- <excludeProperty>git.user.*</excludeProperty> -->
+                    </excludeProperties>
+                    <useNativeGit>false</useNativeGit>
+                    <abbrevLength>7</abbrevLength>
+                    <commitIdGenerationMode>flat</commitIdGenerationMode>
+                    <gitDescribe>
+                        <skip>false</skip>
+                        <always>false</always>
+                        <abbrev>7</abbrev>
+                        <dirty>-dirty</dirty>
+                        <match>*</match>
+                        <forceLongFormat>false</forceLongFormat>
+                    </gitDescribe>
+
+                    <!--<validationProperties>-->
+                    <!--<validationProperty>-->
+                    <!--<name>validating project version</name>-->
+                    <!--<value>${project.version}</value>-->
+                    <!--<shouldMatchTo><![CDATA[^.*(?<!-SNAPSHOT)$]]></shouldMatchTo>-->
+                    <!--</validationProperty>-->
+                    <!--&lt;!&ndash; the next validationProperty you would like to validate &ndash;&gt;-->
+                    <!--</validationProperties>-->
+
+                    <validationProperties>
+                        <!--<validationProperty>-->
+                        <!--<name>validating project version</name>-->
+                        <!--<value>${project.version}</value>-->
+                        <!--&lt;!&ndash; <shouldMatchTo>^[0-9\.]*$</shouldMatchTo> &ndash;&gt;-->
+                        <!--<shouldMatchTo><![CDATA[^.*(?<!-SNAPSHOT)$]]></shouldMatchTo>-->
+                        <!--</validationProperty>-->
+                        <!--<validationProperty>-->
+                        <!--<name>validating git dirty</name>-->
+                        <!--<value>${git.dirty}</value>-->
+                        <!--<shouldMatchTo>false</shouldMatchTo>-->
+                        <!--</validationProperty>-->
+                    </validationProperties>
+                    <!-- @since 2.2.2 -->
+                    <!--
+                        true by default, controls whether the validation will fail if *at least one* of the validationProperties does not match with it's expected values.
+                        If you don't care about this, you may want to set this value to false (this makes the configuration of validationProperties useless).
+                        *Note*: This configuration will only be taken into account when the additional goal `validateRevision` is configured inside an execution and at least one validationProperty is defined.
+                    -->
+                    <validationShouldFailIfNoMatch>false</validationShouldFailIfNoMatch>
+                </configuration>
+
+
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>deployCloud</id>
+            <properties>
+                <jboss.as.username>admin</jboss.as.username>
+                <jboss.as.password>start123</jboss.as.password>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>deployable</id>
+
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+
+            <properties>
+                <packaging.type>war</packaging.type>
+            </properties>
+
+            <dependencies>
+                <dependency>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-tomcat</artifactId>
+                    <scope>provided</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+
+        <profile>
+            <id>executable</id>
+
+            <properties>
+                <packaging.type>jar</packaging.type>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.springframework.boot</groupId>
+                        <artifactId>spring-boot-maven-plugin</artifactId>
+                        <version>1.4.2.RELEASE</version>
+                        <configuration>
+                            <finalName>${project.build.finalName}-executable</finalName>
+                            <mainClass>com.ibps.openapi.UserServiceApp</mainClass>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+
+
+</project>

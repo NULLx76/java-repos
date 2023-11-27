@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.gmail.martinprobson.hadoop</groupId>
+	<artifactId>MapReduce_Temperature_Example</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>Hadoop Map Reduce Example - Temperature data</name>
+	<description>This is the Java MapReduce example taken from 'Hadoop The Definitive Guide 4th Edition' - Part 1 - Chapter 2
+The example uses Mapreduce framework to find the highest temperatures recorded per year from NCDC data files.
+This POM has two exec goals: -
+exec:exec@run-local - Run the map reduce code in local mode.
+exec:exec@run-cluster - Run the map reduce code on cluster.
+
+</description>
+	<packaging>jar</packaging>
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<maven.compiler.source>1.8</maven.compiler.source>
+		<maven.compiler.target>1.8</maven.compiler.target>
+		<maven.javadoc.skip>false</maven.javadoc.skip>
+		<hadoop.version>2.7.1</hadoop.version>
+		<!-- HDFS directory containing input file(s) -->
+		<hdfs.input.dir>/user/martinr/ncdc</hdfs.input.dir>
+		<!-- HDFS directory for output results -->
+		<hdfs.output.dir>/user/martinr/ncdc_output</hdfs.output.dir>
+		<!-- Local filesystem  directory containing input file(s) -->
+		<local.input.dir>${project.basedir}/data/ncdc</local.input.dir>
+		<!-- Local filesystem  directory for output results -->
+		<local.output.dir>${project.basedir}/ncdc_output</local.output.dir>
+	</properties>
+	<dependencies>
+		<dependency>
+			<groupId>net.martinprobson</groupId>
+			<artifactId>Hadoop_Util</artifactId>
+			<version>0.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.hadoop</groupId>
+			<artifactId>hadoop-client</artifactId>
+			<version>${hadoop.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.mrunit</groupId>
+			<artifactId>mrunit</artifactId>
+			<version>1.1.0</version>
+			<scope>test</scope>
+			<classifier>hadoop2</classifier>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.hadoop</groupId>
+			<artifactId>hadoop-minicluster</artifactId>
+			<version>${hadoop.version}</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+	<build>
+		<plugins>
+			<plugin>
+				<!-- Copy the Hadoop Utils jar into target directory for execution purposes -->
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>copy</id>
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>copy</goal>
+						</goals>
+						<configuration>
+							<artifactItems>
+								<artifactItem>
+									<groupId>com.gmail.martinprobson</groupId>
+									<artifactId>Hadoop_Util</artifactId>
+									<version>0.0.1-SNAPSHOT</version>
+									<outputDirectory>${project.build.directory}</outputDirectory>
+								</artifactItem>			
+							</artifactItems>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.1</version>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>2.4</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>2.10.3</version>
+				<executions>
+					<execution>
+						<id>attach-javadoc</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.5.0</version>
+				<executions>
+					<execution>
+						<id>run-cluster</id>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<executable>yarn</executable>
+							<arguments>
+								<argument>jar</argument>
+								<argument>${project.build.directory}/${project.artifactId}-${project.version}.jar</argument>
+								<argument>net.martinprobson.hadoop.mr.MaxTemperatureDriver</argument>
+								<argument>${hdfs.input.dir}</argument>
+								<argument>${hdfs.output.dir}</argument>
+							</arguments>
+							<environmentVariables>
+								<YARN_USER_CLASSPATH>${project.build.directory}/*</YARN_USER_CLASSPATH> 
+							</environmentVariables>
+						</configuration>
+					</execution>
+					<execution>
+						<id>run-local</id>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<executable>hadoop</executable>
+							<arguments>
+								<argument>--config</argument>
+								<argument>${project.basedir}/src/test/resources</argument>
+								<argument>net.martinprobson.hadoop.mr.MaxTemperatureDriver</argument>
+								<argument>${local.input.dir}</argument>
+								<argument>${local.output.dir}</argument>
+							</arguments>
+							<environmentVariables>
+							    <HADOOP_CLASSPATH>${project.build.directory}/test-classes/log4j.properties:${project.build.directory}/${project.artifactId}-${project.version}.jar:${project.build.directory}/*</HADOOP_CLASSPATH>
+							</environmentVariables>
+						</configuration>
+					</execution>
+					
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+	<organization>
+		<name>Martin Robson</name>
+		<url>martinprobson@gmail.com</url>
+	</organization>
+</project> 

@@ -1,0 +1,595 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>de.jfachwert</groupId>
+  <artifactId>jfachwert</artifactId>
+  <version>5.0.1-SNAPSHOT</version>
+  <name>jFachwert</name>
+
+  <description>Implementierung einiger Fachwerte nach dem WAM-Ansatz</description>
+  <inceptionYear>2017</inceptionYear>
+  <url>http://www.jfachwert.de/</url>
+
+  <!-- see http://maven.apache.org/pom.html#Licenses -->
+  <licenses>
+    <license>
+      <name>The Apache Software License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+    </license>
+  </licenses>
+
+
+  <properties>
+
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <java.version>1.8</java.version>
+    <kotlin.version>1.9.0</kotlin.version>
+    <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
+    <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
+
+    <!-- Sonar 4.x Violations Filter -->
+    <!-- ignore violations -->
+    <sonar.issue.ignore.multicriteria>MaximumInheritanceDepth</sonar.issue.ignore.multicriteria>
+
+    <!-- Package names should comply with a naming convention -->
+    <sonar.issue.ignore.multicriteria.MaximumInheritanceDepth.ruleKey>squid:MaximumInheritanceDepth</sonar.issue.ignore.multicriteria.MaximumInheritanceDepth.ruleKey>
+    <sonar.issue.ignore.multicriteria.MaximumInheritanceDepth.resourceKey>**/*Exception.java</sonar.issue.ignore.multicriteria.MaximumInheritanceDepth.resourceKey>
+
+  </properties>
+
+
+  <build>
+
+    <plugins>
+
+      <!-- Kotlin Compiler -->
+      <plugin>
+        <groupId>org.jetbrains.kotlin</groupId>
+        <artifactId>kotlin-maven-plugin</artifactId>
+        <version>${kotlin.version}</version>
+        <executions>
+          <execution>
+            <id>compile</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+            <configuration>
+              <sourceDirs>
+                <source>src/main/kotlin</source>
+                <source>src/main/java</source>
+              </sourceDirs>
+            </configuration>
+          </execution>
+        </executions>
+        <configuration>
+          <jvmTarget>1.8</jvmTarget>
+        </configuration>
+      </plugin>
+
+      <!-- Java Compiler -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.11.0</version>
+        <configuration>
+          <source>${java.version}</source>
+          <target>${java.version}</target>
+          <encoding>${project.build.sourceEncoding}</encoding>
+        </configuration>
+        <executions>
+          <execution>
+            <id>default-compile</id>
+            <phase>none</phase>
+          </execution>
+          <execution>
+            <id>default-testCompile</id>
+            <phase>none</phase>
+          </execution>
+          <execution>
+            <id>java-compile</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>java-test-compile</id>
+            <phase>test-compile</phase>
+            <goals>
+              <goal>testCompile</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.jetbrains.dokka</groupId>
+        <artifactId>dokka-maven-plugin</artifactId>
+        <version>${kotlin.version}</version>
+        <executions>
+          <execution>
+            <phase>pre-site</phase>
+            <goals>
+              <goal>javadoc</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <!-- Default: ${project.basedir}/target/dokka -->
+          <outputDir>${project.basedir}/target/site/apidocs</outputDir>
+          <!-- Used for linking to JDK, default: 6 -->
+          <jdkVersion>8</jdkVersion>
+          <dokkaPlugins>
+            <plugin>
+              <groupId>org.jetbrains.dokka</groupId>
+              <artifactId>kotlin-as-java-plugin</artifactId>
+              <version>${kotlin.version}</version>
+            </plugin>
+          </dokkaPlugins>
+          <sourceLinks>
+            <link>
+              <path>${project.basedir}</path>
+              <url>https://github.com/oboehm/jfachwert/blob/master</url>
+              <lineSuffix>#L</lineSuffix>
+            </link>
+          </sourceLinks>
+        </configuration>
+      </plugin>
+
+      <!-- avoid lib conflicts -->
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-enforcer-plugin</artifactId>
+            <version>3.4.1</version>
+            <executions>
+                <execution>
+                    <id>enforce</id>
+                    <goals>
+                        <goal>enforce</goal>
+                    </goals>
+                    <configuration>
+                        <fail>false</fail>
+                        <rules>
+                            <requireMavenVersion>
+                                <version>3.2.4</version>
+                            </requireMavenVersion>
+                            <requireJavaVersion>
+                                <version>${java.version}</version>
+                            </requireJavaVersion>
+                            <dependencyConvergence/>
+                        </rules>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
+
+        <!-- JUnit Testing -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.1.2</version>
+        <configuration>
+          <excludes>
+            <exclude>**/Abstract*.java</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+
+      <!-- Sonar -->
+      <plugin>
+        <groupId>org.sonarsource.scanner.maven</groupId>
+        <artifactId>sonar-maven-plugin</artifactId>
+        <version>3.9.1.2184</version>
+      </plugin>
+
+      <!-- Code Coverage  -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.8.10</version>
+        <executions>
+          <execution>
+            <id>default-prepare-agent</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>default-report</id>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.eluder.coveralls</groupId>
+        <artifactId>coveralls-maven-plugin</artifactId>
+        <version>4.3.0</version>
+        <configuration>
+          <repoToken>0b6d778b-e679-4ba6-abe9-7d389dc58b1a</repoToken>
+          <sourceDirectories>
+            <directory>src/main/kotlin</directory>
+            <directory>src/main/java</directory>
+          </sourceDirectories>
+        </configuration>
+      </plugin>
+
+      <!--
+          Maven Site Plugin
+          call 'mvn site:site' to generate web site
+          see http://maven.apache.org/plugins/maven-site-plugin/examples/creating-content.html
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-site-plugin</artifactId>
+        <version>3.12.1</version>
+        <configuration>
+          <locales>de</locales>
+          <outputEncoding>UTF-8</outputEncoding>
+        </configuration>
+      </plugin>
+
+    </plugins>
+
+  </build>
+
+
+  <reporting>
+
+    <plugins>
+
+      <!-- Project Reports (like dependencies) -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-project-info-reports-plugin</artifactId>
+        <version>3.4.3</version>
+      </plugin>
+
+      <!-- Javadoc -->
+      <plugin>
+        <groupId>org.jetbrains.dokka</groupId>
+        <artifactId>dokka-maven-plugin</artifactId>
+        <version>${kotlin.version}</version>
+        <configuration>
+          <dokkaPlugins>
+            <plugin>
+              <groupId>org.jetbrains.dokka</groupId>
+              <artifactId>kotlin-as-java-plugin</artifactId>
+              <version>${kotlin.version}</version>
+            </plugin>
+          </dokkaPlugins>
+          <sourceLinks>
+            <link>
+              <path>${project.basedir}</path>
+              <url>https://github.com/oboehm/jfachwert/blob/master</url>
+              <lineSuffix>#L</lineSuffix>
+            </link>
+          </sourceLinks>
+        </configuration>
+      </plugin>
+
+    </plugins>
+
+  </reporting>
+
+
+
+  <dependencies>
+
+    <!-- Kotlin -->
+    <dependency>
+      <groupId>org.jetbrains.kotlin</groupId>
+      <artifactId>kotlin-stdlib</artifactId>
+      <version>${kotlin.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jetbrains.kotlin</groupId>
+      <artifactId>kotlin-test</artifactId>
+      <version>${kotlin.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- normale Libs -->
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>3.13.0</version>
+    </dependency>
+
+    <!-- Vorgriff auf Java 9 -->
+    <dependency>
+      <groupId>javax.money</groupId>
+      <artifactId>money-api</artifactId>
+      <type>jar</type>
+      <version>1.1</version>
+      <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.javamoney.moneta</groupId>
+          <artifactId>moneta-core</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <!-- Workaround, s. https://github.com/JavaMoney/jsr354-ri/issues/158 -->
+    <dependency>
+      <groupId>org.javamoney</groupId>
+      <artifactId>moneta-bp</artifactId>
+      <version>1.4.1</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>javax.annotation</groupId>
+          <artifactId>javax.annotation-api</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    
+    <!-- Serialisierung (optional) -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.15.2</version>
+      <optional>true</optional>
+    </dependency>
+
+    <!-- Test-Libs -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.10.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>5.10.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <version>5.10.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-commons</artifactId>
+      <version>1.10.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest</artifactId>
+      <version>2.2</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>2.0.7</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.patterntesting</groupId>
+      <artifactId>patterntesting-rt</artifactId>
+      <version>2.3.0</version>
+      <scope>test</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+          </exclusion>
+          <exclusion>
+              <groupId>org.javamoney</groupId>
+              <artifactId>javamoney-tck</artifactId>
+          </exclusion>
+          <exclusion>
+              <groupId>com.google.code.findbugs</groupId>
+              <artifactId>jsr305</artifactId>
+          </exclusion>
+        </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.javamoney</groupId>
+      <artifactId>javamoney-tck</artifactId>
+      <version>1.1</version>
+      <scope>test</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>org.javamoney</groupId>
+            <artifactId>moneta</artifactId>
+          </exclusion>
+          <exclusion>  <!-- We only need this for the Java 8 version -->
+            <groupId>org.javamoney</groupId>
+            <artifactId>moneta-bp</artifactId>
+          </exclusion>
+          <exclusion>
+              <groupId>com.google.code.findbugs</groupId>
+              <artifactId>jsr305</artifactId>
+          </exclusion>
+          <exclusion>
+              <groupId>org.hamcrest</groupId>
+              <artifactId>hamcrest-core</artifactId>
+          </exclusion>
+          <exclusion>
+              <groupId>org.mutabilitydetector</groupId>
+              <artifactId>MutabilityDetector</artifactId>
+          </exclusion>
+          <exclusion>
+            <artifactId>moneta-core</artifactId>
+            <groupId>org.javamoney.moneta</groupId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.beust</groupId>
+            <artifactId>jcommander</artifactId>
+          </exclusion>
+        </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.testng</groupId>
+      <artifactId>testng</artifactId>
+      <version>7.8.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>javax.annotation</groupId>
+      <artifactId>javax.annotation-api</artifactId>
+      <version>1.3.2</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mutabilitydetector</groupId>
+      <artifactId>MutabilityDetector</artifactId>
+      <version>0.10.6</version>
+      <scope>test</scope>
+    </dependency>
+
+  </dependencies>
+
+
+  <scm>
+    <connection>scm:git:git://github.com/oboehm/jfachwert.git</connection>
+    <url>https://github.com/oboehm/jfachwert</url>
+  </scm>
+
+  <issueManagement>
+    <system>github</system>
+    <url>https://github.com/oboehm/jfachwert/issues</url>
+  </issueManagement>
+
+  <ciManagement>
+    <system>Travis CI</system>
+    <url>https://travis-ci.org/oboehm/jfachwert</url>
+  </ciManagement>
+
+  <developers>
+    <developer>
+      <name>Oliver Boehm</name>
+      <id>oboehm</id>
+      <email>ob@jfachwert.de</email>
+      <organization>JUGS</organization>
+      <roles>
+        <role>Java Developer</role>
+      </roles>
+    </developer>
+  </developers>
+
+
+  <profiles>
+
+    <!--
+      Deses Profile verwendet AspectJ, um zusaetzliche Log-Ausgaben per
+      Aspekte zu injizieren. Die Aspekte dazu befinden sich unter src/main/aspect.
+      Das erzeugte Jar-File hat zusaetzlich ein "-debug" im Namen.
+    -->
+    <profile>
+
+      <id>debug</id>
+
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-jar-plugin</artifactId>
+              <version>3.2.0</version>
+              <configuration>
+                <classifier>debug</classifier>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
+
+    </profile>
+
+    <!--
+      Das doc-Profile dient zum Erzeugen der Architekt-Dokumentatin
+      in src/main/asciidoc. Es erzeugt aus den verschiedenen Kapiteln
+      eine einzige HTML-Datei (index.html). Die Vorlage dazu stammt aus
+      https://github.com/dukecon/dukecon
+
+      Mit 'mvn -Pdoc generate-resources' wird die Dokumentation erzeugt
+      und in target/generated-docs abgelegt.
+     -->
+    <profile>
+      <id>doc</id>
+      <build>
+        <defaultGoal>process-resources</defaultGoal>
+        <plugins>
+          <plugin>
+            <groupId>org.asciidoctor</groupId>
+            <artifactId>asciidoctor-maven-plugin</artifactId>
+            <version>2.2.3</version>
+            <dependencies>
+              <!-- Comment this section to use the default AsciidoctorJ artifact provided by the plugin -->
+              <dependency>
+                <groupId>org.asciidoctor</groupId>
+                <artifactId>asciidoctorj</artifactId>
+                <version>2.5.8</version>
+              </dependency>
+              <dependency>
+                <groupId>org.asciidoctor</groupId>
+                <artifactId>asciidoctorj-diagram</artifactId>
+                <version>2.2.7</version>
+              </dependency>
+            </dependencies>
+            <configuration>
+              <requires>
+                <require>asciidoctor-diagram</require>
+              </requires>
+              <!-- see http://asciidoctor.org/docs/asciidoctor-maven-plugin/ -->
+              <resources>
+                <resource>
+                  <!-- (Mandatory) Directory to copy from. Paths are relative to maven's ${baseDir} -->
+                  <directory>src/main/asciidoc/images</directory>
+                  <!-- (Optional) Directory to copy to. By default uses the option `outputDirectory` -->
+                  <targetPath>images</targetPath>
+                  <!-- (Optional) NOTE: SVN, GIT and other version control files are excluded by default, there's no need to add them -->
+                  <excludes>
+                    <exclude>**/.txt</exclude>
+                  </excludes>
+                  <!-- (Optional) If not set, includes all files but default exceptions mentioned -->
+                  <includes>
+                    <include>**/*.jpg</include>
+                    <include>**/*.gif</include>
+                    <include>**/*.png</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+            <executions>
+              <execution>
+                <id>generate-html-doc-de</id>
+                <phase>generate-resources</phase>
+                <goals>
+                  <goal>process-asciidoc</goal>
+                </goals>
+                <configuration>
+                  <backend>html5</backend>
+                  <sourceDirectory>${basedir}/src/main/asciidoc/de/</sourceDirectory>
+                  <outputDirectory>${project.build.directory}/generated-docs/de/</outputDirectory>
+                  <sourceDocumentName>index.adoc</sourceDocumentName>
+                  <imagesDir>../images</imagesDir>
+                  <attributes>
+                    <imagesdir>./images</imagesdir>
+                  </attributes>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+  </profiles>
+
+
+</project>

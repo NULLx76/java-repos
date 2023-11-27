@@ -1,0 +1,341 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.test</groupId>
+	<artifactId>Demo1</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>war</packaging>
+
+
+	<properties>
+		<common.version>1.0.0-SNAPSHOT</common.version>
+		<remote.version>1.0.0-SNAPSHOT</remote.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<spring.version>3.1.2.RELEASE</spring.version>
+		<hibernate.version>3.5.0-Final</hibernate.version>
+		<hibernate.annotations.version>3.2.0.Final</hibernate.annotations.version>
+		<zkSwitch>false</zkSwitch>
+		<schedulerAutoStartup>true</schedulerAutoStartup>
+	</properties>
+
+	<dependencies>
+
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.16</version>
+		</dependency>
+
+
+	</dependencies>
+	<build>
+		<finalName>demo</finalName>
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>true</filtering>
+			</resource>
+		</resources>
+		<testResources>
+			<testResource>
+				<directory>src/test/resources</directory>
+				<filtering>true</filtering>
+			</testResource>
+		</testResources>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-antrun-plugin</artifactId>
+					<version>1.2</version>
+					<executions>
+						<execution>
+							<id>prepare-dependencies-repackage-copy</id>
+							<phase>generate-resources</phase>
+							<goals>
+								<goal>run</goal>
+							</goals>
+							<configuration>
+								<tasks>
+									<delete dir="src/test/resources/deploy" />
+									<copy todir="src/test/resources/deploy" overwrite="true">
+										<fileset file="deploy/properties/${param}.properties" />
+									</copy>
+								</tasks>
+							</configuration>
+						</execution>
+					</executions>
+				</plugin>
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>org.codehaus.mojo</groupId>
+										<artifactId>properties-maven-plugin</artifactId>
+										<versionRange>1.0-alpha-1</versionRange>
+										<goals>
+											<goal>read-project-properties</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<execute />
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+		<plugins>
+			<!-- 跳过单元测试 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<includes>  
+      					<include> **/CheckURLTest.java</include>  
+    				</includes>
+				</configuration>
+			</plugin>
+
+			<!-- JDK1.7编译 -->
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>2.3.2</version>
+				<configuration>
+					<source>1.7</source>
+					<target>1.7</target>
+					<encoding>UTF-8</encoding>
+				</configuration>
+			</plugin>
+			<!-- 解决mina打包问题 -->
+			<plugin>
+				<groupId>org.apache.felix</groupId>
+				<artifactId>maven-bundle-plugin</artifactId>
+				<extensions>true</extensions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<configuration>
+					<encoding>UTF-8</encoding>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<version>2.2</version>
+				<configuration>
+					<warSourceDirectory>
+						${basedir}/webapp
+					</warSourceDirectory>
+					<webXml>${basedir}/webapp/WEB-INF/web.xml</webXml>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>properties-maven-plugin</artifactId>
+				<version>1.0-alpha-1</version>
+				<executions>
+					<execution>
+						<phase>initialize</phase>
+						<goals>
+							<goal>read-project-properties</goal>
+						</goals>
+						<configuration>
+							<files>
+								<file>deploy/properties/${param}.properties</file>
+							</files>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+	<profiles>
+		<profile>
+			<id>local</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<properties>
+				<param>local</param>
+			</properties>
+		</profile>
+		<profile>
+			<!-- 开发环境 -->
+			<id>dev</id>
+			<build>
+				<plugins>
+
+					<plugin>
+						<artifactId>maven-antrun-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>1</id>
+								<phase>integration-test</phase>
+								<goals>
+									<goal>run</goal>
+								</goals>
+								<configuration>
+									<tasks>
+										<echo>
+											demo Deploying
+										</echo>
+
+										<!-- 删除原有的war -->
+										<exec executable="/bin/rm">
+											<arg value="-rf" />
+											<arg value="/usr/local/ciecc/webapps/demo" />
+										</exec>
+
+										<!-- COPY WAR包并修改WAR包名称 -->
+										<exec executable="/bin/cp">
+											<arg value="-r" />
+											<arg value="${basedir}/target/demo" />
+											<arg value="/usr/local/ciecc/webapps/demo" />
+										</exec>
+										<echo>Deploy Complete</echo>
+									</tasks>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<!-- 测试环境 -->
+			<id>test</id>
+			<build>
+				<plugins>
+
+					<plugin>
+						<artifactId>maven-antrun-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>1</id>
+								<phase>integration-test</phase>
+								<goals>
+									<goal>run</goal>
+								</goals>
+								<configuration>
+									<tasks>
+										<echo>
+											demo Deploying
+										</echo>
+
+										<!-- 删除原有的war -->
+										<exec executable="/bin/rm">
+											<arg value="-rf" />
+											<arg value="/usr/local/ciecc/webapps/demo" />
+										</exec>
+
+										<!-- COPY WAR包并修改WAR包名称 -->
+										<exec executable="/bin/cp">
+											<arg value="-r" />
+											<arg value="${basedir}/target/demo" />
+											<arg value="/usr/local/ciecc/webapps/demo" />
+										</exec>
+										<echo>Deploy Complete</echo>
+									</tasks>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<!-- 灰度环境 -->
+			<id>gray</id>
+			<build>
+				<plugins>
+
+					<plugin>
+						<artifactId>maven-antrun-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>1</id>
+								<phase>integration-test</phase>
+								<goals>
+									<goal>run</goal>
+								</goals>
+								<configuration>
+									<tasks>
+										<echo>
+											demo Deploying
+										</echo>
+
+										<!-- 删除原有的war -->
+										<exec executable="/bin/rm">
+											<arg value="-rf" />
+											<arg value="/usr/local/ciecc/webapps/demo" />
+										</exec>
+
+										<!-- COPY WAR包并修改WAR包名称 -->
+										<exec executable="/bin/cp">
+											<arg value="-r" />
+											<arg value="${basedir}/target/demo" />
+											<arg value="/usr/local/ciecc/webapps/demo" />
+										</exec>
+										<echo>Deploy Complete</echo>
+									</tasks>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<!-- 生产环境 -->
+			<id>prod</id>
+			<build>
+				<plugins>
+
+					<plugin>
+						<artifactId>maven-antrun-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>1</id>
+								<phase>integration-test</phase>
+								<goals>
+									<goal>run</goal>
+								</goals>
+								<configuration>
+									<tasks>
+										<echo>
+											demo Deploying
+										</echo>
+
+										<!-- 删除原有的war -->
+										<exec executable="/bin/rm">
+											<arg value="-rf" />
+											<arg value="/usr/local/ciecc/webapps/demo" />
+										</exec>
+
+										<!-- COPY WAR包并修改WAR包名称 -->
+										<exec executable="/bin/cp">
+											<arg value="-r" />
+											<arg value="${basedir}/target/demo" />
+											<arg value="/usr/local/ciecc/webapps/demo" />
+										</exec>
+										<echo>Deploy Complete</echo>
+									</tasks>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+</project>
+	

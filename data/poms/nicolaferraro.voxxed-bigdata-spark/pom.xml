@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.voxxed.bigdata</groupId>
+    <artifactId>voxxed-bigdata-spark</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <!-- Source config -->
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+
+        <!-- Dependency versions -->
+        <spark.version>2.1.0</spark.version>
+
+        <!-- Test dependencies -->
+        <unirest.version>1.4.9</unirest.version>
+        <fabric8.version>2.2.200</fabric8.version>
+
+        <!-- Plugin versions -->
+        <fabric8.maven.plugin.version>3.2.28</fabric8.maven.plugin.version>
+        <maven-failsafe-plugin.version>2.19.1</maven-failsafe-plugin.version>
+        <maven.shade.plugin.version>3.0.0</maven.shade.plugin.version>
+        <scala.maven.plugin.version>3.2.1</scala.maven.plugin.version>
+        <exec-maven-plugin-version>1.6.0</exec-maven-plugin-version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-core_2.11</artifactId>
+            <version>${spark.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-streaming_2.11</artifactId>
+            <version>${spark.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-streaming-kafka-0-10_2.11</artifactId>
+            <version>${spark.version}</version>
+        </dependency>
+
+        <!-- TEST -->
+        <dependency>
+            <groupId>io.fabric8</groupId>
+            <artifactId>fabric8-arquillian</artifactId>
+            <version>${fabric8.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.mashape.unirest</groupId>
+            <artifactId>unirest-java</artifactId>
+            <version>${unirest.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <sourceDirectory>src/main/scala</sourceDirectory>
+
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <filtering>true</filtering>
+            </testResource>
+        </testResources>
+
+        <plugins>
+            <plugin>
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
+                <version>${scala.maven.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>testCompile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <args>
+                        <!-- work-around for https://issues.scala-lang.org/browse/SI-8358 -->
+                        <arg>-nobootcp</arg>
+                    </args>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>${maven.shade.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <createDependencyReducedPom>false</createDependencyReducedPom>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>fabric8-maven-plugin</artifactId>
+                <version>${fabric8.maven.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>resource</goal>
+                            <goal>build</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <resources>
+                        <env>
+                            <!-- Name of the Oshinko cluster-->
+                            <OSHINKO_CLUSTER_NAME>mycluster</OSHINKO_CLUSTER_NAME>
+
+                            <!-- Reference to the cluster configmap in src/main/fabric8/cluster-cm.yml -->
+                            <OSHINKO_NAMED_CONFIG>myconfig</OSHINKO_NAMED_CONFIG>
+
+                            <!-- Do not delete the cluster when the pod terminates -->
+                            <OSHINKO_DEL_CLUSTER>false</OSHINKO_DEL_CLUSTER>
+
+                            <!-- Exit if the application crashes (Openshift will create a new pod) -->
+                            <APP_EXIT>true</APP_EXIT>
+
+                            <!-- Name of the jar file -->
+                            <APP_FILE>${build.finalName}.jar</APP_FILE>
+
+                            <!-- Application main class to run -->
+                            <APP_MAIN_CLASS>com.voxxed.bigdata.spark.Stream</APP_MAIN_CLASS>
+
+                            <!-- Alternative settings: add packages here and mark them as provided (it will download them from internet) -->
+                            <!--<SPARK_OPTIONS>&#45;&#45;packages org.apache.spark:spark-streaming-kafka-0-10_2.11:${spark.version}</SPARK_OPTIONS>-->
+                        </env>
+                    </resources>
+                    <generator>
+                        <config>
+                            <java-exec>
+                                <!-- The radanalytics java-spark image -->
+                                <from>radanalyticsio/radanalytics-java-spark</from>
+                            </java-exec>
+                        </config>
+                    </generator>
+                </configuration>
+            </plugin>
+
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>openshift-it</id>
+
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>${maven-failsafe-plugin.version}</version>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <namespace.use.existing>testing</namespace.use.existing>
+
+                                <!-- Delete the namespace at the end -->
+                                <namespace.cleanup.enabled>true</namespace.cleanup.enabled>
+                            </systemPropertyVariables>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>${exec-maven-plugin-version}</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <phase>initialize</phase>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <executable>./prepare-testing.sh</executable>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+</project>

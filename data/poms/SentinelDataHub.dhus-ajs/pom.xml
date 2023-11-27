@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="ISO-8859-1" standalone="yes"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" 
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+            http://maven.apache.org/POM/4.0.0
+            http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+   <modelVersion>4.0.0</modelVersion>
+
+   <properties>
+      <dhus.core>2.0.8-osf</dhus.core>
+      <tomcat.port>8080</tomcat.port>
+   </properties>
+
+   <artifactId>dhus-web-client</artifactId>
+   <groupId>fr.gael.dhus</groupId>
+   <packaging>jar</packaging>
+   <version>1.2.1-osf</version>
+   <name>DHuS - Web Client</name>
+
+   <dependencies>
+      <dependency>
+         <groupId>fr.gael.dhus</groupId>
+         <artifactId>dhus-core</artifactId>
+         <version>${dhus.core}</version>
+         <scope>provided</scope>
+         <exclusions>
+            <exclusion>
+               <groupId>org.eclipse.jdt.core.compiler</groupId>
+               <artifactId>ecj</artifactId>
+            </exclusion>
+         </exclusions>
+      </dependency>
+   </dependencies>
+
+   <build>
+      <plugins>
+         <!-- Clean frontend -->
+         <plugin>
+            <artifactId>maven-clean-plugin</artifactId>
+            <version>2.6.1</version>
+            <configuration>
+               <filesets>
+                  <fileset>
+                     <directory>src/main/frontend/node</directory>
+                     <followSymlinks>false</followSymlinks>
+                  </fileset>
+                  <fileset>
+                     <directory>src/main/frontend/node_modules</directory>
+                     <followSymlinks>false</followSymlinks>
+                  </fileset>
+                  <fileset>
+                     <directory>src/main/frontend/.tmp</directory>
+                     <followSymlinks>false</followSymlinks>
+                  </fileset>
+                  <fileset>
+                     <directory>src/main/frontend/dist</directory>
+                     <followSymlinks>false</followSymlinks>
+                  </fileset>
+               </filesets>
+            </configuration>
+         </plugin>
+
+         <plugin>
+            <groupId>com.github.eirslett</groupId>
+            <artifactId>frontend-maven-plugin</artifactId>
+            <version>1.6</version>
+            <configuration>
+               <workingDirectory>src/main/frontend</workingDirectory>
+               <nodeVersion>v8.11.1</nodeVersion>
+               <npmVersion>3.8.6</npmVersion>
+               <yarnVersion>v1.12.3</yarnVersion>
+               <installDirectory>src/main/frontend</installDirectory>
+               <triggerfiles>
+                  <triggerfile>Gruntfile.js</triggerfile>
+                  <triggerfile>package.json</triggerfile>
+               </triggerfiles>
+            </configuration>
+            <executions>
+
+               <!-- node and yarn -->
+               <execution>
+                  <id>install node and yarn</id>
+                  <goals>
+                     <goal>install-node-and-yarn</goal>
+                  </goals>
+                  <configuration>
+                     <nodeVersion>v8.11.1</nodeVersion>
+                     <yarnVersion>v1.12.3</yarnVersion>
+                  </configuration>
+               </execution>
+
+               <!-- yarn -->
+               <execution>
+                  <id>yarn install</id>
+                  <goals>
+                     <goal>yarn</goal>
+                  </goals>
+               </execution>
+
+               <!-- grunt build -->
+               <execution>
+                  <id>grunt build</id>
+                  <goals>
+                     <goal>grunt</goal>
+                  </goals>
+                  <configuration>
+                     <arguments>build</arguments>
+                  </configuration>
+               </execution>
+            </executions>
+         </plugin>
+
+         <!-- Generate the War -->
+         <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-war-plugin</artifactId>
+            <version>2.3</version>
+            <executions>
+               <execution>
+                  <id>html-war-generator</id>
+                  <phase>prepare-package</phase>
+                  <goals>
+                     <goal>war</goal>
+                  </goals>
+               </execution>
+            </executions>
+            <configuration>
+               <warName>dhus-webclient</warName>
+               <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+               <packagingExcludes>WEB-INF/lib/*,WEB-INF/lib,WEB-INF/classes</packagingExcludes>
+               <archiveClasses>true</archiveClasses>
+               <webResources>
+                  <resource>
+                     <directory>src/main/frontend/dist</directory>
+                     <targetPath>/</targetPath>
+                  </resource>
+                  <resource>
+                     <directory>src/main/resources/web</directory>
+                     <includes>
+                        <include>dhus-api-servlet.xml</include>
+                        <include>spring.xml</include>
+                        <include>web.xml</include>
+                     </includes>
+                     <targetPath>WEB-INF</targetPath>
+                  </resource>
+               </webResources>
+               <failOnMissingWebXml>false</failOnMissingWebXml>
+            </configuration>
+         </plugin>
+
+         <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>3.2</version>
+            <configuration>
+               <source>1.7</source>
+               <target>1.7</target>
+               <encoding>ISO-8859-1</encoding>
+               <compilerArgs>
+                  <arg>-Xlint:all,-options,-path</arg>
+               </compilerArgs>
+            </configuration>
+         </plugin>
+         <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+            <version>2.5</version>
+            <configuration>
+               <archive>
+                  <manifest>
+                     <addDefaultImplementationEntries>
+                        true
+                     </addDefaultImplementationEntries>
+                  </manifest>
+               </archive>
+            </configuration>
+         </plugin>
+      </plugins>
+   </build>
+
+   <repositories>
+      <repository>
+         <id>osf-public</id>
+         <name>OSF Public Repository</name>
+         <url>https://nexus-repository.onda-dias.eu/repository/Public_Repositories/</url>
+         <layout>default</layout>      
+      </repository>
+   </repositories>
+
+   <distributionManagement>
+      <repository>
+         <uniqueVersion>true</uniqueVersion>
+         <id>osf-delivery</id>
+         <name>OSF Releases Repository</name>
+         <url>https://nexus-repository.onda-dias.eu/repository/OSF_releases/</url>
+         <layout>default</layout>
+      </repository>
+   </distributionManagement>
+
+   <issueManagement>
+      <system>Jira</system>
+      <url>https://copernicus.serco.eu/jira-osf</url>
+   </issueManagement>
+
+   <scm>
+      <connection>scm:git:https://github.com/SentinelDataHub/dhus-ajs</connection>
+      <developerConnection>scm:git:https://github.com/SentinelDataHub/dhus-ajs</developerConnection>
+      <tag>HEAD</tag>
+      <url>https://github.com/SentinelDataHub/dhus-ajs</url>
+   </scm>
+
+</project>

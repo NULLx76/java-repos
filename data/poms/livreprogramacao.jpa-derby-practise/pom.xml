@@ -1,0 +1,142 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.ferris.mavenintegrationtestingwithderby</groupId>
+    <artifactId>MavenIntegrationTestingWithDerby</artifactId>
+    <version>1.0.0.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>MavenIntegrationTestingWithDerby</name>
+    <url>https://github.com/mjremijan/MavenIntegrationTestingWithDerby</url>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <ferris.property.test.data.user>sa</ferris.property.test.data.user>
+        <ferris.property.test.data.pass>as</ferris.property.test.data.pass>
+        <ferris.property.test.data.driver>org.apache.derby.jdbc.ClientDriver</ferris.property.test.data.driver>   
+        <ferris.property.test.data.dialect>org.hibernate.dialect.DerbyDialect</ferris.property.test.data.dialect>     
+        <ferris.property.test.data.db>test-data</ferris.property.test.data.db>
+    </properties>
+
+  
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.10</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-core</artifactId>
+            <version>3.6.10.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-entitymanager</artifactId>
+            <version>3.6.10.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.transaction</groupId>
+            <artifactId>jta</artifactId>
+            <version>1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.13</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.derby</groupId>
+            <artifactId>derby</artifactId>
+            <version>10.12.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.derby</groupId>
+            <artifactId>derbyclient</artifactId>
+            <version>10.12.1.1</version>
+        </dependency>
+    </dependencies>
+  
+  
+    <build>
+        <!--
+            Make sure resources are filtered to get the properties defined above
+        -->
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <filtering>true</filtering>
+            </testResource>
+        </testResources>
+    
+        <plugins>
+            <!-- 
+                The maven-failsafe-plugin is used to run integration tests.
+                The tests are part of /src/main/test and should end with 
+                *IT.java
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.12.4</version>
+                <executions>
+                    <execution>
+                        <id>integration-tests</id>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                        <configuration>
+                            <skipTests>${skip.integration.tests}</skipTests>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- 
+                This plugin will take care of starting a Derby database
+                and creating the tables/data before integration testing
+                begins. It will then cleanup everything afterwards
+            -->        
+            <plugin>
+                <groupId>com.btmatthews.maven.plugins.inmemdb</groupId>
+                <artifactId>inmemdb-maven-plugin</artifactId>
+                <version>1.4.2</version>
+                <configuration>
+                    <monitorKey>inmemdb</monitorKey>
+                    <monitorPort>11527</monitorPort>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>run</id>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <phase>pre-integration-test</phase>
+                        <configuration>
+                            <daemon>true</daemon>
+                            <type>derby</type>
+                            <database>${ferris.property.test.data.db}</database>
+                            <username>${ferris.property.test.data.user}</username>
+                            <password>${ferris.property.test.data.pass}</password>
+                            <sources>
+                                <script>
+                                    <sourceFile>src/test/resources/sql/test-data-derby.sql</sourceFile>
+                                </script>                               
+                            </sources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>stop</id>
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>
+                        <phase>post-integration-test</phase>
+                    </execution>
+                </executions>  
+            </plugin>                                
+        </plugins>
+    </build>
+</project>

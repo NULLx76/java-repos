@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>pro.parseq</groupId>
+	<artifactId>solvent</artifactId>
+    <version>1.4.0-RELEASE</version>
+    <!-- NOTE: war packaging being more appropriate currently is incompatible with Hazelcast.
+        For details see:
+            https://github.com/hazelcast/hazelcast/issues/2395
+        and:
+            https://github.com/spring-projects/spring-boot/issues/9014
+     -->
+	<packaging>jar</packaging>
+	<name>solvent</name>
+	<description>Concentrate browser server component</description>
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>1.5.3.RELEASE</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+
+    <profiles>
+        <profile>
+            <id>windows</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <project.package.frontendBuildScript>install.cmd</project.package.frontendBuildScript>
+            </properties>
+        </profile>
+        <profile>
+            <id>unix</id>
+            <activation>
+                <os>
+                    <family>unix</family>
+                </os>
+            </activation>
+            <properties>
+                <!-- Note that in Linux we must explicitly specify current directory prefix -->
+                <project.package.frontendBuildScript>./install.sh</project.package.frontendBuildScript>
+            </properties>
+        </profile>
+        <!-- Profile that activates frontend components inclusion into the application -->
+        <profile>
+            <id>standalone</id>
+            <build>
+                <finalName>concentrate-${project.version}</finalName>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                            <artifactId>exec-maven-plugin</artifactId>
+                            <!-- Clone frontend components sources -->
+                            <executions>
+                                <execution>
+                                    <id>clone-frontend</id>
+                                    <goals>
+                                        <goal>exec</goal>
+                                    </goals>
+                                    <phase>generate-resources</phase>
+                                    <configuration>
+                                        <executable>git</executable>
+                                        <workingDirectory>target</workingDirectory>
+                                        <arguments>
+                                            <argument>clone</argument>
+                                            <argument>--depth=1</argument>
+                                            <!-- Moving .git folder out of static components -->
+                                            <argument>-b</argument>
+                                            <argument>${project.build.standalone.branch}</argument>
+                                            <argument>--separate-git-dir</argument>
+                                            <argument>.git</argument>
+                                            <argument>${project.build.standalone.repository}</argument>
+                                            <argument>${project.build.finalName}/META-INF/resources</argument>
+                                        </arguments>
+                                    </configuration>
+                                </execution>
+                                <!-- Build frontend components sources -->
+                                <execution>
+                                    <id>frontend-build</id>
+                                    <goals>
+                                        <goal>exec</goal>
+                                    </goals>
+                                    <phase>generate-resources</phase>
+                                    <configuration>
+                                        <executable>${project.package.frontendBuildScript}</executable>
+                                        <workingDirectory>target/${project.build.finalName}/META-INF/resources</workingDirectory>
+                                    </configuration>
+                                </execution>
+                            </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<java.version>1.8</java.version>
+
+		<!-- Override version from bundle to use some Java 8 features from 3.6.x -->
+		<assertj-core.version>3.6.1</assertj-core.version>
+        
+        <postgresql.version>9.4.1208.jre7</postgresql.version>
+
+		<reference-explorer.version>0.1.1-RELEASE</reference-explorer.version>
+        <vcf-explorer.version>1.1.1-RELEASE</vcf-explorer.version>
+
+		<!-- Application deploying properties -->
+		<project.deploy.server.protocol>http</project.deploy.server.protocol>
+		<project.deploy.server.address>tests.parseq.pro</project.deploy.server.address>
+		<project.deploy.server.port>8080</project.deploy.server.port>
+		<project.deploy.server.name>parseq-test-server</project.deploy.server.name>
+		<project.deploy.server.username>tomcat</project.deploy.server.username>
+		<project.deploy.server.password>tomcat</project.deploy.server.password>
+		<project.deploy.server.path>/${project.name}</project.deploy.server.path>
+
+        <!-- Standalone build properties default values -->
+        <!-- You can override them like this: mvn package -P standalone -Dproject.build.standalone.branch=foo -->
+
+        <!-- Concentrate (front-end component) fetching properties  -->
+        <project.build.standalone.repository>https://github.com/parseq/concentrate.git</project.build.standalone.repository>
+        <project.build.standalone.branch>${project.version}</project.build.standalone.branch>
+	</properties>
+
+	<dependencies>
+    
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter</artifactId>
+		</dependency>
+        
+		<dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-tomcat</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-hateoas</artifactId>
+		</dependency>
+        
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.springframework.session</groupId>
+            <artifactId>spring-session</artifactId>
+        </dependency>
+
+        <!-- For sessions operation -->
+        <dependency>
+                <groupId>com.hazelcast</groupId>
+                <artifactId>hazelcast</artifactId>
+        </dependency>
+		
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>${assertj-core.version}</version>
+        </dependency>
+        
+		<dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.4</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.5</version>
+        </dependency>
+		
+		<!-- Internally developed artifacts -->
+		<dependency>
+		    <groupId>pro.parseq</groupId>
+		    <artifactId>vcf-explorer</artifactId>
+		    <version>${vcf-explorer.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>pro.parseq</groupId>
+			<artifactId>reference-explorer</artifactId>
+			<version>${reference-explorer.version}</version>
+		</dependency>
+        
+        <!-- Test artifacts -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+
+			<!-- Using plugin for Tomcat 7 as https://issues.apache.org/jira/browse/MTOMCAT-234 -->
+			<plugin>
+				<groupId>org.apache.tomcat.maven</groupId>
+				<artifactId>tomcat7-maven-plugin</artifactId>
+				<version>2.2</version>
+				<configuration>
+					<url>${project.deploy.server.protocol}://${project.deploy.server.address}:${project.deploy.server.port}/manager/text</url>
+					<server>${project.deploy.server.name}</server>
+					<username>${project.deploy.server.username}</username>
+					<password>${project.deploy.server.password}</password>
+					<path>${project.deploy.server.path}</path>
+				</configuration>
+			</plugin>
+		</plugins>
+        
+        <resources>
+            <resource>
+                <directory>${project.basedir}/src/main/resources</directory>
+            </resource>
+            <resource>
+                <targetPath>${project.build.outputDirectory}/META-INF/resources</targetPath>
+                <directory>target/${project.build.finalName}/META-INF/resources</directory>
+            </resource>
+        </resources>
+        
+	</build>
+
+</project>

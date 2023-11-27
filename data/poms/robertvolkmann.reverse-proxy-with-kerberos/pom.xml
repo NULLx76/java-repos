@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.rvolkmann.kerberos</groupId>
+    <artifactId>reverse-proxy-with-kerberos</artifactId>
+    <packaging>jar</packaging>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.camel</groupId>
+                <artifactId>camel-parent</artifactId>
+                <version>2.18.3</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-netty4-http</artifactId>
+        </dependency>
+
+        <!-- logging -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- testing -->
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.codelibs</groupId>
+            <artifactId>spnego</artifactId>
+            <version>1.0.1</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <defaultGoal>verify</defaultGoal>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.5.1</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.0.2</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <mainClass>com.rvolkmann.kerberos.Camel</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>0.20.0</version>
+                <configuration>
+                    <images>
+                        <image>
+                            <name>rvolkmann/reverse-proxy</name>
+                            <build>
+                                <from>openjdk:8-jre-alpine</from>
+                                <assembly>
+                                    <descriptorRef>artifact-with-dependencies</descriptorRef>
+                                </assembly>
+                                <ports>
+                                    <port>8080/tcp</port>
+                                </ports>
+                                <workdir>/maven</workdir>
+                                <entryPoint>java -jar ${project.build.finalName}.jar</entryPoint>
+                            </build>
+                            <run>
+                                <wait>
+                                    <log>started in</log>
+                                    <time>2000</time>
+                                </wait>
+                            </run>
+                        </image>
+                        <image>
+                            <name>rvolkmann/kdc</name>
+                            <build>
+                                <from>alpine:3.4</from>
+                                <runCmds>
+                                    <run>apk add --no-cache krb5-server</run>
+                                    <run>kdb5_util -P masterkey -r LOCALHOST create -s</run>
+                                    <run>kadmin.local -r LOCALHOST -q "addprinc -pw password HTTP/localhost@LOCALHOST"</run>
+                                    <run>kadmin.local -r LOCALHOST -q "addprinc -pw password user@LOCALHOST"</run>
+                                </runCmds>
+                                <ports>
+                                    <port>88/udp</port>
+                                </ports>
+                                <entryPoint>syslogd &amp;&amp; krb5kdc -r LOCALHOST &amp;&amp; tail -F /var/log/messages</entryPoint>
+                                <optimise>true</optimise>
+                            </build>
+                            <run>
+                                <ports>
+                                    <port>localhost:88:88/udp</port>
+                                </ports>
+                            </run>
+                        </image>
+                        <image>
+                            <name>rvolkmann/httpd-krb</name>
+                            <build>
+                                <from>alpine:3.4</from>
+                                <optimise>true</optimise>
+                                <runCmds>
+                                    <run>apk add --no-cache apache2 apache2-proxy apache-mod-auth-kerb</run>
+                                    <run>mkdir -p /run/apache2</run>
+                                    <run>sed -i 's/^#LoadModule slotmem_shm_module/LoadModule slotmem_shm_module/' /etc/apache2/httpd.conf
+                                    </run>
+                                    <run>sed -i 's/^#LoadModule rewrite_module/LoadModule rewrite_module/' /etc/apache2/httpd.conf</run>
+                                    <run>ln -sf /proc/self/fd/1 /var/log/apache2/access.log</run>
+                                    <run>ln -sf /proc/self/fd/1 /var/log/apache2/error.log</run>
+                                </runCmds>
+                                <ports>
+                                    <port>80/tcp</port>
+                                </ports>
+                                <entryPoint>httpd -D FOREGROUND</entryPoint>
+                            </build>
+                            <run>
+                                <links>
+                                    <link>rvolkmann/reverse-proxy:camel</link>
+                                </links>
+                                <ports>
+                                    <port>localhost:8080:80/tcp</port>
+                                </ports>
+                                <volumes>
+                                    <bind>
+                                        <volume>${project.basedir}/src/test/resources/krb5.keytab:/etc/krb5.keytab</volume>
+                                        <volume>${project.basedir}/src/test/resources/krb5.conf:/etc/krb5.conf</volume>
+                                        <volume>${project.basedir}/src/test/resources/vhost.conf:/etc/apache2/conf.d/vhost.conf</volume>
+                                    </bind>
+                                </volumes>
+                            </run>
+                        </image>
+                    </images>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>start</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>start</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>stop</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.18.1</version>
+                <configuration>
+                    <skip>false</skip>
+                    <systemPropertyVariables>
+                        <java.security.krb5.realm>LOCALHOST</java.security.krb5.realm>
+                        <java.security.krb5.kdc>localhost:88</java.security.krb5.kdc>
+                        <java.security.auth.login.config>${project.basedir}/src/test/resources/login.conf</java.security.auth.login.config>
+                    </systemPropertyVariables>
+                    <failIfNoTests>true</failIfNoTests>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>verify</id>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

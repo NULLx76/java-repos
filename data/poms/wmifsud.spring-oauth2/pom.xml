@@ -1,0 +1,239 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.oauth2</groupId>
+	<artifactId>SpringOAuth2</artifactId>
+	<version>1.0.0</version>
+
+	<name>SpringOAuth2</name>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<springframework.version>4.3.7.RELEASE</springframework.version>
+		<springsecurity.version>4.2.2.RELEASE</springsecurity.version>
+		<springsecurityoauth2.version>2.1.0.RELEASE</springsecurityoauth2.version>
+		<jackson.library>2.8.7</jackson.library>
+		<spring.boot.version>1.5.2.RELEASE</spring.boot.version>
+		<maven.compiler.plugin.version>3.6.1</maven.compiler.plugin.version>
+		<spring.boot.maven.plugin.version>1.5.1.RELEASE</spring.boot.maven.plugin.version>
+		<java.version>1.8</java.version>
+		<swagger.version>2.6.1</swagger.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-logging</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.security.oauth</groupId>
+			<artifactId>spring-security-oauth2</artifactId>
+		</dependency>
+
+		<!-- redis token store dependencies -->
+		<dependency>
+			<groupId>org.springframework.data</groupId>
+			<artifactId>spring-data-redis</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>redis.clients</groupId>
+			<artifactId>jedis</artifactId>
+		</dependency>
+
+		<!-- database connection pool -->
+		<dependency>
+			<groupId>com.zaxxer</groupId>
+			<artifactId>HikariCP</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-jdbc</artifactId>
+		</dependency>
+		<!-- postgreSQL dependency -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-simple</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<!-- swagger dependency -->
+		<dependency>
+			<groupId>io.springfox</groupId>
+			<artifactId>springfox-swagger2</artifactId>
+			<version>${swagger.version}</version>
+			<scope>compile</scope>
+		</dependency>
+		<!-- swagger ui dependency -->
+		<dependency>
+			<groupId>io.springfox</groupId>
+			<artifactId>springfox-swagger-ui</artifactId>
+			<version>${swagger.version}</version>
+			<scope>compile</scope>
+		</dependency>
+
+	</dependencies>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<!-- Import dependency management from Spring Boot -->
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-dependencies</artifactId>
+				<version>${spring.boot.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<version>${spring.boot.maven.plugin.version}</version>
+				<!-- repackage required to make application executable -->
+				<executions>
+					<execution>
+						<goals>
+							<goal>repackage</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<!-- executable required to make application executable -->
+					<executable>true</executable>
+					<mainClass>com.oauth2.Main</mainClass>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${maven.compiler.plugin.version}</version>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+		</plugins>
+		<finalName>${project.name}</finalName>
+	</build>
+	<profiles>
+		<profile>
+			<id>swagger</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+		</profile>
+		<profile>
+			<id>docker</id>
+			<activation>
+				<activeByDefault>false</activeByDefault>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>io.fabric8</groupId>
+						<artifactId>docker-maven-plugin</artifactId>
+						<version>0.20.1</version>
+						<configuration>
+							<images>
+								<image>
+									<alias>spring-oauth2-app</alias>
+									<name>spring-oauth2</name>
+									<build>
+										<from>openjdk:latest</from>
+										<assembly>
+											<descriptorRef>artifact</descriptorRef>
+										</assembly>
+										<cmd>java -jar maven/${project.name}.jar</cmd>
+									</build>
+									<run>
+										<links>
+											<link>spring-oauth2-db</link>
+											<link>spring-oauth2-redis</link>
+										</links>
+										<ports>
+											<port>9080:9080</port>
+										</ports>
+										<wait>
+											<log>Tomcat started on port</log>
+											<time>15000</time>
+										</wait>
+									</run>
+								</image>
+								<image>
+									<alias>spring-oauth2-db</alias>
+									<name>postgres:9.6</name>
+									<run>
+										<volumes>
+											<bind>
+												<volume>${project.basedir}/docker/spring-oauth2-db/schema.sql:/docker-entrypoint-initdb.d/schema.sql</volume>
+											</bind>
+										</volumes>
+										<wait>
+											<log>database system is ready to accept connections</log>
+											<time>20000</time>
+										</wait>
+									</run>
+								</image>
+								<image>
+									<alias>spring-oauth2-redis</alias>
+									<name>redis:3.2.8</name>
+									<run>
+										<wait>
+											<log>The server is now ready to accept connections on port</log>
+											<time>5000</time>
+										</wait>
+									</run>
+								</image>
+							</images>
+						</configuration>
+						<executions>
+							<execution>
+								<id>docker:build</id>
+								<phase>package</phase>
+								<goals>
+									<goal>build</goal>
+								</goals>
+							</execution>
+							<execution>
+								<id>docker:start</id>
+								<phase>install</phase>
+								<goals>
+									<goal>run</goal>
+									<goal>logs</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+</project>

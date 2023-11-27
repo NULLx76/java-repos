@@ -1,0 +1,238 @@
+<?xml version="1.0"?>
+<!--
+  ~ Copyright 2017 the original author or authors.
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~        http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.github.indrabasak</groupId>
+    <artifactId>patra-web</artifactId>
+    <version>2.0.0</version>
+
+    <name>Patra Webjar Application</name>
+    <description>A Webjar containing Patra's static web content. Patra visualizes Dropwizard Metrics
+        in a user friendly way.
+    </description>
+    <url>https://indrabasak.github.io/patra-web/</url>
+
+    <licenses>
+        <license>
+            <name>The Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>ibasak</id>
+            <name>Indra Basak</name>
+            <email>indra.basak1@gmail.com</email>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/indrabasak/patra-web.git</connection>
+        <developerConnection>scm:git:ssh://github.com:indrabasak/patra-web.git</developerConnection>
+        <url>http://github.com/indrabasak/patra-web/tree/master</url>
+    </scm>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
+
+    <properties>
+        <java.version>1.8</java.version>
+        <maven.compiler.plugin.version>3.8.1</maven.compiler.plugin.version>
+        <metrics.url>metrics/metrics</metrics.url>
+        <patra.version>2.0.0</patra.version>
+        <patra.download.url>https://github.com/indrabasak/patra/archive/v${patra.version}.zip</patra.download.url>
+        <project.build.sourceEncoding>ISO-8859-1</project.build.sourceEncoding>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>com.googlecode.maven-download-plugin</groupId>
+                <artifactId>download-maven-plugin</artifactId>
+                <version>1.6.0</version>
+                <executions>
+                    <execution>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>wget</goal>
+                        </goals>
+                        <configuration>
+                            <url>${patra.download.url}</url>
+                            <unpack>true</unpack>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                            <md5>6c7d96b3d428f9a028afac311c7855a4</md5>
+                            <!--<skipCache>true</skipCache>-->
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <sequential>
+                                    <echo>Copying Patra files</echo>
+                                    <copy todir="${project.build.directory}/classes/META-INF/resources/webjars/patra">
+                                        <fileset dir="${project.build.directory}/patra-${patra.version}/dist">
+                                            <include name="**"/>
+                                        </fileset>
+                                    </copy>
+                                    <echo>Moving 'html' files</echo>
+                                    <copy todir="${project.build.directory}/classes/META-INF/resources">
+                                        <fileset
+                                                dir="${project.build.directory}/classes/META-INF/resources/webjars/patra">
+                                            <include name="*.html"/>
+                                        </fileset>
+                                    </copy>
+                                    <echo>Deleting old 'html' files</echo>
+                                    <delete>
+                                        <fileset
+                                                dir="${project.build.directory}/classes/META-INF/resources/webjars/patra">
+                                            <include name="*.html"/>
+                                        </fileset>
+                                    </delete>
+                                    <echo>Renaming 'index.html' to 'patra-ui.html'</echo>
+                                    <move file="${project.build.directory}/classes/META-INF/resources/index.html"
+                                          tofile="${project.build.directory}/classes/META-INF/resources/patra-ui.html"/>
+                                    <echo>Renaming the 'css' path in 'patra-ui.html'</echo>
+                                    <replace token="link href='css/"
+                                             value="link href='webjars/patra/css/"
+                                             dir="${project.build.directory}/classes/META-INF/resources">
+                                        <include name="patra-ui.html"/>
+                                    </replace>
+                                    <echo>Renaming the 'js' path in 'patra-ui.html'</echo>
+                                    <replace token="script src='js/"
+                                             value="script src='webjars/patra/js/"
+                                             dir="${project.build.directory}/classes/META-INF/resources">
+                                        <include name="patra-ui.html"/>
+                                    </replace>
+                                    <echo>Renaming the "js" path in 'patra-ui.html'</echo>
+                                    <replace token="script src=&quot;js/"
+                                             value="script src=&quot;webjars/patra/js/"
+                                             dir="${project.build.directory}/classes/META-INF/resources">
+                                        <include name="patra-ui.html"/>
+                                    </replace>
+                                    <echo>Renaming the "images" path in 'patra-ui.html'</echo>
+                                    <replace token="href=&quot;images/"
+                                             value="href=&quot;webjars/patra/images/"
+                                             dir="${project.build.directory}/classes/META-INF/resources">
+                                        <include name="patra-ui.html"/>
+                                    </replace>
+                                    <replace token="src=&quot;images/"
+                                             value="src=&quot;webjars/patra/images/"
+                                             dir="${project.build.directory}/classes/META-INF/resources">
+                                        <include name="patra-ui.html"/>
+                                    </replace>
+                                    <echo>Renaming the metrics url</echo>
+                                    <replace token="http://localhost:8080/metrics/metrics"
+                                             value="${metrics.url}"
+                                             dir="${project.build.directory}/classes/META-INF/resources">
+                                        <include name="patra-ui.html"/>
+                                    </replace>
+                                    <echo>Deleting patra folder</echo>
+                                    <delete dir="${project.build.directory}/patra-${patra.version}"/>
+                                </sequential>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven.compiler.plugin.version}</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>nexus-staging-maven-plugin</artifactId>
+                <version>1.6.8</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <serverId>ossrh</serverId>
+                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.2.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.2.0</version>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.6</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

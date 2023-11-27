@@ -1,0 +1,406 @@
+ <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.algaworks</groupId>
+	<artifactId>brewer</artifactId>
+	<version>1.0.0-SNAPSHOT</version> <!-- *** Ver o esquema de deploy em tomcat externo mais abaixo. Aula 28-3 00:15*** -->
+
+	<packaging>war</packaging>
+	
+	<!-- 
+		É muito comum as empresas terem um servidor dedicado, com o Linux instalado e aí tem um tomcat instalado para 
+			poder fazer deploy da sua aplicação. Empresas de medio e grande porte, isso é bem comum.
+		Também é possível ter uma maquina completa em algum lugar na nuvem. Ter uma maquina inteira pra instalar o que
+			você quiser, como java, tomcat. O esquema na Aula 28-03 00:43 é para aprender fazer uma maquina sua 
+			tipo de empresa (Dedicado) e também na nuvem completa.
+		Para isso precisamos do java 8 jdk (no mínimo para essa nossa aplicação java 8), tomcat instalado/descompactado, 
+			coloca as libs dentro dele e ja libera o projeto dentro dele.
+		O processo de liberação de um projeto pode variar de empresas pra empresas. Existem ferramentas que auxiliam
+			você a fazer isso.
+		Ver artigo http://dzone.com/articles/whi-i-never-use-maven-release
+		Na tag <fileName> vai estar a forma padrão de como vai ser gerado nosso arquivo war, esse padrão geralmente é 
+			${artifactId}-${version}, mas vamos utilizar o artifactId nessa aula e aí o arquivo vai ser gerado com o nome
+			brewer.war.
+		Na hora de gerar o build e empacotar o projeto é só clicar com o botão direito no projeto e clicar em run as> build...
+		Name = brewer - Package
+		Goals = clean Package // limpa o projeto e gera o .war
+		
+		Depois que clicar no <run> ele vai gerar dentro da pasta target o nosso .war
+		Vai ter algo como, Building war: C:\Eclipse Mars\Dev\Projetos\brewer\target\brewer.war
+		Copiar esse arquivo para a pasta do tomcat/webapps, exemplo c:\apache-tomcat-8.0.35/webapps 
+		
+		Ir até o caminho pelo terminal linux ou copiar o .war para a pasta webapps do nosso tomcat.
+		Ex: mnt/c/Eclipse Mars/Ferramentas/apache-tomcat-8.0.36-windows-x64/apache-tomcat-8.0.36/webapps
+		
+		Depois no caso do linux ou mac ir para a basta bin do apache e procurar pelo ./startup.bat no windows e no linux
+			fica ./startup.sh
+		O tomcat vai começar a rodar a aplicação e é possível acompanhar o log pelo indo até o diretorio pelo terminal
+			em /logs dentro do tomcat ainda e então digitar tail -f catalina.out 
+			e então vai começar a exibir o log da aplicação.
+			
+		Esse recurso é possível usar quando se tem um servidor dedicado ou um maquina completa na nuvem.	
+		
+	 -->
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+		<failOnMissingWebXml>false</failOnMissingWebXml>
+
+		<java.version>1.8</java.version>
+		<maven-compiler-pluging.version>3.2</maven-compiler-pluging.version>
+		<flyway-maven-plugin.version>4.0.2</flyway-maven-plugin.version>
+		<mysql-connector-java.version>5.1.39</mysql-connector-java.version>
+
+		<!-- Spring MVC -->
+		<spring-framework.version>4.3.0.RELEASE</spring-framework.version>
+
+		<!-- Servlet API -->
+		<servlet.version>3.1.0</servlet.version>
+		
+		<!-- Thymeleaf -->
+		<thymeleaf.version>3.0.5.RELEASE</thymeleaf.version>
+		
+		<!-- Bean Validation / Hibernate Validator -->
+		<hibernate-validator.version>5.2.4.Final</hibernate-validator.version>
+		
+		<!-- Thymeleaf - Layout Dialect -->
+		<thymeleaf-layout-dialect.version>2.0.1</thymeleaf-layout-dialect.version>
+		
+		<!-- Logging -->
+		<log4j.version>2.6</log4j.version>
+		<jcl-over-slf4j.version>1.7.21</jcl-over-slf4j.version>
+		
+		<!-- JPA / Hibernate -->
+		<hibernate.version>5.1.0.Final</hibernate.version>
+		
+		<!-- Spring Data JPA -->
+		<spring-data-jpa.version>1.10.2.RELEASE</spring-data-jpa.version>
+		
+		<!-- Jackson - JSON -->
+		<jackson-core.version>2.7.5</jackson-core.version>
+		
+		<!-- thumbnailator - Gerar Thumbnail -->
+ 		<!-- https://github.com/coobird/thumbnailator -->
+		<thumbnailator.version>0.4.8</thumbnailator.version>
+		
+		<!-- Thymeleaf extras data attribute -->
+		<thymeleaf-extras-data-attribute.version>2.0.1</thymeleaf-extras-data-attribute.version>
+		
+		<!-- Cache - Guava -->
+		<guava.version>19.0</guava.version>
+		
+		<!-- Apache Bean Utils -->
+		<commons-beanutils.version>1.9.2</commons-beanutils.version>
+		
+		<!-- Spring Security -->
+		<spring-security.version>4.1.1.RELEASE</spring-security.version>
+		
+		<!-- Thymeleaf - Extras Spring Security -->
+		<thymeleaf-extras-springsecurity.version>3.0.0.RELEASE</thymeleaf-extras-springsecurity.version>
+		
+		<!-- JUnit -->
+		<junit.version>4.12</junit.version>		
+		
+		<!-- Java Mail -->
+		<javax.mail.version>1.5.6</javax.mail.version>
+		
+		<!-- AWS SDK - S3 -->
+		<aws-java-sdk-s3.version>1.10.77</aws-java-sdk-s3.version>
+		
+		<!-- Apache Commons DBCP - usado para configração do database de produção no jpaConfig -->
+		<commons-dbcp2.version>2.1.1</commons-dbcp2.version>
+		
+	</properties>
+
+	<build>
+	
+		<finalName>${project.artifactId}</finalName>
+		
+		<plugins>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${maven-compiler-pluging.version}</version>
+				<configuration>
+					<source>${java.version}</source>
+					<target>${java.version}</target>
+				</configuration>
+			</plugin>
+			
+			<plugin>
+				<groupId>org.flywaydb</groupId>
+				<artifactId>flyway-maven-plugin</artifactId>
+				<version>${flyway-maven-plugin.version}</version>
+				<configuration>
+					<driver>com.mysql.jdbc.Driver</driver>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+	
+	<!-- Vamos configurar o profile para quando for produção (momento de compilação) 
+			usar a conexão Apache Commons DBCP e quando for local usar a nossa JNDI 
+			no JPAConfig tem os data sources com profiles 'prod e local', mas é do spring
+			e é para depois que compilou ele injeta o data source conforme o profile que foi setado-->
+	<profiles>
+		<profile>
+			<id>local</id>
+		</profile>
+		
+		<profile>
+			<id>prod</id>
+			
+				<!-- Aqui quando é para quando for empacotar com o profile de 'prod', precisamos informar qual é 
+					  o active default, pois quando ele for empacotar sem informarmos que é local, ele utiliza esse
+					  empacotamento e assim o nosso driver mysql é empacotado para poder jogar o .war lá no heroku.
+					  Aula 28.8 24:28 -->
+				<activation>
+					<activeByDefault>true</activeByDefault>
+				</activation>
+				
+				<dependencies>
+					<!-- MySQL Driver 
+							O Driver mysql veio pra cá na aula 28.8 19:43 para poder rodar lá no heroku, ou seja, para
+								rodar no servidor precisamos do driver aqui, pois lá no heroku não temos acesso ao tom cat
+								para pegar essa configuração e o <scope> é para empacotar junto com a nossa aplicação  
+					Tem como testar e validar que essa dependencia não foi empacotada no .war da aplicação, para isso 
+					 e necessario instalar o maven e executar alguns comando no bash linux quando for local, se atravez desse
+					 maven você empacotar como 'prod' ele vai empacotar dentro do .war o mysql para ser usado 
+					 la dentro do heroku, Aula 28.8 23:00			
+					-->
+					<dependency>
+						<groupId>mysql</groupId>
+						<artifactId>mysql-connector-java</artifactId>
+						<version>${mysql-connector-java.version}</version>
+						<scope>compile</scope>
+					</dependency>
+				</dependencies>
+		</profile>
+	</profiles>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-framework-bom</artifactId>
+				<version>${spring-framework.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<dependencies>
+		<!-- Spring MVC -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-webmvc</artifactId>
+			<scope>compile</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>commons-logging</groupId>
+					<artifactId>commons-logging</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		
+		<!-- Servlet API -->
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>${servlet.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Thymeleaf -->
+		<dependency>
+			<groupId>org.thymeleaf</groupId>
+			<artifactId>thymeleaf</artifactId>
+			<version>${thymeleaf.version}</version>
+			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.thymeleaf</groupId>
+			<artifactId>thymeleaf-spring4</artifactId>
+			<version>${thymeleaf.version}</version>
+			<scope>compile</scope>
+		</dependency>
+		
+		<!-- Bean Validation / Hibernate Validator -->
+  		<dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <version>${hibernate-validator.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        
+        <!-- Thymeleaf - Layout Dialect -->
+		<dependency>
+    		<groupId>nz.net.ultraq.thymeleaf</groupId>
+    		<artifactId>thymeleaf-layout-dialect</artifactId>
+    		<version>${thymeleaf-layout-dialect.version}</version>
+		</dependency>
+		
+		<!-- Logging -->
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-slf4j-impl</artifactId>
+			<version>${log4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-api</artifactId>
+			<version>${log4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-core</artifactId>
+			<version>${log4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>jcl-over-slf4j</artifactId>
+			<version>${jcl-over-slf4j.version}</version>
+		</dependency>
+		
+		<!-- JPA / Hibernate -->
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-entitymanager</artifactId>
+			<version>${hibernate.version}</version>
+			<scope>compile</scope>
+		</dependency>
+
+		<!-- Hibernate - Java 8 support -->
+        <dependency>
+    		<groupId>org.hibernate</groupId>
+    		<artifactId>hibernate-java8</artifactId>
+    		<version>${hibernate.version}</version>
+    		<scope>compile</scope>
+		</dependency>
+		
+		<!-- Spring Data JPA -->
+		<dependency>
+		    <groupId>org.springframework.data</groupId>
+		    <artifactId>spring-data-jpa</artifactId>
+		    <version>${spring-data-jpa.version}</version>
+		    <scope>compile</scope>
+		</dependency>
+		
+		<!-- Jackson - JSON -->
+		<dependency>
+		    <groupId>com.fasterxml.jackson.core</groupId>
+		    <artifactId>jackson-databind</artifactId>
+		    <version>${jackson-core.version}</version>
+		    <scope>compile</scope>
+		</dependency>
+		
+		<!-- thumbnailator - Gerar Thumbnail -->
+		<dependency>
+			<groupId>net.coobird</groupId>
+			<artifactId>thumbnailator</artifactId>
+			<version>${thumbnailator.version}</version>
+			<scope>compile</scope>
+		</dependency>
+		
+		<!-- Thymeleaf extras data attribute -->
+		<dependency>
+    		<groupId>com.github.mxab.thymeleaf.extras</groupId>
+    		<artifactId>thymeleaf-extras-data-attribute</artifactId>
+    		<version>${thymeleaf-extras-data-attribute.version}</version>
+    		<scope>compile</scope>
+		</dependency>
+		
+		<!-- Cache - Guava - usado na aula 17.3/ -->
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>${guava.version}</version>
+			<scope>compile</scope>
+		</dependency>
+		<!-- Spring Context Support / usado junto com o Cache Guava aula 17.3 -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context-support</artifactId>
+			<scope>compile</scope>
+		</dependency>
+		
+		<!-- Apache Bean Utils -->
+		<dependency>
+    		<groupId>commons-beanutils</groupId>
+    		<artifactId>commons-beanutils</artifactId>
+    		<version>${commons-beanutils.version}</version>
+    		<scope>compile</scope>
+		</dependency>
+		
+		<!-- Spring Security -->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-web</artifactId>
+			<version>${spring-security.version}</version>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-config</artifactId>
+			<version>${spring-security.version}</version>
+			<scope>compile</scope>
+		</dependency>
+		
+		<!-- Thymeleaf - Extras Spring Security - aula 19.13 - disponibiliza coisas a mais para usarmos com a segurança -->
+		<dependency>
+		    <groupId>org.thymeleaf.extras</groupId>
+		    <artifactId>thymeleaf-extras-springsecurity4</artifactId>
+		    <version>${thymeleaf-extras-springsecurity.version}</version>
+		    <scope>compile</scope>
+		</dependency>
+		
+		<!-- Banco de Dados Postgresql para o Heroku 
+		<dependency>
+		  <groupId>org.postgresql</groupId>
+		  <artifactId>postgresql</artifactId>
+		  <version>9.4.1208</version>
+		</dependency>
+		-->
+		
+		<!-- JUnit -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>${junit.version}</version>
+			<scope>test</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.sun.mail</groupId>
+			<artifactId>javax.mail</artifactId>
+			<version>${javax.mail.version}</version>
+			<scope>compile</scope>
+		</dependency>
+		
+		<!-- AWS SDK - S3 --> 
+		<!-- Para usar bucket da Amazon para guardar nossas imagens lá. So essa versão funcionou certinho. Aula 28.4 09:22 -->
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-s3</artifactId>
+			<version>${aws-java-sdk-s3.version}</version>
+		</dependency>
+		
+		<!-- Apache Commons DBCP - usado para configração do database de produção no jpaConfig 
+			Só vamos utilizar essa dependencia quando estiver em produção 
+			Aula 28-8 18:50 Diz que o dbcp pode ficar aqui quando formos subir a aplicação para o servidor,
+				pois precisamos dela rodando aqui, para quando subirmos a aplicação para o servidor, lá não tem o driver
+				do Mysql, então temos que passar o driver um pouco lá pra cima no pom.xml dentro da tag <profile> -->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-dbcp2</artifactId>
+			<version>${commons-dbcp2.version}</version>
+		</dependency>
+		
+	</dependencies>
+	
+</project>

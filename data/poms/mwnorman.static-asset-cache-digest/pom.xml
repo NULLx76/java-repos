@@ -1,0 +1,167 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.initlive.tool</groupId>
+    <artifactId>asset-digest</artifactId>
+    <version>0.0.1</version>
+    <packaging>maven-plugin</packaging>
+
+    <name>static-asset-cache-digest</name>
+    <url>https://github.com/https://github.com/mwnorman/static-asset-cache-digest</url>
+    <description>
+            Maven plugin to clone a directory and rename its static assets to include a digest hash
+            This plugin performs a single transformation: walk the *source* directory tree, cloning to
+            the *target* directory. Along the way, for the identified file types (identified by extension)
+            calculate a digest-hash of the file's content and rename the file to include the hash-value.
+    </description>
+    <licenses>
+        <license>
+            <name>3-Clause BSD License</name>
+            <url>https://opensource.org/licenses/BSD-3-Clause</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <developers>
+        <developer>
+            <id>mwnorman</id>
+            <name>Mike Norman</name>
+            <email>dernasherbrezon@gmail.com</email>
+        </developer>
+    </developers>
+    <scm>
+        <url>https://github.com/https://github.com/mwnorman/static-asset-cache-digest</url>
+        <connection>scm:git:git@github.com/mwnorman/static-asset-cache-digest.git</connection>
+        <developerConnection>scm:git:https://github.com/mwnorman/static-asset-cache-digest.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/mwnorman/static-asset-cache-digest/issues</url>
+    </issueManagement>
+
+    <!-- why is everything a property? Because hard-coded values become part of
+        Maven's immutable Model object and then their contents can't be changed.
+        However, if the value is set in a user-defined property BEFORE the Model
+        object is created, then it is possible to do: mvn clean compile -Dfoo.bar.version=1.2.3
+        in order to (say for example) test out a newer version of some dependency
+        without having to change the pom.xml.
+    -->
+    <properties>
+        <!-- maven properties -->
+        <!-- Sigh! weird maven parsing issue (from many MANY years ago!), properties should use 'dot.case' instead of hyphens -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.source.level>1.7</project.source.level>
+        <project.target.level>1.7</project.target.level>
+        <maven.compiler.plugin.version>3.5.1</maven.compiler.plugin.version>
+        <maven.plugin.api.version>3.0.5</maven.plugin.api.version>
+        <maven.plugin.annotations.version>3.2</maven.plugin.annotations.version>
+        <maven.release.plugin.version>2.5.1</maven.release.plugin.version>
+        <nexus.staging.maven.plugin.version>1.6.6</nexus.staging.maven.plugin.version>
+        <maven.gpg.plugin.version>1.6</maven.gpg.plugin.version>
+        <maven.source.plugin.version>2.2</maven.source.plugin.version>
+        <maven.install.plugin.version>2.4</maven.install.plugin.version>
+        <maven.plugin.plugin.version>3.2</maven.plugin.plugin.version>
+        <maven.resources.plugin.version>3.0.2</maven.resources.plugin.version>
+
+        <!-- code properties -->
+        <org.jsoup.version>1.10.2</org.jsoup.version>
+
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-plugin-api</artifactId>
+            <version>${maven.plugin.api.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven.plugin-tools</groupId>
+            <artifactId>maven-plugin-annotations</artifactId>
+            <version>${maven.plugin.annotations.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>${org.jsoup.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>${maven.release.plugin.version}</version>
+                <configuration>
+                    <autoVersionSubmodules>true</autoVersionSubmodules>
+                    <useReleaseProfile>false</useReleaseProfile>
+                    <releaseProfiles>release</releaseProfiles>
+                    <goals>deploy</goals>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>${maven.gpg.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-install-plugin</artifactId>
+                <version>${maven.install.plugin.version}</version>
+                <configuration>
+                    <createChecksum>true</createChecksum>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-plugin-plugin</artifactId>
+                <version>${maven.plugin.plugin.version}</version>
+                <configuration>
+                    <goalPrefix>digest</goalPrefix>
+                    <skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
+                    <extractors>
+                        <!-- We only need the java extractor and not the bsh one -->
+                        <extractor>java-annotations</extractor>
+                    </extractors>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>mojo-descriptor</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>descriptor</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven.compiler.plugin.version}</version>
+                <configuration>
+                    <source>${project.source.level}</source>
+                    <target>${project.target.level}</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>${maven.resources.plugin.version}</version>
+                <configuration>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

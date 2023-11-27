@@ -1,0 +1,264 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.redhat.www.app</groupId>
+    <artifactId>openshift-angular-test</artifactId>
+    <packaging>war</packaging>
+    <version>0.1.0-SNAPSHOT</version>
+    <name>AngularJS based managed application for the container catalog.</name>
+
+    <properties>
+        <java-version>1.7</java-version>
+        <java-test-version>1.8</java-test-version>
+        <slf4j-version>1.7.21</slf4j-version>
+        <jackson-version>2.8.1</jackson-version>
+        <spring-version>4.3.6.RELEASE</spring-version>
+        <springsecurity-version>4.2.1.RELEASE</springsecurity-version>
+        <context.root>rhccm</context.root>
+        <image.builder.dir>${project.build.directory}/image-builder</image.builder.dir>
+    </properties>
+
+    <repositories>
+        <repository>
+            <id>splunk-artifactory</id>  
+            <name>Splunk Releases</name>
+            <url>http://splunk.artifactoryonline.com/splunk/ext-releases-local</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <version>3.1.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.spec.javax.ejb</groupId>
+            <artifactId>jboss-ejb-api_3.1_spec</artifactId>
+            <version>1.0.2.Final</version>
+        </dependency>
+
+        <!--
+            We are using Spring because there is native support for
+            Dependency Injection and CORS support.
+        -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+            <version>${spring-version}</version>
+        </dependency>
+
+        <!-- Spring Security -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-web</artifactId>
+            <version>${springsecurity-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-config</artifactId>
+            <version>${springsecurity-version}</version>
+        </dependency>
+
+        <!-- Spring Test -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <version>${spring-version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Added so we can convert dates easily. -->
+        <dependency>
+            <groupId>joda-time</groupId>
+            <artifactId>joda-time</artifactId>
+            <version>2.9.4</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>18.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+            <version>1.1.3</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.6</version>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.4</version>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!--For code coverage -->
+        <dependency>
+            <groupId>net.sourceforge.cobertura</groupId>
+            <artifactId>cobertura</artifactId>
+            <version>2.1.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson-version}</version>
+        </dependency>
+
+
+    </dependencies>
+
+    <build>
+        <resources>
+            <!--
+                Define the deploy directory as a folder that contains resources to be built.
+                This moves these resources to the target path, and handles variable substitution
+                for the templates.
+            -->
+            <resource>
+                <targetPath>${project.build.directory}</targetPath>
+                <filtering>true</filtering>
+                <directory>${project.basedir}/deploy</directory>
+                <includes>
+                    <include>*.deploy</include>
+                    <include>version-check.py</include>
+                    <include>version.info</include>
+                </includes>
+            </resource>
+
+            <!--
+                Deploy the modules to the Docker build folder.
+                WITHOUT running variable substitution. <AKA FILTERING>
+            -->
+            <resource>
+                <targetPath>${image.builder.dir}/modules</targetPath>
+                <filtering>false</filtering>
+                <directory>${project.basedir}/docker/modules</directory>
+            </resource>
+
+            <!--
+                Deploy the Dockerfile and start.sh to the image build folder.
+                Updates the Dockerfile via variable substitution.
+            -->
+            <resource>
+                <targetPath>${image.builder.dir}</targetPath>
+                <filtering>true</filtering>
+                <directory>${project.basedir}/docker</directory>
+                <includes>
+                    <include>Dockerfile</include>
+                    <include>start.sh</include>
+                </includes>
+            </resource>
+        </resources>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
+                <configuration>
+                    <source>${java-version}</source>
+                    <target>${java-version}</target>
+                    <testSource>${java-test-version}</testSource>
+                    <testTarget>${java-test-version}</testTarget>
+                </configuration>
+            </plugin>
+
+            <!--
+                 maven-war-plugin is used for setting the context.root in jboss-web.xml via filtering
+                 (aka variable substitution)
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>2.6</version>
+                <configuration>
+                    <webResources>
+                        <resource>
+                            <directory>src/main/webapp/</directory>
+                            <includes>
+                                <include>WEB-INF/jboss-web.xml</include>
+                            </includes>
+                            <filtering>true</filtering>
+                            <targetPath>.</targetPath>
+                        </resource>
+                        <resource>
+                            <filtering>false</filtering>
+                            <targetPath>WEB-INF/classes</targetPath>
+                            <directory>src/main/resources</directory>
+                        </resource>
+                    </webResources>
+                    <warName>ROOT</warName>
+                </configuration>
+            </plugin>
+
+            <!--
+                Copy the war in the target directory to the target/$image.builder.dir}
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>2.10</version>
+                <executions>
+                    <execution>
+                        <id>copy-installed</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>${project.groupId}</groupId>
+                                    <artifactId>${project.artifactId}</artifactId>
+                                    <version>${project.version}</version>
+                                    <type>${project.packaging}</type>
+                                </artifactItem>
+                            </artifactItems>
+                            <outputDirectory>${image.builder.dir}</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--
+                Guarantee that mvn test will run tests ending in Spec and Test.
+              -->
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.19.1</version>
+                <configuration>
+                    <useFile>false</useFile>
+                    <includes>
+                        <include>**/*Spec.java</include>
+                        <include>**/*Test.java</include>
+                    </includes>
+                </configuration>
+            </plugin>
+
+        </plugins>
+    </build>
+</project>

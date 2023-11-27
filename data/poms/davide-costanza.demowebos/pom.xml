@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>it.extrasys.studio</groupId>
+    <artifactId>demowebos</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>war</packaging>
+
+    <name>demowebos</name>
+    <description>Demo project for Spring Boot</description>
+
+    <!-- E' possibile non usare il parent POM di Spring Boot (andando incontro 
+        a qualche problema con i plugin); vedi: http://stackoverflow.com/questions/21317006/spring-boot-parent-pom-when-you-already-have-a-parent-pom -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>1.5.2.RELEASE</version>
+        <relativePath /> <!-- lookup parent from repository -->
+    </parent>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <java.version>1.8</java.version>
+
+        <camel-version>2.18.3</camel-version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.camel</groupId>
+                <artifactId>camel-parent</artifactId>
+                <version>${camel-version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web-services</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-servlet</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-jackson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-swagger-java</artifactId>
+        </dependency>
+
+        <!-- <dependency> <groupId>org.postgresql</groupId> <artifactId>postgresql</artifactId> 
+            <scope>runtime</scope> </dependency> -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- Essendo le seguenti dipendenze "provided", funzionano anche 
+            se si fa il deploy su un Tomcat vero. Vedi: http://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#howto-create-a-deployable-war-file 
+            In modalita' standalone, il context path e' definito all'interno di application.properties -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-tomcat</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.tomcat.embed</groupId>
+            <artifactId>tomcat-embed-jasper</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>jstl</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>docker</id>
+            <properties>
+                <!-- Name of Docker image that will be built -->
+                <docker.image.name>demowebos-web</docker.image.name>
+
+                <!-- Directory that holds Docker file and static content 
+                    necessary to build the Docker image -->
+                <docker.image.src.root>src/main/resources/docker</docker.image.src.root>
+
+                <!-- Directory to which the Docker image artifacts and the 
+                    Docker file will be copied to and which will serve as the root directory 
+                    when building the Docker image (Docker build context). -->
+                <docker.build.directory>${project.build.directory}/dockerimgbuild</docker.build.directory>
+
+                <!-- URL to the Docker host used to build the Docker image. 
+                    Abilitare SOLO se e' necessario usare il socket TCP al posto del socket Unix -->
+                <!-- <docker.host.url>http://localhost:2376</docker.host.url> -->
+
+                <!-- Name of the Dockerfile the Docker image will be built 
+                    from -->
+                <docker.file.name>Dockerfile</docker.file.name>
+
+                <!-- Profilo di runtime attivato per l'applicazione Spring 
+                    Boot -->
+                <!-- <spring.profiles.active>dockerdev</spring.profiles.active> -->
+            </properties>
+
+            <build>
+                <plugins>
+
+                    <!-- Copia i file necessari al Docker build nella directory 
+                        di build vera e propria -->
+                    <plugin>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>copy-resources</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${docker.build.directory}</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>${docker.image.src.root}</directory>
+                                            <filtering>false</filtering>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Copia il WAR dell'applicazione Spring Boot nella 
+                        subdirectory application/lib della directory di build di Docker -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-dependency-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>copy</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>copy</goal>
+                                </goals>
+                                <configuration>
+                                    <artifactItems>
+                                        <artifactItem>
+                                            <!-- Specifica le coordinate 
+                                                GAV del WAR da copiare dentro application/lib (questa webapp) -->
+                                            <groupId>${project.groupId}</groupId>
+                                            <artifactId>${project.artifactId}</artifactId>
+                                            <version>${project.version}</version>
+                                            <type>war</type>
+                                            <overWrite>true</overWrite>
+                                            <outputDirectory>${docker.build.directory}/application/lib</outputDirectory>
+                                            <!-- Rinomina il WAR in modo 
+                                                che sia consistente con quello indicato nel Dockerfile. NOTA BENE: E' importante 
+                                                che il file sia un .WAR e non un .JAR, altrimenti non funziona il mapping 
+                                                delle view di Spring (anche se funzionano i servizi REST di Spring) -->
+                                            <destFileName>demowebos-webapp.war</destFileName>
+                                        </artifactItem>
+                                    </artifactItems>
+                                    <outputDirectory>${docker.build.directory}</outputDirectory>
+                                    <overWriteReleases>true</overWriteReleases>
+                                    <overWriteSnapshots>true</overWriteSnapshots>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Effettua il build della immagine Docker -->
+                    <plugin>
+                        <groupId>io.fabric8</groupId>
+                        <artifactId>docker-maven-plugin</artifactId>
+                        <version>0.20.1</version>
+                        <configuration>
+                            <dockerHost>${docker.host.url}</dockerHost>
+                            <images>
+                                <image>
+                                    <name>${docker.image.name}</name>
+                                    <!-- TODO: Al posto dei resources e dependency plugin provare a utilizzare un Maven assembly -->
+                                    <build>
+                                        <tags>
+                                            <tag>${project.version}</tag>
+                                            <tag>latest</tag>
+                                        </tags>
+                                        <dockerFile>${docker.build.directory}/${docker.file.name}</dockerFile>
+                                    </build>
+                                </image>
+                            </images>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+</project>

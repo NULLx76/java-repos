@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <!-- The Basics -->
+    <groupId>com.alternacraft</groupId>
+    <artifactId>PvpHonor</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>jar</packaging>   
+     
+    <repositories>  
+        <!-- Spigot repository -->      
+        <repository>
+            <id>spigot-repo</id>
+            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+        </repository>
+        <!-- Vault repository -->
+        <repository>
+            <id>vault-repo</id>
+            <url>http://nexus.hc.to/content/repositories/pub_releases</url>
+        </repository>        
+        <!-- ACLIB repository -->
+        <repository>
+            <id>aclib-releases</id>
+            <url>http://dl.bintray.com/alternacraft/maven/</url>
+        </repository>
+        <repository>
+            <id>aclib-snapshots</id>
+            <url>http://oss.jfrog.org/oss-snapshot-local/</url>
+        </repository>      
+    </repositories> 
+    
+    <dependencies>
+        <!-- Spigot-API -->
+        <dependency>
+            <groupId>org.spigotmc</groupId>
+            <artifactId>spigot-api</artifactId>
+            <version>1.11-R0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        <!-- Vault API -->
+        <dependency>
+            <groupId>net.milkbowl.vault</groupId>
+            <artifactId>VaultAPI</artifactId>
+            <version>1.6</version>
+            <optional>true</optional>
+            <scope>provided</scope>
+            <type>jar</type>
+        </dependency>
+        
+        <!-- AlternaCraft LIB dependency -->
+        <dependency>
+            <groupId>com.alternacraft</groupId>
+            <artifactId>aclib</artifactId>    
+            <version>1.2.2-SNAPSHOT</version>      
+            <scope>compile</scope>
+        </dependency>   
+        
+        <!-- TESTING DEPENDENCIES -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.powermock</groupId>
+            <artifactId>powermock-module-junit4</artifactId>
+            <version>1.7.0RC4</version>
+            <type>jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.powermock</groupId>
+            <artifactId>powermock-api-mockito</artifactId>
+            <version>1.7.0RC4</version>
+            <type>jar</type>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>   
+    
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.7</maven.compiler.source>
+        <maven.compiler.target>1.7</maven.compiler.target>
+        <outputFile>${basedir}/.travis/dependencies.txt</outputFile>
+        <custom.path>target/release/</custom.path>
+    </properties>
+    
+    <build>
+        <finalName>${project.name}-${project.version}</finalName>
+        <sourceDirectory>src/main/java</sourceDirectory>
+        <testSourceDirectory>src/test/java</testSourceDirectory>
+        
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+            
+            <!-- Add the license to jar in order to see it in the final jar -->
+            <resource>
+                <directory>${basedir}</directory>
+                <includes>
+                    <include>LICENSE.md</include>
+                </includes>
+            </resource>            
+        </resources>
+        
+        <plugins>
+            <!-- ACLIB -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>2.4.3</version>
+                <executions>
+                    <execution>
+                        <id>libs</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <relocations>
+                                <relocation>
+                                    <pattern>com.alternacraft.aclib</pattern>
+                                    <shadedPattern>${project.groupId}.${project.artifactId}.ACLIB</shadedPattern>
+                                </relocation>
+                            </relocations>
+                        </configuration>
+                    </execution>      
+                </executions>
+            </plugin>
+                       
+            <!-- Copy artifacts to non-versioned jar name -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>2.10</version>
+                <executions>
+                    <execution>
+                        <id>copy</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>${project.groupId}</groupId>
+                                    <artifactId>${project.artifactId}</artifactId>
+                                    <version>${project.version}</version>
+                                    <type>jar</type>
+                                    <overWrite>true</overWrite>
+                                    <outputDirectory>${custom.path}</outputDirectory>
+                                    <destFileName>${project.artifactId}.jar</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>dependencies</id>
+                        <phase>prepare-package</phase>
+                        <goals>                         
+                            <goal>tree</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>           
+            
+            <!-- Code coverage -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.7.7.201606060606</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+    
+    <!-- More Project Information -->
+    <name>PvpHonor</name>
+    <description>Custom coin by an enhanced experience</description>
+    <inceptionYear>2017</inceptionYear>    
+
+    <organization>
+        <name>AlternaCraft</name>
+        <url>https://github.com/AlternaCraft</url>
+    </organization>    
+    
+    <developers>
+        <developer>
+            <name>esejuli94</name>
+            <id>1</id>
+            <roles>
+                <role>Programmer</role>
+            </roles>
+        </developer>
+    </developers> 
+    
+    <licenses>
+        <license>
+            <name>The GNU General Public Licence version 3 (GPLv3)</name>
+            <url>http://www.gnu.org/licenses/gpl-3.0.html</url>
+        </license>
+    </licenses>    
+
+    <!-- Environment Settings -->
+    <distributionManagement>
+        <repository>
+            <id>bintray</id>
+            <name>RELEASES</name>
+            <url>https://api.bintray.com/maven/alternacraft/maven/PvpHonor/;publish=1;</url>            
+        </repository>
+        
+        <snapshotRepository>
+            <id>bintray</id>
+            <name>SNAPSHOTS</name>
+            <url>http://oss.jfrog.org/oss-snapshot-local/</url>
+        </snapshotRepository>
+    </distributionManagement>
+</project>

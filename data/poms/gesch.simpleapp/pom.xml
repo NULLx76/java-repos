@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>de.solutionsdirekt</groupId>
+	<artifactId>simpleapp</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>simpleapp</name>
+	<description>Simple project for testing purposes</description>
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>1.5.2.RELEASE</version>
+		<relativePath/> <!-- lookup parent from repository -->
+
+	</parent>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<java.version>1.8</java.version>
+        <prometheus>0.0.21</prometheus>
+        <docker.image.prefix>swarm.azurecr.io</docker.image.prefix>
+
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-jersey</artifactId>
+		</dependency>
+
+
+		<dependency>
+			<groupId>io.prometheus</groupId>
+			<artifactId>simpleclient</artifactId>
+			<version>${prometheus}</version>
+		</dependency>
+		<!-- Hotspot JVM metrics-->
+		<dependency>
+			<groupId>io.prometheus</groupId>
+			<artifactId>simpleclient_hotspot</artifactId>
+			<version>${prometheus}</version>
+		</dependency>
+		<!-- Exposition servlet-->
+        <dependency>
+			<groupId>io.prometheus</groupId>
+			<artifactId>simpleclient_servlet</artifactId>
+			<version>${prometheus}</version>
+		</dependency>
+		<dependency>
+            <groupId>io.prometheus</groupId>
+            <artifactId>simpleclient_spring_boot</artifactId>
+            <version>${prometheus}</version>
+        </dependency>
+
+
+        <dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+
+
+
+    <profiles>
+    <profile>
+        <!-- Generates the app docker image for execution -->
+        <id>app-docker-image</id>
+        <build>
+            <plugins>
+                <plugin>
+                    <groupId>io.fabric8</groupId>
+                    <artifactId>docker-maven-plugin</artifactId>
+                    <version>0.20.0</version>
+                    <configuration>
+                        <registry>swarm.azurecr.io</registry>
+                        <images>
+                            <image>
+                                <name>simpleapp</name>
+                                <registry>swarm.azurecr.io</registry>
+                                <build>
+                                    <!--<from>swarm.azurecr.io/openjdk8</from>-->
+                                    <from>openjdk:8u121-jre-alpine</from>
+                                    <tags>
+                                        <tag>1.0.10</tag>
+                                    </tags>
+                                    <entryPoint>
+                                        <shell>java -jar /maven/jar/simpleapp-0.0.1-SNAPSHOT.jar</shell>
+                                    </entryPoint>
+                                    <ports>
+                                        <port>8080</port>
+                                    </ports>
+                                    <assembly>
+                                        <descriptorRef>project</descriptorRef>
+                                        <inline>
+                                            <fileSets>
+                                                <fileSet>
+                                                    <directory>${basedir}/target</directory>
+                                                    <includes>
+                                                        <include>simpleapp-0.0.1-SNAPSHOT.jar</include>
+                                                    </includes>
+                                                    <outputDirectory>/jar</outputDirectory>
+                                                </fileSet>
+                                            </fileSets>
+                                        </inline>
+                                    </assembly>
+                                </build>
+
+                            </image>
+
+                            <image>
+                                <name>simpleapp-tests</name>
+                                <build>
+                                    <from>maven:latest</from>
+                                    <!-- For remote testing -->
+                                    <!--
+                                    <ports>
+                                        <port>5005</port>
+                                    </ports>
+                                    -->
+                                    <assembly>
+                                        <descriptorRef>project</descriptorRef>
+                                        <inline>
+                                            <fileSets>
+                                                <fileSet>
+                                                    <directory>${basedir}/src</directory>
+                                                    <includes>
+                                                        <include>**/**</include>
+                                                    </includes>
+                                                    <outputDirectory>code/src</outputDirectory>
+                                                </fileSet>
+                                                <fileSet>
+                                                    <directory>${basedir}</directory>
+                                                    <includes>
+                                                        <include>pom.xml</include>
+                                                    </includes>
+                                                    <outputDirectory>code</outputDirectory>
+                                                </fileSet>
+                                                <fileSet>
+                                                    <directory>${basedir}/src/test/resources</directory>
+                                                    <includes>
+                                                        <include>settings.xml</include>
+                                                    </includes>
+                                                    <outputDirectory>/m2</outputDirectory>
+                                                </fileSet>
+                                            </fileSets>
+                                        </inline>
+                                    </assembly>
+                                    <volumes>
+                                        <volume>/m2</volume>
+                                    </volumes>
+                                </build>
+                            </image>
+                        </images>
+                        <authConfig>
+                            <push>
+                                <username>swarm</username>
+                                <password>QOL+9LrhalTBQi8sHoNgtriWOg/y7qd4</password>
+                            </push>
+                        </authConfig>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>docker-build</id>
+                            <phase>pre-integration-test</phase>
+                            <goals>
+                                <goal>build</goal>
+                            </goals>
+                        </execution>
+                        <!--
+                        <execution>
+                            <id>docker-run</id>
+                            <phase>pre-integration-test</phase>
+                            <goals>
+                                <goal>start</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>docker-stop</id>
+                            <phase>post-integration-test</phase>
+                            <goals>
+                                <goal>stop</goal>
+                            </goals>
+                        </execution>
+                        -->
+                        <execution>
+                            <id>docker-push</id>
+                            <phase>deploy</phase>
+                            <goals>
+                                <goal>push</goal>
+                            </goals>
+                        </execution>
+
+                    </executions>
+                </plugin>
+            </plugins>
+        </build>
+    </profile>
+    <profile>
+        <id>app-docker-image-arm</id>
+        <build>
+            <plugins>
+                <plugin>
+                    <groupId>io.fabric8</groupId>
+                    <artifactId>docker-maven-plugin</artifactId>
+                    <version>0.20.0</version>
+                    <configuration>
+                        <images>
+                            <image>
+                                <name>simpleapp-arm</name>
+                                <registry>swarm.azurecr.io</registry>
+                                <build>
+                                    <from>arm32v6/openjdk:8u131-jre-alpine</from>
+                                    <!--<from>swarm.azurecr.io/openjdk8</from>-->
+                                    <!--<from>openjdk:8u121-jre-alpine</from>-->
+                                    <tags>
+                                        <tag>0.0.3</tag>
+                                    </tags>
+                                    <entryPoint>
+                                        <shell>java -jar /maven/jar/simpleapp-0.0.1-SNAPSHOT.jar</shell>
+                                    </entryPoint>
+                                    <ports>
+                                        <port>8080</port>
+                                    </ports>
+                                    <assembly>
+                                        <descriptorRef>project</descriptorRef>
+                                        <inline>
+                                            <fileSets>
+                                                <fileSet>
+                                                    <directory>${basedir}/target</directory>
+                                                    <includes>
+                                                        <include>simpleapp-0.0.1-SNAPSHOT.jar</include>
+                                                    </includes>
+                                                    <outputDirectory>/jar</outputDirectory>
+                                                </fileSet>
+                                            </fileSets>
+                                        </inline>
+                                    </assembly>
+                                </build>
+
+                            </image>
+
+
+                        </images>
+
+                        <authConfig>
+                                <username>swarm</username>
+                                <password>QOL+9LrhalTBQi8sHoNgtriWOg/y7qd4</password>
+                        </authConfig>
+
+                    </configuration>
+                    <executions>
+
+                        <execution>
+                            <id>docker-push</id>
+                            <phase>deploy</phase>
+                            <goals>
+                                <goal>push</goal>
+                            </goals>
+                        </execution>
+
+                    </executions>
+                </plugin>
+            </plugins>
+        </build>
+    </profile>
+    </profiles>
+
+
+
+
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+            <!--
+            <plugin>
+                <groupId>com.spotify</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>0.4.11</version>
+                <configuration>
+                    <imageTags>
+                        <imageTag>1.0.1</imageTag>
+                        <imageTag>latest</imageTag>
+                    </imageTags>
+                    <imageName>${docker.image.prefix}/${project.artifactId}</imageName>
+                    <exposes>8080</exposes>
+                    <dockerDirectory>src/main/docker</dockerDirectory>
+                    <resources>
+                        <resource>
+                            <targetPath>/</targetPath>
+                            <directory>${project.build.directory}</directory>
+                            <include>${project.build.finalName}.jar</include>
+                        </resource>
+                    </resources>
+                </configuration>
+            </plugin>
+            -->
+		</plugins>
+	</build>
+
+
+</project>

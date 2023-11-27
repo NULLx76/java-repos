@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project
+    xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation=
+    "http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>de.springbootbuch</groupId>
+    <artifactId>helloworld_war</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>war</packaging>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.4.0</version>
+        <relativePath/>
+    </parent>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-tomcat</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+   <build>
+        <finalName>${project.artifactId}</finalName>
+        <plugins>
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>0.22.1</version>
+                <configuration>
+                    <images>
+                        <image>
+                            <name>postgres:9.6</name>
+                            <alias>helloworld_war-db</alias>
+                            <run>
+                                <env>
+                                    <POSTGRES_USER>helloworld_war</POSTGRES_USER>
+                                    <POSTGRES_PASSWORD>helloworld_war</POSTGRES_PASSWORD>
+                                </env>
+                                <wait>
+                                    <log>database system is ready to accept connections</log>
+                                    <time>20000</time>
+                                </wait>
+                            </run>
+                        </image>
+
+                        <image>
+                            <name>springbootbuch/helloworld_war</name>
+                            <alias>helloworld_war</alias>
+                            <build>
+                                <from>tomcat:8.5-alpine</from>
+                                <tags>
+                                    <tag>${project.version}</tag>
+                                </tags>
+                                <ports>
+                                    <port>8080</port>
+                                </ports>
+                                <volumes>
+                                    <volume>/tmp</volume>
+                                </volumes>
+                                <assembly>
+                                    <inline xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                                            xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2"
+                                            xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 http://maven.apache.org/xsd/assembly-1.1.2.xsd">
+                                        <files>
+                                            <file>
+                                                <source>${project.build.directory}/${project.build.finalName}.war</source>
+                                                <outputDirectory>webapps/</outputDirectory>
+                                            </file>
+                                            <file>
+                                                <source>helloworld_war.xml</source>
+                                                <outputDirectory>conf/Catalina/localhost</outputDirectory>
+                                                <filtered>true</filtered>
+                                            </file>
+                                        </files>
+                                        <dependencySets>
+                                            <dependencySet>
+                                                <useProjectArtifact>false</useProjectArtifact>
+                                                <scope>provided</scope>
+                                                <includes>
+                                                    <include>org.postgresql:postgresql</include>
+                                                </includes>
+                                                <outputDirectory>lib/</outputDirectory>
+                                            </dependencySet>
+                                        </dependencySets>
+                                    </inline>
+                                    <targetDir>/usr/local/tomcat</targetDir>
+                                </assembly>
+                            </build>
+                            <run>
+                                <links>
+                                    <link>helloworld_war-db:db</link>
+                                </links>
+                                <env>
+                                    <CATALINA_OPTS>-DDB_PORT_5432_TCP_ADDR=${DB_PORT_5432_TCP_ADDR} -DDB_PORT_5432_TCP_PORT=${DB_PORT_5432_TCP_PORT}</CATALINA_OPTS>
+                                </env>
+                                <ports>
+                                    <port>8980:8080</port>
+                                </ports>
+                            </run>
+                        </image>
+                    </images>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

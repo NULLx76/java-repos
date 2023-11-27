@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <properties>
+        <msdemo.skipReportGen>false</msdemo.skipReportGen>
+    </properties>
+
+    <profiles>
+        <profile>
+            <id>gen-pdf-doc</id>
+            <properties>
+                <msdemo.skipPdfDoc>false</msdemo.skipPdfDoc>
+                <msdemo.skipReportGen>true</msdemo.skipReportGen>
+            </properties>
+        </profile>
+    </profiles>
+
+    <parent>
+        <artifactId>parent-starter</artifactId>
+        <groupId>org.ckr.msdemo</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.ckr.msdemo</groupId>
+    <artifactId>common-libs</artifactId>
+    <packaging>pom</packaging>
+    <version>1.0-SNAPSHOT</version>
+
+
+
+    <modules>
+        <module>exceptions</module>
+        <module>db-access</module>
+        <module>utility</module>
+    </modules>
+
+    <dependencies>
+        <!--<dependency>-->
+            <!--<groupId>org.ckr.msdemo</groupId>-->
+            <!--<artifactId>build-tool</artifactId>-->
+            <!--<version>1.0-SNAPSHOT</version>-->
+            <!--&lt;!&ndash;<scope>provided</scope>&ndash;&gt;-->
+        <!--</dependency>-->
+
+
+    </dependencies>
+    <build>
+        <plugins>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+
+                <executions>
+                    <execution>
+                        <id>copy-classes-for-findbug-reports</id>
+                        <phase>pre-site</phase>
+                        <inherited>false</inherited>
+                        <configuration>
+                            <skip>false</skip>
+                            <target>
+
+                                <!-- the findbugs plugin only accept one class folder. If we need to generate
+                                one report for all module, need to copy all classes for all modules into one folder
+                                first -->
+                                <copy todir="${project.basedir}/target/allClasses"
+                                      preservelastmodified="true" verbose="true">
+                                    <fileset dir="${project.basedir}/db-access/target/classes">
+                                        <include name="**/*.class"/>
+                                    </fileset>
+                                    <fileset dir="${project.basedir}/exceptions/target/classes">
+                                        <include name="**/*.class"/>
+                                    </fileset>
+                                    <fileset dir="${project.basedir}/utility/target/classes">
+                                        <include name="**/*.class"/>
+                                    </fileset>
+                                </copy>
+
+                                <!-- if these source are not copied, the source xref link in findbugs report
+                                is wrong. This is only an hacking approach. May need to find better approach later. -->
+                                <copy todir="${project.basedir}/target/allSources"
+                                      preservelastmodified="true" verbose="true">
+                                    <fileset dir="${project.basedir}/db-access/src/main/java">
+                                        <include name="**/*.java"/>
+                                    </fileset>
+                                    <fileset dir="${project.basedir}/exceptions/src/main/java">
+                                        <include name="**/*.java"/>
+                                    </fileset>
+                                    <fileset dir="${project.basedir}/utility/src/main/java">
+                                        <include name="**/*.java"/>
+                                    </fileset>
+                                    <filterchain>
+                                        <headfilter skip="9000000000"/>
+                                    </filterchain>
+                                </copy>
+
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+
+
+
+                </executions>
+
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <inherited>false</inherited>
+
+                <executions>
+                    <execution>
+                        <id>gen-coverage-report</id>
+                        <phase>pre-site</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>java</executable>
+                            <arguments>
+                                <argument>-Dcoverage-output=html</argument>
+                                <argument>-Dcoverage-srcDirs=${project.basedir}/db-access/src/main/java,${project.basedir}/exceptions/src/main/java,${project.basedir}/utility/src/main/java</argument>
+                                <argument>-Dcoverage-outputDir=${project.build.directory}/coverage-report</argument>
+                                <!--<argument>-Dcoverage-classes=org.ckr.msdemo.*</argument>-->
+                                <argument>-classpath</argument>
+                                <classpath>
+                                    <dependency>org.jmockit:jmockit</dependency>
+                                    <dependency>org.jmockit:jmockit</dependency>
+                                </classpath>
+
+                                <argument>mockit.coverage.CodeCoverage</argument>
+                                <argument>db-access/target/coverage-data</argument>
+                                <argument>exceptions/target/coverage-data</argument>
+                                <argument>utility/target/coverage-data</argument>
+                            </arguments>
+
+                            <classpathScope>test</classpathScope>
+                            <workingDirectory>${project.basedir}</workingDirectory>
+                        </configuration>
+                    </execution>
+
+                </executions>
+
+
+                <dependencies>
+                    <!--<dependency>-->
+                        <!--<groupId>org.jmockit</groupId>-->
+                        <!--<artifactId>jmockit</artifactId>-->
+                        <!--<version>${jmockit.version}</version>-->
+                    <!--</dependency>-->
+
+                    <dependency>
+                        <groupId>org.ckr.msdemo</groupId>
+                        <artifactId>build-tool</artifactId>
+                        <version>1.0-SNAPSHOT</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+
+
+
+
+
+
+        </plugins>
+    </build>
+
+
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+
+                <configuration>
+                    <sourceDirectories>
+                        <directory>${project.basedir}/exceptions/src/main/java</directory>
+                        <directory>${project.basedir}/pagination/src/main/java</directory>
+                    </sourceDirectories>
+
+                </configuration>
+            </plugin>
+
+
+
+        </plugins>
+    </reporting>
+</project>

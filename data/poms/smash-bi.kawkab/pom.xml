@@ -1,0 +1,399 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>smash</groupId>
+	<artifactId>kawkab</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>Kawkab Distributed Filesystem</name>
+	<url>https://github.com/smash-bi/kawkab</url>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<nodeID>0</nodeID>
+		<Xms>2g</Xms>
+		<Xmx>16g</Xmx>
+		<MaxDirectMemorySize>16484m</MaxDirectMemorySize>
+		<cmdArgs>""</cmdArgs>
+		<mainClass>kawkab.fs.cli.CLI</mainClass>
+	</properties>
+
+	<build>
+		<!--extensions>
+		    <extension -->
+		<!-- for gRPC -->
+		<!--groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>1.6.2</version>
+      </extension>
+    </extensions-->
+
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<version>3.0.0-M2</version>
+				<executions>
+					<execution>
+						<id>enforce-maven</id>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<requireMavenVersion>
+									<version>3.0</version>
+								</requireMavenVersion>
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>versions-maven-plugin</artifactId>
+				<version>2.7</version>
+				<configuration>
+					<generateBackupPoms>false</generateBackupPoms>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>3.2.1</version>
+				<executions>
+					<execution>
+						<id>main</id>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<shadedArtifactAttached>true</shadedArtifactAttached>
+							<minimizeJar>false</minimizeJar>
+							<transformers>
+								<transformer
+										implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+									<mainClass>kawkab.fs.Main</mainClass>
+								</transformer>
+							</transformers>
+							<finalName>main</finalName>
+							<shadeTestJar>true</shadeTestJar>
+						</configuration>
+					</execution>
+					<execution>
+						<id>cli</id>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<shadedArtifactAttached>true</shadedArtifactAttached>
+							<minimizeJar>false</minimizeJar>
+							<transformers>
+								<transformer
+										implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+									<mainClass>kawkab.fs.cli.CLI</mainClass>
+								</transformer>
+							</transformers>
+							<finalName>cli</finalName>
+							<shadeTestJar>true</shadeTestJar>
+						</configuration>
+					</execution>
+					<execution>
+						<id>appendTest</id>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<shadedArtifactAttached>true</shadedArtifactAttached>
+							<minimizeJar>false</minimizeJar>
+							<transformers>
+								<transformer
+										implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
+									<file>kawkab.fs.tests.AppendTest</file>
+								</transformer>
+								<transformer
+										implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+									<mainClass>kawkab.fs.tests.AppendTest</mainClass>
+								</transformer>
+							</transformers>
+							<finalName>appendTest</finalName>
+							<shadeTestJar>true</shadeTestJar>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.6.0</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<executable>java</executable>
+					<arguments>
+						<!--<argument> - -add-opens=java.base/jdk.internal.ref=ALL-UNNAMED</argument>-->
+						<argument>-ea</argument>
+						<argument>-Xms${Xms}</argument>
+						<argument>-Xmx${Xmx}</argument>
+						<argument>-XX:MaxDirectMemorySize=${MaxDirectMemorySize}</argument>
+
+						<!--<argument>-javaagent:temp/allocation-tracker/target/allocation-tracker-agent-0.0.1-SNAPSHOT.jar=kawkab.fs</argument>-->
+						<!--<argument>-Xlog:gc*</argument>-->
+						<!--<argument>-Xlog:safepoint</argument>-->
+
+						<!--						<argument>-XX:CMSInitiatingOccupancyFraction=92</argument>-->
+						<!--						<argument>-XX:+UseCMSInitiatingOccupancyOnly</argument>-->
+
+												<argument>-XX:+UseConcMarkSweepGC</argument>
+						<!--						<argument>-XX:+UseSerialGC</argument>-->
+						<!--						<argument>-XX:+UseParallelGC</argument>-->
+						<!--						<argument>-XX:ParallelCMSThreads=2</argument>-->
+						<!--						<argument>-XX:ParallelCMSThreads=4</argument>-->
+						<!--						<argument>-XX:+UseG1GC</argument>-->
+						<!--						<argument>XX:+UseDynamicNumberOfCompilerThreads</argument>-->
+
+						<!-- ZGC requires JDK 11 -->
+						<!--argument>-XX:+UnlockExperimentalVMOptions</argument>
+						<argument>-XX:+UseZGC</argument-->
+
+						<!-- EpsilonGC, a no-op GC, requires JDK11 -->
+						<!--						<argument>-XX:+UnlockExperimentalVMOptions</argument>-->
+						<!--						<argument>-XX:+UseEpsilonGC</argument>-->
+
+						<!-- Use ShenandoahGC -->
+						<!--argument>-XX:+UseShenandoahGC</argument>
+						<argument>-XX:+UnlockExperimentalVMOptions</argument>
+						<argument>-XX:ShenandoahUncommitDelay=2000</argument>
+						<argument>-XX:ShenandoahGuaranteedGCInterval=12000</argument-->
+
+
+						<argument>-DnodeID=${nodeID}</argument>
+						<argument>-classpath</argument>
+						<classpath/>
+						<argument>${mainClass}</argument>
+						<argument>${cmdArgs}</argument>
+					</arguments>
+					<addResourcesToClasspath>true</addResourcesToClasspath>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.8.1</version>
+				<configuration>
+					<source>11</source>
+					<target>11</target>
+					<!--release>13</release-->
+					<!-- excludes>
+				      <exclude>**/thrift/*.java</exclude>
+				    </excludes -->
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<version>3.0.0-M3</version>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>3.0.0-M3</version>
+				<configuration>
+					<enableAssertions>true</enableAssertions>
+					<argLine>--illegal-access=permit</argLine>
+					<argLine>-Xmx${Xmx}</argLine>
+					<!--argLine>-XX:+UseG1GC -XX:MaxGCPauseMillis=10 -XX:ParallelGCThreads=4 -XX:ConcGCThreads=4</argLine-->
+					<!--argLine>-agentpath:/home/sm3rizvi/packages/YourKit-JavaProfiler-2019.1/bin/linux-x86-64/libyjpagent.so</argLine-->
+					<!-- argLine>-Xcomp</argLine -->
+					<!--argLine>-verbose:gc</argLine -->
+					<!--					<argLine>-XX:+PrintGCDetails</argLine>-->
+					<!--					<argLine>-XX:+PrintGCTimeStamps</argLine>-->
+					<!--					<argLine>-XX:+PrintGCDateStamps</argLine>-->
+					<!--					<argLine>-XX:+PrintTenuringDistribution</argLine>-->
+					<!--					<argLine>-XX:+PrintGCApplicationStoppedTime</argLine>-->
+					<systemPropertyVariables>
+						<propertyName>nodeID</propertyName>
+						<buildDirectory>${0}</buildDirectory>
+					</systemPropertyVariables>
+					<useFile>false</useFile>
+					<trimStackTrace>false</trimStackTrace>
+				</configuration>
+			</plugin>
+
+			<!--plugin-->
+			<!-- for gRPC -->
+			<!--groupId>org.xolstice.maven.plugins</groupId>
+            <artifactId>protobuf-maven-plugin</artifactId>
+            <version>0.6.1</version>
+              <configuration>
+                  <protocArtifact>com.google.protobuf:protoc:3.9.0:exe:${os.detected.classifier}</protocArtifact>
+                  <pluginId>grpc-java</pluginId>
+                  <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.24.0:exe:${os.detected.classifier}</pluginArtifact>
+              </configuration>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>compile</goal>
+                  <goal>compile-custom</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin-->
+
+			<plugin>
+				<groupId>org.apache.thrift.tools</groupId>
+				<artifactId>maven-thrift-plugin</artifactId>
+				<version>0.1.11</version>
+				<configuration>
+					<thriftExecutable>/home/sm3rizvi/packages/thrift-0.13.0/bin/thrift</thriftExecutable>
+					<thriftSourceRoot>${basedir}/src/main/thrift</thriftSourceRoot>
+					<generator>java</generator>
+				</configuration>
+				<executions>
+					<execution>
+						<id>thrift-sources</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>compile</goal>
+						</goals>
+					</execution>
+					<!--execution>
+						<id>thrift-test-sources</id>
+						<phase>generate-test-sources</phase>
+						<goals>
+							<goal>testCompile</goal>
+						</goals>
+					</execution-->
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+	<dependencyManagement>
+		<dependencies>
+			<!-- https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-bom -->
+			<dependency>
+				<groupId>com.amazonaws</groupId>
+				<artifactId>aws-java-sdk-bom</artifactId>
+				<version>1.11.553</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>net.openhft</groupId>
+				<artifactId>chronicle-bom</artifactId>
+				<version>2.17.476</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+
+		</dependencies>
+	</dependencyManagement>
+
+	<dependencies>
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>28.1-jre</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-api</artifactId>
+			<version>5.4.2</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-engine</artifactId>
+			<version>5.4.2</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>net.openhft</groupId>
+			<artifactId>chronicle-map</artifactId>
+			<!--<version>3.17.6</version>
+			<exclusions>
+				<exclusion>
+					<groupId>com.sun.java</groupId>
+					<artifactId>tools</artifactId>
+				</exclusion>
+			</exclusions>-->
+		</dependency>
+
+		<dependency>
+			<groupId>org.agrona</groupId>
+			<artifactId>agrona</artifactId>
+			<version>1.0.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.curator</groupId>
+			<artifactId>curator-framework</artifactId>
+			<version>4.2.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-s3</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>javax.annotation</groupId>
+			<artifactId>javax.annotation-api</artifactId>
+			<version>1.2</version>
+		</dependency>
+
+		<!--dependency>
+          <groupId>io.grpc</groupId>
+            <artifactId>grpc-netty-shaded</artifactId>
+            <version>1.24.0</version>
+        </dependency>
+        <dependency>
+          <groupId>io.grpc</groupId>
+          <artifactId>grpc-protobuf</artifactId>
+          <version>1.24.0</version>
+        </dependency>
+        <dependency>
+          <groupId>io.grpc</groupId>
+          <artifactId>grpc-stub</artifactId>
+          <version>1.24.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>3.8.0-rc-1</version>
+        </dependency-->
+
+		<dependency>
+			<groupId>org.apache.thrift</groupId>
+			<artifactId>libthrift</artifactId>
+			<version>0.12.0</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
+		<!-- For StopWatch -->
+		<!-- dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>3.9</version>
+		</dependency -->
+
+	</dependencies>
+
+</project>

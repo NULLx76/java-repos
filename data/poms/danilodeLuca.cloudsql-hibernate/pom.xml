@@ -1,0 +1,206 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>cloudsql-hibernate</groupId>
+    <artifactId>cloudsql-hibernate</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>war</packaging>
+
+    <properties>
+    	<app.version>1</app.version>
+		<app.id>cloudsql-hibernate-app</app.id>
+
+	    <INSTANCE_CONNECTION_NAME>INSTANCE_NAME</INSTANCE_CONNECTION_NAME>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <appengine.sdk.version>1.9.48</appengine.sdk.version>
+		<gcloud.plugin.version>2.0.9.90.v20151210</gcloud.plugin.version>
+		<cloudsql.url>jdbc:google:mysql://${INSTANCE_CONNECTION_NAME}/xm_dbase</cloudsql.url>
+    	<cloudsql.url.dev>jdbc:mysql://localhost/xm_dbase?user=root</cloudsql.url.dev>
+    </properties>
+
+    <dependencies>
+        <dependency>
+			<groupId>org.jboss.resteasy</groupId>
+			<artifactId>resteasy-jaxrs</artifactId>
+			<version>3.0.11.Final</version>
+		</dependency>
+		<dependency>
+		    <groupId>javax.ws.rs</groupId>
+		    <artifactId>javax.ws.rs-api</artifactId>
+		    <version>2.0.1</version>
+		</dependency>
+		<dependency>
+		    <groupId>javax.servlet</groupId>
+		    <artifactId>javax.servlet-api</artifactId>
+		    <version>3.1.0</version>
+		</dependency>
+
+		<dependency>
+      		<groupId>com.google.appengine</groupId>
+      		<artifactId>appengine-api-1.0-sdk</artifactId>
+      		<version>${appengine.sdk.version}</version>
+    	</dependency>
+    	<dependency>
+      		<groupId>com.google.api-client</groupId>
+      		<artifactId>google-api-client-appengine</artifactId>
+      		<version>1.22.0</version>
+    	</dependency>
+    	<dependency>
+		    <groupId>com.google.appengine.tools</groupId>
+		    <artifactId>appengine-gcs-client</artifactId>
+		    <version>0.6</version>
+		</dependency>
+
+		<dependency>
+      		<groupId>jstl</groupId>
+      		<artifactId>jstl</artifactId>
+      		<version>1.2</version>
+    	</dependency>
+		<dependency>
+		    <groupId>org.hibernate</groupId>
+		    <artifactId>hibernate-entitymanager</artifactId>
+		    <!-- Problem find while upgrading hibernate https://github.com/GoogleCloudPlatform/appengine-cloudsql-native-mysql-hibernate-jpa-demo-java/issues/2 -->
+			<version>4.2.21.Final</version>
+		</dependency>
+
+		<dependency>
+      		<groupId>mysql</groupId>
+      		<artifactId>mysql-connector-java</artifactId>
+      		<version>5.1.40</version>
+    	</dependency>
+
+    	<!-- Test Dependencies -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+	      <groupId>com.google.appengine</groupId>
+	      <artifactId>appengine-testing</artifactId>
+	      <version>${appengine.sdk.version}</version>
+	      <scope>test</scope>
+	    </dependency>
+	    <dependency>
+	      <groupId>com.google.appengine</groupId>
+	      <artifactId>appengine-api-stubs</artifactId>
+	      <version>${appengine.sdk.version}</version>
+	      <scope>test</scope>
+	    </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <version>2.5.1</version>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.7</source>
+                    <target>1.7</target>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>2.3</version>
+                <configuration>
+                    <archiveClasses>true</archiveClasses>
+                    <webResources>
+                        <!-- in order to interpolate version from pom into appengine-web.xml -->
+                        <resource>
+                            <directory>${basedir}/src/main/webapp/WEB-INF</directory>
+                            <filtering>true</filtering>
+                            <targetPath>WEB-INF</targetPath>
+                            <includes>
+                                <include>**/*.xml</include>
+                            </includes>
+                        </resource>
+                    </webResources>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>com.google.appengine</groupId>
+                <artifactId>appengine-maven-plugin</artifactId>
+                <version>${appengine.sdk.version}</version>
+                <configuration>
+                    <!-- <address>0.0.0.0</address> -->
+                    <jvmFlags>
+                        <jvmFlag>-Xdebug</jvmFlag>
+                        <jvmFlag>-Xnoagent</jvmFlag>
+                        <jvmFlag>-Xrunjdwp:transport=dt_socket,address=4001,suspend=n,server=y
+                        </jvmFlag>
+                        <!-- change this if you want hdr to simulate eventual consistency -->
+                        <jvmFlag>-Ddatastore.default_high_rep_job_policy_unapplied_job_pct=0</jvmFlag>
+                    </jvmFlags>
+                </configuration>
+            </plugin>
+
+        </plugins>
+    </build>
+    <profiles>
+    	<profile>
+		  	<id>default</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<build>
+				<plugins>
+					 <plugin>
+		                <groupId>org.apache.maven.plugins</groupId>
+		                <version>2.5.1</version>
+		                <artifactId>maven-compiler-plugin</artifactId>
+		                <configuration>
+		                    <source>1.7</source>
+		                    <target>1.7</target>
+		                </configuration>
+		            </plugin>
+
+		            <plugin>
+		                <groupId>org.apache.maven.plugins</groupId>
+		                <artifactId>maven-war-plugin</artifactId>
+		                <version>2.3</version>
+		                <configuration>
+		                    <archiveClasses>true</archiveClasses>
+		                    <webResources>
+		                        <!-- in order to interpolate version from pom into appengine-web.xml -->
+		                        <resource>
+		                            <directory>${basedir}/src/main/webapp/WEB-INF</directory>
+		                            <filtering>true</filtering>
+		                            <targetPath>WEB-INF</targetPath>
+		                            <includes>
+		                                <include>**/*.xml</include>
+		                            </includes>
+		                        </resource>
+		                    </webResources>
+		                </configuration>
+		            </plugin>
+
+		            <plugin>
+		                <groupId>com.google.appengine</groupId>
+		                <artifactId>appengine-maven-plugin</artifactId>
+		                <version>${appengine.sdk.version}</version>
+		                <configuration>
+		                    <!-- <address>0.0.0.0</address> -->
+		                    <jvmFlags>
+		                        <jvmFlag>-Xdebug</jvmFlag>
+		                        <jvmFlag>-Xnoagent</jvmFlag>
+		                        <jvmFlag>-Xrunjdwp:transport=dt_socket,address=4001,suspend=n,server=y
+		                        </jvmFlag>
+		                        <!-- change this if you want hdr to simulate eventual consistency -->
+		                        <jvmFlag>-Ddatastore.default_high_rep_job_policy_unapplied_job_pct=0</jvmFlag>
+		                    </jvmFlags>
+		                    <port>8780</port>
+		                </configuration>
+		            </plugin>
+				</plugins>
+			</build>
+		</profile>
+    </profiles>
+</project>

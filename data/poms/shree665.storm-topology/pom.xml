@@ -1,0 +1,636 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>storm-topology</artifactId>
+    <groupId>com.coffeetechfaff.blog</groupId>
+	<version>0.1-SNAPSHOT</version>
+    <name>coffeetechgaff strom topology</name>
+    <description>The Topology Service</description>
+    <packaging>jar</packaging>
+
+    <properties>	
+    		<java.version>1.8</java.version>
+	    <kafka.version>0.10.0.1</kafka.version>
+	    <scala.version>2.11</scala.version>
+	    <janusgraph.version>0.1.1</janusgraph.version>
+	    <elasticsearch.version>2.4.4</elasticsearch.version>
+	    <storm.version>1.0.2</storm.version>
+	    
+	    <!-- Maven specific settings -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ssZ</maven.build.timestamp.format>
+        <build.timestamp>${maven.build.timestamp}</build.timestamp>
+
+        <!-- Unit testing -->
+        <test.args>-Xms256m -Xmx1024m</test.args>
+
+        <!-- Sonar reporting -->
+        <sonar.language>java</sonar.language>
+        <sonar.jacoco.reportPath>${jacoco.ut.reportPath}</sonar.jacoco.reportPath>
+        <sonar.jacoco.itReportPath>${jacoco.it.reportPath}</sonar.jacoco.itReportPath>
+        <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
+        <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
+
+        <!-- jacoco reporting -->
+        <jacoco.it.reportPath>${project.build.directory}/coverage-reports/jacoco-it.exec</jacoco.it.reportPath>
+        <jacoco.ut.reportPath>${project.build.directory}/coverage-reports/jacoco-ut.exec</jacoco.ut.reportPath>
+        <jacoco.version>0.7.9</jacoco.version>
+        <jacoco.failsafe.argline />
+
+        <!-- The following are only ever used in the -P generate-coverage-report
+            profile -->
+        <it.reportPath>${project.reporting.outputDirectory}/jacoco-it</it.reportPath>
+        <ut.reportPath>${project.reporting.outputDirectory}/jacoco-ut</ut.reportPath>
+    </properties>
+    
+    <build>
+        <pluginManagement>
+            <plugins>
+                <!--This plugin's configuration is used to store Eclipse m2e settings
+                    only. It has no influence on the Maven build itself. -->
+                <plugin>
+                    <groupId>org.eclipse.m2e</groupId>
+                    <artifactId>lifecycle-mapping</artifactId>
+                    <version>1.0.0</version>
+                    <configuration>
+                        <lifecycleMappingMetadata>
+                            <pluginExecutions>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.jacoco</groupId>
+                                        <artifactId>
+                                            jacoco-maven-plugin
+                                        </artifactId>
+                                        <versionRange>
+                                            [${jacoco.version},)
+                                        </versionRange>
+                                        <goals>
+                                            <goal>prepare-agent</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore />
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.apache.avro</groupId>
+                                        <artifactId>avro-maven-plugin</artifactId>
+                                        <versionRange>[1.7.6,)</versionRange>
+                                        <goals>
+                                            <goal>schema</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <execute />
+                                    </action>
+                                </pluginExecution>
+                            </pluginExecutions>
+                        </lifecycleMappingMetadata>
+                    </configuration>
+                </plugin>
+
+                <!-- Shading takes all dependencies and creates a mega jar (uberjar)
+                    for deployment -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>2.4.3</version>
+                </plugin>
+
+                <!-- https://mvnrepository.com/artifact/net.alchim31.maven/scala-maven-plugin -->
+                <plugin>
+                    <groupId>net.alchim31.maven</groupId>
+                    <artifactId>scala-maven-plugin</artifactId>
+                    <version>3.2.2</version>
+                </plugin>
+
+                <!-- for building Docker files, use with 'mvn clean package docker:build' -->
+                <plugin>
+                    <groupId>io.fabric8</groupId>
+                    <artifactId>docker-maven-plugin</artifactId>
+                    <version>${docker.plugin.version}</version>
+                    <configuration>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>docker:build</id>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>build</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.5.1</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
+            </plugin>
+
+            <!-- Execute unit tests in every project -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.19.1</version>
+                <configuration>
+                    <argLine>${test.args} ${jacoco.surefire.argline}</argLine>
+                    <includes>
+                        <include>**/*.class</include>
+                    </includes>
+                    <rerunFailingTestsCount>3</rerunFailingTestsCount>
+                </configuration>
+            </plugin>
+
+            <!-- SonarQube integration (mvn sonar:sonar) -->
+            <plugin>
+                <groupId>org.sonarsource.scanner.maven</groupId>
+                <artifactId>sonar-maven-plugin</artifactId>
+                <version>3.0.2</version>
+            </plugin>
+
+
+            <!-- For building javadocs, use with 'mvn javadoc:aggregate' -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.10.4</version>
+                <configuration>
+                    <notimestamp>true</notimestamp>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>aggregate</id>
+                        <goals>
+                            <goal>aggregate</goal>
+                        </goals>
+                        <phase>site</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            
+            <plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${session.executionRootDirectory}/target/build</outputDirectory>
+							<artifactSet>
+                                <excludes>
+                                    <exclude>org.apache.spark:*</exclude>
+                                    <exclude>log4j:*</exclude>
+                                    <exclude>org.slf4j:slf4j-log4j12:*</exclude>
+                                </excludes>
+                            </artifactSet>
+							<filters>
+								<filter>
+									<artifact>*:*</artifact>
+									<excludes>
+										<exclude>META-INF/*.SF</exclude>
+										<exclude>META-INF/*.DSA</exclude>
+										<exclude>META-INF/*.RSA</exclude>
+									</excludes>
+								</filter>
+							</filters>
+							<transformers>
+								<transformer
+									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+									<manifestEntries>
+										<Specification-Title>Subedi Test Project</Specification-Title>
+										<Specification-Vendor>Subedi</Specification-Vendor>
+										<Specification-Version>${project.version}</Specification-Version>
+										<Implementation-Title>com.coffeetechgaff.storm</Implementation-Title>
+										<Implementation-Vendor>Public</Implementation-Vendor>
+										<Implementation-Version>${project.version}</Implementation-Version>
+									</manifestEntries>
+								</transformer>
+
+								<transformer
+									implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+							</transformers>
+							<createDependencyReducedPom>false</createDependencyReducedPom>
+							<minimizeJar>false</minimizeJar>
+							<finalName>storm-topology-${project.version}-everything</finalName>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+
+        <!-- Description: Adds a few more executions to the jacoco to generate
+            human readable code coverage reports -->
+        <profile>
+            <id>generate-coverage-report</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>${jacoco.version}</version>
+                        <executions>
+                            <execution>
+                                <id>post-unit-test</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>report</goal>
+                                </goals>
+                                <configuration>
+                                    <dataFile>${jacoco.ut.reportPath}</dataFile>
+                                    <outputDirectory>${ut.reportPath}</outputDirectory>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>post-integration-test</id>
+                                <phase>post-integration-test</phase>
+                                <goals>
+                                    <goal>report-integration</goal>
+                                </goals>
+                                <configuration>
+                                    <dataFile>${jacoco.it.reportPath}</dataFile>
+                                    <outputDirectory>${it.reportPath}</outputDirectory>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- Description: Will compile code and generate a jar file containing
+            source code -->
+        <profile>
+            <id>sources-jar</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <configuration>
+                            <outputDirectory>${session.executionRootDirectory}/target/build</outputDirectory>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- Description: Skip all code quality tools if specified -->
+        <profile>
+            <id>skip-code-quality</id>
+            <activation>
+                <property>
+                    <name>skip-quality</name>
+                </property>
+            </activation>
+            <properties>
+                <skipTests>true</skipTests>
+                <formatter.skip>true</formatter.skip>
+                <findbugs.skip>true</findbugs.skip>
+            </properties>
+        </profile>
+
+        <!-- Description: Code quality plugins are disabled by default for development
+            but will be active in continuous integration. Developers should run these
+            before checking in, but this won't force them to do it for every build. To
+            enable, use -Dcheck-code-quality when building -->
+        <!-- NOTE: This profile is also defined in asc-test, so if you rename the
+            property or the profile name, change that as well. -->
+        <profile>
+            <id>code-quality</id>
+            <activation>
+                <property>
+                    <name>!skip-quality</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+
+                    <!-- Do code coverage reporting -->
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>${jacoco.version}</version>
+                        <executions>
+                            <execution>
+                                <id>pre-unit-test</id>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                                <configuration>
+                                    <includes>
+                                        <include>com/coffeetechgaff/storm/**</include>
+                                    </includes>
+                                    <destFile>${jacoco.ut.reportPath}</destFile>
+                                    <propertyName>jacoco.surefire.argline</propertyName>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>pre-integration-test</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                                <configuration>
+                                    <includes>
+                                        <include>com/coffeetechgaff/storm/**</include>
+                                    </includes>
+                                    <destFile>${jacoco.it.reportPath}</destFile>
+                                    <propertyName>jacoco.failsafe.argline</propertyName>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <!-- Description: When using Java 1.8, disable doclint (apparently this
+            is important for javadocs?) -->
+        <profile>
+            <id>doclint-java8-disable</id>
+            <activation>
+                <jdk>[1.8,)</jdk>
+            </activation>
+            <properties>
+                <javadoc.opts>-Xdoclint:none</javadoc.opts>
+            </properties>
+        </profile>
+    </profiles>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.apache.kafka</groupId>
+			<artifactId>kafka_${scala.version}</artifactId>
+			<version>${kafka.version}</version>
+			<exclusions>
+				<exclusion>
+	                <groupId>org.apache.zookeeper</groupId>
+	                <artifactId>zookeeper</artifactId>
+	            </exclusion>
+	            <exclusion>
+           			<groupId>log4j</groupId>
+           			<artifactId>log4j</artifactId>
+        		</exclusion>
+			</exclusions>
+		</dependency>
+		
+		<!-- Janus Graph Dependency -->
+		<dependency>
+		   <groupId>org.janusgraph</groupId>
+		   <artifactId>janusgraph-all</artifactId>
+		   <version>${janusgraph.version}</version>
+		   <exclusions>
+		   	<!-- This will override the log4j.xml that is coming from netflix -->
+		   		<exclusion>
+					<groupId>com.netflix.astyanax</groupId>
+					<artifactId>astyanax-core</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.netflix.astyanax</groupId>
+					<artifactId>astyanax-thrift</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.netflix.astyanax</groupId>
+					<artifactId>astyanax-recipes</artifactId>
+				</exclusion>
+			   	<exclusion>
+			   		<groupId>org.slf4j</groupId>
+	    			<artifactId>jcl-over-slf4j</artifactId>
+			   	</exclusion>
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-log4j12</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>log4j</groupId>
+					<artifactId>log4j</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>junit</groupId>
+                	<artifactId>junit</artifactId>
+				</exclusion>
+                <exclusion>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>log4j-slf4j-impl</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>log4j-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>log4j-over-slf4j</artifactId>
+                </exclusion>
+				<exclusion>
+					 <groupId>org.mockito</groupId>
+                	<artifactId>mockito-all</artifactId>
+				</exclusion>
+				<!--  There were multiple sl4j in our class path because of JanusGraph dependency. We need to exclude following to include our SL4J dependency -->
+				 <exclusion>
+	                <groupId>ch.qos.logback</groupId>
+	                <artifactId>logback-classic</artifactId>
+	            </exclusion>
+	            <exclusion>
+	            	<groupId>org.scala-lang</groupId>
+    				<artifactId>scala-reflect</artifactId>
+	            </exclusion>
+	            <exclusion>
+	            	<groupId>com.fasterxml.jackson.module</groupId>
+    				<artifactId>jackson-module-scala_2.10</artifactId>
+	            </exclusion>
+	            <exclusion>
+		            <groupId>com.sun.jersey</groupId>
+		            <artifactId>jersey-server</artifactId>
+	            </exclusion>
+	            <exclusion>
+		            <groupId>com.sun.jersey</groupId>
+		            <artifactId>jersey-core</artifactId>
+	            </exclusion>
+			</exclusions>
+		</dependency>
+
+		<dependency>
+		  <groupId>org.apache.avro</groupId>
+		  <artifactId>avro</artifactId>
+		  <version>1.8.1</version>
+		</dependency>
+		
+		 <dependency>
+		    <groupId>org.apache.avro</groupId>
+		    <artifactId>avro-maven-plugin</artifactId>
+		    <version>1.8.1</version>
+		  </dependency>
+		  <dependency>
+		    <groupId>org.apache.avro</groupId>
+		    <artifactId>avro-compiler</artifactId>
+		    <version>1.8.1</version>
+		  </dependency>
+		  <dependency>
+		    <groupId>org.apache.avro</groupId>
+		    <artifactId>avro-ipc</artifactId>
+		    <version>1.8.1</version>
+		  </dependency>
+
+		<dependency>
+		    <groupId>org.apache.httpcomponents</groupId>
+		    <artifactId>httpclient</artifactId>
+		    <version>4.5.3</version>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.apache.storm/storm-core -->
+		<dependency>
+		    <groupId>org.apache.storm</groupId>
+		    <artifactId>storm-core</artifactId>
+		    <version>${storm.version}</version>
+		    <scope>provided</scope>
+		    <exclusions>
+                <exclusion>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>log4j-slf4j-impl</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>log4j-over-slf4j</artifactId>
+                </exclusion>
+            </exclusions>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-core -->
+		<dependency>
+		    <groupId>com.fasterxml.jackson.core</groupId>
+		    <artifactId>jackson-core</artifactId>
+		    <version>2.8.8</version>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
+		<dependency>
+		    <groupId>com.fasterxml.jackson.core</groupId>
+		    <artifactId>jackson-databind</artifactId>
+		    <version>2.8.8</version>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.springframework/spring-core -->
+		<dependency>
+		    <groupId>org.springframework</groupId>
+		    <artifactId>spring-core</artifactId>
+		    <version>4.3.7.RELEASE</version>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-api -->
+		<dependency>
+		    <groupId>org.apache.logging.log4j</groupId>
+		    <artifactId>log4j-core</artifactId>
+		    <version>2.1</version>
+		    <scope>compile</scope>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.apache.storm/storm-kafka -->
+		<dependency>
+		    <groupId>org.apache.storm</groupId>
+		    <artifactId>storm-kafka</artifactId>
+		    <version>${storm.version}</version>
+		    <scope>compile</scope>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.apache.zookeeper/zookeeper -->
+		<dependency>
+		    <groupId>org.apache.zookeeper</groupId>
+		    <artifactId>zookeeper</artifactId>
+		    <version>3.4.8</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.clojure/clojure -->
+		<dependency>
+    		<groupId>org.clojure</groupId>
+    		<artifactId>clojure</artifactId>
+    		<version>1.7.0</version>
+		</dependency>
+		
+		<!-- We need this scala version as a compile scope -->
+		<dependency>
+		    <groupId>org.scala-lang</groupId>
+		    <artifactId>scala-library</artifactId>
+		    <version>2.11.4</version><!--$NO-MVN-MAN-VER$-->
+		    <scope>compile</scope>
+		</dependency>
+        
+        <!-- https://mvnrepository.com/artifact/org.apache.curator/curator-framework -->
+		<dependency>
+		    <groupId>org.apache.curator</groupId>
+		    <artifactId>curator-framework</artifactId>
+		    <version>2.10.0</version>
+		</dependency>
+
+		<!-- testing frameworks -->
+		<!-- https://mvnrepository.com/artifact/org.hamcrest/hamcrest-all -->
+		<dependency>
+			<groupId>org.hamcrest</groupId>
+			<artifactId>hamcrest-all</artifactId>
+			<version>1.3</version>
+			<scope>test</scope>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.powermock/powermock-module-junit4 -->
+		<dependency>
+			<groupId>org.powermock</groupId>
+			<artifactId>powermock-module-junit4</artifactId>
+			<version>1.6.6</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.powermock/powermock-api-mockito -->
+		<dependency>
+			<groupId>org.powermock</groupId>
+			<artifactId>powermock-api-mockito</artifactId>
+			<version>1.6.6</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.powermock/powermock-core -->
+		<dependency>
+			<groupId>org.powermock</groupId>
+			<artifactId>powermock-core</artifactId>
+			<version>1.6.6</version>
+			<scope>test</scope>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/redis.clients/jedis -->
+		<dependency>
+		    <groupId>redis.clients</groupId>
+		    <artifactId>jedis</artifactId>
+		    <version>2.9.0</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.fiftyonred</groupId>
+			<artifactId>mock-jedis</artifactId>
+			<version>0.4.0</version>
+			<type>jar</type>
+			<scope>test</scope>
+		</dependency>
+		
+	</dependencies>
+	
+</project>

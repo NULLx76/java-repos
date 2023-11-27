@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.intuso</groupId>
+        <artifactId>parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <groupId>com.intuso.housemate</groupId>
+    <artifactId>housemate-globalserver</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <name>Housemate GlobalServer</name>
+    <description>Housemate Global Server for accessing user instances remotely through a common, remotely accessible url</description>
+
+    <profiles>
+        <profile>
+            <id>intuso</id>
+        </profile>
+    </profiles>
+
+    <properties>
+        <intuso.housemate.client.version>1.0.0-SNAPSHOT</intuso.housemate.client.version>
+        <intuso.utilities.version>1.1.0-SNAPSHOT</intuso.utilities.version>
+    </properties>
+
+    <dependencies>
+
+        <!-- Webserver -->
+        <dependency>
+            <groupId>com.intuso.housemate</groupId>
+            <artifactId>housemate-webserver</artifactId>
+            <version>2.0.0-SNAPSHOT</version>
+        </dependency>
+
+        <!-- Database impl -->
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongo-java-driver</artifactId>
+            <version>3.4.2</version>
+        </dependency>
+
+        <!-- REST APIs -->
+        <dependency>
+            <groupId>com.intuso.housemate</groupId>
+            <artifactId>housemate-client-1-0-rest</artifactId>
+            <version>${intuso.housemate.client.version}</version>
+        </dependency>
+
+        <!-- For connecting to clients -->
+        <dependency>
+            <groupId>com.intuso.housemate</groupId>
+            <artifactId>housemate-client-1-0-proxy</artifactId>
+            <version>${intuso.housemate.client.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.intuso.housemate</groupId>
+            <artifactId>housemate-client-1-0-messaging-jms</artifactId>
+            <version>${intuso.housemate.client.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.activemq</groupId>
+            <artifactId>activemq-client</artifactId>
+        </dependency>
+
+        <!-- Properties -->
+        <dependency>
+            <groupId>com.intuso.utilities</groupId>
+            <artifactId>utilities-properties-reader-commandline</artifactId>
+            <version>${intuso.utilities.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.intuso.utilities</groupId>
+            <artifactId>utilities-properties-reader-file</artifactId>
+            <version>${intuso.utilities.version}</version>
+        </dependency>
+
+        <!-- Logging -->
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+        </dependency>
+
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>org.apache.oltu.oauth2</groupId>
+            <artifactId>org.apache.oltu.oauth2.client</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+
+        <plugins>
+            <!-- Attach javadoc -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+            </plugin>
+
+            <!-- Package all dependencies into one jar and make it executable -->
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <mainClass>com.intuso.housemate.globalserver.GlobalServer</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-my-jar-with-dependencies</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Make deb -->
+            <plugin>
+                <artifactId>jdeb</artifactId>
+                <groupId>org.vafer</groupId>
+                <version>1.4</version>
+                <executions>
+                    <execution>
+                        <id>package-deb</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jdeb</goal>
+                        </goals>
+                        <configuration>
+                            <deb>${project.build.directory}/housemate-globalserver-${project.version}.deb</deb>
+                            <changesOut>${project.build.directory}/housemate-globalserver-${project.version}.changes</changesOut>
+                            <dataSet>
+
+                                <!-- Main jar with all deps in it -->
+                                <data>
+                                    <src>${project.build.directory}/housemate-globalserver-${project.version}-jar-with-dependencies.jar</src>
+                                    <type>file</type>
+                                    <mapper>
+                                        <type>perm</type>
+                                        <prefix>/usr/share/intuso/housemate</prefix>
+                                        <user>hm</user>
+                                        <group>nogroup</group>
+                                        <filemode>744</filemode>
+                                    </mapper>
+                                </data>
+
+                                <!-- Config files -->
+                                <data>
+                                    <src>${project.build.directory}/classes/conf</src>
+                                    <type>directory</type>
+                                    <mapper>
+                                        <type>perm</type>
+                                        <prefix>/etc/intuso/housemate/globalserver</prefix>
+                                        <user>hm</user>
+                                        <group>nogroup</group>
+                                        <filemode>744</filemode>
+                                    </mapper>
+                                </data>
+
+                                <!-- Web interface -->
+                                <data>
+                                    <src>../housemate-frontend/build</src>
+                                    <type>directory</type>
+                                    <mapper>
+                                        <type>perm</type>
+                                        <prefix>/var/www/intuso/housemate/globalserver</prefix>
+                                        <user>hm</user>
+                                        <group>nogroup</group>
+                                        <filemode>755</filemode>
+                                    </mapper>
+                                </data>
+
+                                <!-- Log dir -->
+                                <data>
+                                    <type>template</type>
+                                    <paths>
+                                        <path>/var/log/intuso</path>
+                                    </paths>
+                                    <mapper>
+                                        <type>perm</type>
+                                        <user>hm</user>
+                                        <group>nogroup</group>
+                                        <filemode>755</filemode>
+                                    </mapper>
+                                </data>
+
+                                <!-- The systemctl service -->
+                                <data>
+                                    <src>${project.build.directory}/classes/systemctl/housemate-globalserver.service</src>
+                                    <type>file</type>
+                                    <mapper>
+                                        <type>perm</type>
+                                        <prefix>/lib/systemd/system</prefix>
+                                        <user>root</user>
+                                        <group>root</group>
+                                    </mapper>
+                                </data>
+                            </dataSet>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <scm>
+        <connection>git@github.com:intuso/housemate-globalserver.git</connection>
+        <developerConnection>git@github.com:intuso/housemate-globalserver.git</developerConnection>
+    </scm>
+
+</project>

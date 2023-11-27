@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>pl.xperios</groupId>
+    <artifactId>tdb</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>tbb</name>
+    <description>TDB</description>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>1.5.1.RELEASE</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+
+    <modules>
+        <module>gui</module>
+        <module>middleware</module>
+    </modules>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <java.version>1.8</java.version>
+        <celerio-maven-plugin.version>4.0.18-SNAPSHOT</celerio-maven-plugin.version>
+        <celerio-maven-plugin.configuration>${basedir}/generator/conf/celerio-maven-plugin.xml
+        </celerio-maven-plugin.configuration>
+        <celerio-maven-plugin.packs.configuration>${basedir}/generator/conf/celerio-template-packs.xml
+        </celerio-maven-plugin.packs.configuration>
+        <celerio.xmlMetadata>${basedir}/generator/metadata.xml</celerio.xmlMetadata>
+
+        <jdbc.groupId>mysql</jdbc.groupId>
+        <jdbc.artifactId>mysql-connector-java</jdbc.artifactId>
+        <jdbc.version>5.1.40</jdbc.version>
+        <jdbc.driver>com.mysql.jdbc.Driver</jdbc.driver>
+        <jdbc.url>jdbc:mysql://127.0.0.1:3306/tdb_dev</jdbc.url>
+        <jdbc.user>root</jdbc.user>
+        <jdbc.password>root</jdbc.password>
+        <jdbc.schema></jdbc.schema>
+        <jdbc.catalog></jdbc.catalog>
+        <hibernate.dialect>org.hibernate.dialect.MySQL57InnoDBDialect</hibernate.dialect>
+        <sql-maven-plugin.delimiter>;</sql-maven-plugin.delimiter>
+        <sql.create.script>dump.sql</sql.create.script>
+
+    </properties>
+
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>pl.xperios</groupId>
+                <artifactId>tdb-gui</artifactId>
+                <version>${version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+    <profiles>
+        <profile>
+            <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+            <!-- Drop and recreate the database -->
+            <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+            <id>db</id>
+            <build>
+                <defaultGoal>initialize</defaultGoal>
+                <plugins>
+                    <plugin>
+                        <!-- http://mojo.codehaus.org/sql-maven-plugin/ -->
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>sql-maven-plugin</artifactId>
+                        <version>1.5</version>
+                        <executions>
+                            <execution>
+                                <id>Create and initialize the database</id>
+                                <phase>initialize</phase>
+                                <configuration>
+                                    <driver>${jdbc.driver}</driver>
+                                    <url>${jdbc.url}</url>
+                                    <username>${jdbc.user}</username>
+                                    <password>${jdbc.password}</password>
+                                    <autocommit>true</autocommit>
+                                    <encoding>UTF-8</encoding>
+                                    <printResultSet>true</printResultSet>
+                                    <onError>continue</onError>
+                                    <delimiter>${sql-maven-plugin.delimiter}</delimiter>
+                                    <orderFile>ascending</orderFile>
+                                    <fileset>
+                                        <basedir>${project.basedir}/generator</basedir>
+                                        <includes>
+                                            <include>${sql.create.script}</include>
+                                        </includes>
+                                    </fileset>
+                                </configuration>
+                                <goals>
+                                    <goal>execute</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <dependencies>
+                            <dependency>
+                                <groupId>${jdbc.groupId}</groupId>
+                                <artifactId>${jdbc.artifactId}</artifactId>
+                                <version>${jdbc.version}</version>
+                            </dependency>
+                        </dependencies>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+            <!-- Drop and recreate the database -->
+            <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+            <id>dbFromLiquibase</id>
+            <build>
+                <defaultGoal>initialize</defaultGoal>
+                <plugins>
+                    <plugin>
+                        <groupId>org.liquibase</groupId>
+                        <artifactId>liquibase-maven-plugin</artifactId>
+                        <version>3.5.3</version>
+                        <configuration>
+                            <changeLogFile>middleware/src/main/resources/db/changelog/db.changelog-master.xml
+                            </changeLogFile>
+                            <driver>${jdbc.driver}</driver>
+                            <url>${jdbc.url}</url>
+                            <username>${jdbc.user}</username>
+                            <password>${jdbc.password}</password>
+                            <logging>info</logging>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>run-app</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>update</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <dependencies>
+                            <dependency>
+                                <groupId>${jdbc.groupId}</groupId>
+                                <artifactId>${jdbc.artifactId}</artifactId>
+                                <version>${jdbc.version}</version>
+                            </dependency>
+                        </dependencies>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <!-- Profiles below are used when Celerio Maven Plugin is present in the build process -->
+        <profile>
+            <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+            <!-- Extract the database metadata -->
+            <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+            <id>metadata</id>
+            <build>
+                <defaultGoal>generate-sources</defaultGoal>
+                <plugins>
+                    <plugin>
+                        <groupId>com.jaxio.celerio</groupId>
+                        <artifactId>dbmetadata-maven-plugin</artifactId>
+                        <version>${celerio-maven-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>Extract the database schema.</id>
+                                <goals>
+                                    <goal>extract-metadata</goal>
+                                </goals>
+                                <configuration>
+                                    <targetFilename>${celerio.xmlMetadata}</targetFilename>
+                                </configuration>
+                            </execution>
+                        </executions>
+                        <dependencies>
+                            <dependency>
+                                <groupId>${jdbc.groupId}</groupId>
+                                <artifactId>${jdbc.artifactId}</artifactId>
+                                <version>${jdbc.version}</version>
+                            </dependency>
+                        </dependencies>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+            <!-- Generate the code using Celerio -->
+            <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+            <id>gen</id>
+            <build>
+                <defaultGoal>generate-sources</defaultGoal>
+                <plugins>
+                    <plugin>
+                        <groupId>com.jaxio.celerio</groupId>
+                        <artifactId>celerio-maven-plugin</artifactId>
+                        <version>${celerio-maven-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>Generates files using the extracted database schema.</id>
+                                <goals>
+                                    <goal>generate</goal>
+                                </goals>
+                                <configuration>
+                                    <xmlMetadata>${celerio.xmlMetadata}</xmlMetadata>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+            <!-- Delete code generated by Celerio -->
+            <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+            <id>cleanGen</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-clean-plugin</artifactId>
+                        <version>3.0.0</version>
+                        <executions>
+                            <execution>
+                                <id>auto-clean</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>clean</goal>
+                                </goals>
+                                <configuration>
+                                    <filesets>
+                                        <fileset>
+                                            <directory>generated</directory>
+                                        </fileset>
+                                    </filesets>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>com.jaxio.celerio</groupId>
+                        <artifactId>celerio-maven-plugin</artifactId>
+                        <version>${celerio-maven-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>Delete previously generated files (use .celerio/ folder)</id>
+                                <phase>generate-resources</phase>
+                                <goals>
+                                    <goal>cleanGenerated</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+</project>

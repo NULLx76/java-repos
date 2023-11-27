@@ -1,0 +1,253 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.pwllc</groupId>
+    <artifactId>hello-docker-app-1</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <name>DockerTestApp</name>
+
+    <properties>
+        <maven.compiler.target>1.7</maven.compiler.target>
+        <maven.compiler.source>1.7</maven.compiler.source>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <junit.version>4.11</junit.version>
+        <dropwizard.version>0.8.2</dropwizard.version>
+
+        <!-- leave empty for docker hub; use e.g. "localhost:5000/" for a local docker registry -->
+        <docker.registry.name>pwllc</docker.registry.name>
+
+        <!--<docker.repository.name>${docker.registry.name}cdowns/${project.artifactId}</docker.repository.name>-->
+        <docker.repository.name>${docker.registry.name}/${project.artifactId}</docker.repository.name>
+
+        <!-- this is not localhost when using boot2docker! -->
+        <!--<docker.host.address>localhost</docker.host.address>-->
+        <docker.host.address>192.168.99.100</docker.host.address>
+
+        <cdowns.port>8080</cdowns.port>
+        <cdowns.port.admin>8081</cdowns.port.admin>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.dropwizard</groupId>
+            <artifactId>dropwizard-core</artifactId>
+            <version>${dropwizard.version}</version>
+        </dependency>
+    </dependencies>
+    <build>
+        <finalName>TestApp</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.4</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>2.3</version>
+                <configuration>
+                    <createDependencyReducedPom>true</createDependencyReducedPom>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>com.pwllc.application.TestApplication</mainClass>
+                                </transformer>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.jolokia</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>0.13.9</version>
+                <configuration>
+                    <images>
+                        <image>
+                            <alias>${project.artifactId}</alias>
+                            <name>${docker.repository.name}:${project.version}</name>
+                            <build>
+                                <from>java:8-jre</from>
+                                <maintainer>cdowns</maintainer>
+                                <assembly>
+                                    <descriptor>docker-assembly.xml</descriptor>
+                                </assembly>
+                                <ports>
+                                    <port>8080</port>
+                                    <port>8081</port>
+                                </ports>
+
+                                <!--<cmd>-->
+                                <!--<shell>java -jar \-->
+                                <!--/maven/${project.build.finalName}.jar server \-->
+                                <!--/maven/docker-config.yml</shell>-->
+                                <!--</cmd>-->
+
+                                <cmd>
+                                    <shell>java -DdbHost=$DB_PORT_27017_TCP_ADDR \
+                                        -DdbPort=$DB_PORT_27017_TCP_PORT -jar \
+                                        /maven/${project.build.finalName}.jar server \
+                                        /maven/docker-config.yml
+                                    </shell>
+                                </cmd>
+                            </build>
+                            <run>
+                                <namingStrategy>alias</namingStrategy>
+                                <ports>
+                                    <port>${cdowns.port}:8080</port>
+                                    <port>${cdowns.port.admin}:8081</port>
+                                </ports>
+                                <volumes>
+                                    <bind>
+                                        <volume>${user.home}/logs:/logs</volume>
+                                    </bind>
+                                </volumes>
+                                <wait>
+                                    <url>http://${docker.host.address}:${cdowns.port.admin}/ping</url>
+                                    <time>10000</time>
+                                </wait>
+                                <log>
+                                    <prefix>${project.artifactId}</prefix>
+                                    <color>cyan</color>
+                                </log>
+
+                                <links>
+                                    <link>mongodb-1:db</link>
+                                </links>
+                            </run>
+                        </image>
+
+                        <image>
+                            <alias>mongodb-1</alias>
+                            <name>mongo:2.6.11</name>
+                            <run>
+                                <namingStrategy>alias</namingStrategy>
+                                <cmd>--smallfiles</cmd>
+                                <wait>
+                                    <log>waiting for connections on port</log>
+                                    <time>10000</time>
+                                </wait>
+                                <log>
+                                    <prefix>MongoDB</prefix>
+                                    <color>yellow</color>
+                                </log>
+                            </run>
+                        </image>
+
+                    </images>
+                </configuration>
+
+                <executions>
+                    <execution>
+                        <id>start</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>start</goal>
+                        </goals>
+                    </execution>
+
+                    <execution>
+                        <id>stop</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>
+                    </execution>
+
+                    <execution>
+                        <id>push-to-docker-registry</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>push</goal>
+                        </goals>
+                    </execution>
+                </executions>
+
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.18.1</version>
+                <configuration>
+                    <!--<phase>integration-test</phase>-->
+                    <includes>
+                        <include>**/*.java</include>
+                    </includes>
+                    <groups>com.pwllc.IntegrationTest</groups>
+                    <systemPropertyVariables>
+                        <service.url>http://${docker.host.address}:${cdowns.port}/</service.url>
+                    </systemPropertyVariables>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.18.1</version>
+                <configuration>
+                    <excludedGroups>com.pwllc.IntegrationTest</excludedGroups>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>2.7</version>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+
+        </plugins>
+    </build>
+
+
+</project>

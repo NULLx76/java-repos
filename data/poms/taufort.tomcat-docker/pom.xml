@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.github.taufort.tomcatdocker</groupId>
+  <artifactId>tomcat-docker</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>war</packaging>
+
+  <name>JSF 2 / Primefaces 5 with tomcat on docker</name>
+
+  <properties>
+    <!-- Libraries' versions -->
+    <jsf-api.version>2.2.13</jsf-api.version>
+    <primefaces.version>5.3</primefaces.version>
+    <jstl.version>1.2</jstl.version>
+    <javax.servlet.jsp-api.version>2.3.1</javax.servlet.jsp-api.version>
+    <javax.servlet-api.version>3.1.0</javax.servlet-api.version>
+    <primefaces-extensions.version>4.0.0</primefaces-extensions.version>
+    <log4j-slf4j-impl.version>2.6.2</log4j-slf4j-impl.version>
+    <slf4j-api.version>1.7.25</slf4j-api.version>
+    <logback-classic.version>1.2.2</logback-classic.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <!-- Docker build properties -->
+    <tomcat.final-artifact-name>${project.artifactId}-${project.version}</tomcat.final-artifact-name>
+    <skip.docker.build>false</skip.docker.build>
+
+    <!--
+      Useful for running docker image with maven for tests
+      Not to be used for production environment of course
+     -->
+    <skip.docker.run>false</skip.docker.run>
+
+    <!--
+      To fill with your repository if needed (ex: repository.toto.com/)
+      and change the property skip.docker.push to false
+     -->
+    <skip.docker.push>true</skip.docker.push>
+    <docker.registry.url />
+  </properties>
+
+  <repositories>
+    <repository>
+      <id>primefaces-repository</id>
+      <name>PrimeFaces Maven Repository</name>
+      <url>http://repository.primefaces.org</url>
+    </repository>
+  </repositories>
+
+  <dependencies>
+
+    <!-- Servlet -->
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>javax.servlet-api</artifactId>
+      <version>${javax.servlet-api.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>javax.servlet.jsp</groupId>
+      <artifactId>javax.servlet.jsp-api</artifactId>
+      <version>${javax.servlet.jsp-api.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>jstl</artifactId>
+      <version>${jstl.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.sun.el</groupId>
+      <artifactId>el-ri</artifactId>
+      <version>1.0</version>
+    </dependency>
+
+    <!-- JSF -->
+    <dependency>
+      <groupId>com.sun.faces</groupId>
+      <artifactId>jsf-impl</artifactId>
+      <version>${jsf-api.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.sun.faces</groupId>
+      <artifactId>jsf-api</artifactId>
+      <version>${jsf-api.version}</version>
+    </dependency>
+
+    <!-- Primefaces -->
+    <dependency>
+      <groupId>org.primefaces</groupId>
+      <artifactId>primefaces</artifactId>
+      <version>${primefaces.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.primefaces.extensions</groupId>
+      <artifactId>primefaces-extensions</artifactId>
+      <version>${primefaces-extensions.version}</version>
+    </dependency>
+
+    <!-- Slf4j & logback -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j-api.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>${logback-classic.version}</version>
+    </dependency>
+
+  </dependencies>
+
+  <build>
+    <resources>
+      <resource>
+        <directory>${project.basedir}/src/main/docker</directory>
+        <filtering>true</filtering>
+        <targetPath>${project.build.directory}/docker</targetPath>
+      </resource>
+      <resource>
+        <directory>${project.basedir}/src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
+
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.1</version>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+          <encoding>${project.build.sourceEncoding}</encoding>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>3.0.2</version>
+        <configuration>
+          <encoding>${project.build.sourceEncoding}</encoding>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.tomcat.maven</groupId>
+        <artifactId>tomcat7-maven-plugin</artifactId>
+        <version>2.2</version>
+        <configuration>
+          <!--<path>/${project.artifactId}-${project.version}</path>-->
+          <contextFile>src/main/webapp/WEB-INF/web.xml</contextFile>
+          <charset>${project.build.sourceEncoding}</charset>
+          <warDirectory>${project.build.directory}</warDirectory>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>docker</id>
+      <build>
+        <plugins>
+          <!--
+            Since the docker-maven-plugin does not currently support Docker's authentication token,
+            we need to call directly the docker command.
+            This may be removed, when the docker-maven-plugin will support authentication
+            -->
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>1.4.0</version>
+            <executions>
+              <execution>
+                <id>copy-war</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <skip>${skip.docker.build}</skip>
+                  <executable>cp</executable>
+                  <arguments>
+                    <argument>${project.build.directory}/${tomcat.final-artifact-name}.war</argument>
+                    <argument>${project.build.directory}/docker</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <id>docker-build</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <skip>${skip.docker.build}</skip>
+                  <executable>docker</executable>
+                  <arguments>
+                    <argument>build</argument>
+                    <argument>-t</argument>
+                    <argument>
+                      ${docker.registry.url}${project.artifactId}:${project.version}
+                    </argument>
+                    <argument>${project.build.directory}/docker</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <id>docker-run</id>
+                <phase>install</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <skip>${skip.docker.run}</skip>
+                  <executable>docker</executable>
+                  <arguments>
+                    <argument>run</argument>
+                    <argument>-d</argument>
+                    <argument>-p</argument>
+                    <argument>8080:8080</argument>
+                    <argument>${docker.registry.url}${project.artifactId}:${project.version}</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <id>docker-tag</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <skip>${skip.docker.push}</skip>
+                  <executable>docker</executable>
+                  <arguments>
+                    <argument>tag</argument>
+                    <argument>
+                      ${docker.registry.url}${project.artifactId}:${project.version}
+                    </argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <id>docker-push</id>
+                <phase>deploy</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <skip>${skip.docker.push}</skip>
+                  <executable>docker</executable>
+                  <arguments>
+                    <argument>push</argument>
+                    <argument>
+                      ${docker.registry.url}${project.artifactId}:${project.version}
+                    </argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+</project>

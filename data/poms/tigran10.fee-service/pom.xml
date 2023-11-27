@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.homeoffice.pbs.fee</groupId>
+    <artifactId>fee-service</artifactId>
+    <packaging>jar</packaging>
+    <version>1.0-SNAPSHOT</version>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>1.4.3.RELEASE</version>
+    </parent>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <java.version>1.8</java.version>
+
+        <!--docker-->
+        <team.name>acuma</team.name>
+        <docker.push.image>false</docker.push.image>
+        <artifact.shortname>fee-service</artifact.shortname>
+
+        <project.exec.artifactId>${project.build.finalName}-exec</project.exec.artifactId>
+
+        <!--checkstyle -->
+        <checkstyle.config.dir>${project.basedir}/conf/checkstyle</checkstyle.config.dir>
+        <checkstyle.file.location>${checkstyle.config.dir}/checkstyle.xml</checkstyle.file.location>
+        <checkstyle.suppressions.location>${checkstyle.config.dir}/suppressions.xml</checkstyle.suppressions.location>
+
+        <maven-checkstyle-plugin.version>2.15</maven-checkstyle-plugin.version>
+        <maven-compiler-plugin.version>3.3</maven-compiler-plugin.version>
+        <spring-boot-maven-plugin.version>1.4.4.RELEASE</spring-boot-maven-plugin.version>
+
+    </properties>
+
+
+
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-web</artifactId>
+            </dependency>
+
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-data-mongodb</artifactId>
+            </dependency>
+
+
+            <!--test-->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-test</artifactId>
+                <scope>test</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>com.jayway.jsonpath</groupId>
+                <artifactId>json-path</artifactId>
+                <scope>test</scope>
+            </dependency>
+
+        </dependencies>
+
+
+    <build>
+
+        <sourceDirectory>${basedir}/src/main/java</sourceDirectory>
+        <testSourceDirectory>${basedir}/src/test/java</testSourceDirectory>
+
+            <plugins>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-checkstyle-plugin</artifactId>
+                    <version>${maven-checkstyle-plugin.version}</version>
+                    <configuration>
+                        <configLocation>${checkstyle.file.location}</configLocation>
+                        <suppressionsLocation>${checkstyle.suppressions.location}</suppressionsLocation>
+                        <consoleOutput>true</consoleOutput>
+                        <failsOnError>false</failsOnError>
+                        <propertyExpansion>suppression.location=${checkstyle.suppressions.location}</propertyExpansion>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${maven-compiler-plugin.version}</version>
+                    <configuration>
+                        <source>1.8</source>
+                        <target>1.8</target>
+                        <compilerArgs>
+                            <arg>-XDignore.symbol.file</arg>
+                        </compilerArgs>
+                        <fork>true</fork>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring-boot-maven-plugin.version}</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>repackage</goal>
+                            </goals>
+                            <configuration>
+                                <classifier>exec</classifier>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+
+                <plugin>
+                    <groupId>com.spotify</groupId>
+                    <artifactId>docker-maven-plugin</artifactId>
+                    <version>0.4.13</version>
+                    <configuration>
+                        <imageName>${team.name}/${artifact.shortname}:latest</imageName>
+                        <dockerDirectory>${project.build.directory}/docker</dockerDirectory>
+                        <useConfigFile>true</useConfigFile>
+                        <pushImage>${docker.push.image}</pushImage>
+                        <imageTags>
+                            <imageTag>${project.version}</imageTag>
+                        </imageTags>
+                        <resources>
+                            <resource>
+                                <filtering>false</filtering>
+                                <targetPath>/</targetPath>
+                                <directory>${project.build.directory}</directory>
+                                <include>${project.build.finalName}-exec.jar</include>
+                            </resource>
+                        </resources>
+                        <skipDockerBuild>false</skipDockerBuild>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>build-image</id>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>build</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+
+                <plugin>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>3.0.2</version>
+                    <executions>
+                        <execution>
+                            <id>copy-resources</id>
+                            <!-- here the phase you need -->
+                            <phase>validate</phase>
+                            <goals>
+                                <goal>copy-resources</goal>
+                            </goals>
+                            <configuration>
+                                <outputDirectory>${project.build.directory}</outputDirectory>
+                                <resources>
+                                    <resource>
+                                        <directory>src/main/resources</directory>
+                                        <filtering>true</filtering>
+                                        <includes>
+                                            <include>**/*.properties</include>
+                                        </includes>
+                                    </resource>
+
+                                    <resource>
+                                        <directory>src/main/resources</directory>
+                                        <filtering>false</filtering>
+                                        <excludes>
+                                            <exclude>**/*.properties</exclude>
+                                        </excludes>
+                                    </resource>
+
+                                </resources>
+                                <encoding>UTF-8</encoding>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>copy-docker</id>
+                            <!-- here the phase you need -->
+                            <phase>process-resources</phase>
+                            <goals>
+                                <goal>copy-resources</goal>
+                            </goals>
+                            <configuration>
+                                <outputDirectory>${project.build.directory}</outputDirectory>
+                                <resources>
+
+                                    <resource>
+                                        <directory>docker</directory>
+                                        <targetPath>docker</targetPath>
+                                        <filtering>true</filtering>
+                                        <includes>
+                                            <include>Dockerfile</include>
+                                            <include>init.sh</include>
+                                        </includes>
+                                    </resource>
+
+                                </resources>
+                                <encoding>UTF-8</encoding>
+                                <delimiters>
+                                    <delimiter>${*}</delimiter>
+                                </delimiters>
+                            </configuration>
+                        </execution>
+                    </executions>
+
+                </plugin>
+
+            </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>jenkins</id>
+            <build>
+                <resources>
+
+                </resources>
+                <plugins>
+
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+
+</project>

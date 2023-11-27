@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>io.crowdcode</groupId>
+	<artifactId>restservice</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>restservice</name>
+	<description>Demo project for Spring Boot</description>
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>1.5.2.RELEASE</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<java.version>1.8</java.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-rest</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.springfox</groupId>
+			<artifactId>springfox-swagger-ui</artifactId>
+			<version>2.6.0</version>
+		</dependency>
+		<dependency>
+			<groupId>io.springfox</groupId>
+			<artifactId>springfox-swagger2</artifactId>
+			<version>2.6.0</version>
+		</dependency>
+    </dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+            <!-- https://mvnrepository.com/artifact/com.github.kongchen/swagger-maven-plugin -->
+            <plugin>
+                <groupId>com.github.kongchen</groupId>
+                <artifactId>swagger-maven-plugin</artifactId>
+                <version>3.1.4</version>
+                <configuration>
+                    <apiSources>
+                        <apiSource>
+                            <info>
+                                <title>Swagger Test</title>
+                                <version>1</version>
+                                <description>This is a swagger test</description>
+                            </info>
+                            <locations>io.crowdcode.service,io.crowdcode.model</locations>
+                            <outputFormats>json</outputFormats>
+                            <swaggerDirectory>${project.build.outputDirectory}</swaggerDirectory>
+                        </apiSource>
+                    </apiSources>
+                </configuration>
+            </plugin>
+		</plugins>
+	</build>
+	<profiles>
+		<profile>
+			<id>with-docker</id>
+			<build>
+				<plugins>
+					<!-- This plugin should be used if you are using Spring Boot.
+                    To build the docker image you need to define the server port
+                    where the application is listening. But the server port is
+                    already defined in the application.properties. If you set the
+                    environment variable ${server.port} yourself, you can remove
+                    this plugin.-->
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>properties-maven-plugin</artifactId>
+						<version>1.0.0</version>
+						<executions>
+							<execution>
+								<phase>initialize</phase>
+								<goals>
+									<goal>read-project-properties</goal>
+								</goals>
+								<configuration>
+									<files>
+										<file>
+											${project.basedir}/src/main/resources/application.properties
+										</file>
+									</files>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>io.fabric8</groupId>
+						<artifactId>docker-maven-plugin</artifactId>
+						<version>0.19.1</version>
+						<executions>
+							<execution>
+								<phase>pre-integration-test</phase>
+								<goals>
+									<goal>build</goal>
+									<goal>push</goal>
+								</goals>
+							</execution>
+						</executions>
+						<configuration>
+							<images>
+								<image>
+									<name>
+										${docker.registry}/${project.artifactId}
+									</name>
+									<build>
+										<from>java:8</from>
+										<maintainer>
+											marcus.noerder-tuitje@crowdcode.io
+										</maintainer>
+										<tags>
+											<tag>
+												${project.version}
+											</tag>
+										</tags>
+										<ports>
+											<port>${server.port}</port>
+										</ports>
+										<cmd>
+											<exec>
+												<arg>java</arg>
+												<arg>-jar</arg>
+												<arg>
+													/maven/${project.artifactId}-${project.version}.jar
+												</arg>
+											</exec>
+										</cmd>
+										<assembly>
+											<descriptorRef>
+												artifact-with-dependencies
+											</descriptorRef>
+										</assembly>
+									</build>
+								</image>
+							</images>
+							<authConfig>
+								<username>${docker.username}</username>
+								<password>${docker.password}</password>
+							</authConfig>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+</project>

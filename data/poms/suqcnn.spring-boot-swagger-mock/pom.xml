@@ -1,0 +1,181 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.yifanyou.sbsm</groupId>
+  <artifactId>spring-boot-swagger-mock</artifactId>
+  <packaging>jar</packaging>
+  <version>1.0-SNAPSHOT</version>
+  <name>spring-boot-swagger-mock Maven Webapp</name>
+  <url>http://maven.apache.org</url>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>1.4.1.RELEASE</version>
+  </parent>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <java.version>1.8</java.version>
+    <springfox-swagger2.version>2.6.0</springfox-swagger2.version>
+    <springfox-swagger-ui.version>2.6.0</springfox-swagger-ui.version>
+    <mockito.version>1.10.19</mockito.version>
+    <swagger.version>1.5.10</swagger.version>
+    <fixture-factory.version>3.1.0</fixture-factory.version>
+    <commons-beanutils.version>1.9.2</commons-beanutils.version>
+    <log4j.version>1.2.17</log4j.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-autoconfigure</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-configuration-processor</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.springfox</groupId>
+      <artifactId>springfox-swagger2</artifactId>
+      <version>${springfox-swagger2.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.springfox</groupId>
+      <artifactId>springfox-swagger-ui</artifactId>
+      <version>${springfox-swagger-ui.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.swagger</groupId>
+      <artifactId>swagger-annotations</artifactId>
+      <version>${swagger.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>br.com.six2six</groupId>
+      <artifactId>fixture-factory</artifactId>
+      <version>${fixture-factory.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-beanutils</groupId>
+      <artifactId>commons-beanutils</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <version>${log4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>3.8.1</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  <build>
+    <finalName>spring-boot-swagger-mock</finalName>
+
+    <plugins>
+      <!-- 合并swagge文档 -->
+      <plugin>
+        <groupId>org.codehaus.gmaven</groupId>
+        <artifactId>groovy-maven-plugin</artifactId>
+        <version>2.0</version>
+        <configuration>
+          <properties>
+            <inFile>${project.basedir}/src/main/swagger-spec/all/index.yaml</inFile>
+            <outFile>${project.basedir}/src/main/swagger-spec/api</outFile>
+          </properties>
+          <source>
+            import io.swagger.parser.Swagger20Parser
+            import io.swagger.parser.SwaggerResolver
+            import io.swagger.util.Json
+            import io.swagger.util.Yaml
+            import org.apache.commons.io.FileUtils
+
+            def parser = new Swagger20Parser()
+            def path = properties['inFile']
+            def swagger = parser.read(path, null)
+            def resolver = new SwaggerResolver(swagger, null, path)
+            resolver.resolve()
+            def out = properties['outFile']
+            Json.pretty().writeValue(new File(out + '.json'), swagger)
+            Yaml.pretty().writeValue(new File(out + '.yaml'), swagger)
+          </source>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>io.swagger</groupId>
+            <artifactId>swagger-parser</artifactId>
+            <version>1.0.25</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+      <!-- 基于swagger文档生成服务端代码 -->
+      <plugin>
+        <groupId>io.swagger</groupId>
+        <artifactId>swagger-codegen-maven-plugin</artifactId>
+        <version>2.2.1</version>
+        <configuration>
+          <!-- specify the swagger yaml -->
+          <inputSpec>${project.basedir}/src/main/swagger-spec/api.json</inputSpec>
+          <output>swagger-codegen</output>
+          <!--<output>swagger-codegen-javascript</output>-->
+          <!-- target to generate -->
+          <language>spring</language>
+          <!--<language>javascript</language>-->
+          <!-- pass any necessary config options -->
+          <modelPackage>com.yifanyou.sbsm.app.common.model</modelPackage>
+          <invokerPackage>com.yifanyou.sbsm.app.common</invokerPackage>
+          <templateDirectory>src/main/swagger-templates/spring</templateDirectory>
+          <configOptions>
+            <sourceFolder>src/main/java</sourceFolder>
+            <apiPackage>com.yifanyou.sbsm.app.common.api</apiPackage>
+            <basePackage>com.yifanyou.sbsm.app.common</basePackage>
+            <interfaceOnly>true</interfaceOnly>
+            <java8>true</java8>
+            <jdk8>true</jdk8>
+            <dateLibrary>java8</dateLibrary>
+            <import-mappings>Response=com.yifanyou.sbsm.domain.Response</import-mappings>
+          </configOptions>
+          <verbose>true</verbose>
+        </configuration>
+      </plugin>
+      <!-- 添加生成的source到maven -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>1.12</version>
+        <executions>
+          <execution>
+            <id>add-source</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>swagger-codegen/src/main/java</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <finalName>spring-boot-swagger-mock-exec</finalName>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

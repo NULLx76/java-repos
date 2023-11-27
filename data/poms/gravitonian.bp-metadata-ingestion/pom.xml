@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>metadata-ingestion</artifactId>
+    <version>1.1-SNAPSHOT</version>
+
+    <!-- UPDATED -->
+    <name>BestPub Metadata Ingestion Platform Jar Module</name>
+    <description>Platform JAR Module with code that checks for and ingests book metadata</description>
+    <packaging>jar</packaging>
+
+    <!-- ADDED -->
+    <parent>
+        <groupId>org.acme.bestpublishing</groupId>
+        <artifactId>best-publishing-parent</artifactId>
+        <version>1.2</version>
+    </parent>
+
+    <properties>
+
+    </properties>
+
+    <scm>
+        <connection>scm:git:https://github.com/gravitonian/bp-metadata-ingestion.git</connection>
+        <url>https://github.com/gravitonian/bp-metadata-ingestion</url>
+        <developerConnection>scm:git:https://github.com/gravitonian/bp-metadata-ingestion.git</developerConnection>
+      <tag>HEAD</tag>
+  </scm>
+
+    <!-- This will import the dependencyManagement for all artifacts in the selected Alfresco platform.
+            NOTE: You still need to define dependencies in your POM,
+            but you can omit version as it's enforced by this dependencyManagement.
+            NOTE: It defaults to the latest version this SDK pom has been tested with,
+            but alfresco version can/should be overridden in your project's pom
+    -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>${alfresco.groupId}</groupId>
+                <artifactId>alfresco-platform-distribution</artifactId>
+                <version>${alfresco.platform.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- The main Alfresco Repo dependency for compiling Java code in src/main/java -->
+        <dependency>
+            <groupId>${alfresco.groupId}</groupId>
+            <artifactId>alfresco-repository</artifactId>
+        </dependency>
+
+        <!-- Bring in Alfresco RAD so we get access to AlfrescoTestRunner classes -->
+        <dependency>
+            <groupId>org.alfresco.maven</groupId>
+            <artifactId>alfresco-rad</artifactId>
+            <version>${alfresco.sdk.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- (ADDED) Bring in Spring JMX so we can define ManagedResource with managed properties -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-jmx</artifactId>
+            <version>${spring.jmx.version}</version>
+        </dependency>
+
+        <!-- Bring in Spring Context so we can use ApplicationContext, ApplicationContextAware etc -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>${spring.framework.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Integration tests need httpcomponents to execute tests -->
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>${http.client.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- ADDED -->
+        <dependency>
+            <groupId>org.acme.bestpublishing</groupId>
+            <artifactId>utils</artifactId>
+            <version>${bestpublishing.utils.version}</version>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+            </plugin>
+
+            <!--
+                The Alfresco Maven Plugin contains all the logic to run the extension
+                in an embedded Tomcat with the H2 database.
+                -->
+            <plugin>
+                <groupId>org.alfresco.maven.plugin</groupId>
+                <artifactId>alfresco-maven-plugin</artifactId>
+                <version>${alfresco.sdk.version}</version>
+
+                <configuration>
+                    <!-- We need the flat file H2 database to run the Repo -->
+                    <enableH2>true</enableH2>
+                    <!-- This is a platform extension JAR, so we need the platform webapp (alfresco.war) -->
+                    <enablePlatform>true</enablePlatform>
+                    <!-- Enable Solr so we can use search, our Repo extension probably need search -->
+                    <enableSolr>true</enableSolr>
+                    <!-- We don't need the share.war if we don't have any UI extensions -->
+                    <enableShare>false</enableShare>
+                    <!-- Enable the REST API Explorer -->
+                    <enableApiExplorer>true</enableApiExplorer>
+
+                    <!--
+                       JARs and AMPs that should be overlayed/applied to the Platform/Repository WAR
+                       (i.e. alfresco.war)
+                       -->
+                    <platformModules>
+                        <!-- This AMP is needed if we are going to access the platform webapp from a Share webapp -->
+                        <!-- Share Services will be ignored if you are on Platform earlier than 5.1 -->
+                        <moduleDependency>
+                            <groupId>${alfresco.groupId}</groupId>
+                            <artifactId>alfresco-share-services</artifactId>
+                            <version>${alfresco.share.version}</version>
+                            <type>amp</type>
+                        </moduleDependency>
+
+                        <!-- Bring in this JAR project, need to be included here, otherwise resources from META-INF
+                             will not be loaded, such as the test.html page
+                        -->
+                        <moduleDependency>
+                            <groupId>${project.groupId}</groupId>
+                            <artifactId>${project.artifactId}</artifactId>
+                            <version>${project.version}</version>
+                        </moduleDependency>
+                    </platformModules>
+                </configuration>
+            </plugin>
+
+        </plugins>
+
+        <resources>
+            <!-- Filter the resource files in this project and do property substitutions -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+        <testResources>
+            <!-- Filter the test resource files in this project and do property substitutions -->
+            <testResource>
+                <directory>src/test/resources</directory>
+                <filtering>true</filtering>
+            </testResource>
+        </testResources>
+
+    </build>
+    <repositories>
+        <repository>
+            <id>local-releases</id>
+            <url>http://localhost:8081/repository/maven-releases/</url>
+        </repository>
+    </repositories>
+</project>

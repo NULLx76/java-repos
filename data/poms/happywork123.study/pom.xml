@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+
+    <groupId>Analytics</groupId>
+    <artifactId>Jmeter</artifactId>
+    <version>1.0</version>
+
+    <repositories>
+        <repository>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+            <id>public</id>
+            <name>Public Repositories</name>
+            <url>http://nexus.patsnap.com/content/groups/public/</url>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>public</id>
+            <name>Public Repositories</name>
+            <url>http://nexus.patsnap.com/content/groups/public/</url>
+        </pluginRepository>
+    </pluginRepositories>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <!--用于Maven调用Jmeter-->
+        <dependency>
+            <groupId>com.lazerycode.jmeter</groupId>
+            <artifactId>jmeter-maven-plugin</artifactId>
+            <version>2.0.3</version>
+            <scope>test</scope>
+        </dependency>
+        <!--用于解析XSL模板-->
+        <dependency>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>xml-maven-plugin</artifactId>
+            <version>1.0.1</version>
+        </dependency>
+        <!--生成报告-->
+        <dependency>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-report-plugin</artifactId>
+            <version>2.18.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>net.sf.saxon</groupId>
+            <artifactId>saxon</artifactId>
+            <version>9.1.0.8</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>1.2.20</version>
+        </dependency>
+    </dependencies>
+
+
+    <build>
+        <defaultGoal>compile</defaultGoal>
+        <plugins>
+            <!--拷贝jar包-->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/jmeter/lib/ext</outputDirectory>
+                            <!--<outputDirectory>${project.build.directory}/jmeter/bin</outputDirectory>-->
+                            <overWriteReleases>false</overWriteReleases>
+                            <overWriteSnapshots>false</overWriteSnapshots>
+                            <overWriteIfNewer>true</overWriteIfNewer>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                            <mainClass>theMainClass</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.lazerycode.jmeter</groupId>
+                <artifactId>jmeter-maven-plugin</artifactId>
+                <version>2.1.0</version>
+                <configuration>
+                    <resultsFileFormat>xml</resultsFileFormat>
+                    <ignoreResultFailures>false</ignoreResultFailures>
+                    <testResultsTimestamp>false</testResultsTimestamp>
+                    <!--<propertiesReplacedByCustomFiles>true</propertiesReplacedByCustomFiles>-->
+                    <!--用于读取用户自己的jmeter配置文件-->
+                    <!--Windows-->
+                    <!--<customPropertiesFiles>${project.basedir}\jmeter.properties</customPropertiesFiles>-->
+                    <!--MacOS-->
+                    <!--<customPropertiesFiles>${project.basedir}/jmeter.properties</customPropertiesFiles>-->
+                    <logsDirectory>/${project.basedir}</logsDirectory>
+                    <!--<overrideRootLogLevel>DEBUG</overrideRootLogLevel>-->
+                    <!--<propertiesFilesDirectory></propertiesFilesDirectory>-->
+                    <propertiesJMeter>
+                        <log_level.jmeter.protocol.http.sampler.HTTPSamplerBase>DEBUG</log_level.jmeter.protocol.http.sampler.HTTPSamplerBase>
+                        <log_level.jmeter.protocol.http.sampler.HTTPHC4Impl>DEBUG</log_level.jmeter.protocol.http.sampler.HTTPHC4Impl>
+                        <log_level.jmeter.assertions.ResponseAssertion>DEBUG</log_level.jmeter.assertions.ResponseAssertion>
+                        <log_level.org.apache.http.headers>DEBUG</log_level.org.apache.http.headers>
+                        <!--<log_level.org.apache.http.wire>DEBUG</log_level.org.apache.http.wire>-->
+                    </propertiesJMeter>
+                </configuration>
+
+                <executions>
+                    <execution>
+                        <id>jmeter-tests</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>jmeter</goal>
+                        </goals>
+                        <configuration>
+                            <!--用于指定路径-->
+                            <!--<testFilesDirectory>/${project.basedir}/src/test/modules</testFilesDirectory>-->
+                            <!--用于指定Jmeter运行的脚本文件，可以为多个file(<jMeterTestFile>1.jmx</jMeterTestFile> <jMeterTestFile>2.jmx</jMeterTestFile>);可以为*.jmx,读取所有JMX-->
+                            <testFilesIncluded>
+                                <jMeterTestFile>Chemical API.jmx</jMeterTestFile>
+                                <!--<jMeterTestFile>*.jmx</jMeterTestFile>-->
+                            </testFilesIncluded>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+
+            <!--生成HTML文件-->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>xml-maven-plugin</artifactId>
+                <version>1.0.1</version>
+                <executions>
+                    <execution>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>transform</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <transformationSets>
+                        <transformationSet>
+                            <dir>${project.build.directory}/jmeter/results</dir>
+                            <stylesheet>${project.basedir}/src/test/resources/resultReport.xsl</stylesheet>
+                            <outputDir>/${project.basedir}</outputDir>
+                            <fileMappers>
+                                <fileMapper
+                                        implementation="org.codehaus.plexus.components.io.filemappers.FileExtensionMapper">
+                                    <targetExtension>.html</targetExtension>
+                                </fileMapper>
+                            </fileMappers>
+                        </transformationSet>
+                    </transformationSets>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>net.sf.saxon</groupId>
+                        <artifactId>saxon</artifactId>
+                        <version>9.1.0.8</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+        </plugins>
+    </build>
+
+
+</project>

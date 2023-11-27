@@ -1,0 +1,939 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>de.scrum-master</groupId>
+  <artifactId>geb-spock-samples-parent</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>Geb + Spock sample project</name>
+  <description>
+    This project shows how to easily use Geb + Spock in Maven projects and thereby keeping the Maven POM clean,
+    utilising a BoM for test dependency versions plus a single test dependency to transitively import all other
+    dependencies needed for multi-browser Geb tests.
+  </description>
+
+  <organization>
+    <name>Scrum-Master.de - Agile Project Management</name>
+    <url>https://scrum-master.de</url>
+  </organization>
+
+  <prerequisites>
+    <maven>3.1.0</maven>
+  </prerequisites>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <!-- Maven Compiler Plugin -->
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+
+    <!-- Groovy compiler for Spock/Geb tests -->
+    <version.groovy-eclipse-compiler>3.7.1</version.groovy-eclipse-compiler>
+    <version.groovy-eclipse-batch>2.5.18-01</version.groovy-eclipse-batch>
+
+    <!-- Geb, Selenium -->
+    <!--
+      Possible geb.env values:
+        * Headless browsers: html_unit, chrome_headless, firefox_headless
+        * Regular browsers: chrome, firefox, edge, opera
+        * Others: win_app
+    -->
+    <geb.env>chrome_headless</geb.env>
+    <geb.env.deployment>production</geb.env.deployment>
+    <!-- MavenSystemPropertyIT needs this-->
+    <tomcat.http.port>8080</tomcat.http.port>
+
+    <!-- Maven site -->
+    <version.wagon-ssh>2.8</version.wagon-ssh>
+
+    <version.lombok>1.18.22</version.lombok>
+    <version.jmockit>1.46</version.jmockit>
+    <version.sarek>1.0-SNAPSHOT</version.sarek>
+    <!-- TODO: keep up to date with Sarek's version -->
+    <version.byte-buddy>1.12.8</version.byte-buddy>
+    <!--
+      Surefire 2.20+ creates dump files containing native log output, which is really annoying. So we stick with the
+      latest version which does not create dump files, but correctly prints native output to the console.
+      TODO: Use 3.0.0-M6 when native console problems from M5 have been fixed.
+    -->
+    <version.surefire>2.19.1</version.surefire>
+  </properties>
+
+  <pluginRepositories>
+    <!-- Latest Groovy Eclipse version -->
+    <pluginRepository>
+      <id>groovy-plugins-release</id>
+      <name>JFrog Groovy Plugins Releases</name>
+      <url>https://groovy.jfrog.io/artifactory/plugins-release</url>
+      <releases>
+        <updatePolicy>never</updatePolicy>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </pluginRepository>
+  </pluginRepositories>
+
+  <repositories>
+    <repository>
+      <id>sonatype-snapshopts</id>
+      <name>Sonatype Snapshots</name>
+      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+    <!-- Jenkins (for https://stackoverflow.com/q/57036137/1082681) -->
+    <repository>
+      <id>jenkins-releases</id>
+      <name>Jenkins Releases</name>
+      <url>https://repo.jenkins-ci.org/releases/</url>
+      <releases>
+        <updatePolicy>never</updatePolicy>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+  <build>
+
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.10.1</version>
+          <configuration>
+            <source>${maven.compiler.source}</source>
+            <target>${maven.compiler.target}</target>
+            <!-- IMPORTANT -->
+<!--            <useIncrementalCompilation>false</useIncrementalCompilation>-->
+            <encoding>${project.build.sourceEncoding}</encoding>
+            <!-- Groovy needed for Spock tests -->
+            <compilerId>groovy-eclipse-compiler</compilerId>
+            <!--
+              Lombok agent needed for successful Maven compilation, see
+              https://github.com/groovy/groovy-eclipse/wiki/Groovy-Eclipse-Maven-plugin#project-lombok
+            -->
+            <compilerArguments>
+              <javaAgentClass>lombok.launch.Agent</javaAgentClass>
+            </compilerArguments>
+            <!-- Without this Lombok compilation fails -->
+            <fork>true</fork>
+            <!--<verbose>true</verbose>-->
+          </configuration>
+          <dependencies>
+            <dependency>
+              <groupId>org.codehaus.groovy</groupId>
+              <artifactId>groovy-eclipse-compiler</artifactId>
+              <version>${version.groovy-eclipse-compiler}</version>
+            </dependency>
+            <dependency>
+              <groupId>org.codehaus.groovy</groupId>
+              <artifactId>groovy-eclipse-batch</artifactId>
+              <version>${version.groovy-eclipse-batch}</version>
+            </dependency>
+            <dependency>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+              <version>${version.lombok}</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+
+        <!-- Enforce important build rules -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>1.4.1</version>
+          <executions>
+            <execution>
+              <id>enforcer-rules-error</id>
+              <goals>
+                <goal>enforce</goal>
+              </goals>
+              <configuration>
+                <fail>true</fail>
+                <skip>false</skip>
+                <rules>
+                  <requireMavenVersion>
+                    <version>3.2.5</version>
+                  </requireMavenVersion>
+                  <requireJavaVersion>
+                    <version>1.8</version>
+                  </requireJavaVersion>
+                  <requirePluginVersions/>
+                  <requireReleaseDeps>
+                    <onlyWhenRelease>true</onlyWhenRelease>
+                  </requireReleaseDeps>
+                  <reactorModuleConvergence/>
+                </rules>
+              </configuration>
+            </execution>
+            <execution>
+              <id>enforcer-rules-warning</id>
+              <goals>
+                <goal>enforce</goal>
+              </goals>
+              <configuration>
+                <fail>false</fail>
+                <skip>false</skip>
+                <rules>
+                  <banDistributionManagement/>
+                  <dependencyConvergence/>
+                  <banDuplicateClasses>
+                    <findAllDuplicates>true</findAllDuplicates>
+                    <ignoreClasses>
+                      <!--<ignoreClass>scala.*</ignoreClass>-->
+                    </ignoreClasses>
+                    <dependencies>
+                      <!--
+                      <dependency>
+                        <groupId>javax</groupId>
+                        <artifactId>javaee-web-api</artifactId>
+                        <ignoreClasses>
+                          <ignoreClass>*</ignoreClass>
+                        </ignoreClasses>
+                      </dependency>
+                      -->
+                    </dependencies>
+                  </banDuplicateClasses>
+                </rules>
+              </configuration>
+            </execution>
+          </executions>
+          <dependencies>
+            <dependency>
+              <groupId>org.codehaus.mojo</groupId>
+              <artifactId>extra-enforcer-rules</artifactId>
+              <version>1.0-beta-6</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+
+        <!-- Check forbidden API usage (e.g. calls using default locales) -->
+        <plugin>
+          <groupId>de.thetaphi</groupId>
+          <artifactId>forbiddenapis</artifactId>
+          <version>2.2</version>
+          <configuration>
+            <failOnUnsupportedJava>false</failOnUnsupportedJava>
+            <failOnViolation>false</failOnViolation>
+            <bundledSignatures>
+              <bundledSignature>jdk-unsafe</bundledSignature>
+              <bundledSignature>jdk-deprecated</bundledSignature>
+              <bundledSignature>jdk-internal</bundledSignature>
+              <bundledSignature>jdk-non-portable</bundledSignature>
+              <!--<bundledSignature>commons-io-unsafe-2.4</bundledSignature>-->
+            </bundledSignatures>
+            <!-- If we ever want to generate warnings for our own set of method signatures:
+            <signaturesFiles>
+              <signaturesFile>./rel/path/to/signatures.txt</signaturesFile>
+            </signaturesFiles>
+            -->
+          </configuration>
+          <executions>
+            <execution>
+              <goals>
+                <goal>check</goal>
+                <goal>testCheck</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+
+        <!-- Check for new dependency and plugin versions -->
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>versions-maven-plugin</artifactId>
+          <version>2.10.0</version>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${version.surefire}</version>
+          <configuration>
+            <!--<skipTests>true</skipTests>-->
+            <excludes>
+              <exclude>**/IT*.java</exclude>
+            </excludes>
+            <systemPropertyVariables>
+              <test.tmpdir>${project.build.directory}/tmp</test.tmpdir>
+              <geb.env>${geb.env}</geb.env>
+              <geb.env.deployment>${geb.env.deployment}</geb.env.deployment>
+            </systemPropertyVariables>
+            <argLine>
+              -Dfile.encoding=UTF8
+              <!-- Help libraries using restricted JDK APIs on JDK 9+ (mostly 16+) -->
+              ${jvm.arg.addOpens}
+              <!-- Help Java find native libraries for JNI tests -->
+              -Djava.library.path=${basedir}/src/main/resources/lib
+              <!--
+                Not really necessary. The default target bytecode level in Groovy 2.5.x is 1.7.
+                This setting influences e.g. EmbeddedSpecRunner or other dynamically compiled code.
+              -->
+              -Dgroovy.target.bytecode=${maven.compiler.target}
+              -javaagent:"${settings.localRepository}"/org/jmockit/jmockit/${version.jmockit}/jmockit-${version.jmockit}.jar
+            </argLine>
+          </configuration>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-report-plugin</artifactId>
+          <version>${version.surefire}</version>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>${version.surefire}</version>
+          <configuration>
+            <!--<skipTests>true</skipTests>-->
+            <systemPropertyVariables>
+              <test.tmpdir>${project.build.directory}/tmp</test.tmpdir>
+              <geb.env>${geb.env}</geb.env>
+              <geb.env.deployment>${geb.env.deployment}</geb.env.deployment>
+              <geb.build.baseUrl>https://scrum-master.de</geb.build.baseUrl>
+              <!-- MavenSystemPropertyIT needs this-->
+              <test.server.port>${tomcat.http.port}</test.server.port>
+            </systemPropertyVariables>
+            <argLine>
+              <!--
+                TODO:
+                  Needs to be inactive for IDEA, but active for Failsafe.
+                  Otherwise arguments for Surefire and Failsafe appear 2x on the command line.
+              -->
+<!--
+              -Dfile.encoding=UTF8
+              &lt;!&ndash; Help libraries using restricted JDK APIs on JDK 9+ (mostly 16+) &ndash;&gt;
+              ${jvm.arg.addOpens}
+              &lt;!&ndash; Help Java find native libraries for JNI tests &ndash;&gt;
+              -Djava.library.path=${basedir}/src/main/resources/lib
+              &lt;!&ndash;
+                Not really necessary. The default target bytecode level in Groovy 2.5.x is 1.7.
+                This setting influences e.g. EmbeddedSpecRunner or other dynamically compiled code.
+              &ndash;&gt;
+              -Dgroovy.target.bytecode=${maven.compiler.target}
+              -javaagent:"${settings.localRepository}"/org/jmockit/jmockit/${version.jmockit}/jmockit-${version.jmockit}.jar
+-->
+            </argLine>
+          </configuration>
+          <executions>
+            <execution>
+              <id>integration-tests</id>
+              <goals>
+                <goal>integration-test</goal>
+                <goal>verify</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-clean-plugin</artifactId>
+          <version>2.5</version>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-install-plugin</artifactId>
+          <version>2.5.2</version>
+          <configuration>
+            <!-- Avoid uploading incomplete releases when build fails in submodule -->
+            <installAtEnd>true</installAtEnd>
+          </configuration>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <version>2.8.2</version>
+          <configuration>
+            <!-- Avoid uploading incomplete releases when build fails in submodule -->
+            <deployAtEnd>true</deployAtEnd>
+          </configuration>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-site-plugin</artifactId>
+          <version>3.6</version>
+          <dependencies>
+            <dependency>
+              <groupId>org.apache.maven.wagon</groupId>
+              <artifactId>wagon-ssh</artifactId>
+              <version>${version.wagon-ssh}</version>
+            </dependency>
+
+            <dependency>
+              <groupId>lt.velykis.maven.skins</groupId>
+              <artifactId>reflow-velocity-tools</artifactId>
+              <version>1.1.1</version>
+            </dependency>
+            <!-- Reflow skin requires Velocity >= 1.7  -->
+            <dependency>
+              <groupId>org.apache.velocity</groupId>
+              <artifactId>velocity</artifactId>
+              <version>1.7</version>
+            </dependency>
+          </dependencies>
+          <configuration>
+            <skip>false</skip>
+            <skipDeploy>false</skipDeploy>
+            <generateProjectInfo>true</generateProjectInfo>
+            <generateReports>true</generateReports>
+          </configuration>
+        </plugin>
+
+        <!-- Conveniently double-click goals like 'dependency:analyze' and 'dependency:tree' in IDEA -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <version>3.3.0</version>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>3.0.1</version>
+          <configuration>
+            <encoding>${project.build.sourceEncoding}</encoding>
+          </configuration>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>3.2.2</version>
+        </plugin>
+
+      </plugins>
+    </pluginManagement>
+
+    <plugins>
+
+      <plugin>
+        <groupId>org.apache.tomcat.maven</groupId>
+        <artifactId>tomcat7-maven-plugin</artifactId>
+        <version>2.2</version>
+        <configuration>
+          <!-- http port -->
+          <port>9090</port>
+          <!-- application path always starts with /-->
+          <path>/</path>
+          <!-- optional path to a context file -->
+          <contextFile>${tomcatContextXml}</contextFile>
+          <!-- optional system propoerties you want to add -->
+          <systemProperties>
+            <appserver.base>${project.build.directory}/appserver-base</appserver.base>
+            <appserver.home>${project.build.directory}/appserver-home</appserver.home>
+            <java.io.tmpdir>${project.build.directory}</java.io.tmpdir>
+          </systemProperties>
+          <!-- if you want to use test dependencies rather than only runtime -->
+          <useTestClasspath>true</useTestClasspath>
+          <!-- optional if you want to add some extra directories into the classloader -->
+          <additionalClasspathDirs>
+            <additionalClasspathDir></additionalClasspathDir>
+          </additionalClasspathDirs>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-install-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-deploy-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+
+  <dependencyManagement>
+    <dependencies>
+
+      <!-- BoM with test dependency versions -->
+      <dependency>
+        <groupId>de.scrum-master</groupId>
+        <artifactId>test-bom</artifactId>
+        <version>1.4.3-SNAPSHOT</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <!-- Test resources + base configuration + base classes for Spock, Geb, Selenium -->
+      <dependency>
+        <groupId>de.scrum-master</groupId>
+        <artifactId>test-resources</artifactId>
+        <version>1.4.3-SNAPSHOT</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!-- Version 25.0-jre is used by selenium-remote-driver 3.14.0, 20 by embedded-ldap-junit 0.6 -->
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>25.0-jre</version>
+      </dependency>
+
+      <!-- Reactor (for https://stackoverflow.com/q/56064582) -->
+      <dependency>
+        <groupId>io.projectreactor</groupId>
+        <artifactId>reactor-bom</artifactId>
+        <version>Bismuth-RELEASE</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <!-- Jenkins Spock (for https://stackoverflow.com/q/57036137/1082681) -->
+      <dependency>
+        <groupId>com.homeaway.devtools.jenkins</groupId>
+        <artifactId>jenkins-spock</artifactId>
+        <!--<version>2.1.5</version>-->
+        <!-- TODO: Bump version after https://github.com/ExpediaGroup/jenkins-spock/pull/111 was merged and released -->
+        <version>2.1.6-SNAPSHOT</version>
+        <scope>test</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-all</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.jenkins-ci.main</groupId>
+        <artifactId>jenkins-core</artifactId>
+        <version>2.337</version>
+        <scope>test</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>net.sourceforge.htmlunit</groupId>
+            <artifactId>htmlunit</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-all</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.sun</groupId>
+            <artifactId>tools</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.jenkins-ci.plugins.workflow</groupId>
+        <artifactId>workflow-step-api</artifactId>
+        <version>622.vb_8e7c15b_c95a_</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.jenkins-ci.plugins.workflow</groupId>
+        <artifactId>workflow-cps</artifactId>
+        <version>2.94.1</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.jenkins-ci</groupId>
+        <artifactId>symbol-annotation</artifactId>
+        <version>1.23</version>
+        <scope>test</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>net.bytebuddy</groupId>
+        <artifactId>byte-buddy</artifactId>
+        <version>${version.byte-buddy}</version>
+        <scope>test</scope>
+      </dependency>
+      <!-- Used by ClassLoaderChecker utility -->
+      <dependency>
+        <groupId>net.bytebuddy</groupId>
+        <artifactId>byte-buddy-agent</artifactId>
+        <version>${version.byte-buddy}</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!--
+        HTTPBuilder, used in
+          https://stackoverflow.com/q/68093910/1082681
+          https://stackoverflow.com/q/57468204/1082681
+      -->
+      <dependency>
+        <groupId>org.codehaus.groovy.modules.http-builder</groupId>
+        <artifactId>http-builder</artifactId>
+        <version>0.7.1</version>
+      </dependency>
+
+      <!--
+        Sarek is for special mocking purposes which Spock is unable to implement directly.
+        Some, but not all Sarek features are covered by Mockito, PowerMock, JMockit.
+        Sarek, when used correctly, can replace them all, even though Mockito has a nicer and easier to use API.
+      -->
+      <dependency>
+        <groupId>dev.sarek</groupId>
+        <artifactId>sarek-unfinal</artifactId>
+        <version>${version.sarek}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>dev.sarek</groupId>
+        <artifactId>sarek</artifactId>
+        <version>${version.sarek}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>dev.sarek</groupId>
+        <artifactId>sarek-spock-extension</artifactId>
+        <version>${version.sarek}</version>
+        <scope>test</scope>
+      </dependency>
+
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <!--
+      Use groovy-all version defined in BoM.
+      Make sure to depend on it here explicitly in order to override the dependencies from spock-core.
+    -->
+    <dependency>
+      <groupId>org.codehaus.groovy</groupId>
+      <artifactId>groovy-all</artifactId>
+      <scope>test</scope>
+      <type>pom</type>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-web</artifactId>
+      <version>5.3.16</version>
+    </dependency>
+
+    <!-- Used by selenium-remote-driver and embedded-ldap-junit -->
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+    </dependency>
+
+    <!-- Test resources + base configuration + base classes for Spock, Geb, Selenium -->
+    <dependency>
+      <groupId>de.scrum-master</groupId>
+      <artifactId>test-resources</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.togglz</groupId>
+      <artifactId>togglz-servlet</artifactId>
+      <version>2.5.0.Final</version>
+    </dependency>
+    <dependency>
+      <groupId>org.togglz</groupId>
+      <artifactId>togglz-junit</artifactId>
+      <version>2.5.0.Final</version>
+    </dependency>
+
+    <!-- SpotlinTestRunner - due to JEP-396, only runs on JDK < 16 -->
+    <dependency>
+      <groupId>de.jodamob.kotlin</groupId>
+      <artifactId>kotlin-runner-spock</artifactId>
+      <version>0.3.1</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-core</artifactId>
+      <version>7.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpcore</artifactId>
+      <version>4.4.10</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.sling</groupId>
+      <artifactId>org.apache.sling.api</artifactId>
+      <version>2.24.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.sparkjava</groupId>
+      <artifactId>spark-core</artifactId>
+      <version>2.9.1</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <version>${version.lombok}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>1.7.36</version>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>1.2.11</version>
+    </dependency>
+
+    <dependency>
+      <groupId>commons-validator</groupId>
+      <artifactId>commons-validator</artifactId>
+      <version>1.7</version>
+    </dependency>
+
+    <!-- Contains ByteBuddy transitive dependency -->
+    <dependency>
+      <groupId>org.zapodot</groupId>
+      <artifactId>embedded-ldap-junit</artifactId>
+      <version>0.6</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.javers</groupId>
+      <artifactId>javers-core</artifactId>
+      <version>3.9.4</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.modelmapper</groupId>
+      <artifactId>modelmapper</artifactId>
+      <version>2.0.0</version>
+    </dependency>
+
+    <!-- BouncyCastle crypto -->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
+      <version>1.70</version>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk15on</artifactId>
+      <version>1.69</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.appium</groupId>
+      <artifactId>java-client</artifactId>
+      <!--
+        7.6.0 ist the latest version supporting Selenium 3. Version 8.0.0 needs Selenium 4,
+        and for that we need a Geb version supporting Selenium 4.
+      -->
+      <version>7.6.0</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Reactor (for https://stackoverflow.com/q/56064582) -->
+    <dependency>
+      <groupId>io.projectreactor</groupId>
+      <artifactId>reactor-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.projectreactor</groupId>
+      <artifactId>reactor-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Jenkins Spock (for https://stackoverflow.com/q/57036137/1082681) -->
+    <dependency>
+      <groupId>com.homeaway.devtools.jenkins</groupId>
+      <artifactId>jenkins-spock</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.main</groupId>
+      <artifactId>jenkins-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins.workflow</groupId>
+      <artifactId>workflow-step-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins.workflow</groupId>
+      <artifactId>workflow-cps</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci</groupId>
+      <artifactId>symbol-annotation</artifactId>
+    </dependency>
+
+    <!-- AShot screenshot utility, see https://github.com/pazone/ashot -->
+    <dependency>
+      <groupId>io.github.pazone</groupId>
+      <artifactId>ashot</artifactId>
+      <!-- from sonatype-snapshopts -->
+      <version>1.6.0-SNAPSHOT</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>net.sourceforge.htmlunit</groupId>
+      <artifactId>htmlunit</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.jmockit</groupId>
+      <artifactId>jmockit</artifactId>
+      <version>${version.jmockit}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-context</artifactId>
+      <version>5.3.17</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-core</artifactId>
+      <version>5.3.18</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.kafka</groupId>
+      <artifactId>spring-kafka</artifactId>
+      <version>2.4.5.RELEASE</version>
+    </dependency>
+    <dependency>
+      <groupId>org.aspectj</groupId>
+      <artifactId>aspectjrt</artifactId>
+      <version>1.9.6</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-api</artifactId>
+      <version>2.17.2</version>
+    </dependency>
+
+    <!--
+      HTTPBuilder, used in
+        https://stackoverflow.com/q/68093910/1082681
+        https://stackoverflow.com/q/57468204/1082681
+    -->
+    <dependency>
+      <groupId>org.codehaus.groovy.modules.http-builder</groupId>
+      <artifactId>http-builder</artifactId>
+    </dependency>
+
+    <!-- https://stackoverflow.com/q/74575745/1082681 -->
+    <dependency>
+      <groupId>com.squareup.okhttp3</groupId>
+      <artifactId>okhttp</artifactId>
+      <!-- Do not upgrade to 4.x or newer, test uses 3.x API -->
+      <version>3.12.13</version>
+    </dependency>
+
+  </dependencies>
+
+  <profiles>
+
+    <!--
+      Caveat: Automatic, JDK-based profile activation can *not* be inherited by child POMs defining
+      the same profiles. Thus, we have to repeat activation conditions there.
+
+      Note: We can check if automatic profile activation works via mvn help:active-profiles.
+    -->
+    <profile>
+      <id>jdk-8</id>
+      <activation>
+        <jdk>[1.8,1.9)</jdk>
+      </activation>
+      <properties>
+        <jvm.arg.addOpens/>
+      </properties>
+    </profile>
+    <profile>
+      <id>jdk-9</id>
+      <activation>
+        <jdk>[1.9,)</jdk>
+      </activation>
+      <properties>
+        <jvm.arg.addOpens>--add-opens java.base/java.lang=ALL-UNNAMED</jvm.arg.addOpens>
+      </properties>
+    </profile>
+    <profile>
+      <id>jdk-16</id>
+      <activation>
+        <jdk>[16,)</jdk>
+      </activation>
+      <properties>
+        <jvm.arg.addOpens>
+          --add-opens java.base/java.lang=ALL-UNNAMED
+          --add-opens java.base/java.lang.ref=ALL-UNNAMED
+          --add-opens java.base/java.io=ALL-UNNAMED
+          --add-opens java.base/java.util=ALL-UNNAMED
+        </jvm.arg.addOpens>
+      </properties>
+    </profile>
+
+    <profile>
+      <id>check-maven</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-enforcer-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>de.thetaphi</groupId>
+            <artifactId>forbiddenapis</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>versions-maven-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>github</id>
+      <dependencies>
+        <!-- Jenkins Spock (for https://stackoverflow.com/q/57036137/1082681) -->
+        <dependency>
+          <groupId>com.homeaway.devtools.jenkins</groupId>
+          <artifactId>jenkins-spock</artifactId>
+          <version>2.1.5</version>
+          <!-- TODO: Bump version after https://github.com/ExpediaGroup/jenkins-spock/pull/111 was merged and released -->
+          <!--<version>2.1.6-SNAPSHOT</version>-->
+        </dependency>
+      </dependencies>
+    </profile>
+
+  </profiles>
+
+  <modules>
+    <module>geb-spock-samples</module>
+    <module>geb-spock-samples-powermock</module>
+    <module>geb-spock-samples-mockito</module>
+    <module>geb-spock-samples-sarek</module>
+    <module>geb-spock-samples-jni</module>
+  </modules>
+
+</project>
